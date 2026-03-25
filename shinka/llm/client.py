@@ -12,6 +12,23 @@ load_shinka_dotenv()
 TIMEOUT = 600
 
 
+def _resolve_local_api_key(base_url: str | None) -> str:
+    """Resolve API key for a local_openai endpoint.
+
+    Checks LOCAL_OPENAI_API_KEY__{DOMAIN} first (dots → underscores, uppercase),
+    then falls back to LOCAL_OPENAI_API_KEY.
+    Example: mydamoxing.cn → LOCAL_OPENAI_API_KEY__MYDAMOXING_CN
+    """
+    if base_url:
+        from urllib.parse import urlparse
+        domain = urlparse(base_url).hostname or ""
+        env_key = "LOCAL_OPENAI_API_KEY__" + domain.replace(".", "_").replace("-", "_").upper()
+        val = os.getenv(env_key)
+        if val:
+            return val
+    return os.getenv("LOCAL_OPENAI_API_KEY", "local")
+
+
 def _build_azure_endpoint() -> str:
     endpoint = os.getenv("AZURE_API_ENDPOINT")
     if not endpoint:
@@ -95,7 +112,7 @@ def get_client_llm(
             client = instructor.from_openai(client, mode=instructor.Mode.MD_JSON)
     elif provider == "local_openai":
         client = openai.OpenAI(
-            api_key=os.getenv("LOCAL_OPENAI_API_KEY", "local"),
+            api_key=_resolve_local_api_key(resolved.base_url),
             base_url=resolved.base_url,
             timeout=TIMEOUT,
         )
@@ -175,7 +192,7 @@ def get_async_client_llm(
             client = instructor.from_openai(client, mode=instructor.Mode.MD_JSON)
     elif provider == "local_openai":
         client = openai.AsyncOpenAI(
-            api_key=os.getenv("LOCAL_OPENAI_API_KEY", "local"),
+            api_key=_resolve_local_api_key(resolved.base_url),
             base_url=resolved.base_url,
             timeout=TIMEOUT,
         )
