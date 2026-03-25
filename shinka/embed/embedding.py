@@ -184,7 +184,7 @@ class EmbeddingClient:
             response = self.client.embeddings.create(
                 model=self.model, input=code, encoding_format="float"
             )
-            cost = _get_embedding_cost(response, self.model_name)
+            cost = 0.0 if self.provider == "local" else _get_embedding_cost(response, self.model_name)
             # Extract embedding from response
             if single_code:
                 return response.data[0].embedding, cost
@@ -444,7 +444,7 @@ class AsyncEmbeddingClient:
             response = await self.async_client.embeddings.create(
                 model=self.model, input=code, encoding_format="float"
             )
-            cost = _get_embedding_cost(response, self.model_name)
+            cost = 0.0 if self.provider == "local" else _get_embedding_cost(response, self.model_name)
             if single_code:
                 return response.data[0].embedding, cost
             else:

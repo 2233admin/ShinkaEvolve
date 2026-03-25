@@ -47,6 +47,8 @@ def get_model_price(model_name: str) -> float:
 
     Returns the input price (embeddings only have input costs).
     """
+    if model_name.startswith("local/"):
+        return 0.0
     if model_name not in _PRICING_DF.index:
         raise ValueError(f"Embedding model {model_name} not found in pricing data")
     return _PRICING_DF.loc[model_name, "input_price"]
@@ -54,11 +56,15 @@ def get_model_price(model_name: str) -> float:
 
 def model_exists(model_name: str) -> bool:
     """Check if an embedding model exists in pricing data."""
+    if model_name.startswith("local/"):
+        return True
     return model_name in _PRICING_DF.index
 
 
 def get_provider(model_name: str) -> Optional[str]:
     """Get the provider for a given embedding model."""
+    if model_name.startswith("local/"):
+        return "local"
     if model_name not in _PRICING_DF.index:
         return None
     return _PRICING_DF.loc[model_name, "provider"]

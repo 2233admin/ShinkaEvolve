@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 import os
-from typing import Any, Tuple
+from typing import Any, Optional, Tuple
 
 from google import genai
 import openai
@@ -20,10 +20,23 @@ class ResolvedEmbeddingModel:
     original_model_name: str
     api_model_name: str
     provider: str
+    base_url: Optional[str] = None
 
 
 def resolve_embedding_backend(model_name: str) -> ResolvedEmbeddingModel:
     """Resolve runtime backend info for embedding model identifiers."""
+    if model_name.startswith("local/"):
+        # Format: local/model@base_url
+        parts = model_name.split("/", 1)[1].split("@", 1)
+        api_model_name = parts[0]
+        base_url = parts[1] if len(parts) > 1 else None
+        return ResolvedEmbeddingModel(
+            original_model_name=model_name,
+            api_model_name=api_model_name,
+            provider="local",
+            base_url=base_url,
+        )
+
     provider = get_provider(model_name)
     if provider == "azure":
         api_model_name = model_name.split("azure-", 1)[-1]
@@ -59,6 +72,14 @@ def get_client_embed(model_name: str) -> Tuple[Any, str]:
 
     if provider == "openai":
         client = openai.OpenAI(timeout=TIMEOUT)
+    elif provider == "local":
+        api_key = os.getenv("LOCAL_OPENAI_API_KEY", "local")
+        base_url = os.getenv("SHINKA_EMBEDDING_BASE_URL", resolved.base_url)
+        client = openai.OpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=TIMEOUT,
+        )
     elif provider == "azure":
         client = openai.AzureOpenAI(
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
@@ -87,6 +108,14 @@ def get_async_client_embed(model_name: str) -> Tuple[Any, str]:
 
     if provider == "openai":
         client = openai.AsyncOpenAI()
+    elif provider == "local":
+        api_key = os.getenv("LOCAL_OPENAI_API_KEY", "local")
+        base_url = os.getenv("SHINKA_EMBEDDING_BASE_URL", resolved.base_url)
+        client = openai.AsyncOpenAI(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=TIMEOUT,
+        )
     elif provider == "azure":
         client = openai.AsyncAzureOpenAI(
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
