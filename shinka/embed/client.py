@@ -37,6 +37,15 @@ def resolve_embedding_backend(model_name: str) -> ResolvedEmbeddingModel:
             base_url=base_url,
         )
 
+    if model_name.startswith("gpu/"):
+        # Format: gpu/all-MiniLM-L6-v2
+        api_model_name = model_name.split("/", 1)[1]
+        return ResolvedEmbeddingModel(
+            original_model_name=model_name,
+            api_model_name=api_model_name,
+            provider="gpu",
+        )
+
     provider = get_provider(model_name)
     if provider == "azure":
         api_model_name = model_name.split("azure-", 1)[-1]
@@ -70,7 +79,10 @@ def get_client_embed(model_name: str) -> Tuple[Any, str]:
     resolved = resolve_embedding_backend(model_name)
     provider = resolved.provider
 
-    if provider == "openai":
+    if provider == "gpu":
+        from .local_gpu import GPUEmbeddingClient
+        client = GPUEmbeddingClient(model_name=resolved.api_model_name)
+    elif provider == "openai":
         client = openai.OpenAI(timeout=TIMEOUT)
     elif provider == "local":
         api_key = os.getenv("LOCAL_OPENAI_API_KEY", "local")
@@ -106,7 +118,10 @@ def get_async_client_embed(model_name: str) -> Tuple[Any, str]:
     resolved = resolve_embedding_backend(model_name)
     provider = resolved.provider
 
-    if provider == "openai":
+    if provider == "gpu":
+        from .local_gpu import GPUEmbeddingClient
+        client = GPUEmbeddingClient(model_name=resolved.api_model_name)
+    elif provider == "openai":
         client = openai.AsyncOpenAI()
     elif provider == "local":
         api_key = os.getenv("LOCAL_OPENAI_API_KEY", "local")

@@ -159,6 +159,10 @@ class EmbeddingClient:
         else:
             single_code = False
 
+        # Handle GPU models (delegate directly)
+        if self.provider == "gpu":
+            return self.client.get_embedding(code[0] if single_code else code)
+
         # Handle Gemini models
         if self.provider == "google":
             try:
@@ -413,6 +417,10 @@ class AsyncEmbeddingClient:
             single_code = True
         else:
             single_code = False
+
+        # Handle GPU models (local computation, no async needed)
+        if self.provider == "gpu":
+            return self.async_client.get_embedding(code[0] if single_code else code)
 
         # Handle Gemini models (no async API yet, use thread pool)
         if self.provider == "google":
