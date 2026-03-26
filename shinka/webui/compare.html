@@ -744,7 +744,7 @@
         localStorage.setItem('shinka-theme', isDark ? 'dark' : 'light');
         applyChartTheme();
     }
-    if (localStorage.getItem('shinka-theme') === 'dark') {
+    if (localStorage.getItem('shinka-theme') !== 'light') {
         document.body.classList.add('dark');
         document.getElementById('theme-toggle').textContent = '☀️';
     }

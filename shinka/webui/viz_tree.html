@@ -17958,8 +17958,8 @@ console.error("[DEBUG] Error in processData:", error);
             document.querySelectorAll('svg').forEach(s => { s.style.backgroundColor = ''; });
         }
     }
-    // Load saved theme
-    if (localStorage.getItem('shinka-theme') === 'dark') {
+    // Load saved theme — default to dark to match index.html
+    if (localStorage.getItem('shinka-theme') !== 'light') {
         document.body.classList.add('dark');
         document.getElementById('theme-toggle').textContent = '☀️';
     }
