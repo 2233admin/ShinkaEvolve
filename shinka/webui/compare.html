@@ -280,9 +280,52 @@
             font-size: 0.9rem;
             background: #fff;
         }
+
+        /* Theme toggle */
+        #theme-toggle {
+            position: fixed; top: 20px; right: 20px; z-index: 100;
+            width: 40px; height: 40px; border-radius: 50%;
+            border: 1px solid #e0e0e0; background: #fff;
+            font-size: 18px; cursor: pointer; transition: all 0.2s;
+            display: flex; align-items: center; justify-content: center;
+        }
+        #theme-toggle:hover { background: #f0f0f0; }
+
+        /* ===== Dark Mode ===== */
+        body.dark { background-color: #0D0D0D; color: #E8EAED; }
+        body.dark .container { color: #E8EAED; }
+        body.dark header { border-bottom-color: rgba(255,255,255,0.08); }
+        body.dark .header-text h1 { color: #E8EAED; }
+        body.dark .header-text p { color: #9AA0A6; }
+        body.dark .back-link { background: #242424; color: #9AA0A6; border-color: rgba(255,255,255,0.08); }
+        body.dark .back-link:hover { background: #333; color: #E8EAED; border-color: rgba(255,255,255,0.15); }
+        body.dark .chart-container { background: #1A1A1A; border-color: rgba(255,255,255,0.08); }
+        body.dark .chart-title { color: #E8EAED; }
+        body.dark .legend-container { background: #1A1A1A; border-color: rgba(255,255,255,0.08); }
+        body.dark .legend-title { color: #E8EAED; }
+        body.dark .legend-table th { background: #242424; color: #9AA0A6; border-color: rgba(255,255,255,0.08); }
+        body.dark .legend-table td { color: #E8EAED; border-color: rgba(255,255,255,0.06); }
+        body.dark .legend-table tbody tr:hover { background: rgba(66,133,244,0.08); }
+        body.dark .legend-table tbody tr:hover .result-label { color: #4285F4; }
+        body.dark .result-label { color: #E8EAED; }
+        body.dark .arrow-cell { color: #555; }
+        body.dark .legend-table tbody tr:hover .arrow-cell { color: #4285F4; }
+        body.dark .loading-container { background: #1A1A1A; border-color: rgba(255,255,255,0.08); }
+        body.dark .spinner { border-color: #333; border-top-color: #4285F4; }
+        body.dark .loading-text { color: #9AA0A6; }
+        body.dark .error-state { background: #1A1A1A; border-color: rgba(255,255,255,0.08); }
+        body.dark .error-text { color: #9AA0A6; }
+        body.dark .control-group label { color: #9AA0A6; }
+        body.dark .control-group select { background: #242424; color: #E8EAED; border-color: rgba(255,255,255,0.08); }
+        body.dark #theme-toggle { background: #242424; border-color: rgba(255,255,255,0.08); }
+        body.dark #theme-toggle:hover { background: #333; }
+        body.dark ::-webkit-scrollbar-track { background: #0D0D0D; }
+        body.dark ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        body.dark ::-webkit-scrollbar-thumb:hover { background: #8A60F5; }
     </style>
 </head>
 <body>
+    <button id="theme-toggle" title="Toggle dark/light mode" onclick="toggleTheme()">🌙</button>
     <div class="container">
         <header>
             <img src="favicon.png" alt="Shinka Logo" class="logo">
@@ -657,8 +700,54 @@
             return div.innerHTML;
         }
 
+        function getChartColors() {
+            const isDark = document.body.classList.contains('dark');
+            return {
+                grid: isDark ? 'rgba(255,255,255,0.06)' : '#f0f0f0',
+                text: isDark ? '#9AA0A6' : '#666',
+                title: isDark ? '#E8EAED' : undefined
+            };
+        }
+
+        function applyChartTheme() {
+            const c = getChartColors();
+            const isDark = document.body.classList.contains('dark');
+            Chart.defaults.color = isDark ? '#9AA0A6' : '#666';
+            Chart.defaults.borderColor = c.grid;
+            if (chartGen) { updateChartScaleColors(chartGen, c); chartGen.update('none'); }
+            if (chartCost) { updateChartScaleColors(chartCost, c); chartCost.update('none'); }
+        }
+
+        function updateChartScaleColors(chart, c) {
+            ['x','y'].forEach(axis => {
+                if (chart.options.scales[axis]) {
+                    chart.options.scales[axis].grid.color = c.grid;
+                    chart.options.scales[axis].ticks = chart.options.scales[axis].ticks || {};
+                    chart.options.scales[axis].ticks.color = c.text;
+                    if (chart.options.scales[axis].title) chart.options.scales[axis].title.color = c.text;
+                }
+            });
+            if (chart.options.plugins.legend) {
+                chart.options.plugins.legend.labels = chart.options.plugins.legend.labels || {};
+                chart.options.plugins.legend.labels.color = c.text;
+            }
+        }
+
         // Initialize on page load
         init();
+    </script>
+    <script>
+    function toggleTheme() {
+        document.body.classList.toggle('dark');
+        const isDark = document.body.classList.contains('dark');
+        document.getElementById('theme-toggle').textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('shinka-theme', isDark ? 'dark' : 'light');
+        applyChartTheme();
+    }
+    if (localStorage.getItem('shinka-theme') === 'dark') {
+        document.body.classList.add('dark');
+        document.getElementById('theme-toggle').textContent = '☀️';
+    }
     </script>
 </body>
 </html>

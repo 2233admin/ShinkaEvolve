@@ -138,5 +138,7 @@
   "ens_posterior": "Posterior",
   "ens_no_data": "No model posteriors data found.",
   "ens_total_cost": "Total Cost",
-  "ens_avg_posterior": "Avg Posterior"
+  "ens_avg_posterior": "Avg Posterior",
+  "ens_viz_lines": "Lines",
+  "ens_viz_stacked": "Stacked Area"
 }

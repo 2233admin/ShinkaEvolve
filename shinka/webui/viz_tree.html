@@ -1629,8 +1629,20 @@
             font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
             color: #666; margin: 20px 0 10px 0; padding-bottom: 6px;
             border-bottom: 1px solid rgba(0,0,0,0.06);
+            display: flex; align-items: center; justify-content: space-between;
         }
         .ens-section-title:first-child { margin-top: 0; }
+        .ens-viz-toggle { display: flex; gap: 4px; }
+        .ens-viz-btn {
+            font-size: 11px; padding: 2px 10px; border-radius: 99px; cursor: pointer;
+            border: 1px solid #ddd; background: #f8f9fa; color: #666;
+            font-family: inherit; transition: all 0.15s;
+        }
+        .ens-viz-btn:hover { border-color: #4285F4; color: #4285F4; }
+        .ens-viz-btn.active {
+            background: linear-gradient(135deg, #4285F4, #8A60F5); color: #fff;
+            border-color: transparent;
+        }
 
         /* Model overview card grid */
         .ens-card-grid {
@@ -1878,6 +1890,8 @@
         body.dark .path-section-title { color: #9AA0A6; }
         /* Ensembling dark mode */
         body.dark .ens-section-title { color: #9AA0A6; border-bottom-color: rgba(255,255,255,0.06); }
+        body.dark .ens-viz-btn { background: #242424; color: #9AA0A6; border-color: #333; }
+        body.dark .ens-viz-btn:hover { border-color: #4285F4; color: #4285F4; }
         body.dark .ens-card { background: #242424; border-color: #333; }
         body.dark .ens-card:hover { border-color: #4285F4; }
         body.dark .ens-card.active { border-color: #8A60F5; }
@@ -11485,9 +11499,18 @@ console.error("[DEBUG] Error in processData:", error);
                     <div class="ens-section-title" data-i18n="ens_model_overview">${t('ens_model_overview')}</div>
                     <div id="ens-card-grid" class="ens-card-grid"></div>
 
-                    <div class="ens-section-title" data-i18n="ens_posterior_curves">${t('ens_posterior_curves')}</div>
+                    <div class="ens-section-title">
+                        <span data-i18n="ens_posterior_curves">${t('ens_posterior_curves')}</span>
+                        <div class="ens-viz-toggle">
+                            <button class="ens-viz-btn active" data-viz="lines">${t('ens_viz_lines')}</button>
+                            <button class="ens-viz-btn" data-viz="stacked">${t('ens_viz_stacked')}</button>
+                        </div>
+                    </div>
                     <div id="ens-curve-wrap" class="ens-curve-container">
                         <div id="ens-tooltip" class="ens-tooltip"></div>
+                    </div>
+                    <div id="ens-stacked-wrap" class="ens-curve-container" style="display:none">
+                        <div id="ens-stacked-tooltip" class="ens-tooltip"></div>
                     </div>
 
                     <div class="ens-section-title" data-i18n="ens_model_comparison">${t('ens_model_comparison')}</div>
@@ -11639,6 +11662,85 @@ console.error("[DEBUG] Error in processData:", error);
                     .on("mouseout", function() {
                         tooltip.style.opacity = "0";
                     });
+            });
+
+            // ── Section 2b: Stacked area chart ──────────────────────────────────
+            const stackedWrap = document.getElementById("ens-stacked-wrap");
+            const stackedTooltip = document.getElementById("ens-stacked-tooltip");
+
+            // Build stacked data: for each generation, normalize posteriors to sum=1
+            const stackGens = generations.slice();
+            const stackRows = stackGens.map(gen => {
+                const row = { generation: gen };
+                const genPts = chartData.filter(d => d.generation === gen);
+                const total = genPts.reduce((s, d) => s + d.posterior, 0) || 1;
+                models.forEach(m => {
+                    const pt = genPts.find(d => d.model === m);
+                    row[m] = pt ? pt.posterior / total : 0;
+                });
+                return row;
+            });
+
+            const stackSvg = d3.select("#ens-stacked-wrap").append("svg")
+                .attr("class", "ens-curve-svg")
+                .attr("width", svgW).attr("height", svgH)
+                .attr("viewBox", `0 0 ${svgW} ${svgH}`);
+
+            const stackG = stackSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const stackX = d3.scaleLinear().domain(d3.extent(stackGens)).range([0, innerW]);
+            const stackY = d3.scaleLinear().domain([0, 1]).range([innerH, 0]);
+
+            const stackedTicks = getReducedTicks(stackGens);
+            stackG.append("g").attr("transform", `translate(0,${innerH})`).call(d3.axisBottom(stackX).tickValues(stackedTicks).tickFormat(d3.format("d")));
+            stackG.append("g").call(d3.axisLeft(stackY).ticks(5).tickFormat(d => (d * 100) + "%"));
+
+            const stack = d3.stack().keys(models).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
+            const series = stack(stackRows);
+
+            const area = d3.area()
+                .x(d => stackX(d.data.generation))
+                .y0(d => stackY(d[0]))
+                .y1(d => stackY(d[1]))
+                .curve(d3.curveMonotoneX);
+
+            stackG.selectAll(".ens-stacked-layer")
+                .data(series)
+                .enter().append("path")
+                .attr("class", "ens-stacked-layer")
+                .attr("d", area)
+                .attr("fill", d => colorScale(d.key))
+                .attr("fill-opacity", 0.75)
+                .attr("stroke", d => colorScale(d.key))
+                .attr("stroke-width", 0.5)
+                .on("mouseover", function(event, d) {
+                    d3.select(this).attr("fill-opacity", 0.95);
+                    stackedTooltip.style.opacity = "1";
+                    // Find closest generation
+                    const rect = stackedWrap.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left - margin.left;
+                    const gen = Math.round(stackX.invert(mouseX));
+                    const row = stackRows.find(r => r.generation === gen) || {};
+                    const pct = ((row[d.key] || 0) * 100).toFixed(1);
+                    stackedTooltip.innerHTML = `<b>${escapeHtml(shortName(d.key))}</b><br>Gen ${gen}: ${pct}%`;
+                })
+                .on("mousemove", function(event) {
+                    const rect = stackedWrap.getBoundingClientRect();
+                    stackedTooltip.style.left = (event.clientX - rect.left + 10) + "px";
+                    stackedTooltip.style.top = (event.clientY - rect.top - 30) + "px";
+                })
+                .on("mouseout", function() {
+                    d3.select(this).attr("fill-opacity", 0.75);
+                    stackedTooltip.style.opacity = "0";
+                });
+
+            // ── Toggle logic ─────────────────────────────────────────────────────
+            container.selectAll(".ens-viz-btn").on("click", function() {
+                const mode = d3.select(this).attr("data-viz");
+                container.selectAll(".ens-viz-btn").classed("active", false);
+                d3.select(this).classed("active", true);
+                document.getElementById("ens-curve-wrap").style.display = mode === "lines" ? "" : "none";
+                document.getElementById("ens-stacked-wrap").style.display = mode === "stacked" ? "" : "none";
             });
 
             // ── Section 3: Comparison table ──────────────────────────────────────

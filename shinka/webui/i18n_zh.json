@@ -138,5 +138,7 @@
   "ens_posterior": "后验",
   "ens_no_data": "未找到模型后验数据。",
   "ens_total_cost": "总成本",
-  "ens_avg_posterior": "平均后验"
+  "ens_avg_posterior": "平均后验",
+  "ens_viz_lines": "折线",
+  "ens_viz_stacked": "堆叠面积"
 }
