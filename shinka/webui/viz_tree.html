@@ -1644,6 +1644,21 @@
         body.dark .main-svg, body.dark .bg { background: #1A1A1A !important; fill: #1A1A1A !important; }
         body.dark .js-plotly-plot .plotly .main-svg { background: #1A1A1A !important; }
         body.dark .meta-sub-tab[style*="background-color: #f8f9fa"] { background-color: #242424 !important; }
+        body.dark #tree-legend {
+            background-color: rgba(26, 26, 26, 0.95) !important;
+            border-color: rgba(255,255,255,0.08) !important;
+            color: #E8EAED !important;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5) !important;
+        }
+        body.dark #tree-legend h5, body.dark #tree-legend span,
+        body.dark #tree-legend div, body.dark #tree-legend label {
+            color: #E8EAED !important;
+        }
+        /* Catch rgba(248,...) variants too */
+        body.dark [style*="background-color: rgba(248"] {
+            background-color: rgba(26, 26, 26, 0.95) !important;
+            color: #E8EAED !important;
+        }
     </style>
 </head>
 <body>
