@@ -129,5 +129,14 @@
   "path_empty": "最佳路径为空。",
   "path_show_diff": "展开 diff",
   "path_hide_diff": "收起 diff",
-  "path_no_diff": "（无 diff 数据）"
+  "path_no_diff": "（无 diff 数据）",
+  "ens_model_overview": "模型概览",
+  "ens_posterior_curves": "后验概率变化",
+  "ens_model_comparison": "模型对比",
+  "ens_programs": "程序数",
+  "ens_success_rate": "成功率",
+  "ens_posterior": "后验",
+  "ens_no_data": "未找到模型后验数据。",
+  "ens_total_cost": "总成本",
+  "ens_avg_posterior": "平均后验"
 }

@@ -129,5 +129,14 @@
   "path_empty": "Best path is empty.",
   "path_show_diff": "Show diff",
   "path_hide_diff": "Hide diff",
-  "path_no_diff": "(no diff available)"
+  "path_no_diff": "(no diff available)",
+  "ens_model_overview": "Model Overview",
+  "ens_posterior_curves": "Posterior Probability Curves",
+  "ens_model_comparison": "Model Comparison",
+  "ens_programs": "Programs",
+  "ens_success_rate": "Success Rate",
+  "ens_posterior": "Posterior",
+  "ens_no_data": "No model posteriors data found.",
+  "ens_total_cost": "Total Cost",
+  "ens_avg_posterior": "Avg Posterior"
 }
