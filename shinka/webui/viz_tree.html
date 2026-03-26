@@ -1666,10 +1666,11 @@
         <div id="tree-panel" style="position: relative;">
             <div class="panel-header">
                 <a href="/" class="dashboard-btn" title="Back to Dashboard">
-                    ← Dashboard
+                    ← <span data-i18n="dashboard">Dashboard</span>
                 </a>
-                <h2 class="panel-title"><span class="highlight">🎏 ShinkaEvolve</span>: Program Evolution 🎏</h2>
+                <h2 class="panel-title"><span class="highlight">🎏 ShinkaEvolve</span>: <span data-i18n="program_evolution">Program Evolution</span> 🎏</h2>
                 <div class="header-buttons">
+                    <button id="lang-toggle" title="切换语言 / Switch Language" onclick="toggleLang()" style="font-size:12px;padding:4px 8px;border-radius:4px;cursor:pointer;margin-left:5px;">EN/中</button>
                     <button id="theme-toggle" title="Toggle dark/light mode" onclick="toggleTheme()">🌙</button>
                     <button id="reload-data" title="Reload current data">📊</button>
                     <button id="auto-refresh-toggle" title="Toggle auto-refresh (every 3 seconds)">⏱️</button>
@@ -1685,17 +1686,15 @@
                 <div id="file-list"></div>
             </div>
             <div id="left-tabs">
-                <div class="left-tab active" data-tab="tree-view">Tree</div>
-                <div class="left-tab" data-tab="meta-prompt-view">PromptEvo</div>
-                <div class="left-tab" data-tab="table-view">Programs</div>
-                <div class="left-tab" data-tab="metrics-view">Metrics</div>
-                <div class="left-tab" 
-                data-tab="embeddings-view">Embed</div>
-                <div class="left-tab" data-tab="clusters-view">Clusters</div>
-                <div class="left-tab"
-                data-tab="islands-view">Islands</div>
-                <div class="left-tab" data-tab="model-posteriors-view">Ensembling</div>
-                <div class="left-tab" data-tab="best-path-view">Path</div>
+                <div class="left-tab active" data-tab="tree-view" data-i18n="tree">Tree</div>
+                <div class="left-tab" data-tab="meta-prompt-view" data-i18n="prompt_evo">PromptEvo</div>
+                <div class="left-tab" data-tab="table-view" data-i18n="programs">Programs</div>
+                <div class="left-tab" data-tab="metrics-view" data-i18n="metrics">Metrics</div>
+                <div class="left-tab" data-tab="embeddings-view" data-i18n="embed">Embed</div>
+                <div class="left-tab" data-tab="clusters-view" data-i18n="clusters">Clusters</div>
+                <div class="left-tab" data-tab="islands-view" data-i18n="islands">Islands</div>
+                <div class="left-tab" data-tab="model-posteriors-view" data-i18n="ensembling">Ensembling</div>
+                <div class="left-tab" data-tab="best-path-view" data-i18n="path">Path</div>
                 <div class="left-tab" data-tab="maps-view">MAPs</div>
 
             </div>
@@ -1958,15 +1957,15 @@
         <div id="details-panel">
             <div id="node-summary"></div>
             <div id="tabs">
-                <div class="tab active" data-tab="agent-info">Meta</div>
+                <div class="tab active" data-tab="agent-info" data-i18n="meta">Meta</div>
                 <div class="tab" data-tab="pareto-front">Pareto</div>
-                <div class="tab" data-tab="meta-analysis">Scratchpad</div>
-                <div class="tab" data-tab="node-details">Node</div>
-                <div class="tab" data-tab="agent-code">Code</div>
-                <div class="tab" data-tab="code-diff">Diff</div>
-                <div class="tab" data-tab="log-output">Evaluation</div>
+                <div class="tab" data-tab="meta-analysis" data-i18n="scratchpad">Scratchpad</div>
+                <div class="tab" data-tab="node-details" data-i18n="node">Node</div>
+                <div class="tab" data-tab="agent-code" data-i18n="code">Code</div>
+                <div class="tab" data-tab="code-diff" data-i18n="diff">Diff</div>
+                <div class="tab" data-tab="log-output" data-i18n="evaluation">Evaluation</div>
                 <div class="tab" data-tab="llm-result">LLM</div>
-                <div class="tab" data-tab="analysis">Analysis</div>
+                <div class="tab" data-tab="analysis" data-i18n="analysis">Analysis</div>
             </div>
             <div id="tab-content">
                 <div id="agent-info" class="content-section active">
@@ -16617,6 +16616,51 @@ console.error("[DEBUG] Error in processData:", error);
         document.body.classList.add('dark');
         document.getElementById('theme-toggle').textContent = '☀️';
     }
+
+    // ===== i18n System =====
+    var _i18n = { en: null, zh: null };
+    var _currentLang = localStorage.getItem('shinka-lang') || 'en';
+
+    async function loadI18n() {
+        try {
+            var [enResp, zhResp] = await Promise.all([
+                fetch('i18n_en.json'), fetch('i18n_zh.json')
+            ]);
+            _i18n.en = await enResp.json();
+            _i18n.zh = await zhResp.json();
+            if (_currentLang === 'zh') applyLang('zh');
+        } catch(e) { console.warn('i18n load failed:', e); }
+    }
+
+    function t(key) {
+        var dict = _i18n[_currentLang] || _i18n.en;
+        return (dict && dict[key]) || (_i18n.en && _i18n.en[key]) || key;
+    }
+
+    function applyLang(lang) {
+        _currentLang = lang;
+        var dict = _i18n[lang];
+        if (!dict) return;
+        // Replace data-i18n elements
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+            var key = el.getAttribute('data-i18n');
+            if (dict[key]) {
+                if (el.tagName === 'INPUT') el.placeholder = dict[key];
+                else el.textContent = dict[key];
+            }
+        });
+        // Update lang toggle button
+        var btn = document.getElementById('lang-toggle');
+        if (btn) btn.textContent = lang === 'en' ? 'EN/中' : '中/EN';
+    }
+
+    function toggleLang() {
+        var newLang = _currentLang === 'en' ? 'zh' : 'en';
+        localStorage.setItem('shinka-lang', newLang);
+        applyLang(newLang);
+    }
+
+    loadI18n();
     // Watch for D3 re-renders and fix SVG colors in dark mode
     function fixSvgForDark() {
         if (!document.body.classList.contains('dark')) return;
