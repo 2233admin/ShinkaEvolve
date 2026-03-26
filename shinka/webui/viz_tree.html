@@ -11329,7 +11329,10 @@ console.error("[DEBUG] Error in processData:", error);
                 return gens.filter((_, i) => i % step === 0 || i === gens.length - 1);
             };
 
-            const shortName = (m) => m.split('/').pop();
+            const shortName = (m) => {
+                const base = m.includes('@') ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            };
 
             // ── data extraction ──────────────────────────────────────────────────
             if (!data || data.length === 0) {
