@@ -120,5 +120,14 @@
   "chronological": "Chronological",
   "dark_mode": "Dark Mode",
   "light_mode": "Light Mode",
-  "language": "Language"
+  "language": "Language",
+  "path_evolution_path": "Evolution Path",
+  "path_score_progression": "Score Progression",
+  "path_diff_chain": "Code Diff Chain",
+  "path_no_data": "No data to visualize.",
+  "path_no_best": "Could not determine the best node.",
+  "path_empty": "Best path is empty.",
+  "path_show_diff": "Show diff",
+  "path_hide_diff": "Hide diff",
+  "path_no_diff": "(no diff available)"
 }

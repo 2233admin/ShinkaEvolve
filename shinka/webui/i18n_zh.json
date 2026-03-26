@@ -120,5 +120,14 @@
   "chronological": "时间顺序",
   "dark_mode": "暗色模式",
   "light_mode": "亮色模式",
-  "language": "语言"
+  "language": "语言",
+  "path_evolution_path": "进化路径",
+  "path_score_progression": "得分趋势",
+  "path_diff_chain": "代码变更链",
+  "path_no_data": "暂无数据。",
+  "path_no_best": "无法确定最佳节点。",
+  "path_empty": "最佳路径为空。",
+  "path_show_diff": "展开 diff",
+  "path_hide_diff": "收起 diff",
+  "path_no_diff": "（无 diff 数据）"
 }

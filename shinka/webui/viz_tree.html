@@ -1523,6 +1523,106 @@
             text-align: center;
         }
 
+        /* ===== Path Tab Three-in-One ===== */
+        .path-three-in-one { padding: 20px; }
+        .path-section-title {
+            font-size: 12px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #666; margin: 20px 0 10px 0; padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .path-section-title:first-child { margin-top: 0; }
+
+        /* Flowchart */
+        .path-flowchart {
+            display: flex; align-items: center; gap: 0; overflow-x: auto;
+            padding: 20px 10px; scrollbar-width: thin;
+        }
+        .path-flow-node {
+            min-width: 110px; padding: 10px 14px; background: #f8f9fa; border: 2px solid #ddd;
+            border-radius: 10px; text-align: center; flex-shrink: 0; cursor: pointer;
+            transition: all 0.2s;
+        }
+        .path-flow-node:hover { border-color: #3498db; box-shadow: 0 0 12px rgba(52,152,219,0.2); }
+        .path-flow-node.active { border-color: #e58e26; box-shadow: 0 0 8px rgba(229,130,38,0.4); }
+        .path-flow-node.best { border-color: #ff8c00; background: rgba(255,140,0,0.08); }
+        .path-flow-node .gen { font-size: 11px; color: #999; }
+        .path-flow-node .name { font-size: 12px; font-weight: 500; margin: 3px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px; }
+        .path-flow-node .score {
+            font-size: 16px; font-weight: 700;
+            background: linear-gradient(135deg, #4285F4, #8A60F5);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        }
+        .path-flow-node .type {
+            font-size: 10px; padding: 1px 6px; background: #eee; border-radius: 99px;
+            color: #888; display: inline-block; margin-top: 3px;
+        }
+        .path-flow-arrow {
+            width: 36px; height: 2px; background: linear-gradient(90deg, #4285F4, #8A60F5);
+            position: relative; flex-shrink: 0;
+        }
+        .path-flow-arrow::after {
+            content: '▶'; position: absolute; right: -4px; top: -8px; font-size: 11px; color: #8A60F5;
+        }
+        .path-flow-delta {
+            position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+            font-size: 10px; padding: 1px 5px; border-radius: 3px; white-space: nowrap;
+        }
+        .path-flow-delta.positive { color: #34A853; background: rgba(52,168,83,0.12); }
+        .path-flow-delta.negative { color: #EA4335; background: rgba(234,67,53,0.12); }
+
+        /* Score Curve */
+        .path-curve-container { position: relative; margin: 10px 0; }
+        .path-curve-svg { width: 100%; height: 180px; }
+        .path-curve-line { fill: none; stroke: url(#pathCurveGrad); stroke-width: 2.5; }
+        .path-curve-area { fill: url(#pathAreaGrad); }
+        .path-curve-dot {
+            fill: #8A60F5; stroke: #fff; stroke-width: 2; cursor: pointer; transition: r 0.2s;
+        }
+        .path-curve-dot:hover { r: 7; }
+        .path-curve-dot.active { fill: #e58e26; stroke: #fff; r: 7; }
+        .path-curve-label { font-size: 11px; fill: #999; }
+        .path-curve-value { font-size: 11px; fill: #333; font-weight: 500; }
+        .path-curve-grid { stroke: rgba(0,0,0,0.05); stroke-width: 1; }
+        .path-curve-axis { stroke: rgba(0,0,0,0.12); stroke-width: 1; }
+
+        /* Diff Chain */
+        .path-diff-chain { display: flex; flex-direction: column; gap: 0; }
+        .path-diff-step { display: flex; gap: 14px; position: relative; }
+        .path-diff-step::before {
+            content: ''; position: absolute; left: 15px; top: 32px; bottom: -1px;
+            width: 2px; background: linear-gradient(180deg, #4285F4, #8A60F5);
+        }
+        .path-diff-step:last-child::before { display: none; }
+        .path-diff-dot {
+            width: 32px; height: 32px; border-radius: 50%; background: #f8f9fa;
+            border: 2px solid #4285F4; display: flex; align-items: center; justify-content: center;
+            font-size: 12px; font-weight: 700; flex-shrink: 0; z-index: 1; cursor: pointer;
+        }
+        .path-diff-dot.init { border-color: #999; }
+        .path-diff-dot.active { border-color: #e58e26; background: rgba(229,130,38,0.1); }
+        .path-diff-content { flex: 1; padding-bottom: 16px; }
+        .path-diff-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+        .path-diff-header .step-name { font-weight: 500; font-size: 13px; }
+        .path-diff-header .step-score { color: #4285F4; font-family: 'Roboto Mono', monospace; font-size: 13px; }
+        .path-diff-header .step-delta { font-size: 11px; padding: 1px 6px; border-radius: 4px; }
+        .path-diff-header .step-delta.up { color: #34A853; background: rgba(52,168,83,0.1); }
+        .path-diff-header .step-delta.down { color: #EA4335; background: rgba(234,67,53,0.1); }
+        .path-diff-header .step-type { font-size: 11px; color: #999; }
+        .path-diff-code {
+            background: #f6f8fa; border: 1px solid #e0e0e0; border-radius: 6px;
+            padding: 10px; font-family: 'Roboto Mono', monospace; font-size: 12px;
+            line-height: 1.5; max-height: 150px; overflow-y: auto; white-space: pre-wrap; word-break: break-all;
+        }
+        .path-diff-add { color: #34A853; }
+        .path-diff-del { color: #EA4335; }
+        .path-diff-ctx { color: #888; }
+        .path-diff-summary { font-size: 12px; color: #999; margin-top: 4px; }
+        .path-diff-toggle {
+            font-size: 11px; color: #4285F4; cursor: pointer; margin-top: 4px;
+            user-select: none;
+        }
+        .path-diff-toggle:hover { text-decoration: underline; }
+
         /* Google Sans font override */
         body, button, input, select, textarea, .left-tab, .right-tab,
         .panel-header, .panel-title, h1, h2, h3, h4, h5, h6, th, td, label, span, p, a, div {
@@ -1655,6 +1755,43 @@
             color: #E8EAED !important;
         }
         /* Catch rgba(248,...) variants too */
+        /* Best Path timeline dark mode */
+        body.dark .best-path-timeline::after { background: linear-gradient(180deg, #4285F4, #8A60F5); }
+        body.dark .timeline-item::after { background-color: #1A1A1A; border-color: #8A60F5; }
+        body.dark .timeline-content { background-color: #242424; border-color: rgba(255,255,255,0.08); }
+        body.dark .timeline-content h4 { color: #E8EAED; }
+        body.dark .timeline-item.selected .timeline-content { border-color: #8A60F5; box-shadow: 0 0 8px rgba(138,96,245,0.4); }
+        /* MAPs dark mode */
+        body.dark .maps-cell { stroke: #333; }
+        body.dark .maps-cell:hover { stroke: #8A60F5; }
+        body.dark .maps-cell.empty { fill: #242424; }
+        body.dark .maps-cell.empty:hover { stroke: #333; }
+        body.dark #maps-controls { background-color: #1A1A1A !important; border-color: rgba(255,255,255,0.08) !important; }
+        body.dark #maps-controls select { background: #242424; color: #E8EAED; border-color: rgba(255,255,255,0.08); }
+        body.dark #maps-controls label { color: #9AA0A6; }
+        /* Tree controls overlay dark mode */
+        body.dark #tree-controls { background-color: rgba(26,26,26,0.95) !important; border-color: rgba(255,255,255,0.08) !important; }
+        body.dark #tree-controls label, body.dark #tree-controls span { color: #E8EAED; }
+        /* Flowchart path dark mode (three-in-one) */
+        body.dark .path-flowchart { scrollbar-color: #333 #0D0D0D; }
+        body.dark .path-flow-node { background: #242424; border-color: #333; }
+        body.dark .path-flow-node:hover { border-color: #8A60F5; box-shadow: 0 0 15px rgba(138,96,245,0.3); }
+        body.dark .path-flow-node.best { border-color: #4285F4; background: rgba(66,133,244,0.15); }
+        body.dark .path-flow-node .gen { color: #9AA0A6; }
+        body.dark .path-flow-node .type { background: #333; color: #9AA0A6; }
+        body.dark .path-curve-dot { stroke: #1A1A1A; }
+        body.dark .path-curve-dot.active { stroke: #1A1A1A; }
+        body.dark .path-curve-label { fill: #9AA0A6; }
+        body.dark .path-curve-value { fill: #E8EAED; }
+        body.dark .path-curve-grid { stroke: rgba(255,255,255,0.05); }
+        body.dark .path-curve-axis { stroke: rgba(255,255,255,0.15); }
+        body.dark .path-diff-dot { background: #242424; }
+        body.dark .path-diff-dot.init { border-color: #9AA0A6; }
+        body.dark .path-diff-code { background: #0D0D0D; border-color: rgba(255,255,255,0.08); }
+        body.dark .path-diff-summary { color: #9AA0A6; }
+        body.dark .path-diff-step::before { background: linear-gradient(180deg, #4285F4, #8A60F5); }
+        body.dark .path-section-title { color: #9AA0A6; }
+
         body.dark [style*="background-color: rgba(248"] {
             background-color: rgba(26, 26, 26, 0.95) !important;
             color: #E8EAED !important;
@@ -10396,81 +10533,243 @@ console.error("[DEBUG] Error in processData:", error);
         }
 
         function createBestPathVisualization(data) {
-            console.log("[DEBUG] Creating best path visualization");
-            
-            // Check if the best path tab is visible
+            console.log("[DEBUG] Creating best path visualization (three-in-one)");
+
             const bestPathView = document.getElementById('best-path-view');
-            if (!bestPathView || !bestPathView.classList.contains('active')) {
-                console.log("[DEBUG] Best path view not active, skipping visualization creation");
-                return;
-            }
+            if (!bestPathView || !bestPathView.classList.contains('active')) return;
 
             const container = d3.select("#best-path-container");
-            container.html(""); // Clear previous content
+            container.html("");
 
             if (!data || data.length === 0) {
-                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No data to visualize.");
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_no_data'));
                 return;
             }
 
+            // Build best path
             const correctNodes = data.filter(d => d.correct && d.combined_score !== null);
             let bestNode;
             if (correctNodes.length > 0) {
-                bestNode = correctNodes.reduce((best, current) => (current.combined_score > best.combined_score) ? current : best);
+                bestNode = correctNodes.reduce((a, b) => b.combined_score > a.combined_score ? b : a);
             } else {
-                bestNode = data.reduce((best, current) => {
-                    const currentScore = current.combined_score ? current.combined_score : -Infinity;
-                    const bestScore = best.combined_score ? best.combined_score : -Infinity;
-                    return (currentScore > bestScore) ? current : best;
+                bestNode = data.reduce((a, b) => {
+                    return (b.combined_score || -Infinity) > (a.combined_score || -Infinity) ? b : a;
                 }, { combined_score: -Infinity });
             }
-            
             if (!bestNode || !bestNode.id) {
-                 container.append("p").style('text-align', 'center').style('margin-top', '50px').text("Could not determine the best node.");
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_no_best'));
                 return;
             }
 
-            const nodeMap = new Map(data.map(node => [node.id, node]));
+            const nodeMap = new Map(data.map(n => [n.id, n]));
             const path = [];
-            let currentNode = bestNode;
-
-            while (currentNode) {
-                path.unshift(currentNode);
-                currentNode = nodeMap.get(currentNode.parent_id);
-            }
-
+            let cur = bestNode;
+            while (cur) { path.unshift(cur); cur = nodeMap.get(cur.parent_id); }
             if (path.length === 0) {
-                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("Best path is empty or could not be constructed.");
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_empty'));
                 return;
             }
 
-            const timeline = container.append("div").attr("class", "best-path-timeline");
-
-            const items = timeline.selectAll(".timeline-item")
-                .data(path, d => d.id)
-                .enter()
-                .append("div")
-                .attr("class", "timeline-item")
-                .attr("data-node-id", d => d.id)
-                .style("cursor", "pointer")
-                .on('click', (event, d) => {
-                    selectNodeById(d.id, false, false);
+            // Track active selection
+            let activeIdx = null;
+            function setActive(idx) {
+                activeIdx = idx;
+                // Update flowchart
+                wrapper.querySelectorAll('.path-flow-node').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
                 });
-            
-            items.append("div")
-                .attr("class", "timeline-content")
-                .html(d => {
-                        const description = d.metadata.patch_description ? `<p><strong>Description:</strong> ${d.metadata.patch_description}</p>` : '';
-                        return `
-                        <h4>Gen ${d.generation}: <span style="font-weight: normal;">${d.metadata.patch_name || 'unnamed'}</span></h4>
-                        <p><strong>ID:</strong> <a href="#" onclick="event.preventDefault(); event.stopPropagation(); selectNodeById('${d.id}', false, false);">${d.id}</a></p>
-                        <p><strong>Type:</strong> ${d.metadata.patch_type || 'N/A'}</p>
-                        <p><strong>Score:</strong> ${formatScore(d.combined_score)}</p>
-                        ${description}
-                        `;
+                // Update curve dots
+                wrapper.querySelectorAll('.path-curve-dot').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
                 });
-                
+                // Update diff dots
+                wrapper.querySelectorAll('.path-diff-dot').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
+                });
+                // Select in tree
+                selectNodeById(path[idx].id, false, false);
+            }
 
+            const wrapper = container.append("div").attr("class", "path-three-in-one").node();
+
+            // ===== SECTION 1: Flowchart =====
+            const flowTitle = document.createElement('div');
+            flowTitle.className = 'path-section-title';
+            flowTitle.textContent = '📐 ' + t('path_evolution_path');
+            wrapper.appendChild(flowTitle);
+
+            const flowchart = document.createElement('div');
+            flowchart.className = 'path-flowchart';
+            path.forEach((node, i) => {
+                if (i > 0) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'path-flow-arrow';
+                    const delta = (node.combined_score || 0) - (path[i-1].combined_score || 0);
+                    if (delta !== 0) {
+                        const deltaEl = document.createElement('div');
+                        deltaEl.className = 'path-flow-delta ' + (delta >= 0 ? 'positive' : 'negative');
+                        deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(3);
+                        arrow.appendChild(deltaEl);
+                    }
+                    flowchart.appendChild(arrow);
+                }
+                const el = document.createElement('div');
+                el.className = 'path-flow-node' + (i === path.length - 1 ? ' best' : '');
+                el.innerHTML = `
+                    <div class="gen">Gen ${node.generation}${i === path.length - 1 ? ' ★' : ''}</div>
+                    <div class="name" title="${node.metadata.patch_name || 'initial'}">${node.metadata.patch_name || 'initial'}</div>
+                    <div class="score">${formatScore(node.combined_score)}</div>
+                    <div class="type">${node.metadata.patch_type || 'init'}</div>
+                `;
+                el.addEventListener('click', () => setActive(i));
+                flowchart.appendChild(el);
+            });
+            wrapper.appendChild(flowchart);
+
+            // ===== SECTION 2: Score Curve =====
+            const curveTitle = document.createElement('div');
+            curveTitle.className = 'path-section-title';
+            curveTitle.textContent = '📈 ' + t('path_score_progression');
+            wrapper.appendChild(curveTitle);
+
+            const curveDiv = document.createElement('div');
+            curveDiv.className = 'path-curve-container';
+            const scores = path.map(n => n.combined_score || 0);
+            const minScore = Math.min(...scores);
+            const maxScore = Math.max(...scores);
+            const scoreRange = maxScore - minScore || 0.1;
+            const padTop = 35, padBottom = 25, padLeft = 55, padRight = 20;
+            const svgW = 600, svgH = 180;
+            const plotW = svgW - padLeft - padRight;
+            const plotH = svgH - padTop - padBottom;
+
+            function xPos(i) { return padLeft + (path.length > 1 ? (i / (path.length - 1)) * plotW : plotW / 2); }
+            function yPos(s) { return padTop + plotH - ((s - minScore) / scoreRange) * plotH; }
+
+            let svgParts = `<svg class="path-curve-svg" viewBox="0 0 ${svgW} ${svgH}">
+                <defs>
+                    <linearGradient id="pathCurveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#4285F4"/>
+                        <stop offset="100%" style="stop-color:#8A60F5"/>
+                    </linearGradient>
+                    <linearGradient id="pathAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:rgba(138,96,245,0.2)"/>
+                        <stop offset="100%" style="stop-color:rgba(138,96,245,0)"/>
+                    </linearGradient>
+                </defs>
+                <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${svgH - padBottom}" class="path-curve-axis"/>
+                <line x1="${padLeft}" y1="${svgH - padBottom}" x2="${svgW - padRight}" y2="${svgH - padBottom}" class="path-curve-axis"/>`;
+
+            // Y-axis labels (3 ticks)
+            [0, 0.5, 1].forEach(frac => {
+                const val = minScore + frac * scoreRange;
+                const y = yPos(val);
+                svgParts += `<line x1="${padLeft}" y1="${y}" x2="${svgW - padRight}" y2="${y}" class="path-curve-grid" stroke-dasharray="4"/>`;
+                svgParts += `<text x="${padLeft - 6}" y="${y + 3}" class="path-curve-label" text-anchor="end">${val.toFixed(2)}</text>`;
+            });
+
+            // Area
+            const areaPoints = path.map((_, i) => `${xPos(i)},${yPos(scores[i])}`).join(' ');
+            svgParts += `<polygon class="path-curve-area" points="${xPos(0)},${svgH - padBottom} ${areaPoints} ${xPos(path.length - 1)},${svgH - padBottom}"/>`;
+
+            // Line
+            const linePoints = path.map((_, i) => `${xPos(i)},${yPos(scores[i])}`).join(' ');
+            svgParts += `<polyline class="path-curve-line" points="${linePoints}"/>`;
+
+            // Dots + labels
+            path.forEach((node, i) => {
+                const cx = xPos(i), cy = yPos(scores[i]);
+                svgParts += `<circle cx="${cx}" cy="${cy}" r="5" class="path-curve-dot" data-idx="${i}"/>`;
+                svgParts += `<text x="${cx}" y="${svgH - padBottom + 14}" class="path-curve-label" text-anchor="middle">G${node.generation}</text>`;
+                svgParts += `<text x="${cx}" y="${cy - 10}" class="path-curve-value" text-anchor="middle">${scores[i].toFixed(3)}${i === path.length - 1 ? '★' : ''}</text>`;
+            });
+
+            svgParts += '</svg>';
+            curveDiv.innerHTML = svgParts;
+            wrapper.appendChild(curveDiv);
+
+            // Click on SVG dots
+            curveDiv.querySelectorAll('.path-curve-dot').forEach(dot => {
+                dot.addEventListener('click', () => setActive(parseInt(dot.dataset.idx)));
+            });
+
+            // ===== SECTION 3: Diff Chain =====
+            const diffTitle = document.createElement('div');
+            diffTitle.className = 'path-section-title';
+            diffTitle.textContent = '🔗 ' + t('path_diff_chain');
+            wrapper.appendChild(diffTitle);
+
+            const diffChain = document.createElement('div');
+            diffChain.className = 'path-diff-chain';
+
+            path.forEach((node, i) => {
+                const step = document.createElement('div');
+                step.className = 'path-diff-step';
+
+                const dot = document.createElement('div');
+                dot.className = 'path-diff-dot' + (i === 0 ? ' init' : '');
+                dot.textContent = i === path.length - 1 ? `${node.generation}★` : node.generation;
+                dot.addEventListener('click', () => setActive(i));
+                step.appendChild(dot);
+
+                const content = document.createElement('div');
+                content.className = 'path-diff-content';
+
+                // Header
+                const header = document.createElement('div');
+                header.className = 'path-diff-header';
+                header.innerHTML = `<span class="step-name">${node.metadata.patch_name || 'initial'}</span>
+                    <span class="step-score">${formatScore(node.combined_score)}</span>`;
+                if (i > 0) {
+                    const delta = (node.combined_score || 0) - (path[i-1].combined_score || 0);
+                    header.innerHTML += `<span class="step-delta ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${delta >= 0 ? '+' : ''}${delta.toFixed(3)}</span>`;
+                }
+                header.innerHTML += `<span class="step-type">${node.metadata.patch_type || 'init'}</span>`;
+                content.appendChild(header);
+
+                // Diff code block (collapsed by default for non-first/non-last)
+                const codeBlock = document.createElement('div');
+                codeBlock.className = 'path-diff-code';
+                const diffText = node.metadata.diff || node.metadata.patch_diff || '';
+                if (diffText) {
+                    codeBlock.innerHTML = diffText.split('\n').map(line => {
+                        if (line.startsWith('+')) return `<span class="path-diff-add">${escapeHtml(line)}</span>`;
+                        if (line.startsWith('-')) return `<span class="path-diff-del">${escapeHtml(line)}</span>`;
+                        return `<span class="path-diff-ctx">${escapeHtml(line)}</span>`;
+                    }).join('\n');
+                } else {
+                    codeBlock.innerHTML = '<span class="path-diff-ctx">' + escapeHtml(t('path_no_diff')) + '</span>';
+                }
+
+                // Collapse middle items by default
+                if (i > 0 && i < path.length - 1 && path.length > 4) {
+                    codeBlock.style.display = 'none';
+                    const toggle = document.createElement('div');
+                    toggle.className = 'path-diff-toggle';
+                    toggle.textContent = '▸ ' + t('path_show_diff');
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const shown = codeBlock.style.display !== 'none';
+                        codeBlock.style.display = shown ? 'none' : 'block';
+                        toggle.textContent = shown ? '▸ ' + t('path_show_diff') : '▾ ' + t('path_hide_diff');
+                    });
+                    content.appendChild(toggle);
+                }
+                content.appendChild(codeBlock);
+
+                // Description summary
+                if (node.metadata.patch_description) {
+                    const summary = document.createElement('div');
+                    summary.className = 'path-diff-summary';
+                    summary.textContent = node.metadata.patch_description;
+                    content.appendChild(summary);
+                }
+
+                step.appendChild(content);
+                diffChain.appendChild(step);
+            });
+
+            wrapper.appendChild(diffChain);
         }
 
         // --- MAPs (MAP-Elites) Visualization ---
