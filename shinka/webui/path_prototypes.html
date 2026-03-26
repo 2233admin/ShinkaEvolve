@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Path Tab Prototypes</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+body { font-family: 'Google Sans', sans-serif; background: #0D0D0D; color: #E8EAED; margin: 0; padding: 20px; }
+h2 { color: #8A60F5; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 10px; }
+.section { margin: 30px 0; padding: 20px; background: #1A1A1A; border-radius: 12px; }
+
+/* ===== Prototype 1: Flowchart Path ===== */
+.flowchart { display: flex; align-items: center; gap: 0; overflow-x: auto; padding: 30px 10px; }
+.flow-node {
+    min-width: 120px; padding: 12px 16px; background: #242424; border: 2px solid #333;
+    border-radius: 12px; text-align: center; position: relative; flex-shrink: 0;
+    transition: all 0.3s;
+}
+.flow-node:hover { border-color: #8A60F5; box-shadow: 0 0 15px rgba(138,96,245,0.3); }
+.flow-node.best { border-color: #4285F4; background: rgba(66,133,244,0.15); }
+.flow-node .gen { font-size: 11px; color: #9AA0A6; }
+.flow-node .name { font-size: 13px; font-weight: 500; margin: 4px 0; }
+.flow-node .score { font-size: 18px; font-weight: 700; background: linear-gradient(135deg, #4285F4, #8A60F5); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+.flow-node .type { font-size: 10px; padding: 2px 6px; background: #333; border-radius: 99px; color: #9AA0A6; display: inline-block; margin-top: 4px; }
+.flow-arrow {
+    width: 40px; height: 2px; background: linear-gradient(90deg, #4285F4, #8A60F5);
+    position: relative; flex-shrink: 0;
+}
+.flow-arrow::after {
+    content: '▶'; position: absolute; right: -4px; top: -8px; font-size: 12px; color: #8A60F5;
+}
+.flow-delta {
+    position: absolute; top: -20px; left: 50%; transform: translateX(-50%);
+    font-size: 11px; padding: 2px 6px; border-radius: 4px; white-space: nowrap;
+}
+.flow-delta.positive { color: #34A853; background: rgba(52,168,83,0.15); }
+.flow-delta.negative { color: #EA4335; background: rgba(234,67,53,0.15); }
+
+/* ===== Prototype 2: Score Curve ===== */
+.curve-container { position: relative; }
+.curve-svg { width: 100%; height: 200px; }
+.curve-line { fill: none; stroke: url(#curveGrad); stroke-width: 2.5; }
+.curve-area { fill: url(#areaGrad); }
+.curve-dot { fill: #8A60F5; stroke: #0D0D0D; stroke-width: 2; cursor: pointer; transition: r 0.2s; }
+.curve-dot:hover { r: 7; }
+.curve-label { font-size: 11px; fill: #9AA0A6; }
+.curve-value { font-size: 12px; fill: #E8EAED; font-weight: 500; }
+.curve-grid { stroke: rgba(255,255,255,0.05); stroke-width: 1; }
+.curve-axis { stroke: rgba(255,255,255,0.15); stroke-width: 1; }
+
+/* ===== Prototype 3: Diff Chain ===== */
+.diff-chain { display: flex; flex-direction: column; gap: 0; }
+.diff-step { display: flex; gap: 16px; position: relative; }
+.diff-step::before {
+    content: ''; position: absolute; left: 15px; top: 32px; bottom: -1px;
+    width: 2px; background: linear-gradient(180deg, #4285F4, #8A60F5);
+}
+.diff-step:last-child::before { display: none; }
+.diff-dot {
+    width: 32px; height: 32px; border-radius: 50%; background: #242424;
+    border: 2px solid #4285F4; display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 700; flex-shrink: 0; z-index: 1;
+}
+.diff-dot.init { border-color: #9AA0A6; }
+.diff-content { flex: 1; padding-bottom: 20px; }
+.diff-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.diff-header .step-name { font-weight: 500; }
+.diff-header .step-score { color: #4285F4; font-family: 'Roboto Mono', monospace; }
+.diff-header .step-delta { font-size: 12px; padding: 1px 6px; border-radius: 4px; }
+.diff-header .step-delta.up { color: #34A853; background: rgba(52,168,83,0.1); }
+.diff-code { background: #0D0D0D; border: 1px solid rgba(255,255,255,0.08); border-radius: 8px; padding: 12px; font-family: 'Roboto Mono', monospace; font-size: 12px; line-height: 1.6; max-height: 120px; overflow-y: auto; }
+.diff-add { color: #34A853; }
+.diff-del { color: #EA4335; }
+.diff-ctx { color: #666; }
+.diff-summary { font-size: 12px; color: #9AA0A6; margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<h2>方案 1：流程图路径 (Flowchart)</h2>
+<div class="section">
+<p style="color:#9AA0A6;font-size:13px;margin-bottom:15px;">从初始程序到最优解的进化路径，每个节点可点击查看详情</p>
+<div class="flowchart">
+    <div class="flow-node">
+        <div class="gen">Gen 0</div>
+        <div class="name">initial_program</div>
+        <div class="score">0.7823</div>
+        <div class="type">init</div>
+    </div>
+    <div class="flow-arrow"><div class="flow-delta positive">+0.052</div></div>
+    <div class="flow-node">
+        <div class="gen">Gen 1</div>
+        <div class="name">optimize_loop</div>
+        <div class="score">0.8345</div>
+        <div class="type">diff</div>
+    </div>
+    <div class="flow-arrow"><div class="flow-delta positive">+0.089</div></div>
+    <div class="flow-node">
+        <div class="gen">Gen 3</div>
+        <div class="name">vectorize_calc</div>
+        <div class="score">0.9231</div>
+        <div class="type">full</div>
+    </div>
+    <div class="flow-arrow"><div class="flow-delta positive">+0.023</div></div>
+    <div class="flow-node">
+        <div class="gen">Gen 5</div>
+        <div class="name">cache_results</div>
+        <div class="score">0.9462</div>
+        <div class="type">diff</div>
+    </div>
+    <div class="flow-arrow"><div class="flow-delta positive">+0.014</div></div>
+    <div class="flow-node best">
+        <div class="gen">Gen 7 ★</div>
+        <div class="name">final_polish</div>
+        <div class="score">0.9598</div>
+        <div class="type">cross</div>
+    </div>
+</div>
+</div>
+
+<h2>方案 2：得分变化曲线 (Score Curve)</h2>
+<div class="section">
+<p style="color:#9AA0A6;font-size:13px;margin-bottom:15px;">进化路径上每一步的得分变化趋势，悬停查看详情</p>
+<div class="curve-container">
+<svg class="curve-svg" viewBox="0 0 600 200">
+    <defs>
+        <linearGradient id="curveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" style="stop-color:#4285F4"/>
+            <stop offset="100%" style="stop-color:#8A60F5"/>
+        </linearGradient>
+        <linearGradient id="areaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" style="stop-color:rgba(138,96,245,0.2)"/>
+            <stop offset="100%" style="stop-color:rgba(138,96,245,0)"/>
+        </linearGradient>
+    </defs>
+    <!-- Grid -->
+    <line x1="60" y1="30" x2="60" y2="170" class="curve-axis"/>
+    <line x1="60" y1="170" x2="570" y2="170" class="curve-axis"/>
+    <line x1="60" y1="100" x2="570" y2="100" class="curve-grid" stroke-dasharray="4"/>
+    <line x1="60" y1="65" x2="570" y2="65" class="curve-grid" stroke-dasharray="4"/>
+    <!-- Y labels -->
+    <text x="50" y="173" class="curve-label" text-anchor="end">0.7</text>
+    <text x="50" y="103" class="curve-label" text-anchor="end">0.85</text>
+    <text x="50" y="35" class="curve-label" text-anchor="end">1.0</text>
+    <!-- Area -->
+    <path class="curve-area" d="M80,150 L180,130 L300,80 L420,60 L540,45 L540,170 L80,170 Z"/>
+    <!-- Line -->
+    <path class="curve-line" d="M80,150 L180,130 L300,80 L420,60 L540,45"/>
+    <!-- Dots + labels -->
+    <circle cx="80" cy="150" r="5" class="curve-dot"/>
+    <text x="80" y="165" class="curve-label" text-anchor="middle">G0</text>
+    <text x="80" y="143" class="curve-value" text-anchor="middle">0.782</text>
+
+    <circle cx="180" cy="130" r="5" class="curve-dot"/>
+    <text x="180" y="165" class="curve-label" text-anchor="middle">G1</text>
+    <text x="180" y="123" class="curve-value" text-anchor="middle">0.835</text>
+
+    <circle cx="300" cy="80" r="5" class="curve-dot"/>
+    <text x="300" y="165" class="curve-label" text-anchor="middle">G3</text>
+    <text x="300" y="73" class="curve-value" text-anchor="middle">0.923</text>
+
+    <circle cx="420" cy="60" r="5" class="curve-dot"/>
+    <text x="420" y="165" class="curve-label" text-anchor="middle">G5</text>
+    <text x="420" y="53" class="curve-value" text-anchor="middle">0.946</text>
+
+    <circle cx="540" cy="45" r="5" class="curve-dot"/>
+    <text x="540" y="165" class="curve-label" text-anchor="middle">G7</text>
+    <text x="540" y="38" class="curve-value" text-anchor="middle">0.960★</text>
+</svg>
+</div>
+</div>
+
+<h2>方案 3：代码 Diff 链 (Diff Chain)</h2>
+<div class="section">
+<p style="color:#9AA0A6;font-size:13px;margin-bottom:15px;">每一步进化的代码变更，展示从初始到最优的具体改动</p>
+<div class="diff-chain">
+    <div class="diff-step">
+        <div class="diff-dot init">0</div>
+        <div class="diff-content">
+            <div class="diff-header">
+                <span class="step-name">initial_program</span>
+                <span class="step-score">0.7823</span>
+                <span style="color:#9AA0A6;font-size:12px;">init</span>
+            </div>
+            <div class="diff-code">
+<span class="diff-ctx">def solve(data):</span>
+<span class="diff-ctx">    result = []</span>
+<span class="diff-ctx">    for item in data:</span>
+<span class="diff-ctx">        result.append(process(item))</span>
+<span class="diff-ctx">    return result</span>
+            </div>
+        </div>
+    </div>
+    <div class="diff-step">
+        <div class="diff-dot">1</div>
+        <div class="diff-content">
+            <div class="diff-header">
+                <span class="step-name">optimize_loop</span>
+                <span class="step-score">0.8345</span>
+                <span class="step-delta up">▲ +0.052</span>
+                <span style="color:#9AA0A6;font-size:12px;">diff patch</span>
+            </div>
+            <div class="diff-code">
+<span class="diff-ctx"> def solve(data):</span>
+<span class="diff-del">-    result = []</span>
+<span class="diff-del">-    for item in data:</span>
+<span class="diff-del">-        result.append(process(item))</span>
+<span class="diff-add">+    result = [process(item) for item in data]</span>
+<span class="diff-ctx">     return result</span>
+            </div>
+            <div class="diff-summary">Changed 3 lines → 1 line (list comprehension)</div>
+        </div>
+    </div>
+    <div class="diff-step">
+        <div class="diff-dot">3</div>
+        <div class="diff-content">
+            <div class="diff-header">
+                <span class="step-name">vectorize_calc</span>
+                <span class="step-score">0.9231</span>
+                <span class="step-delta up">▲ +0.089</span>
+                <span style="color:#9AA0A6;font-size:12px;">full rewrite</span>
+            </div>
+            <div class="diff-code">
+<span class="diff-del">-def solve(data):</span>
+<span class="diff-del">-    result = [process(item) for item in data]</span>
+<span class="diff-del">-    return result</span>
+<span class="diff-add">+import numpy as np</span>
+<span class="diff-add">+def solve(data):</span>
+<span class="diff-add">+    arr = np.array(data)</span>
+<span class="diff-add">+    return np.vectorize(process)(arr).tolist()</span>
+            </div>
+            <div class="diff-summary">Full rewrite: numpy vectorization (+10.5% score)</div>
+        </div>
+    </div>
+    <div class="diff-step">
+        <div class="diff-dot" style="border-color:#8A60F5;">7★</div>
+        <div class="diff-content">
+            <div class="diff-header">
+                <span class="step-name">final_polish</span>
+                <span class="step-score" style="color:#8A60F5;">0.9598 ★</span>
+                <span class="step-delta up">▲ +0.014</span>
+                <span style="color:#9AA0A6;font-size:12px;">cross patch</span>
+            </div>
+            <div class="diff-code">
+<span class="diff-ctx"> import numpy as np</span>
+<span class="diff-ctx"> def solve(data):</span>
+<span class="diff-del">-    arr = np.array(data)</span>
+<span class="diff-del">-    return np.vectorize(process)(arr).tolist()</span>
+<span class="diff-add">+    arr = np.array(data, dtype=np.float32)</span>
+<span class="diff-add">+    result = np.empty_like(arr)</span>
+<span class="diff-add">+    np.vectorize(process, otypes=[np.float32])(arr, out=result)</span>
+<span class="diff-add">+    return result.tolist()</span>
+            </div>
+            <div class="diff-summary">Optimized dtype + pre-allocated output array</div>
+        </div>
+    </div>
+</div>
+</div>
+
+<h2 style="color:#4285F4;">💡 建议：三合一</h2>
+<div class="section" style="border: 1px solid rgba(66,133,244,0.3);">
+<p>最佳方案是三个组合在一起：顶部放流程图概览（方案1），中间放得分曲线（方案2），底部点击某个节点展开 diff（方案3）。</p>
+</div>
+
+</body>
+</html>
