@@ -1720,6 +1720,70 @@
             margin-right: 6px; flex-shrink: 0;
         }
 
+        /* ===== Battle Tab ===== */
+        .battle-section-title {
+            font-size: 12px; font-weight: 600;
+            color: #666; margin: 24px 0 12px 0; padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .battle-section-title:first-child { margin-top: 0; }
+        .battle-no-data {
+            text-align: center; padding: 40px; color: #999; font-size: 14px;
+        }
+
+        /* Box plot */
+        .battle-box { cursor: default; }
+        .battle-box-rect { fill: #D97706; opacity: 0.75; }
+        .battle-box-median { stroke: #fff; stroke-width: 2; }
+        .battle-box-whisker { stroke: #C2410C; stroke-width: 1.5; stroke-dasharray: none; }
+        .battle-box-cap { stroke: #C2410C; stroke-width: 1.5; }
+        .battle-box-outlier { fill: #C2410C; opacity: 0.6; }
+        .battle-axis text { font-size: 11px; fill: #555; }
+        .battle-axis line, .battle-axis path { stroke: rgba(0,0,0,0.12); }
+
+        /* Win rate matrix */
+        .battle-matrix-cell { stroke: none; cursor: pointer; transition: opacity 0.15s; }
+        .battle-matrix-cell:hover { opacity: 0.8; stroke: #333; stroke-width: 1; }
+        .battle-matrix-label { font-size: 11px; fill: #555; }
+        .battle-matrix-val { font-size: 10px; fill: #fff; text-anchor: middle; pointer-events: none; }
+        .battle-tooltip {
+            position: absolute; background: rgba(0,0,0,0.78); color: #fff;
+            border-radius: 6px; padding: 6px 10px; font-size: 11px; pointer-events: none;
+            white-space: nowrap; opacity: 0; transition: opacity 0.1s; z-index: 100;
+        }
+
+        /* Ranking table */
+        .battle-rank-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        .battle-rank-table th {
+            padding: 7px 10px; text-align: left; font-weight: 500;
+            background: #fef3c7; border-bottom: 2px solid #D97706; white-space: nowrap;
+            color: #92400E;
+        }
+        .battle-rank-table td { padding: 6px 10px; border-bottom: 1px solid rgba(0,0,0,0.05); }
+        .battle-rank-table tr:hover td { background: rgba(217,119,6,0.04); }
+        .battle-rank-num { text-align: right; font-family: 'Roboto Mono', monospace; }
+        .battle-rank-badge {
+            display: inline-block; width: 22px; height: 22px; border-radius: 50%;
+            text-align: center; line-height: 22px; font-size: 11px; font-weight: 700;
+            background: #D97706; color: #fff; margin-right: 4px; flex-shrink: 0;
+        }
+        .battle-rank-badge.r1 { background: #D97706; }
+        .battle-rank-badge.r2 { background: #9CA3AF; }
+        .battle-rank-badge.r3 { background: #B45309; }
+        .battle-model-cell { display: flex; align-items: center; gap: 6px; }
+        .battle-model-avatar {
+            width: 18px; height: 18px; border-radius: 50%; flex-shrink: 0; object-fit: cover;
+        }
+
+        /* Dark mode */
+        body.dark .battle-section-title { color: #9AA0A6; border-bottom-color: rgba(255,255,255,0.06); }
+        body.dark .battle-axis text { fill: #9AA0A6; }
+        body.dark .battle-axis line, body.dark .battle-axis path { stroke: rgba(255,255,255,0.12); }
+        body.dark .battle-matrix-label { fill: #9AA0A6; }
+        body.dark .battle-rank-table th { background: #2d1a00; color: #D97706; border-bottom-color: #D97706; }
+        body.dark .battle-rank-table td { border-bottom-color: rgba(255,255,255,0.04); }
+        body.dark .battle-rank-table tr:hover td { background: rgba(217,119,6,0.06); }
+
         /* Inter font override */
         body, button, input, select, textarea, .left-tab, .right-tab,
         .panel-header, .panel-title, h1, h2, h3, h4, h5, h6, th, td, label, span, p, a, div {
@@ -1909,10 +1973,176 @@
         body.dark .ens-table td { border-bottom-color: rgba(255,255,255,0.04); color: #E8EAED; }
         body.dark .ens-table tr.data-row:hover td { background: rgba(217,119,6,0.06); }
 
+        /* Cost tab */
+        .cost-overview-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 4px;
+        }
+        .cost-stat-card {
+            background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 16px;
+            padding: 14px 16px; transition: all 0.2s;
+        }
+        .cost-stat-card:hover { border-color: #D97706; box-shadow: 0 0 10px rgba(217,119,6,0.15); }
+        .cost-stat-label {
+            font-size: 11px; color: #888; font-weight: 500; margin-bottom: 4px;
+        }
+        .cost-stat-value {
+            font-size: 18px; font-weight: 700; color: #C2410C;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .cost-section-title {
+            font-size: 12px; font-weight: 600;
+            color: #666; margin: 20px 0 10px 0; padding-bottom: 6px;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .cost-section-title:first-child { margin-top: 0; }
+        .cost-chart-wrap { position: relative; margin: 4px 0 10px 0; }
+        .cost-bar-row {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px; font-size: 12px;
+        }
+        .cost-bar-label {
+            width: 130px; flex-shrink: 0; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; color: #555; display: flex; align-items: center; gap: 5px;
+        }
+        .cost-bar-track {
+            flex: 1; height: 10px; background: rgba(0,0,0,0.06); border-radius: 99px; overflow: hidden;
+        }
+        .cost-bar-fill {
+            height: 100%; border-radius: 99px;
+            background: linear-gradient(90deg, #D97706, #C2410C);
+            transition: width 0.4s ease;
+        }
+        .cost-bar-val {
+            width: 72px; flex-shrink: 0; text-align: right;
+            font-family: 'Roboto Mono', monospace; font-size: 11px; color: #888;
+        }
+        .cost-tooltip {
+            position: absolute; background: rgba(0,0,0,0.75); color: #fff;
+            border-radius: 6px; padding: 5px 9px; font-size: 11px; pointer-events: none;
+            white-space: nowrap; opacity: 0; transition: opacity 0.1s; z-index: 10;
+        }
+        /* Cost dark mode */
+        body.dark .cost-stat-card { background: #242424; border-color: #333; }
+        body.dark .cost-stat-card:hover { border-color: #D97706; }
+        body.dark .cost-stat-label { color: #9AA0A6; }
+        body.dark .cost-stat-value { color: #F59E0B; }
+        body.dark .cost-section-title { color: #9AA0A6; border-bottom-color: rgba(255,255,255,0.06); }
+        body.dark .cost-bar-label { color: #9AA0A6; }
+        body.dark .cost-bar-track { background: rgba(255,255,255,0.08); }
+        body.dark .cost-bar-val { color: #9AA0A6; }
+
         body.dark [style*="background-color: rgba(248"] {
             background-color: rgba(26, 26, 26, 0.95) !important;
             color: #E8EAED !important;
         }
+
+        /* Diversity tab styles */
+        .div-section {
+            margin-bottom: 28px;
+            padding: 18px 20px;
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+        }
+        .div-section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #374151;
+            margin: 0 0 14px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .div-chart-wrap {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .div-scatter-controls {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .div-slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: #e5e7eb;
+            outline: none;
+            width: 200px;
+            cursor: pointer;
+        }
+        .div-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #D97706;
+            cursor: pointer;
+            box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+        }
+        .div-slider::-moz-range-thumb {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: #D97706;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 0 0 2px rgba(217,119,6,0.2);
+        }
+        .div-gen-label {
+            font-size: 13px;
+            color: #6b7280;
+            min-width: 80px;
+        }
+        .div-gen-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #D97706, #C2410C);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            padding: 2px 10px;
+            border-radius: 12px;
+        }
+        .div-stats-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .div-stats-table th {
+            background: #f9fafb;
+            color: #6b7280;
+            font-weight: 600;
+            padding: 7px 10px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .div-stats-table td {
+            padding: 6px 10px;
+            border-bottom: 1px solid #f3f4f6;
+            color: #374151;
+            font-family: 'Roboto Mono', monospace;
+        }
+        .div-stats-table tr:hover td {
+            background: #fef9ec;
+        }
+        .div-no-data {
+            text-align: center;
+            color: #9ca3af;
+            font-size: 13px;
+            padding: 30px 0;
+        }
+        /* Dark mode overrides */
+        body.dark .div-section { background: #242424; border-color: #333; }
+        body.dark .div-section-title { color: #E8EAED; border-bottom-color: rgba(255,255,255,0.08); }
+        body.dark .div-gen-label { color: #9AA0A6; }
+        body.dark .div-stats-table th { background: #1a1a1a; color: #9AA0A6; border-color: #333; }
+        body.dark .div-stats-table td { color: #E8EAED; border-color: #2a2a2a; }
+        body.dark .div-stats-table tr:hover td { background: #2d2000; }
+        body.dark .div-no-data { color: #6b7280; }
+        body.dark .div-slider { background: #333; }
     </style>
 </head>
 <body>
@@ -1949,7 +2179,10 @@
                 <div class="left-tab" data-tab="islands-view" data-i18n="islands">Islands</div>
                 <div class="left-tab" data-tab="model-posteriors-view" data-i18n="ensembling">Ensembling</div>
                 <div class="left-tab" data-tab="best-path-view" data-i18n="path">Path</div>
+                <div class="left-tab" data-tab="cost-view" data-i18n="cost_tab">Cost</div>
                 <div class="left-tab" data-tab="maps-view">MAPs</div>
+                <div class="left-tab" data-tab="battle-view" data-i18n="battle_tab">Battle</div>
+                <div class="left-tab" data-tab="diversity-view" data-i18n="div_tab">Diversity</div>
 
             </div>
             <div id="left-tab-content" style="flex-grow: 1; overflow: hidden; position: relative; height: calc(100vh - 200px);">
@@ -2060,6 +2293,10 @@
                     </div>
                 </div>
 
+                <div id="cost-view" class="left-content-section">
+                    <div id="cost-container" style="width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;"></div>
+                </div>
+
                 <div id="maps-view" class="left-content-section">
                     <div id="maps-controls" style="padding: 10px; border-bottom: 1px solid #ddd; background-color: #f8f9fa;">
                         <div style="display: flex; gap: 20px; align-items: center; flex-wrap: wrap;">
@@ -2093,6 +2330,14 @@
                     </div>
                     <div id="maps-container" style="width: 100%; height: calc(100% - 60px); overflow: auto; padding: 20px; box-sizing: border-box;">
                     </div>
+                </div>
+
+                <div id="battle-view" class="left-content-section">
+                    <div id="battle-container" style="width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;"></div>
+                </div>
+
+                <div id="diversity-view" class="left-content-section">
+                    <div id="diversity-container" style="width: 100%; height: 100%; overflow-y: auto; padding: 20px; box-sizing: border-box;"></div>
                 </div>
 
                 <div id="model-posteriors-view" class="left-content-section">
@@ -2695,10 +2940,28 @@
                                     createBestPathVisualization(window.treeData);
                                 }
                             }, 100);
+                        } else if (tabId === 'cost-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createCostVisualization(window.treeData);
+                                }
+                            }, 100);
                         } else if (tabId === 'maps-view') {
                             setTimeout(() => {
                                 if (window.treeData) {
                                     createMAPsVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'battle-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createBattleVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'diversity-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createDiversityVisualization(window.treeData);
                                 }
                             }, 100);
                         } else if (tabId === 'model-posteriors-view') {
@@ -4366,6 +4629,7 @@ ${'='.repeat(80)}
                 clearContainer('islands-container');
                 clearContainer('best-path-container');
                 clearContainer('maps-container');
+                clearContainer('battle-container');
 
                 clearContainer('cluster-plot-2d');
                 clearContainer('cluster-plot-3d');
@@ -4385,8 +4649,14 @@ ${'='.repeat(80)}
                             createIslandsVisualization(data);
                         } else if (activeLeftTabId === 'best-path-view') {
                             createBestPathVisualization(data);
+                        } else if (activeLeftTabId === 'cost-view') {
+                            createCostVisualization(data);
                         } else if (activeLeftTabId === 'maps-view') {
                             createMAPsVisualization(data);
+                        } else if (activeLeftTabId === 'battle-view') {
+                            createBattleVisualization(data);
+                        } else if (activeLeftTabId === 'diversity-view') {
+                            createDiversityVisualization(data);
                         } else if (activeLeftTabId === 'model-posteriors-view') {
                             createModelPosteriorsVisualization(data);
                         } else if (activeLeftTabId === 'clusters-view') {
@@ -11814,6 +12084,616 @@ console.error("[DEBUG] Error in processData:", error);
             renderTableRows();
         }
 
+        function createCostVisualization(data) {
+            var costView = document.getElementById('cost-view');
+            if (!costView || !costView.classList.contains('active')) return;
+            var container = document.getElementById('cost-container');
+            if (!container) return;
+
+            var COST_AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            var COST_AVATAR_MAP = {
+                glm: 'chatglm', chatglm: 'chatglm', zhipu: 'chatglm',
+                deepseek: 'deepseek', ds: 'deepseek',
+                doubao: 'doubao', bytedance: 'doubao',
+                minimax: 'minimax', abab: 'minimax',
+                kimi: 'kimi', moonshot: 'moonshot',
+                qwen: 'qwen', alibaba: 'qwen',
+                claude: 'claude', anthropic: 'claude',
+                gpt: 'openai', openai: 'openai',
+                gemini: 'google', google: 'google',
+                llama: 'meta', meta: 'meta',
+                mistral: 'mistral'
+            };
+            function costShortName(m) {
+                var base = m.indexOf('@') >= 0 ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            }
+            function costModelAvatar(modelName) {
+                var lower = costShortName(modelName).toLowerCase();
+                var keys = Object.keys(COST_AVATAR_MAP);
+                for (var ki = 0; ki < keys.length; ki++) {
+                    if (lower.indexOf(keys[ki]) >= 0) return COST_AVATAR_CDN + '/' + COST_AVATAR_MAP[keys[ki]] + '.webp';
+                }
+                return null;
+            }
+            function programCost(p) {
+                var md = p.metadata || {};
+                return (parseFloat(md.api_costs) || 0) + (parseFloat(md.embed_cost) || 0) +
+                       (parseFloat(md.novelty_cost) || 0) + (parseFloat(md.meta_cost) || 0);
+            }
+            function fmtCost(v) { return v === 0 ? '$0.0000' : '$' + v.toFixed(4); }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p style="text-align:center;padding:40px;color:#999">' + t('cost_no_data') + '</p>';
+                return;
+            }
+
+            var totalApi = 0, totalEmbed = 0, totalNovelty = 0, totalMeta = 0;
+            data.forEach(function(p) {
+                var md = p.metadata || {};
+                totalApi     += parseFloat(md.api_costs)    || 0;
+                totalEmbed   += parseFloat(md.embed_cost)   || 0;
+                totalNovelty += parseFloat(md.novelty_cost) || 0;
+                totalMeta    += parseFloat(md.meta_cost)    || 0;
+            });
+            var totalAll = totalApi + totalEmbed + totalNovelty + totalMeta;
+            var avgPerProgram = data.length > 0 ? totalAll / data.length : 0;
+
+            var overviewCards = [
+                { label: t('cost_total_api'),       value: fmtCost(totalApi)      },
+                { label: t('cost_total_embed'),     value: fmtCost(totalEmbed)    },
+                { label: t('cost_overview'),        value: fmtCost(totalAll)      },
+                { label: t('cost_avg_per_program'), value: fmtCost(avgPerProgram) }
+            ];
+            var overviewHtml = overviewCards.map(function(c) {
+                return '<div class="cost-stat-card">' +
+                    '<div class="cost-stat-label">' + escapeHtml(c.label) + '</div>' +
+                    '<div class="cost-stat-value">' + escapeHtml(c.value) + '</div>' +
+                    '</div>';
+            }).join('');
+
+            container.innerHTML =
+                '<div class="cost-section-title">' + t('cost_overview') + '</div>' +
+                '<div class="cost-overview-grid">' + overviewHtml + '</div>' +
+                '<div class="cost-section-title">' + t('cost_vs_score') + '</div>' +
+                '<div class="cost-chart-wrap" id="cost-line-wrap" style="height:260px;">' +
+                    '<div class="cost-tooltip" id="cost-line-tooltip"></div>' +
+                '</div>' +
+                '<div class="cost-section-title">' + t('cost_efficiency') + '</div>' +
+                '<div id="cost-bar-section"></div>';
+
+            var lineWrap = document.getElementById('cost-line-wrap');
+            if (lineWrap) {
+                var sorted = data.slice().sort(function(a, b) {
+                    var ta = a.timestamp || a.generation || 0;
+                    var tb = b.timestamp || b.generation || 0;
+                    if (ta !== tb) return ta - tb;
+                    return (a.id || 0) - (b.id || 0);
+                });
+                var lineTooltip = document.getElementById('cost-line-tooltip');
+                var wrapRect = lineWrap.getBoundingClientRect();
+                var svgW = Math.max(300, wrapRect.width || 500);
+                var svgH = 240;
+                var mg = { top: 18, right: 56, bottom: 36, left: 64 };
+                var innerW = svgW - mg.left - mg.right;
+                var innerH = svgH - mg.top - mg.bottom;
+
+                var cumCost = 0, runningBest = null;
+                var series = sorted.map(function(p, i) {
+                    cumCost += programCost(p);
+                    var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
+                    if (sc != null && (runningBest === null || sc > runningBest)) runningBest = sc;
+                    return { idx: i + 1, cost: cumCost, score: runningBest };
+                }).filter(function(d) { return d.score !== null; });
+
+                if (series.length < 2) {
+                    lineWrap.innerHTML = '<p style="text-align:center;padding:30px;color:#999">' + t('cost_no_data') + '</p>';
+                } else {
+                    var maxCost  = d3.max(series, function(d) { return d.cost;  }) || 1;
+                    var maxScore = d3.max(series, function(d) { return d.score; }) || 1;
+                    var xScale = d3.scaleLinear().domain([1, series.length]).range([0, innerW]);
+                    var yCost  = d3.scaleLinear().domain([0, maxCost  * 1.05]).range([innerH, 0]);
+                    var yScore = d3.scaleLinear().domain([0, maxScore * 1.1 ]).range([innerH, 0]);
+
+                    var svg = d3.select(lineWrap).append('svg')
+                        .attr('width', svgW).attr('height', svgH)
+                        .attr('viewBox', '0 0 ' + svgW + ' ' + svgH);
+                    var g = svg.append('g').attr('transform', 'translate(' + mg.left + ',' + mg.top + ')');
+
+                    g.append('g').selectAll('line').data(yCost.ticks(5)).enter()
+                        .append('line')
+                        .attr('x1', 0).attr('x2', innerW)
+                        .attr('y1', function(d) { return yCost(d); }).attr('y2', function(d) { return yCost(d); })
+                        .attr('stroke', 'rgba(0,0,0,0.05)').attr('stroke-width', 1);
+
+                    g.append('g').attr('transform', 'translate(0,' + innerH + ')')
+                        .call(d3.axisBottom(xScale).ticks(Math.min(series.length, 8)).tickFormat(d3.format('d')))
+                        .selectAll('text').style('font-size', '10px').style('font-family', 'Inter, sans-serif');
+                    g.append('g')
+                        .call(d3.axisLeft(yCost).ticks(5).tickFormat(function(d) { return '$' + d3.format('.3f')(d); }))
+                        .selectAll('text').style('font-size', '10px').style('fill', '#D97706')
+                        .style('font-family', 'Roboto Mono, monospace');
+                    g.append('g').attr('transform', 'translate(' + innerW + ',0)')
+                        .call(d3.axisRight(yScore).ticks(5).tickFormat(d3.format('.3f')))
+                        .selectAll('text').style('font-size', '10px').style('fill', '#059669')
+                        .style('font-family', 'Roboto Mono, monospace');
+
+                    g.append('text').attr('transform', 'rotate(-90)').attr('x', -(innerH / 2)).attr('y', -50)
+                        .attr('text-anchor', 'middle')
+                        .style('font-size', '10px').style('fill', '#D97706').style('font-family', 'Inter, sans-serif')
+                        .text('Cumulative Cost ($)');
+                    g.append('text')
+                        .attr('transform', 'rotate(90,' + (innerW + 50) + ',' + (innerH / 2) + ')')
+                        .attr('x', innerW + 50).attr('y', innerH / 2).attr('text-anchor', 'middle')
+                        .style('font-size', '10px').style('fill', '#059669').style('font-family', 'Inter, sans-serif')
+                        .text('Best Score');
+
+                    g.append('path').datum(series)
+                        .attr('fill', 'none').attr('stroke', '#D97706').attr('stroke-width', 2.2)
+                        .attr('d', d3.line()
+                            .x(function(d) { return xScale(d.idx); }).y(function(d) { return yCost(d.cost); })
+                            .curve(d3.curveMonotoneX));
+                    g.append('path').datum(series)
+                        .attr('fill', 'none').attr('stroke', '#059669').attr('stroke-width', 2)
+                        .attr('stroke-dasharray', '5 3')
+                        .attr('d', d3.line()
+                            .x(function(d) { return xScale(d.idx); }).y(function(d) { return yScore(d.score); })
+                            .curve(d3.curveMonotoneX));
+
+                    var lgG = g.append('g').attr('transform', 'translate(' + (innerW - 112) + ',2)');
+                    [[false, '#D97706', 'Cost'], [true, '#059669', 'Best Score']].forEach(function(entry, li) {
+                        var row = lgG.append('g').attr('transform', 'translate(0,' + (li * 14) + ')');
+                        row.append('line').attr('x1', 0).attr('x2', 16).attr('y1', 5).attr('y2', 5)
+                            .attr('stroke', entry[1]).attr('stroke-width', 2)
+                            .attr('stroke-dasharray', entry[0] ? '5 3' : 'none');
+                        row.append('text').attr('x', 20).attr('y', 9)
+                            .style('font-size', '10px').style('fill', entry[1]).style('font-family', 'Inter, sans-serif')
+                            .text(entry[2]);
+                    });
+
+                    var bisect = d3.bisector(function(d) { return d.idx; }).left;
+                    g.append('rect').attr('width', innerW).attr('height', innerH).attr('fill', 'transparent')
+                        .on('mousemove', function(event) {
+                            var xy = d3.pointer(event);
+                            var xVal = xScale.invert(xy[0]);
+                            var idx2 = Math.min(Math.max(bisect(series, xVal, 1), 1), series.length) - 1;
+                            var d = series[idx2];
+                            if (!d || !lineTooltip) return;
+                            lineTooltip.style.opacity = '1';
+                            lineTooltip.innerHTML = '#' + d.idx + '\u00a0 Cost: $' + d.cost.toFixed(4) + '\u00a0 Score: ' + d.score.toFixed(4);
+                            var r = lineWrap.getBoundingClientRect();
+                            lineTooltip.style.left = (event.clientX - r.left + 12) + 'px';
+                            lineTooltip.style.top  = (event.clientY - r.top  - 32) + 'px';
+                        })
+                        .on('mouseleave', function() { if (lineTooltip) lineTooltip.style.opacity = '0'; });
+                }
+            }
+
+            var barSection = document.getElementById('cost-bar-section');
+            if (barSection) {
+                var modelMap = {};
+                data.forEach(function(p) {
+                    var md = p.metadata || {};
+                    var lr = md.llm_result || {};
+                    var m = md.model_name || md.model || lr.model || p.model_name || p.model || 'unknown';
+                    if (!modelMap[m]) modelMap[m] = { cost: 0, scores: [] };
+                    modelMap[m].cost += programCost(p);
+                    var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
+                    if (sc != null) modelMap[m].scores.push(sc);
+                });
+
+                var modelRows = Object.keys(modelMap).map(function(model) {
+                    var v = modelMap[model];
+                    var maxScore   = v.scores.length ? Math.max.apply(null, v.scores) : 0;
+                    var minScore   = v.scores.length ? Math.min.apply(null, v.scores) : 0;
+                    var scoreDelta = Math.max(maxScore - minScore, 1e-6);
+                    var efficiency = v.cost > 0 ? v.cost / scoreDelta : 0;
+                    return { model: model, cost: v.cost, maxScore: maxScore, efficiency: efficiency };
+                }).filter(function(r) { return r.cost > 0; }).sort(function(a, b) { return a.efficiency - b.efficiency; });
+
+                if (modelRows.length === 0) {
+                    barSection.innerHTML = '<p style="text-align:center;padding:20px;color:#999">' + t('cost_no_data') + '</p>';
+                } else {
+                    var maxEff = d3.max(modelRows, function(r) { return r.efficiency; }) || 1;
+                    var rowsHtml = modelRows.map(function(r) {
+                        var pct = (r.efficiency / maxEff * 100).toFixed(1);
+                        var avUrl = costModelAvatar(r.model);
+                        var avHtml = avUrl
+                            ? '<img src="' + avUrl + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+                            : '';
+                        return '<div class="cost-bar-row">' +
+                            '<div class="cost-bar-label" title="' + escapeHtml(r.model) + '">' +
+                                avHtml + '<span>' + escapeHtml(costShortName(r.model)) + '</span>' +
+                            '</div>' +
+                            '<div class="cost-bar-track"><div class="cost-bar-fill" style="width:' + pct + '%"></div></div>' +
+                            '<div class="cost-bar-val">$/' + '\u0394score: ' + fmtCost(r.efficiency) + '</div>' +
+                            '</div>';
+                    }).join('');
+                    barSection.innerHTML =
+                        '<p style="font-size:11px;color:#999;margin:0 0 10px 0;">$/' + '\u0394score \u2014 lower is more efficient</p>' +
+                        rowsHtml;
+                }
+            }
+        }
+
+        // ===== Battle Tab =====
+        function createBattleVisualization(data) {
+            const battleView = document.getElementById('battle-view');
+            if (!battleView || !battleView.classList.contains('active')) return;
+
+            const container = document.getElementById('battle-container');
+            if (!container) return;
+
+            // ── helpers (locally scoped, mirrors Ensembling patterns) ────────────
+            const shortName = (m) => {
+                const base = m.includes('@') ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            };
+
+            const AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            const MODEL_AVATAR_MAP = {
+                'glm': 'chatglm', 'chatglm': 'chatglm', 'zhipu': 'chatglm',
+                'deepseek': 'deepseek', 'ds': 'deepseek',
+                'doubao': 'doubao', 'bytedance': 'doubao',
+                'minimax': 'minimax', 'abab': 'minimax',
+                'kimi': 'kimi', 'moonshot': 'moonshot',
+                'qwen': 'qwen', 'alibaba': 'qwen',
+                'claude': 'claude', 'anthropic': 'claude',
+                'gpt': 'openai', 'openai': 'openai',
+                'gemini': 'google', 'google': 'google',
+                'llama': 'meta', 'meta': 'meta',
+                'mistral': 'mistral',
+            };
+            const modelAvatar = (modelName) => {
+                const lower = shortName(modelName).toLowerCase();
+                for (const [key, avatar] of Object.entries(MODEL_AVATAR_MAP)) {
+                    if (lower.includes(key)) return `${AVATAR_CDN}/${avatar}.webp`;
+                }
+                return null;
+            };
+
+            // ── data extraction ──────────────────────────────────────────────────
+            const getModel = (p) =>
+                p.metadata?.model_name || p.metadata?.llm_result?.model ||
+                p.metadata?.model || p.model_name || p.model;
+
+            const programs = (data || []).filter(p => {
+                const m = getModel(p);
+                return m && p.combined_score != null;
+            });
+
+            if (programs.length === 0) {
+                container.innerHTML = `<div class="battle-no-data">${t('battle_no_data')}</div>`;
+                return;
+            }
+
+            // Group scores by model
+            const modelMap = {};
+            programs.forEach(p => {
+                const m = getModel(p);
+                if (!modelMap[m]) modelMap[m] = [];
+                modelMap[m].push(p.combined_score);
+            });
+
+            const palette = d3.schemeTableau10 || d3.schemeCategory10;
+            const modelList = Object.keys(modelMap);
+            const colorScale = d3.scaleOrdinal(palette).domain(modelList);
+
+            // Compute box statistics per model
+            const boxStats = modelList.map(model => {
+                const scores = modelMap[model].slice().sort((a, b) => a - b);
+                const n = scores.length;
+                const median = n % 2 === 0
+                    ? (scores[n / 2 - 1] + scores[n / 2]) / 2
+                    : scores[Math.floor(n / 2)];
+                const q1 = scores[Math.floor(n * 0.25)];
+                const q3 = scores[Math.floor(n * 0.75)];
+                const iqr = q3 - q1;
+                const wLow = Math.max(scores[0], q1 - 1.5 * iqr);
+                const wHigh = Math.min(scores[n - 1], q3 + 1.5 * iqr);
+                const outliers = scores.filter(s => s < wLow || s > wHigh);
+                return { model, scores, n, median, q1, q3, wLow, wHigh, outliers };
+            }).sort((a, b) => b.median - a.median);
+
+            // Win rate matrix: row model beats column model
+            const matModels = boxStats.map(s => s.model);
+            const winMatrix = {};
+            matModels.forEach(a => {
+                winMatrix[a] = {};
+                matModels.forEach(b => {
+                    if (a === b) { winMatrix[a][b] = null; return; }
+                    const sa = modelMap[a];
+                    const sb = modelMap[b];
+                    let wins = 0, total = 0;
+                    sa.forEach(va => {
+                        sb.forEach(vb => {
+                            wins += va > vb ? 1 : 0;
+                            total++;
+                        });
+                    });
+                    winMatrix[a][b] = total > 0 ? wins / total : 0;
+                });
+            });
+
+            // ── DOM skeleton ─────────────────────────────────────────────────────
+            container.innerHTML = `
+                <div style="position:relative">
+                    <div class="battle-section-title">${t('battle_score_dist')}</div>
+                    <div id="battle-boxplot-wrap" style="position:relative;overflow-x:auto;"></div>
+
+                    <div class="battle-section-title">${t('battle_winrate')}</div>
+                    <div id="battle-matrix-wrap" style="position:relative;overflow-x:auto;"></div>
+                    <div id="battle-tooltip" class="battle-tooltip"></div>
+
+                    <div class="battle-section-title">${t('battle_ranking')}</div>
+                    <div id="battle-rank-wrap"></div>
+                </div>
+            `;
+
+            const tooltip = container.querySelector('#battle-tooltip');
+            const showTip = (html, evt) => {
+                tooltip.innerHTML = html;
+                tooltip.style.opacity = '1';
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (evt.clientX - rect.left + 12) + 'px';
+                tooltip.style.top = (evt.clientY - rect.top - 28) + 'px';
+            };
+            const hideTip = () => { tooltip.style.opacity = '0'; };
+
+            // ── Section 1: Box Plot ──────────────────────────────────────────────
+            const bpWrap = container.querySelector('#battle-boxplot-wrap');
+            const bpMargin = { top: 20, right: 20, bottom: 60, left: 50 };
+            const bpMinWidth = Math.max(boxStats.length * 72, 400);
+            const bpWidth = Math.max(bpWrap.getBoundingClientRect().width || 600, bpMinWidth);
+            const bpHeight = 220;
+            const bpInnerW = bpWidth - bpMargin.left - bpMargin.right;
+            const bpInnerH = bpHeight - bpMargin.top - bpMargin.bottom;
+
+            const allScores = programs.map(p => p.combined_score);
+            const scoreMin = Math.min(...allScores);
+            const scoreMax = Math.max(...allScores);
+            const scorePad = (scoreMax - scoreMin) * 0.05 || 0.05;
+
+            const xBand = d3.scaleBand()
+                .domain(boxStats.map(s => s.model))
+                .range([0, bpInnerW])
+                .padding(0.4);
+
+            const yScale = d3.scaleLinear()
+                .domain([scoreMin - scorePad, scoreMax + scorePad])
+                .range([bpInnerH, 0])
+                .nice();
+
+            const bpSvg = d3.select(bpWrap).append('svg')
+                .attr('width', bpWidth).attr('height', bpHeight)
+                .attr('style', 'display:block');
+
+            const bpG = bpSvg.append('g')
+                .attr('transform', `translate(${bpMargin.left},${bpMargin.top})`);
+
+            // Horizontal grid lines
+            bpG.append('g').attr('class', 'battle-grid')
+                .call(d3.axisLeft(yScale).ticks(5).tickSize(-bpInnerW).tickFormat(''))
+                .call(g => {
+                    g.select('.domain').remove();
+                    g.selectAll('line').attr('stroke', 'rgba(0,0,0,0.05)').attr('stroke-width', 1);
+                });
+
+            // Y axis
+            bpG.append('g').attr('class', 'battle-axis')
+                .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => d.toFixed(2)));
+
+            // X axis with rotated labels
+            bpG.append('g').attr('class', 'battle-axis')
+                .attr('transform', `translate(0,${bpInnerH})`)
+                .call(d3.axisBottom(xBand).tickFormat(d => shortName(d)))
+                .selectAll('text')
+                .attr('transform', 'rotate(-30)')
+                .attr('text-anchor', 'end')
+                .attr('dy', '0.35em')
+                .attr('dx', '-0.4em');
+
+            // Draw each box
+            boxStats.forEach(stat => {
+                const bw = xBand.bandwidth();
+                const xMid = xBand(stat.model) + bw / 2;
+                const color = colorScale(stat.model);
+
+                // Whisker stem
+                bpG.append('line')
+                    .attr('x1', xMid).attr('x2', xMid)
+                    .attr('y1', yScale(stat.wHigh)).attr('y2', yScale(stat.wLow))
+                    .attr('stroke', color).attr('stroke-width', 1.5);
+
+                // Whisker caps
+                [stat.wHigh, stat.wLow].forEach(v => {
+                    bpG.append('line')
+                        .attr('x1', xMid - bw * 0.2).attr('x2', xMid + bw * 0.2)
+                        .attr('y1', yScale(v)).attr('y2', yScale(v))
+                        .attr('stroke', color).attr('stroke-width', 1.5);
+                });
+
+                // IQR box
+                bpG.append('rect')
+                    .attr('x', xBand(stat.model))
+                    .attr('y', yScale(stat.q3))
+                    .attr('width', bw)
+                    .attr('height', Math.max(1, yScale(stat.q1) - yScale(stat.q3)))
+                    .attr('fill', color).attr('opacity', 0.72)
+                    .on('mouseover', (evt) => {
+                        showTip(
+                            `<b>${escapeHtml(shortName(stat.model))}</b><br>` +
+                            `${t('battle_median')}: ${stat.median.toFixed(4)}<br>` +
+                            `Q1: ${stat.q1.toFixed(4)} / Q3: ${stat.q3.toFixed(4)}<br>` +
+                            `N: ${stat.n}`,
+                            evt
+                        );
+                    })
+                    .on('mousemove', (evt) => showTip(tooltip.innerHTML, evt))
+                    .on('mouseout', hideTip);
+
+                // Median line
+                bpG.append('line')
+                    .attr('x1', xBand(stat.model)).attr('x2', xBand(stat.model) + bw)
+                    .attr('y1', yScale(stat.median)).attr('y2', yScale(stat.median))
+                    .attr('stroke', '#fff').attr('stroke-width', 2);
+
+                // Outlier dots (jittered slightly)
+                stat.outliers.forEach(v => {
+                    bpG.append('circle')
+                        .attr('cx', xMid + (Math.random() - 0.5) * bw * 0.4)
+                        .attr('cy', yScale(v))
+                        .attr('r', 3)
+                        .attr('fill', color).attr('opacity', 0.55);
+                });
+            });
+
+            // ── Section 2: Win Rate Matrix ───────────────────────────────────────
+            const matWrap = container.querySelector('#battle-matrix-wrap');
+            const N = matModels.length;
+            const cellSize = Math.max(32, Math.min(60, Math.floor((container.getBoundingClientRect().width - 140) / N)));
+            const matMargin = { top: 50, right: 20, bottom: 30, left: 110 };
+            const matW = matMargin.left + N * cellSize + matMargin.right;
+            const matH = matMargin.top + N * cellSize + matMargin.bottom;
+
+            const winColor = d3.scaleSequential()
+                .domain([0, 1])
+                .interpolator(d3.interpolateRgb('#EA4335', '#34A853'));
+
+            const matSvg = d3.select(matWrap).append('svg')
+                .attr('width', matW).attr('height', matH)
+                .attr('style', 'display:block');
+
+            const matG = matSvg.append('g')
+                .attr('transform', `translate(${matMargin.left},${matMargin.top})`);
+
+            // Column headers (rotated)
+            matModels.forEach((m, ci) => {
+                matG.append('text').attr('class', 'battle-matrix-label')
+                    .attr('x', ci * cellSize + cellSize / 2)
+                    .attr('y', -4)
+                    .attr('text-anchor', 'start')
+                    .attr('font-size', 10)
+                    .attr('transform', `rotate(-40,${ci * cellSize + cellSize / 2},-4)`)
+                    .text(shortName(m));
+            });
+
+            // Row headers
+            matModels.forEach((m, ri) => {
+                matG.append('text').attr('class', 'battle-matrix-label')
+                    .attr('x', -6)
+                    .attr('y', ri * cellSize + cellSize / 2 + 4)
+                    .attr('text-anchor', 'end')
+                    .attr('font-size', 10)
+                    .text(shortName(m));
+            });
+
+            // Matrix cells
+            matModels.forEach((rowM, ri) => {
+                matModels.forEach((colM, ci) => {
+                    const wr = winMatrix[rowM][colM];
+                    const fillColor = wr === null ? '#ccc' : winColor(wr);
+                    const cellRect = matG.append('rect').attr('class', 'battle-matrix-cell')
+                        .attr('x', ci * cellSize).attr('y', ri * cellSize)
+                        .attr('width', cellSize).attr('height', cellSize)
+                        .attr('fill', fillColor)
+                        .attr('rx', 2);
+
+                    if (wr !== null) {
+                        cellRect
+                            .on('mouseover', (evt) => {
+                                showTip(
+                                    `<b>${escapeHtml(shortName(rowM))}</b> vs <b>${escapeHtml(shortName(colM))}</b><br>` +
+                                    `Win rate: ${(wr * 100).toFixed(1)}%`,
+                                    evt
+                                );
+                            })
+                            .on('mousemove', (evt) => showTip(tooltip.innerHTML, evt))
+                            .on('mouseout', hideTip);
+
+                        if (cellSize >= 36) {
+                            matG.append('text').attr('class', 'battle-matrix-val')
+                                .attr('x', ci * cellSize + cellSize / 2)
+                                .attr('y', ri * cellSize + cellSize / 2 + 4)
+                                .attr('fill', wr > 0.55 || wr < 0.45 ? '#fff' : '#333')
+                                .attr('font-size', 10)
+                                .text((wr * 100).toFixed(0) + '%');
+                        }
+                    }
+                });
+            });
+
+            // Gradient legend bar
+            const legendG = matSvg.append('g')
+                .attr('transform', `translate(${matMargin.left},${matMargin.top + N * cellSize + 10})`);
+            const legendW = Math.min(180, N * cellSize);
+            const defs = matSvg.append('defs');
+            const lgId = 'battle-lg-' + Date.now();
+            const lg = defs.append('linearGradient').attr('id', lgId)
+                .attr('x1', '0%').attr('x2', '100%');
+            lg.append('stop').attr('offset', '0%').attr('stop-color', '#EA4335');
+            lg.append('stop').attr('offset', '100%').attr('stop-color', '#34A853');
+            legendG.append('rect').attr('width', legendW).attr('height', 8)
+                .attr('rx', 2).attr('fill', `url(#${lgId})`);
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', 0).attr('y', 20).attr('font-size', 10).text('0%');
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', legendW / 2).attr('y', 20).attr('text-anchor', 'middle')
+                .attr('font-size', 10).text('50%');
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', legendW).attr('y', 20).attr('text-anchor', 'end')
+                .attr('font-size', 10).text('100%');
+
+            // ── Section 3: Ranking Table ─────────────────────────────────────────
+            const rankWrap = container.querySelector('#battle-rank-wrap');
+            const rankStats = boxStats.map(stat => {
+                const progs = programs.filter(p => getModel(p) === stat.model);
+                return {
+                    model: stat.model,
+                    median: stat.median,
+                    best: Math.max(...stat.scores),
+                    count: stat.n,
+                    correct: progs.filter(p => p.correct).length,
+                };
+            });
+
+            let tableHtml = `<table class="battle-rank-table">
+                <thead><tr>
+                    <th>#</th>
+                    <th>${t('model')}</th>
+                    <th class="battle-rank-num">${t('battle_median')}</th>
+                    <th class="battle-rank-num">${t('battle_best')}</th>
+                    <th class="battle-rank-num">${t('programs')}</th>
+                </tr></thead>
+                <tbody>`;
+
+            rankStats.forEach((stat, i) => {
+                const rank = i + 1;
+                const badgeClass = rank <= 3 ? ` r${rank}` : '';
+                const avatarUrl = modelAvatar(stat.model);
+                const avatarHtml = avatarUrl
+                    ? `<img src="${avatarUrl}" class="battle-model-avatar" onerror="this.style.display='none'">`
+                    : '';
+                const color = colorScale(stat.model);
+                tableHtml += `<tr>
+                    <td><span class="battle-rank-badge${badgeClass}">${rank}</span></td>
+                    <td>
+                        <div class="battle-model-cell">
+                            ${avatarHtml}
+                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+                            <span title="${escapeHtml(stat.model)}">${escapeHtml(shortName(stat.model))}</span>
+                        </div>
+                    </td>
+                    <td class="battle-rank-num">${stat.median.toFixed(4)}</td>
+                    <td class="battle-rank-num">${stat.best.toFixed(4)}</td>
+                    <td class="battle-rank-num">${stat.count}</td>
+                </tr>`;
+            });
+
+            tableHtml += '</tbody></table>';
+            rankWrap.innerHTML = tableHtml;
+        }
+
         function createClusterPlots(data) {
             console.log("[DEBUG] Creating cluster plots");
             
@@ -12777,6 +13657,291 @@ console.error("[DEBUG] Error in processData:", error);
 
 
 
+
+        // ── Diversity tab ────────────────────────────────────────────────────────
+        function createDiversityVisualization(data) {
+            const view = document.getElementById('diversity-view');
+            if (!view || !view.classList.contains('active')) return;
+
+            const container = document.getElementById('diversity-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `<p class="div-no-data">${t('div_no_data')}</p>`;
+                return;
+            }
+
+            // check for embedding data
+            const hasEmbed = data.some(d => Array.isArray(d.embedding_pca_2d) && d.embedding_pca_2d.length === 2);
+
+            // group by generation
+            const genMap = new Map();
+            data.forEach(d => {
+                const g = d.generation !== undefined ? d.generation : 0;
+                if (!genMap.has(g)) genMap.set(g, []);
+                genMap.get(g).push(d);
+            });
+            const generations = Array.from(genMap.keys()).sort((a, b) => a - b);
+
+            // compute per-generation stats
+            function avgPairwiseDist(programs) {
+                const pts = programs
+                    .filter(p => Array.isArray(p.embedding_pca_2d) && p.embedding_pca_2d.length === 2)
+                    .map(p => p.embedding_pca_2d);
+                if (pts.length < 2) return 0;
+                let sum = 0, count = 0;
+                for (let i = 0; i < pts.length; i++) {
+                    for (let j = i + 1; j < pts.length; j++) {
+                        const dx = pts[i][0] - pts[j][0];
+                        const dy = pts[i][1] - pts[j][1];
+                        sum += Math.sqrt(dx * dx + dy * dy);
+                        count++;
+                    }
+                }
+                return count > 0 ? sum / count : 0;
+            }
+
+            function stdDev(arr) {
+                if (arr.length < 2) return 0;
+                const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
+                const variance = arr.reduce((s, v) => s + (v - mean) ** 2, 0) / (arr.length - 1);
+                return Math.sqrt(variance);
+            }
+
+            const genStats = generations.map(g => {
+                const progs = genMap.get(g);
+                const scores = progs
+                    .map(p => p.combined_score)
+                    .filter(s => s !== null && s !== undefined && !isNaN(s));
+                const embedDist = avgPairwiseDist(progs);
+                const scoreSd = stdDev(scores);
+                const scoreMin = scores.length ? Math.min(...scores) : 0;
+                const scoreMax = scores.length ? Math.max(...scores) : 0;
+                const clusters = new Set(progs.map(p => p.embedding_cluster_id).filter(c => c !== null && c !== undefined));
+                return {
+                    generation: g,
+                    count: progs.length,
+                    embedDist,
+                    scoreSd,
+                    scoreMin,
+                    scoreMax,
+                    scoreRange: scoreMax - scoreMin,
+                    clusterCount: clusters.size
+                };
+            });
+
+            // Section 1: diversity metrics line chart
+            const sec1 = document.createElement('div');
+            sec1.className = 'div-section';
+            sec1.innerHTML = `<h4 class="div-section-title">${t('div_metrics')}</h4><div class="div-chart-wrap"><div id="div-linechart"></div></div>`;
+            container.appendChild(sec1);
+
+            (function buildLineChart() {
+                const wrap = document.getElementById('div-linechart');
+                const W = Math.max(wrap.clientWidth || 0, 500);
+                const H = 260;
+                const margin = { top: 20, right: 65, bottom: 42, left: 62 };
+                const innerW = W - margin.left - margin.right;
+                const innerH = H - margin.top - margin.bottom;
+
+                const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H);
+                const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+                const xScale = d3.scaleLinear()
+                    .domain(d3.extent(genStats, d => d.generation))
+                    .range([0, innerW]);
+
+                const maxSd = d3.max(genStats, d => d.scoreSd) || 1;
+                const yLeft = d3.scaleLinear().domain([0, maxSd * 1.2]).range([innerH, 0]);
+
+                const maxEmbed = hasEmbed ? (d3.max(genStats, d => d.embedDist) || 1) : 1;
+                const yRight = d3.scaleLinear().domain([0, maxEmbed * 1.2]).range([innerH, 0]);
+
+                const isDark = document.body.classList.contains('dark');
+                const textColor = isDark ? '#9AA0A6' : '#6b7280';
+                const gridColor = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+
+                // Grid lines
+                g.append('g').attr('class', 'div-grid')
+                    .call(d3.axisLeft(yLeft).ticks(5).tickSize(-innerW).tickFormat(''))
+                    .selectAll('line').attr('stroke', gridColor);
+                g.select('.div-grid .domain').remove();
+
+                g.append('g').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(xScale).ticks(Math.min(generations.length, 10)).tickFormat(d3.format('d')));
+                g.append('g').call(d3.axisLeft(yLeft).ticks(5));
+                if (hasEmbed) {
+                    g.append('g').attr('transform', `translate(${innerW},0)`).call(d3.axisRight(yRight).ticks(5));
+                }
+
+                // Axis labels
+                g.append('text').attr('x', innerW / 2).attr('y', innerH + 36).attr('text-anchor', 'middle')
+                    .attr('fill', textColor).attr('font-size', '11px').text(t('div_generation'));
+                g.append('text').attr('transform', 'rotate(-90)').attr('x', -innerH / 2).attr('y', -48)
+                    .attr('text-anchor', 'middle').attr('fill', '#C2410C').attr('font-size', '11px').text(t('div_score_std'));
+                if (hasEmbed) {
+                    g.append('text').attr('transform', `translate(${innerW + 52}, ${innerH / 2}) rotate(90)`)
+                        .attr('text-anchor', 'middle').attr('fill', '#2563eb').attr('font-size', '11px').text(t('div_embed_distance'));
+                }
+
+                // Score std line
+                const lineScoreStd = d3.line().x(d => xScale(d.generation)).y(d => yLeft(d.scoreSd)).curve(d3.curveMonotoneX);
+                g.append('path').datum(genStats).attr('fill', 'none').attr('stroke', '#C2410C').attr('stroke-width', 2).attr('d', lineScoreStd);
+                g.selectAll('.div-dot-std').data(genStats).enter().append('circle')
+                    .attr('class', 'div-dot-std').attr('r', 3)
+                    .attr('cx', d => xScale(d.generation)).attr('cy', d => yLeft(d.scoreSd))
+                    .attr('fill', '#C2410C');
+
+                // Embedding distance line
+                if (hasEmbed) {
+                    const lineEmbed = d3.line().x(d => xScale(d.generation)).y(d => yRight(d.embedDist)).curve(d3.curveMonotoneX);
+                    g.append('path').datum(genStats).attr('fill', 'none').attr('stroke', '#2563eb').attr('stroke-width', 2).attr('stroke-dasharray', '5,3').attr('d', lineEmbed);
+                    g.selectAll('.div-dot-embed').data(genStats).enter().append('circle')
+                        .attr('class', 'div-dot-embed').attr('r', 3)
+                        .attr('cx', d => xScale(d.generation)).attr('cy', d => yRight(d.embedDist))
+                        .attr('fill', '#2563eb');
+                }
+
+                // Legend
+                const lgd = g.append('g').attr('transform', `translate(0, 0)`);
+                lgd.append('line').attr('x1', 0).attr('x2', 18).attr('y1', 8).attr('y2', 8).attr('stroke', '#C2410C').attr('stroke-width', 2);
+                lgd.append('text').attr('x', 22).attr('y', 12).attr('font-size', '11px').attr('fill', textColor).text(t('div_score_std'));
+                if (hasEmbed) {
+                    lgd.append('line').attr('x1', 120).attr('x2', 138).attr('y1', 8).attr('y2', 8).attr('stroke', '#2563eb').attr('stroke-width', 2).attr('stroke-dasharray', '5,3');
+                    lgd.append('text').attr('x', 142).attr('y', 12).attr('font-size', '11px').attr('fill', textColor).text(t('div_embed_distance'));
+                }
+            })();
+
+            // Section 2: per-generation scatter (only when embedding data exists)
+            if (hasEmbed) {
+                const sec2 = document.createElement('div');
+                sec2.className = 'div-section';
+                sec2.innerHTML = `
+                    <h4 class="div-section-title">${t('div_scatter')}</h4>
+                    <div class="div-scatter-controls">
+                        <span class="div-gen-label">${t('div_generation')}:</span>
+                        <input type="range" class="div-slider" id="div-gen-slider"
+                            min="0" max="${generations.length - 1}" value="0" step="1">
+                        <span class="div-gen-badge" id="div-gen-badge">${generations[0]}</span>
+                    </div>
+                    <div class="div-chart-wrap"><div id="div-scatter"></div></div>`;
+                container.appendChild(sec2);
+
+                const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+
+                function drawScatter(genIdx) {
+                    const gen = generations[genIdx];
+                    const progs = genMap.get(gen).filter(p => Array.isArray(p.embedding_pca_2d) && p.embedding_pca_2d.length === 2);
+                    const badge = document.getElementById('div-gen-badge');
+                    if (badge) badge.textContent = gen;
+
+                    const wrap = document.getElementById('div-scatter');
+                    if (!wrap) return;
+                    wrap.innerHTML = '';
+
+                    if (progs.length === 0) {
+                        wrap.innerHTML = `<p class="div-no-data">${t('div_no_data')}</p>`;
+                        return;
+                    }
+
+                    const W = Math.max(wrap.clientWidth || 0, 500);
+                    const H = 300;
+                    const margin = { top: 16, right: 20, bottom: 40, left: 50 };
+                    const innerW = W - margin.left - margin.right;
+                    const innerH = H - margin.top - margin.bottom;
+
+                    const xs = progs.map(p => p.embedding_pca_2d[0]);
+                    const ys = progs.map(p => p.embedding_pca_2d[1]);
+                    const xPad = (Math.max(...xs) - Math.min(...xs)) * 0.1 || 0.5;
+                    const yPad = (Math.max(...ys) - Math.min(...ys)) * 0.1 || 0.5;
+                    const xScale = d3.scaleLinear().domain([Math.min(...xs) - xPad, Math.max(...xs) + xPad]).range([0, innerW]);
+                    const yScale = d3.scaleLinear().domain([Math.min(...ys) - yPad, Math.max(...ys) + yPad]).range([innerH, 0]);
+
+                    const scores = progs.map(p => p.combined_score).filter(s => s !== null && s !== undefined && !isNaN(s));
+                    const scoreMin = scores.length ? Math.min(...scores) : 0;
+                    const scoreMax = scores.length ? Math.max(...scores) : 1;
+                    const rScale = d3.scaleLinear().domain([scoreMin, scoreMax]).range([4, 12]).clamp(true);
+
+                    const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H);
+                    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+                    g.append('g').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(xScale).ticks(5));
+                    g.append('g').call(d3.axisLeft(yScale).ticks(5));
+
+                    // Tooltip
+                    let tooltip = document.getElementById('div-scatter-tooltip');
+                    if (!tooltip) {
+                        tooltip = document.createElement('div');
+                        tooltip.id = 'div-scatter-tooltip';
+                        tooltip.className = 'cost-tooltip';
+                        document.body.appendChild(tooltip);
+                    }
+
+                    g.selectAll('.div-dot').data(progs).enter().append('circle')
+                        .attr('class', 'div-dot')
+                        .attr('cx', d => xScale(d.embedding_pca_2d[0]))
+                        .attr('cy', d => yScale(d.embedding_pca_2d[1]))
+                        .attr('r', d => {
+                            const s = d.combined_score;
+                            return (s !== null && s !== undefined && !isNaN(s)) ? rScale(s) : 5;
+                        })
+                        .attr('fill', d => colorScale(d.embedding_cluster_id !== null && d.embedding_cluster_id !== undefined ? d.embedding_cluster_id : '__none__'))
+                        .attr('opacity', 0.82)
+                        .attr('stroke', '#fff')
+                        .attr('stroke-width', 1)
+                        .on('mouseover', function(event, d) {
+                            const scoreStr = (d.combined_score !== null && d.combined_score !== undefined) ? formatScore(d.combined_score) : 'N/A';
+                            tooltip.innerHTML = `<strong>${escapeHtml(String(d.id || ''))}</strong><br>${t('score')}: ${scoreStr}<br>cluster: ${d.embedding_cluster_id !== null && d.embedding_cluster_id !== undefined ? d.embedding_cluster_id : '—'}`;
+                            tooltip.style.opacity = '1';
+                            tooltip.style.left = (event.pageX + 12) + 'px';
+                            tooltip.style.top = (event.pageY - 8) + 'px';
+                        })
+                        .on('mousemove', function(event) {
+                            tooltip.style.left = (event.pageX + 12) + 'px';
+                            tooltip.style.top = (event.pageY - 8) + 'px';
+                        })
+                        .on('mouseout', function() { tooltip.style.opacity = '0'; });
+                }
+
+                drawScatter(0);
+
+                document.getElementById('div-gen-slider').addEventListener('input', function() {
+                    drawScatter(parseInt(this.value, 10));
+                });
+            }
+
+            // Section 3: statistics table
+            const sec3 = document.createElement('div');
+            sec3.className = 'div-section';
+
+            const headers = [
+                t('div_generation'), 'N',
+                ...(hasEmbed ? [t('div_embed_distance')] : []),
+                t('div_score_std'), `${t('score')} range`, 'clusters'
+            ];
+            const rows = genStats.map(s => [
+                s.generation,
+                s.count,
+                ...(hasEmbed ? [s.embedDist.toFixed(4)] : []),
+                s.scoreSd.toFixed(4),
+                s.scoreRange.toFixed(4),
+                s.clusterCount
+            ]);
+
+            const thCells = headers.map(h => `<th>${escapeHtml(String(h))}</th>`).join('');
+            const bodyRows = rows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('');
+
+            sec3.innerHTML = `
+                <h4 class="div-section-title">${t('div_stats')}</h4>
+                <div style="overflow-x:auto;">
+                    <table class="div-stats-table">
+                        <thead><tr>${thCells}</tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table>
+                </div>`;
+            container.appendChild(sec3);
+        }
+        // ── End Diversity tab ─────────────────────────────────────────────────────
 
         // Function to download top performing programs as ZIP
         function downloadTopPrograms() {
