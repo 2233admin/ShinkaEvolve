@@ -5298,12 +5298,13 @@ console.error("[DEBUG] Error in processData:", error);
                         const score = formatScore(d.data.combined_score);
                         const patchType = d.data.metadata.patch_type || 'N/A';
                         const islandIdx = d.data.island_idx !== null && d.data.island_idx !== undefined ? d.data.island_idx : 'N/A';
-                        const modelName = d.data.metadata?.model_name || 
-                                         d.data.metadata?.llm_result?.model || 
+                        const rawModelName = d.data.metadata?.model_name ||
+                                         d.data.metadata?.llm_result?.model ||
                                          d.data.metadata?.model ||
                                          d.data.model_name ||
                                          d.data.model ||
                                          'N/A';
+                        const modelName = rawModelName !== 'N/A' ? ((rawModelName.includes('@') ? rawModelName.split('@')[0] : rawModelName).split('/').pop()) : 'N/A';
                         
                         if (d.data.isUnifiedRoot) {
                             tooltip.html(`
@@ -8605,7 +8606,8 @@ console.error("[DEBUG] Error in processData:", error);
                 
                 const apiCost = (prog.metadata && prog.metadata.api_costs) ? '$' + parseFloat(prog.metadata.api_costs).toFixed(4) : 'N/A';
                 const complexity = prog.complexity ? prog.complexity.toFixed(3) : 'N/A';
-                const model = (prog.metadata && prog.metadata.model_name) || 'N/A';
+                const rawModel = (prog.metadata && prog.metadata.model_name) || 'N/A';
+                const model = rawModel !== 'N/A' ? ((rawModel.includes('@') ? rawModel.split('@')[0] : rawModel).split('/').pop()) : 'N/A';
 
                 const islandIdx = prog.island_idx !== null && prog.island_idx !== undefined ? prog.island_idx : 'N/A';
                 const archiveStatus = prog.in_archive ? '✓' : '';
@@ -8630,7 +8632,7 @@ console.error("[DEBUG] Error in processData:", error);
                     <td>${noveltyAttempt}</td>
                     <td>${resampleAttempt}</td>
                     <td>${patchAttempt}</td>
-                    <td>${model}</td>
+                    <td title="${rawModel}">${model}</td>
                 `;
                 tableBody.appendChild(row);
             });
@@ -12138,13 +12140,29 @@ console.error("[DEBUG] Error in processData:", error);
             });
             var totalAll = totalApi + totalEmbed + totalNovelty + totalMeta;
             var avgPerProgram = data.length > 0 ? totalAll / data.length : 0;
+            var zeroCostMode = totalAll < 0.0001;
 
-            var overviewCards = [
-                { label: t('cost_total_api'),       value: fmtCost(totalApi)      },
-                { label: t('cost_total_embed'),     value: fmtCost(totalEmbed)    },
-                { label: t('cost_overview'),        value: fmtCost(totalAll)      },
-                { label: t('cost_avg_per_program'), value: fmtCost(avgPerProgram) }
-            ];
+            // Compute-time stats for zero-cost mode
+            var computeTimes = data.map(function(p) { return parseFloat((p.metadata || {}).compute_time) || 0; }).filter(function(t) { return t > 0; });
+            var totalCompute = computeTimes.reduce(function(a, b) { return a + b; }, 0);
+            var avgCompute = computeTimes.length > 0 ? totalCompute / computeTimes.length : 0;
+
+            var overviewCards;
+            if (zeroCostMode) {
+                overviewCards = [
+                    { label: 'Free Models', value: '\u2714 $0' },
+                    { label: 'Total Compute', value: totalCompute.toFixed(1) + 's' },
+                    { label: 'Avg / Program', value: avgCompute.toFixed(2) + 's' },
+                    { label: 'Programs', value: String(data.length) }
+                ];
+            } else {
+                overviewCards = [
+                    { label: t('cost_total_api'),       value: fmtCost(totalApi)      },
+                    { label: t('cost_total_embed'),     value: fmtCost(totalEmbed)    },
+                    { label: t('cost_overview'),        value: fmtCost(totalAll)      },
+                    { label: t('cost_avg_per_program'), value: fmtCost(avgPerProgram) }
+                ];
+            }
             var overviewHtml = overviewCards.map(function(c) {
                 return '<div class="cost-stat-card">' +
                     '<div class="cost-stat-label">' + escapeHtml(c.label) + '</div>' +
@@ -12152,14 +12170,16 @@ console.error("[DEBUG] Error in processData:", error);
                     '</div>';
             }).join('');
 
+            var chartTitle = zeroCostMode ? 'Compute Time vs Best Score' : t('cost_vs_score');
+            var effTitle = zeroCostMode ? 'Compute Efficiency by Model' : t('cost_efficiency');
             container.innerHTML =
                 '<div class="cost-section-title">' + t('cost_overview') + '</div>' +
                 '<div class="cost-overview-grid">' + overviewHtml + '</div>' +
-                '<div class="cost-section-title">' + t('cost_vs_score') + '</div>' +
+                '<div class="cost-section-title">' + chartTitle + '</div>' +
                 '<div class="cost-chart-wrap" id="cost-line-wrap" style="height:260px;">' +
                     '<div class="cost-tooltip" id="cost-line-tooltip"></div>' +
                 '</div>' +
-                '<div class="cost-section-title">' + t('cost_efficiency') + '</div>' +
+                '<div class="cost-section-title">' + effTitle + '</div>' +
                 '<div id="cost-bar-section"></div>';
 
             var lineWrap = document.getElementById('cost-line-wrap');
@@ -12180,7 +12200,11 @@ console.error("[DEBUG] Error in processData:", error);
 
                 var cumCost = 0, runningBest = null;
                 var series = sorted.map(function(p, i) {
-                    cumCost += programCost(p);
+                    if (zeroCostMode) {
+                        cumCost += parseFloat((p.metadata || {}).compute_time) || 0;
+                    } else {
+                        cumCost += programCost(p);
+                    }
                     var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
                     if (sc != null && (runningBest === null || sc > runningBest)) runningBest = sc;
                     return { idx: i + 1, cost: cumCost, score: runningBest };
@@ -12190,10 +12214,12 @@ console.error("[DEBUG] Error in processData:", error);
                     lineWrap.innerHTML = '<p style="text-align:center;padding:30px;color:#999">' + t('cost_no_data') + '</p>';
                 } else {
                     var maxCost  = d3.max(series, function(d) { return d.cost;  }) || 1;
+                    var minScore = d3.min(series, function(d) { return d.score; }) || 0;
                     var maxScore = d3.max(series, function(d) { return d.score; }) || 1;
+                    var scorePad = Math.max((maxScore - minScore) * 0.1, 0.01);
                     var xScale = d3.scaleLinear().domain([1, series.length]).range([0, innerW]);
                     var yCost  = d3.scaleLinear().domain([0, maxCost  * 1.05]).range([innerH, 0]);
-                    var yScore = d3.scaleLinear().domain([0, maxScore * 1.1 ]).range([innerH, 0]);
+                    var yScore = d3.scaleLinear().domain([minScore - scorePad, maxScore + scorePad]).range([innerH, 0]);
 
                     var svg = d3.select(lineWrap).append('svg')
                         .attr('width', svgW).attr('height', svgH)
@@ -12209,8 +12235,11 @@ console.error("[DEBUG] Error in processData:", error);
                     g.append('g').attr('transform', 'translate(0,' + innerH + ')')
                         .call(d3.axisBottom(xScale).ticks(Math.min(series.length, 8)).tickFormat(d3.format('d')))
                         .selectAll('text').style('font-size', '10px').style('font-family', 'Inter, sans-serif');
+                    var costAxisFmt = zeroCostMode
+                        ? function(d) { return d3.format('.1f')(d) + 's'; }
+                        : function(d) { return '$' + d3.format('.3f')(d); };
                     g.append('g')
-                        .call(d3.axisLeft(yCost).ticks(5).tickFormat(function(d) { return '$' + d3.format('.3f')(d); }))
+                        .call(d3.axisLeft(yCost).ticks(5).tickFormat(costAxisFmt))
                         .selectAll('text').style('font-size', '10px').style('fill', '#D97706')
                         .style('font-family', 'Roboto Mono, monospace');
                     g.append('g').attr('transform', 'translate(' + innerW + ',0)')
@@ -12221,7 +12250,7 @@ console.error("[DEBUG] Error in processData:", error);
                     g.append('text').attr('transform', 'rotate(-90)').attr('x', -(innerH / 2)).attr('y', -50)
                         .attr('text-anchor', 'middle')
                         .style('font-size', '10px').style('fill', '#D97706').style('font-family', 'Inter, sans-serif')
-                        .text('Cumulative Cost ($)');
+                        .text(zeroCostMode ? 'Cumulative Compute (s)' : 'Cumulative Cost ($)');
                     g.append('text')
                         .attr('transform', 'rotate(90,' + (innerW + 50) + ',' + (innerH / 2) + ')')
                         .attr('x', innerW + 50).attr('y', innerH / 2).attr('text-anchor', 'middle')
@@ -12241,7 +12270,7 @@ console.error("[DEBUG] Error in processData:", error);
                             .curve(d3.curveMonotoneX));
 
                     var lgG = g.append('g').attr('transform', 'translate(' + (innerW - 112) + ',2)');
-                    [[false, '#D97706', 'Cost'], [true, '#059669', 'Best Score']].forEach(function(entry, li) {
+                    [[false, '#D97706', zeroCostMode ? 'Time' : 'Cost'], [true, '#059669', 'Best Score']].forEach(function(entry, li) {
                         var row = lgG.append('g').attr('transform', 'translate(0,' + (li * 14) + ')');
                         row.append('line').attr('x1', 0).attr('x2', 16).attr('y1', 5).attr('y2', 5)
                             .attr('stroke', entry[1]).attr('stroke-width', 2)
@@ -12260,7 +12289,8 @@ console.error("[DEBUG] Error in processData:", error);
                             var d = series[idx2];
                             if (!d || !lineTooltip) return;
                             lineTooltip.style.opacity = '1';
-                            lineTooltip.innerHTML = '#' + d.idx + '\u00a0 Cost: $' + d.cost.toFixed(4) + '\u00a0 Score: ' + d.score.toFixed(4);
+                            var costLabel = zeroCostMode ? 'Time: ' + d.cost.toFixed(1) + 's' : 'Cost: $' + d.cost.toFixed(4);
+                            lineTooltip.innerHTML = '#' + d.idx + '\u00a0 ' + costLabel + '\u00a0 Score: ' + d.score.toFixed(4);
                             var r = lineWrap.getBoundingClientRect();
                             lineTooltip.style.left = (event.clientX - r.left + 12) + 'px';
                             lineTooltip.style.top  = (event.clientY - r.top  - 32) + 'px';
@@ -12276,8 +12306,10 @@ console.error("[DEBUG] Error in processData:", error);
                     var md = p.metadata || {};
                     var lr = md.llm_result || {};
                     var m = md.model_name || md.model || lr.model || p.model_name || p.model || 'unknown';
-                    if (!modelMap[m]) modelMap[m] = { cost: 0, scores: [] };
+                    if (!modelMap[m]) modelMap[m] = { cost: 0, compute: 0, scores: [], count: 0 };
                     modelMap[m].cost += programCost(p);
+                    modelMap[m].compute += parseFloat((md).compute_time) || 0;
+                    modelMap[m].count++;
                     var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
                     if (sc != null) modelMap[m].scores.push(sc);
                 });
@@ -12287,9 +12319,10 @@ console.error("[DEBUG] Error in processData:", error);
                     var maxScore   = v.scores.length ? Math.max.apply(null, v.scores) : 0;
                     var minScore   = v.scores.length ? Math.min.apply(null, v.scores) : 0;
                     var scoreDelta = Math.max(maxScore - minScore, 1e-6);
-                    var efficiency = v.cost > 0 ? v.cost / scoreDelta : 0;
-                    return { model: model, cost: v.cost, maxScore: maxScore, efficiency: efficiency };
-                }).filter(function(r) { return r.cost > 0; }).sort(function(a, b) { return a.efficiency - b.efficiency; });
+                    var resource = zeroCostMode ? v.compute : v.cost;
+                    var efficiency = resource > 0 ? resource / scoreDelta : 0;
+                    return { model: model, cost: v.cost, compute: v.compute, count: v.count, maxScore: maxScore, efficiency: efficiency };
+                }).filter(function(r) { return zeroCostMode ? r.compute > 0 : r.cost > 0; }).sort(function(a, b) { return a.efficiency - b.efficiency; });
 
                 if (modelRows.length === 0) {
                     barSection.innerHTML = '<p style="text-align:center;padding:20px;color:#999">' + t('cost_no_data') + '</p>';
@@ -12306,11 +12339,14 @@ console.error("[DEBUG] Error in processData:", error);
                                 avHtml + '<span>' + escapeHtml(costShortName(r.model)) + '</span>' +
                             '</div>' +
                             '<div class="cost-bar-track"><div class="cost-bar-fill" style="width:' + pct + '%"></div></div>' +
-                            '<div class="cost-bar-val">$/' + '\u0394score: ' + fmtCost(r.efficiency) + '</div>' +
+                            '<div class="cost-bar-val">' + (zeroCostMode ? r.efficiency.toFixed(1) + 's/\u0394score' : '$/' + '\u0394score: ' + fmtCost(r.efficiency)) + '</div>' +
                             '</div>';
                     }).join('');
+                    var effDesc = zeroCostMode
+                        ? 'seconds/\u0394score \u2014 lower = faster improvement'
+                        : '$/\u0394score \u2014 lower is more efficient';
                     barSection.innerHTML =
-                        '<p style="font-size:11px;color:#999;margin:0 0 10px 0;">$/' + '\u0394score \u2014 lower is more efficient</p>' +
+                        '<p style="font-size:11px;color:#999;margin:0 0 10px 0;">' + effDesc + '</p>' +
                         rowsHtml;
                 }
             }

@@ -704,9 +704,15 @@
 
         function formatScore(s) {
             if (s === null || s === undefined) return '-';
-            const p = Math.min(100, Math.max(0, s * 100));
+            // Support negative scores (e.g. sharpe ratio): normalize to 0-100 range
+            // For scores in [0,1] range, use percentage directly
+            // For wider ranges (sharpe etc.), just show the number with color coding
+            const absMax = Math.max(Math.abs(s), 0.001);
+            const isNormalized = absMax <= 1.5;
+            const p = isNormalized ? Math.min(100, Math.max(0, s * 100)) : Math.min(100, Math.max(0, 50 + s * 20));
+            const color = s < 0 ? '#E57373' : '';
             return `
-                <div class="score-gradient">${s.toFixed(3)}</div>
+                <div class="score-gradient" ${color ? `style="-webkit-text-fill-color:${color}"` : ''}>${s.toFixed(3)}</div>
                 <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${p}%"></div></div>
             `;
         }
