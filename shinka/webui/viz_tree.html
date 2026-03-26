@@ -1645,6 +1645,15 @@
         .ens-card-name {
             font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden;
             text-overflow: ellipsis; margin-bottom: 6px; color: #333;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .ens-model-avatar {
+            width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0;
+            object-fit: cover; vertical-align: middle;
+        }
+        .ens-model-avatar-sm {
+            width: 16px; height: 16px; border-radius: 50%; flex-shrink: 0;
+            object-fit: cover; vertical-align: middle; margin-right: 4px;
         }
         .ens-card-meta {
             display: flex; gap: 12px; font-size: 11px; color: #888; margin-bottom: 8px;
@@ -11334,6 +11343,28 @@ console.error("[DEBUG] Error in processData:", error);
                 return base.split('/').pop();
             };
 
+            const AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            const MODEL_AVATAR_MAP = {
+                'glm': 'chatglm', 'chatglm': 'chatglm', 'zhipu': 'chatglm',
+                'deepseek': 'deepseek', 'ds': 'deepseek',
+                'doubao': 'doubao', 'bytedance': 'doubao',
+                'minimax': 'minimax', 'abab': 'minimax',
+                'kimi': 'kimi', 'moonshot': 'moonshot',
+                'qwen': 'qwen', 'alibaba': 'qwen',
+                'claude': 'claude', 'anthropic': 'claude',
+                'gpt': 'openai', 'openai': 'openai',
+                'gemini': 'google', 'google': 'google',
+                'llama': 'meta', 'meta': 'meta',
+                'mistral': 'mistral',
+            };
+            const modelAvatar = (modelName) => {
+                const lower = shortName(modelName).toLowerCase();
+                for (const [key, avatar] of Object.entries(MODEL_AVATAR_MAP)) {
+                    if (lower.includes(key)) return `${AVATAR_CDN}/${avatar}.webp`;
+                }
+                return null;
+            };
+
             // ── data extraction ──────────────────────────────────────────────────
             if (!data || data.length === 0) {
                 container.html(`<p style="text-align:center;padding:40px;color:#999">${t('ens_no_data')}</p>`);
@@ -11490,10 +11521,14 @@ console.error("[DEBUG] Error in processData:", error);
                             .attr("stroke-width", activeModel ? d => d.model === activeModel ? 3 : 1.5 : 2.2);
                     });
 
+                const avatarUrl = modelAvatar(stat.model);
+                const avatarHtml = avatarUrl
+                    ? `<img class="ens-model-avatar" src="${avatarUrl}" onerror="this.style.display='none'">`
+                    : '';
                 card.append("div")
                     .attr("class", "ens-card-name")
                     .attr("title", stat.model)
-                    .html(`<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`);
+                    .html(`${avatarHtml}<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`);
 
                 const meta = card.append("div").attr("class", "ens-card-meta");
                 meta.append("span").html(`<b>${stat.totalPrograms}</b>&nbsp;${t('ens_programs')}`);
@@ -11662,8 +11697,10 @@ console.error("[DEBUG] Error in processData:", error);
                 rows.forEach(stat => {
                     const tr = tbody.append("tr").attr("class", "data-row");
                     const color = colorScale(stat.model);
+                    const tAvUrl = modelAvatar(stat.model);
+                    const tAvHtml = tAvUrl ? `<img class="ens-model-avatar-sm" src="${tAvUrl}" onerror="this.style.display='none'">` : '';
                     tr.append("td").attr("class", "ens-model-cell")
-                        .html(`<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`)
+                        .html(`${tAvHtml}<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`)
                         .attr("title", stat.model);
                     tr.append("td").attr("class", "ens-num").text(stat.totalPrograms);
                     tr.append("td").attr("class", "ens-num").text((stat.successRate * 100).toFixed(1) + "%");
