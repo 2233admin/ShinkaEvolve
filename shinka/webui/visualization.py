@@ -894,10 +894,11 @@ class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
 
                 # Get the generation where best score was achieved
                 best_gen = row["max_generation"] or 0
+                best_public_metrics = {}
                 if row["best_score"] is not None:
                     cursor.execute(
                         """
-                        SELECT MIN(generation) as best_gen
+                        SELECT MIN(generation) as best_gen, public_metrics
                         FROM programs
                         WHERE combined_score = ?
                     """,
@@ -906,6 +907,12 @@ class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
                     best_row = cursor.fetchone()
                     if best_row and best_row["best_gen"] is not None:
                         best_gen = best_row["best_gen"]
+                    if best_row and best_row["public_metrics"]:
+                        try:
+                            import json as _json
+                            best_public_metrics = _json.loads(best_row["public_metrics"])
+                        except Exception:
+                            pass
 
                 max_gen = row["max_generation"] or 0
                 gens_since_improvement = max_gen - best_gen
@@ -921,6 +928,10 @@ class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
                     "prompt_count": 0,
                     "prompt_evo_cost": 0,
                     "has_prompt_evo": False,
+                    # v6 multi-objective monitoring metrics (from best program's public_metrics)
+                    "best_win_rate": best_public_metrics.get("win_rate"),
+                    "best_avg_hold_days": best_public_metrics.get("avg_hold_days"),
+                    "best_stop_loss_rate": best_public_metrics.get("stop_loss_rate"),
                 }
 
                 # Check for prompts.db in the same directory

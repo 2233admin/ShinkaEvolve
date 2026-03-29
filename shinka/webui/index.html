@@ -488,6 +488,9 @@
                             <th class="numeric">Gen</th>
                             <th class="numeric hide-tablet">Stall</th>
                             <th class="numeric">Best Score</th>
+                            <th class="numeric hide-tablet" title="Win rate of best program">Win%</th>
+                            <th class="numeric hide-tablet" title="Average hold days of best program">Hold</th>
+                            <th class="numeric hide-tablet" title="Stop-loss rate of best program">SL%</th>
                             <th class="numeric hide-tablet">P-Evo</th>
                             <th class="numeric hide-mobile">Cost ($)</th>
                             <th class="hide-mobile">Updated</th>
@@ -594,7 +597,7 @@
 
                 filteredResults.forEach(result => {
                     const cached = statsCache[result.path];
-                    if (cached && cached.program_count <= 1) return; // Skip empty/initial meta files
+                    if (cached && cached.program_count < 1) return; // Skip truly empty DBs
 
                     const row = document.createElement('tr');
                     row.className = 'task-child' + (isCollapsed ? ' hidden' : '');
@@ -615,6 +618,9 @@
                         <td class="numeric" data-stat="max_generation">${renderLoader(cached, 'max_generation')}</td>
                         <td class="numeric hide-tablet" data-stat="stall">${renderLoader(cached, 'gens_since_improvement', formatStall)}</td>
                         <td class="numeric" data-stat="best_score">${renderLoader(cached, 'best_score', formatScore)}</td>
+                        <td class="numeric hide-tablet" data-stat="best_win_rate">${renderLoader(cached, 'best_win_rate', formatPct)}</td>
+                        <td class="numeric hide-tablet" data-stat="best_avg_hold_days">${renderLoader(cached, 'best_avg_hold_days', formatHold)}</td>
+                        <td class="numeric hide-tablet" data-stat="best_stop_loss_rate">${renderLoader(cached, 'best_stop_loss_rate', formatSLRate)}</td>
                         <td class="numeric hide-tablet" data-stat="prompt_evo">${renderLoader(cached, 'has_prompt_evo', (_, s) => formatPromptEvo(s))}</td>
                         <td class="numeric hide-mobile" data-stat="total_cost">${renderLoader(cached, 'total_cost', (v, s) => formatCost(v + (s.prompt_evo_cost || 0)))}</td>
                         <td class="hide-mobile" data-stat="last_update">${renderLoader(cached, 'last_update', formatTimeAgo)}</td>
@@ -680,6 +686,9 @@
                 'max_generation': stats.max_generation || 0,
                 'stall': formatStall(stats.gens_since_improvement),
                 'best_score': formatScore(stats.best_score),
+                'best_win_rate': formatPct(stats.best_win_rate),
+                'best_avg_hold_days': formatHold(stats.best_avg_hold_days),
+                'best_stop_loss_rate': formatSLRate(stats.best_stop_loss_rate),
                 'prompt_evo': formatPromptEvo(stats),
                 'total_cost': formatCost(totalCost),
                 'last_update': formatTimeAgo(stats.last_update)
@@ -730,6 +739,27 @@
                 <div class="score-gradient" ${color ? `style="-webkit-text-fill-color:${color}"` : ''}>${s.toFixed(3)}</div>
                 <div class="progress-bar-container"><div class="progress-bar-fill" style="width: ${p}%"></div></div>
             `;
+        }
+
+        function formatPct(v) {
+            if (v === null || v === undefined) return '-';
+            const p = v * 100;
+            const color = p >= 60 ? '#81C784' : p >= 50 ? '#FFD54F' : '#E57373';
+            return `<span style="color:${color}">${p.toFixed(1)}%</span>`;
+        }
+
+        function formatHold(v) {
+            if (v === null || v === undefined) return '-';
+            const color = v >= 3 ? '#81C784' : v >= 2 ? '#FFD54F' : '#E57373';
+            return `<span style="color:${color}">${v.toFixed(1)}d</span>`;
+        }
+
+        function formatSLRate(v) {
+            if (v === null || v === undefined) return '-';
+            const p = v * 100;
+            // Lower is better: <25% green, 25-35% yellow, >35% red
+            const color = p <= 25 ? '#81C784' : p <= 35 ? '#FFD54F' : '#E57373';
+            return `<span style="color:${color}">${p.toFixed(1)}%</span>`;
         }
 
         function formatCost(c) {
