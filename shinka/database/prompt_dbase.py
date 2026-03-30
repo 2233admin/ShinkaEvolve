@@ -1013,7 +1013,7 @@ class SystemPromptDatabase:
             or self.config.archive_size <= 0
         ):
             logger.debug("Archive update skipped.")
-            return
+            return None
 
         self.cursor.execute("SELECT COUNT(*) FROM prompt_archive")
         count = (self.cursor.fetchone() or [0])[0]
@@ -1160,53 +1160,40 @@ class SystemPromptDatabase:
         """Return the full descendant chain rooted at root_prompt_id.
 
         Each entry is a dict with keys: id, parent_id, generation, patch_type,
-        fitness, program_count, timestamp.  Ordered by generation (BFS).
+        fitness, program_count, timestamp.  Ordered by generation ascending.
         Useful for replaying or visualising the evolution trajectory.
+
+        Uses a single recursive CTE query — O(n) queries, not O(n²).
 
         Args:
             root_prompt_id: ID of the ancestor prompt to start from.
 
         Returns:
-            List of dicts, one per prompt in the lineage (including the root).
+            List of dicts, one per prompt in the lineage (including the root),
+            ordered by generation ascending.
         """
         if not self.cursor:
             raise ConnectionError("Prompt DB not connected.")
 
-        result: List[Dict] = []
-        queue = [root_prompt_id]
-        seen: set = set()
-
-        while queue:
-            current_id = queue.pop(0)
-            if current_id in seen:
-                continue
-            seen.add(current_id)
-
-            self.cursor.execute(
-                """
-                SELECT id, parent_id, generation, patch_type, fitness,
-                       program_count, timestamp
+        self.cursor.execute(
+            """
+            WITH RECURSIVE lineage(id, parent_id, generation, patch_type,
+                                   fitness, program_count, timestamp) AS (
+                SELECT id, parent_id, generation, patch_type,
+                       fitness, program_count, timestamp
                 FROM system_prompts
                 WHERE id = ?
-                """,
-                (current_id,),
+                UNION ALL
+                SELECT s.id, s.parent_id, s.generation, s.patch_type,
+                       s.fitness, s.program_count, s.timestamp
+                FROM system_prompts s
+                JOIN lineage l ON s.parent_id = l.id
             )
-            row = self.cursor.fetchone()
-            if not row:
-                continue
-
-            result.append(dict(row))
-
-            # Find children
-            self.cursor.execute(
-                "SELECT id FROM system_prompts WHERE parent_id = ?",
-                (current_id,),
-            )
-            children = self.cursor.fetchall()
-            for child in children:
-                queue.append(child["id"])
-
-        return result
+            SELECT * FROM lineage ORDER BY generation ASC
+            """,
+            (root_prompt_id,),
+        )
+        return [dict(row) for row in self.cursor.fetchall()]
 
     def recompute_all_percentiles(
         self,
