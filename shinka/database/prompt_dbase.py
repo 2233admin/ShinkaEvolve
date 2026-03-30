@@ -213,8 +213,10 @@ class SystemPrompt:
             self.total_percentile += percentile
             self.total_improvement += improvement  # Keep for backward compat
             self.program_scores.append(program_score)  # Store for recomputation
-            if self.correct_program_count > 0:
-                self.fitness = self.total_percentile / self.correct_program_count
+        # Divide by total program_count (not just correct) so failures penalize fitness.
+        # A prompt generating 3 correct out of 100 runs is worse than 3 correct out of 3.
+        if self.program_count > 0:
+            self.fitness = self.total_percentile / self.program_count
 
 
 class SystemPromptDatabase:
@@ -781,8 +783,14 @@ class SystemPromptDatabase:
                     # Legacy behavior: infinite UCB for new prompts
                     ucb_scores.append(float("inf"))
             else:
-                # UCB1 formula: avg_reward + c * sqrt(log(N) / n)
-                exploitation = p.fitness
+                # Thompson sampling over Beta parameterized by fitness (percentile mean).
+                # alpha = fitness * N + 1, beta = (1-fitness) * N + 1 encodes the
+                # quality distribution: higher fitness → higher expected Beta sample.
+                # N = program_count gives confidence proportional to observation count.
+                n_obs = max(p.program_count, 1)
+                exploitation = np.random.beta(
+                    p.fitness * n_obs + 1, (1.0 - p.fitness) * n_obs + 1
+                )
                 exploration = c * np.sqrt(
                     np.log(total_correct) / p.correct_program_count
                 )
@@ -861,10 +869,9 @@ class SystemPromptDatabase:
             new_total_improvement += improvement
             new_program_scores.append(program_score)
 
-        # Fitness is average percentile over correct programs only
-        new_fitness = (
-            new_total_percentile / new_correct_count if new_correct_count > 0 else 0.0
-        )
+        # Fitness is average percentile over ALL programs (correct + failed).
+        # Failures contribute 0 percentile, so they drag fitness down proportionally.
+        new_fitness = new_total_percentile / new_count
 
         # Update program_ids list
         new_program_ids = prompt.program_ids.copy()

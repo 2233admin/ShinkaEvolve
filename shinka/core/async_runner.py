@@ -447,6 +447,9 @@ class ShinkaEvolveRunner:
         self._last_meta_log_state: dict | None = None
         self._last_meta_log_info_time: float | None = None
 
+        # Track which patch_type produced each evolved prompt (for bandit feedback)
+        self._prompt_patch_types: dict[str, str] = {}  # prompt_id → patch_type
+
     def _save_bandit_state(self) -> None:
         """Save the LLM selection bandit state to disk."""
         if self.llm_selection is None:
@@ -476,6 +479,43 @@ class ShinkaEvolveRunner:
                 )
         except Exception as e:
             logger.warning(f"Failed to load bandit state: {e}")
+
+    def _save_patch_bandit_state(self) -> None:
+        """Save patch-type Thompson bandit state to disk."""
+        if self.prompt_evolver is None:
+            return
+        try:
+            import pickle
+
+            path = Path(self.results_dir) / "patch_bandit_state.pkl"
+            state = {
+                "successes": dict(self.prompt_evolver._patch_successes),
+                "failures": dict(self.prompt_evolver._patch_failures),
+            }
+            with open(path, "wb") as f:
+                pickle.dump(state, f)
+            logger.debug(f"Saved patch bandit state to {path}: {state}")
+        except Exception as e:
+            logger.warning(f"Failed to save patch bandit state: {e}")
+
+    def _load_patch_bandit_state(self) -> None:
+        """Load patch-type Thompson bandit state from disk."""
+        if self.prompt_evolver is None:
+            return
+        try:
+            import pickle
+
+            path = Path(self.results_dir) / "patch_bandit_state.pkl"
+            if path.exists():
+                with open(path, "rb") as f:
+                    state = pickle.load(f)
+                self.prompt_evolver._patch_successes.update(state.get("successes", {}))
+                self.prompt_evolver._patch_failures.update(state.get("failures", {}))
+                logger.info(f"Loaded patch bandit state from {path}: {state}")
+            else:
+                logger.debug(f"No patch bandit state file found at {path}, starting fresh")
+        except Exception as e:
+            logger.warning(f"Failed to load patch bandit state: {e}")
 
     def _validate_concurrency_settings(
         self,
@@ -783,6 +823,7 @@ class ShinkaEvolveRunner:
 
             # Save final bandit state
             self._save_bandit_state()
+            self._save_patch_bandit_state()
 
             if self.verbose:
                 logger.info(
@@ -846,6 +887,7 @@ class ShinkaEvolveRunner:
 
             logger.info("=" * 80)
             self._load_bandit_state()
+            self._load_patch_bandit_state()
 
             # Update state for resuming
             self.completed_generations = self.db.last_iteration + 1
@@ -1004,6 +1046,12 @@ class ShinkaEvolveRunner:
                 improvement=improvement,  # Keep for backward compat/logging
                 program_score=program_score,  # Store for percentile recomputation
             )
+
+            # Feed patch-type Thompson bandit with correctness reward
+            if self.prompt_evolver and prompt_id in self._prompt_patch_types:
+                pt = self._prompt_patch_types[prompt_id]
+                self.prompt_evolver.record_patch_reward(pt, 1.0 if correct else 0.0)
+
             logger.debug(
                 f"Updated prompt {prompt_id[:8]}... fitness with "
                 f"percentile={percentile:.4f} (score={program_score:.4f}, "
@@ -1117,6 +1165,7 @@ class ShinkaEvolveRunner:
 
             if new_prompt:
                 self.prompt_db.add(new_prompt, verbose=self.verbose)
+                self._prompt_patch_types[new_prompt.id] = patch_type
                 logger.info(
                     f"Evolved new prompt {new_prompt.id[:8]}... "
                     f"(prompt_gen={new_prompt.generation}, prog_gen={current_program_generation}, "
@@ -1124,6 +1173,9 @@ class ShinkaEvolveRunner:
                 )
             else:
                 logger.warning(f"Prompt evolution failed (patch_type={patch_type})")
+                # Failed evolution is a direct negative signal for this patch type
+                if self.prompt_evolver and patch_type:
+                    self.prompt_evolver.record_patch_reward(patch_type, 0.0)
 
         except Exception as e:
             logger.error(f"Error during prompt evolution: {e}")
@@ -3409,6 +3461,7 @@ class ShinkaEvolveRunner:
             # Periodically save bandit state (every 5 generations)
             if self.completed_generations % 5 == 0 and self.completed_generations > 0:
                 self._save_bandit_state()
+                self._save_patch_bandit_state()
 
         except Exception as e:
             logger.warning(f"Error in optimized completion counting: {e}")

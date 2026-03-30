@@ -187,16 +187,17 @@ class SystemPromptEvolver:
         Args:
             llm_client: LLM client for generating prompt mutations
             patch_types: List of mutation types (default: ["diff", "full"])
-            patch_type_probs: Probabilities for each patch type
+            patch_type_probs: Probabilities for each patch type (used as initial prior;
+                              adapted via Thompson sampling over observed rewards)
             llm_kwargs: Additional kwargs for LLM queries
         """
         self.llm_client = llm_client
 
+        if patch_types is None:
+            patch_types = ["diff", "full"]
         for p in patch_types:
             if p not in ["diff", "full"]:
                 raise ValueError(f"Invalid patch type: {p}")
-        if patch_types is None:
-            patch_types = ["diff", "full"]
         if patch_type_probs is None:
             patch_type_probs = [0.7, 0.3]
 
@@ -209,6 +210,12 @@ class SystemPromptEvolver:
         self.patch_types = patch_types
         self.patch_type_probs = patch_type_probs
         self.llm_kwargs = llm_kwargs or {}
+
+        # Per-patch-type reward tracking for Thompson sampling over mutation policy.
+        # Successes/failures are updated via record_patch_reward() after each evolution.
+        # Probs adapt from replay rather than staying frozen at the initial prior.
+        self._patch_successes: dict[str, int] = {pt: 1 for pt in patch_types}
+        self._patch_failures: dict[str, int] = {pt: 1 for pt in patch_types}
 
     def evolve(
         self,
@@ -308,9 +315,36 @@ class SystemPromptEvolver:
 
         return new_prompt, patch_type, cost
 
+    def record_patch_reward(self, patch_type: str, reward: float) -> None:
+        """Record observed reward for a patch type to adapt mutation policy.
+
+        Call this after each evolution with the fitness delta (or percentile) of the
+        child prompt relative to its parent. Positive reward = success, zero/negative = failure.
+        Thompson sampling over Beta(successes, failures) replaces the static [0.7, 0.3] prior.
+
+        Args:
+            patch_type: The mutation type used ("diff" or "full")
+            reward: Scalar reward signal (e.g., child_fitness - parent_fitness)
+        """
+        if patch_type not in self._patch_successes:
+            return
+        if reward > 0:
+            self._patch_successes[patch_type] += 1
+        else:
+            self._patch_failures[patch_type] += 1
+
     def _sample_patch_type(self) -> str:
-        """Sample a patch type."""
-        return np.random.choice(self.patch_types, p=self.patch_type_probs)
+        """Sample a patch type via Thompson sampling over per-type Beta distributions.
+
+        Each patch type has Beta(successes+1, failures+1). We draw one sample per type
+        and pick the argmax — this naturally shifts probability toward types that have
+        produced higher rewards, without freezing at the initial [0.7, 0.3] prior.
+        """
+        thompson_samples = [
+            np.random.beta(self._patch_successes[pt], self._patch_failures[pt])
+            for pt in self.patch_types
+        ]
+        return self.patch_types[int(np.argmax(thompson_samples))]
 
     def _diff_mutate(
         self,
@@ -472,6 +506,19 @@ class AsyncSystemPromptEvolver:
         self.patch_type_probs = patch_type_probs
         self.llm_kwargs = llm_kwargs or {}
 
+        # Per-patch-type reward tracking (mirrors sync evolver).
+        self._patch_successes: dict[str, int] = {pt: 1 for pt in patch_types}
+        self._patch_failures: dict[str, int] = {pt: 1 for pt in patch_types}
+
+    def record_patch_reward(self, patch_type: str, reward: float) -> None:
+        """Record observed reward for a patch type. See SystemPromptEvolver.record_patch_reward."""
+        if patch_type not in self._patch_successes:
+            return
+        if reward > 0:
+            self._patch_successes[patch_type] += 1
+        else:
+            self._patch_failures[patch_type] += 1
+
     async def evolve(
         self,
         parent_prompt: SystemPrompt,
@@ -570,8 +617,12 @@ class AsyncSystemPromptEvolver:
         return new_prompt, patch_type, cost
 
     def _sample_patch_type(self) -> str:
-        """Sample a patch type."""
-        return np.random.choice(self.patch_types, p=self.patch_type_probs)
+        """Sample a patch type via Thompson sampling over per-type Beta distributions."""
+        thompson_samples = [
+            np.random.beta(self._patch_successes[pt], self._patch_failures[pt])
+            for pt in self.patch_types
+        ]
+        return self.patch_types[int(np.argmax(thompson_samples))]
 
     async def _diff_mutate_async(
         self,

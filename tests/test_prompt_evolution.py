@@ -125,12 +125,12 @@ class TestSystemPromptDataclass:
         assert prompt.fitness == 0.8
         assert prompt.program_scores == [0.9]
 
-        # Add an incorrect program - should not affect fitness or scores
+        # Add an incorrect program - penalizes fitness (divided by total program_count)
         prompt.update_fitness(percentile=0.0, correct=False, program_score=0.1)
         assert prompt.program_count == 2
         assert prompt.correct_program_count == 1  # Still 1
-        assert prompt.fitness == 0.8  # Unchanged
-        assert prompt.program_scores == [0.9]  # No new score added
+        assert prompt.fitness == pytest.approx(0.4)  # 0.8 / 2 — failures dilute fitness
+        assert prompt.program_scores == [0.9]  # No new score added for incorrect
 
 
 class TestSystemPromptDatabase:
@@ -417,22 +417,25 @@ class TestSystemPromptSampler:
             db, exploration_constant=10.0, epsilon=0.0
         )
 
-        # Count how often high-fitness is selected
-        # With low exploration, UCB should favor exploitation (high fitness prompt)
+        # Both samplers should prefer high_fit (Thompson exploitation favors higher fitness).
+        # Since both prompts have equal sample counts, exploration bonuses are identical
+        # regardless of c — only the exploitation (Beta sample) determines preference.
+        # Use 1000 trials to keep variance low enough for a stable assertion.
+        n = 1000
         low_explore_high_count = sum(
-            1 for _ in range(100) if low_explore_sampler.sample().id == high_fit.id
+            1 for _ in range(n) if low_explore_sampler.sample().id == high_fit.id
         )
-
-        # With high exploration, UCB should explore more evenly
-        # (both prompts have same number of samples, so exploration term is equal,
-        # but high exploration makes fitness difference matter less relatively)
         high_explore_high_count = sum(
-            1 for _ in range(100) if high_explore_sampler.sample().id == high_fit.id
+            1 for _ in range(n) if high_explore_sampler.sample().id == high_fit.id
         )
 
-        # Low exploration should select high fitness more often
-        # (exploitation dominates over exploration)
-        assert low_explore_high_count >= high_explore_high_count
+        # Both samplers should strongly prefer the higher-fitness prompt (>60%)
+        assert low_explore_high_count > n * 0.6, (
+            f"low_explore selected high_fit only {low_explore_high_count}/{n} times"
+        )
+        assert high_explore_high_count > n * 0.6, (
+            f"high_explore selected high_fit only {high_explore_high_count}/{n} times"
+        )
 
         db.close()
 
