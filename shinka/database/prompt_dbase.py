@@ -476,7 +476,7 @@ class SystemPromptDatabase:
         return (self.cursor.fetchone() or {"COUNT(*)": 0})["COUNT(*)"]
 
     @prompt_db_retry()
-    def add(self, prompt: SystemPrompt, verbose: bool = False) -> str:
+    def add(self, prompt: SystemPrompt, verbose: bool = False) -> tuple[str, Optional[str]]:
         """
         Add a system prompt to the database.
 
@@ -551,7 +551,7 @@ class SystemPromptDatabase:
         # Update archive - force add for newly evolved prompts (those with a parent)
         # This ensures new prompts get a chance to be sampled and evaluated
         is_evolved = prompt.parent_id is not None
-        self._update_archive(prompt, force=is_evolved)
+        evicted_id = self._update_archive(prompt, force=is_evolved)
 
         # Update best prompt tracking
         self._update_best_prompt(prompt)
@@ -567,7 +567,7 @@ class SystemPromptDatabase:
                 f"patch={prompt.patch_type}, fitness={prompt.fitness:.4f})"
             )
 
-        return prompt.id
+        return prompt.id, evicted_id
 
     def _prompt_from_row(self, row: sqlite3.Row) -> Optional[SystemPrompt]:
         """Helper to create a SystemPrompt object from a database row."""
@@ -994,7 +994,7 @@ class SystemPromptDatabase:
         return prompt1.timestamp > prompt2.timestamp
 
     @prompt_db_retry()
-    def _update_archive(self, prompt: SystemPrompt, force: bool = False) -> None:
+    def _update_archive(self, prompt: SystemPrompt, force: bool = False) -> Optional[str]:
         """Update the archive with the new prompt if it qualifies.
 
         Args:
@@ -1002,6 +1002,9 @@ class SystemPromptDatabase:
             force: If True, always add the prompt to the archive (replacing the
                    worst prompt if full). Used for newly evolved prompts to ensure
                    they get a chance to be sampled and evaluated.
+
+        Returns:
+            The ID of the evicted prompt if one was replaced, else None.
         """
         if (
             not self.cursor
@@ -1015,6 +1018,8 @@ class SystemPromptDatabase:
         self.cursor.execute("SELECT COUNT(*) FROM prompt_archive")
         count = (self.cursor.fetchone() or [0])[0]
 
+        evicted_id: Optional[str] = None
+
         if count < self.config.archive_size:
             self.cursor.execute(
                 "INSERT OR IGNORE INTO prompt_archive (prompt_id) VALUES (?)",
@@ -1024,7 +1029,7 @@ class SystemPromptDatabase:
             # Archive is full, find worst to replace
             self.cursor.execute(
                 """
-                SELECT a.prompt_id, p.fitness, p.program_count, 
+                SELECT a.prompt_id, p.fitness, p.program_count,
                        p.correct_program_count, p.timestamp
                 FROM prompt_archive a
                 JOIN system_prompts p ON a.prompt_id = p.id
@@ -1037,7 +1042,7 @@ class SystemPromptDatabase:
                     (prompt.id,),
                 )
                 self.conn.commit()
-                return
+                return None
 
             # Find worst prompt in archive
             archive_prompts = []
@@ -1063,6 +1068,7 @@ class SystemPromptDatabase:
             should_replace = force or self._is_better(prompt, worst_in_archive)
 
             if should_replace:
+                evicted_id = worst_in_archive.id
                 self.cursor.execute(
                     "DELETE FROM prompt_archive WHERE prompt_id = ?",
                     (worst_in_archive.id,),
@@ -1083,6 +1089,7 @@ class SystemPromptDatabase:
                     )
 
         self.conn.commit()
+        return evicted_id
 
     @prompt_db_retry()
     def _update_best_prompt(self, prompt: SystemPrompt) -> None:
@@ -1147,6 +1154,59 @@ class SystemPromptDatabase:
         # Reverse to get chronological order (oldest ancestor first)
         ancestors.reverse()
         return ancestors
+
+    @prompt_db_retry()
+    def get_lineage_chain(self, root_prompt_id: str) -> List[Dict]:
+        """Return the full descendant chain rooted at root_prompt_id.
+
+        Each entry is a dict with keys: id, parent_id, generation, patch_type,
+        fitness, program_count, timestamp.  Ordered by generation (BFS).
+        Useful for replaying or visualising the evolution trajectory.
+
+        Args:
+            root_prompt_id: ID of the ancestor prompt to start from.
+
+        Returns:
+            List of dicts, one per prompt in the lineage (including the root).
+        """
+        if not self.cursor:
+            raise ConnectionError("Prompt DB not connected.")
+
+        result: List[Dict] = []
+        queue = [root_prompt_id]
+        seen: set = set()
+
+        while queue:
+            current_id = queue.pop(0)
+            if current_id in seen:
+                continue
+            seen.add(current_id)
+
+            self.cursor.execute(
+                """
+                SELECT id, parent_id, generation, patch_type, fitness,
+                       program_count, timestamp
+                FROM system_prompts
+                WHERE id = ?
+                """,
+                (current_id,),
+            )
+            row = self.cursor.fetchone()
+            if not row:
+                continue
+
+            result.append(dict(row))
+
+            # Find children
+            self.cursor.execute(
+                "SELECT id FROM system_prompts WHERE parent_id = ?",
+                (current_id,),
+            )
+            children = self.cursor.fetchall()
+            for child in children:
+                queue.append(child["id"])
+
+        return result
 
     def recompute_all_percentiles(
         self,

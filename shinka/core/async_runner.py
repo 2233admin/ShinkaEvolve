@@ -954,7 +954,7 @@ class ShinkaEvolveRunner:
                 name="initial_system_prompt",
                 description="Initial system prompt provided by the user.",
             )
-            self.prompt_db.add(initial_prompt, verbose=self.verbose)
+            self.prompt_db.add(initial_prompt, verbose=self.verbose)  # evicted_id ignored for initial
             logger.info(f"Added initial prompt {initial_prompt.id[:8]}... to database")
 
         # Initialize prompt sampler
@@ -1164,8 +1164,10 @@ class ShinkaEvolveRunner:
             self.prompt_api_cost += cost
 
             if new_prompt:
-                self.prompt_db.add(new_prompt, verbose=self.verbose)
+                _, evicted_id = self.prompt_db.add(new_prompt, verbose=self.verbose)
                 self._prompt_patch_types[new_prompt.id] = patch_type
+                if evicted_id:
+                    self._prompt_patch_types.pop(evicted_id, None)
                 logger.info(
                     f"Evolved new prompt {new_prompt.id[:8]}... "
                     f"(prompt_gen={new_prompt.generation}, prog_gen={current_program_generation}, "
