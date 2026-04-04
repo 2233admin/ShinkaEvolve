@@ -163,6 +163,19 @@ def run_step(plugin: Plugin, gen: int, results_root: str = "results") -> tuple[f
     best = float(state_file.read_text()) if state_file.exists() else -1e18
 
     if score > best:
+        # verification gate: run verify_cmd before committing
+        if plugin.verify_cmd:
+            vresult = subprocess.run(
+                plugin.verify_cmd,
+                shell=True,
+                cwd=str(plugin.plugin_dir),
+                env=_eval_env(),
+            )
+            if vresult.returncode != 0:
+                _git_revert(plugin)
+                print(f"[plugin] gen {gen:03d} REVERT verify_cmd failed (score {score:.4f})")
+                return score, False
+
         state_file.write_text(str(score))
         _git_commit(plugin, f"[plugin] gen {gen:03d} {plugin.name}: {score:.4f} (+{score-best:.4f})")
         print(f"[plugin] gen {gen:03d} KEEP  {score:.4f} (prev best {best:.4f})")
