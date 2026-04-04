@@ -1,0 +1,118 @@
+{
+  "project": "ShinkaEvolve plugin system",
+  "updated": "2026-04-05",
+  "features": [
+    {
+      "id": "plug-001",
+      "name": "plugin.yaml loader + Goodhart guard",
+      "status": "completed",
+      "acceptance_criteria": [
+        "load() reads plugin.yaml into Plugin dataclass",
+        "eval_module in mutable raises ValueError",
+        "eval_fn field removed (dead)"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-002",
+      "name": "runner.py: agent-mode keep/revert loop",
+      "status": "completed",
+      "acceptance_criteria": [
+        "run_eval_once() calls evaluate.py via subprocess",
+        "run_step() reads .best state file, git commit or revert",
+        "run_loop() sets baseline, prints guidance"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-003",
+      "name": "runner.py: shinka UCB mode delegation",
+      "status": "completed",
+      "acceptance_criteria": [
+        "mode='shinka' delegates full loop to evaluate.py main()",
+        "PYTHONPATH injects ShinkaEvolve root for subprocess"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-004",
+      "name": "evaluate.py wrapper: autoresearch (val_bpb)",
+      "status": "completed",
+      "acceptance_criteria": [
+        "runs train.py, parses val_bpb from stdout",
+        "writes metrics.json with combined_score = -bpb"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-005",
+      "name": "evaluate.py wrapper: autoresearch-win-rtx (rank_ic)",
+      "status": "completed",
+      "acceptance_criteria": [
+        "runs train.py, parses rank_ic from stdout",
+        "writes metrics.json with combined_score = rank_ic"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-006",
+      "name": "evaluate.py wrapper: parameter-golf (hyperparams via env)",
+      "status": "completed",
+      "acceptance_criteria": [
+        "importlib loads get_hyperparameters() from initial.py",
+        "sets env vars, runs train_gpt_ours.py, parses val_bpb"
+      ],
+      "session_completed": "2026-04-05"
+    },
+    {
+      "id": "plug-007",
+      "name": "FORGE plugin (evaluate.py + plugin.yaml)",
+      "status": "pending",
+      "acceptance_criteria": [
+        "plugin.yaml at D:/projects/FORGE/forge_evolve/",
+        "evaluate.py wraps FORGE training loop",
+        "smoke-test: python run_plugin.py --plugin D:/projects/FORGE/forge_evolve --eval"
+      ]
+    },
+    {
+      "id": "plug-008",
+      "name": "hist-mat plugin (evaluate.py + plugin.yaml)",
+      "status": "pending",
+      "acceptance_criteria": [
+        "plugin.yaml at D:/projects/hist-mat/hmc_evolve/",
+        "evaluate.py runs hist-mat and parses P_risk or accuracy metric",
+        "mutable: adapter or calibration file"
+      ]
+    },
+    {
+      "id": "plug-009",
+      "name": "multi-mutable file support",
+      "status": "pending",
+      "acceptance_criteria": [
+        "runner uses all plugin.mutable entries (not just [0])",
+        "git add/checkout covers all mutable files",
+        "at least one plugin with 2 mutable files tested"
+      ]
+    },
+    {
+      "id": "plug-010",
+      "name": "verification gate hook",
+      "status": "pending",
+      "acceptance_criteria": [
+        "pre-commit hook or run_step guard that runs pytest",
+        "blocks keep if tests fail",
+        "opt-in via plugin.yaml verify_cmd field"
+      ]
+    },
+    {
+      "id": "plug-011",
+      "name": "results dashboard (gen score history)",
+      "status": "pending",
+      "acceptance_criteria": [
+        "reads results/gen_*/metrics.json",
+        "prints ASCII score curve or writes results.md",
+        "accessible via: python run_plugin.py --plugin . --results"
+      ]
+    }
+  ]
+}
