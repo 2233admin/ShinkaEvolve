@@ -1,0 +1,2101 @@
+{
+  "metadata": {
+    "last_iteration": "7",
+    "problem": "circle_packing_n26"
+  },
+  "archive_ids": [
+    "eee2d719-33f1-47f5-89c8-12d250fd1efa",
+    "fa6d2a71-2b64-4561-9140-162cda8d3442",
+    "d69e14cb-0516-4541-bb35-a9513ec9342e",
+    "91ff3072-4bfe-4ae0-bb28-5d50c94aab94",
+    "d3dd2afa-b521-47ef-8be5-136f454f62f5",
+    "106b9d8b-88b5-4eea-8b33-56c28deddd70",
+    "2d61cb1f-1b82-4c4e-9497-fba4b7d91d4e",
+    "95b2ec0e-c269-4b7b-9bba-c9b96f41591e",
+    "9530f69f-949b-4c04-8bd3-c89ab4c54bcb",
+    "ff7e50f3-bd3f-40fa-9430-1ca4028197d9",
+    "c1935d08-9203-4bc0-ada4-dc66e6640dcc",
+    "715bda61-be24-4967-ad02-a1ef27126d8c",
+    "0713831b-6642-42d1-8b0f-7719c1dfe2fa",
+    "985bdf58-6d5f-4684-96d4-be9e9990724c",
+    "8abf61c2-8ed1-43a0-9347-f704837ab8ec",
+    "f5832a5d-96dc-48d6-9534-bf6d61513b5a",
+    "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80",
+    "4975f13f-e097-4147-84cc-c7ba278f775e",
+    "1a3f4146-5a96-4508-b57f-aeeba3252119",
+    "de45748d-6364-4f9c-a9a2-209a4c38ca7e",
+    "2a245fff-854a-4539-8f02-9d1cce9db992",
+    "612678f2-826c-4885-b846-33c5004536a3",
+    "906af160-cc3f-47c4-9f16-47ce293366c3",
+    "231f95df-9e12-4272-93ab-07ac7be02b69",
+    "40dbbcd5-14cd-4314-bdff-fe9c11b7f131",
+    "c2ad595c-27f9-4093-8553-d8d5ab9f4285",
+    "3c64cf81-c474-4921-bd81-05928bd2ec7e"
+  ],
+  "programs": [
+    {
+      "id": "62b34a69-c753-4309-9d52-8496c889a07c",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774011792.6935112,
+      "combined_score": 0.770348,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7703480126595045,
+        "win_rate": 0.3767,
+        "hold_days": 2.58,
+        "sl_pct": 0.0396,
+        "sharpe": 2.783
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.770348
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.973,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 19.76,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "95b2ec0e-c269-4b7b-9bba-c9b96f41591e",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774011899.592158,
+      "combined_score": 0.729292,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7292919094762688,
+        "win_rate": 0.4094,
+        "hold_days": 8.32,
+        "sl_pct": 0.0318,
+        "sharpe": 2.683
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.729292
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.81,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 19.73,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "106b9d8b-88b5-4eea-8b33-56c28deddd70",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012034.6722806,
+      "combined_score": 0.742539,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7425394790904528,
+        "win_rate": 0.4184,
+        "hold_days": 9.52,
+        "sl_pct": 0.0141,
+        "sharpe": 2.641
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.742539
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.89,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 13.97,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "9530f69f-949b-4c04-8bd3-c89ab4c54bcb",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012170.1736856,
+      "combined_score": 0.74273,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7427300275034154,
+        "win_rate": 0.8352,
+        "hold_days": 5.47,
+        "sl_pct": 0.0321,
+        "sharpe": 1.922
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.74273
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.115,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 20.46,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "40dbbcd5-14cd-4314-bdff-fe9c11b7f131",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012271.6738966,
+      "combined_score": 0.71655,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7165502461465486,
+        "win_rate": 0.4592,
+        "hold_days": 2.34,
+        "sl_pct": 0.0193,
+        "sharpe": 2.205
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.71655
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.751,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 11.95,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "2cec612c-c9f1-4384-b0ed-a5abd9e95514",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012418.2105105,
+      "combined_score": 0.739551,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7395509647552176,
+        "win_rate": 0.686,
+        "hold_days": 8.68,
+        "sl_pct": 0.0129,
+        "sharpe": 2.606
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.739551
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.017,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 18.35,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "1a3f4146-5a96-4508-b57f-aeeba3252119",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012536.3999856,
+      "combined_score": 0.632239,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.6322393834618626,
+        "win_rate": 0.6063,
+        "hold_days": 8.69,
+        "sl_pct": 0.0437,
+        "sharpe": 2.646
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.632239
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.088,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 10.73,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "fd11fdf7-bc7e-4556-a41f-083735c94181",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012672.7881675,
+      "combined_score": 0.70796,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7079604966012412,
+        "win_rate": 0.6119,
+        "hold_days": 9.04,
+        "sl_pct": 0.0185,
+        "sharpe": 2.33
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.70796
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.95,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 27.12,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "de45748d-6364-4f9c-a9a2-209a4c38ca7e",
+      "language": "python",
+      "parent_id": null,
+      "archive_inspiration_ids": [],
+      "top_k_inspiration_ids": [],
+      "generation": 0,
+      "timestamp": 1774012771.6820881,
+      "combined_score": 0.71719,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7171895690519761,
+        "win_rate": 0.4445,
+        "hold_days": 7.64,
+        "sl_pct": 0.0459,
+        "sharpe": 2.52
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.71719
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.9,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 10.48,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "91ff3072-4bfe-4ae0-bb28-5d50c94aab94",
+      "language": "python",
+      "parent_id": "62b34a69-c753-4309-9d52-8496c889a07c",
+      "archive_inspiration_ids": [
+        "106b9d8b-88b5-4eea-8b33-56c28deddd70",
+        "1a3f4146-5a96-4508-b57f-aeeba3252119"
+      ],
+      "top_k_inspiration_ids": [
+        "106b9d8b-88b5-4eea-8b33-56c28deddd70"
+      ],
+      "generation": 1,
+      "timestamp": 1774015413.7845418,
+      "combined_score": 0.759808,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7598079911247175,
+        "win_rate": 0.5116,
+        "hold_days": 7.76,
+        "sl_pct": 0.0287,
+        "sharpe": 2.299
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.759808
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.826,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 18.83,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "d3dd2afa-b521-47ef-8be5-136f454f62f5",
+      "language": "python",
+      "parent_id": "95b2ec0e-c269-4b7b-9bba-c9b96f41591e",
+      "archive_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131",
+        "2cec612c-c9f1-4384-b0ed-a5abd9e95514"
+      ],
+      "top_k_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131"
+      ],
+      "generation": 1,
+      "timestamp": 1774015504.6931305,
+      "combined_score": 0.724349,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7243492396301799,
+        "win_rate": 0.5391,
+        "hold_days": 6.26,
+        "sl_pct": 0.0482,
+        "sharpe": 1.979
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.724349
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.138,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 11.58,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "733bcbb4-c16e-4c07-8d05-98759f405880",
+      "language": "python",
+      "parent_id": "de45748d-6364-4f9c-a9a2-209a4c38ca7e",
+      "archive_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131",
+        "9530f69f-949b-4c04-8bd3-c89ab4c54bcb"
+      ],
+      "top_k_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131"
+      ],
+      "generation": 1,
+      "timestamp": 1774015627.170356,
+      "combined_score": 0.813995,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8139950505259492,
+        "win_rate": 0.7194,
+        "hold_days": 7.16,
+        "sl_pct": 0.0411,
+        "sharpe": 2.288
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.813995
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.965,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 5.01,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "fa6d2a71-2b64-4561-9140-162cda8d3442",
+      "language": "python",
+      "parent_id": "95b2ec0e-c269-4b7b-9bba-c9b96f41591e",
+      "archive_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131",
+        "9530f69f-949b-4c04-8bd3-c89ab4c54bcb"
+      ],
+      "top_k_inspiration_ids": [
+        "40dbbcd5-14cd-4314-bdff-fe9c11b7f131"
+      ],
+      "generation": 1,
+      "timestamp": 1774015741.47551,
+      "combined_score": 0.819145,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8191449817005322,
+        "win_rate": 0.7829,
+        "hold_days": 11.44,
+        "sl_pct": 0.0134,
+        "sharpe": 2.356
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.819145
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.943,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 6.73,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+      "language": "python",
+      "parent_id": "fa6d2a71-2b64-4561-9140-162cda8d3442",
+      "archive_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442",
+        "91ff3072-4bfe-4ae0-bb28-5d50c94aab94"
+      ],
+      "top_k_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442"
+      ],
+      "generation": 2,
+      "timestamp": 1774019033.7348096,
+      "combined_score": 0.792704,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7927039803878088,
+        "win_rate": 0.7154,
+        "hold_days": 8.74,
+        "sl_pct": 0.0385,
+        "sharpe": 2.478
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.792704
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.899,
+      "correct": 1,
+      "children_count": 3,
+      "metadata": {
+        "compute_time": 21.79,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "906af160-cc3f-47c4-9f16-47ce293366c3",
+      "language": "python",
+      "parent_id": "fa6d2a71-2b64-4561-9140-162cda8d3442",
+      "archive_inspiration_ids": [
+        "733bcbb4-c16e-4c07-8d05-98759f405880",
+        "91ff3072-4bfe-4ae0-bb28-5d50c94aab94"
+      ],
+      "top_k_inspiration_ids": [
+        "733bcbb4-c16e-4c07-8d05-98759f405880"
+      ],
+      "generation": 2,
+      "timestamp": 1774019133.2985232,
+      "combined_score": 0.790679,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7906794839365517,
+        "win_rate": 0.4266,
+        "hold_days": 3.81,
+        "sl_pct": 0.0128,
+        "sharpe": 2.678
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.790679
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.016,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 10.72,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "6ffc1387-0da5-459d-a7f1-e6a7d7d98991",
+      "language": "python",
+      "parent_id": "91ff3072-4bfe-4ae0-bb28-5d50c94aab94",
+      "archive_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442",
+        "91ff3072-4bfe-4ae0-bb28-5d50c94aab94"
+      ],
+      "top_k_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442"
+      ],
+      "generation": 2,
+      "timestamp": 1774019250.3540359,
+      "combined_score": 0.73781,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7378097650009211,
+        "win_rate": 0.6978,
+        "hold_days": 10.77,
+        "sl_pct": 0.033,
+        "sharpe": 2.339
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.73781
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.821,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 16.82,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "5b393ede-760a-41e5-b4ba-adf2e1b869ee",
+      "language": "python",
+      "parent_id": "91ff3072-4bfe-4ae0-bb28-5d50c94aab94",
+      "archive_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442",
+        "d3dd2afa-b521-47ef-8be5-136f454f62f5"
+      ],
+      "top_k_inspiration_ids": [
+        "fa6d2a71-2b64-4561-9140-162cda8d3442"
+      ],
+      "generation": 2,
+      "timestamp": 1774019389.830205,
+      "combined_score": 0.749752,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7497516186629581,
+        "win_rate": 0.3298,
+        "hold_days": 8.36,
+        "sl_pct": 0.0358,
+        "sharpe": 2.163
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.749752
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.73,
+      "correct": 1,
+      "children_count": 3,
+      "metadata": {
+        "compute_time": 23.21,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "3c64cf81-c474-4921-bd81-05928bd2ec7e",
+      "language": "python",
+      "parent_id": "d3dd2afa-b521-47ef-8be5-136f454f62f5",
+      "archive_inspiration_ids": [
+        "d3dd2afa-b521-47ef-8be5-136f454f62f5",
+        "fa6d2a71-2b64-4561-9140-162cda8d3442"
+      ],
+      "top_k_inspiration_ids": [
+        "d3dd2afa-b521-47ef-8be5-136f454f62f5"
+      ],
+      "generation": 2,
+      "timestamp": 1774019485.757684,
+      "combined_score": 0.748585,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7485845472624633,
+        "win_rate": 0.781,
+        "hold_days": 2.29,
+        "sl_pct": 0.0423,
+        "sharpe": 2.358
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.748585
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.128,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 7.45,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "ee063641-692d-476b-af2a-bb9c3bb7fc0a",
+      "language": "python",
+      "parent_id": "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+      "archive_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3",
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e"
+      ],
+      "top_k_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3"
+      ],
+      "generation": 3,
+      "timestamp": 1774022602.3848436,
+      "combined_score": 0.884638,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8846377481510226,
+        "win_rate": 0.5647,
+        "hold_days": 10.58,
+        "sl_pct": 0.0461,
+        "sharpe": 2.698
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.884638
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.782,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 5.05,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "03cd3350-236d-4c77-b40b-2dbd691a23a8",
+      "language": "python",
+      "parent_id": "5b393ede-760a-41e5-b4ba-adf2e1b869ee",
+      "archive_inspiration_ids": [
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e",
+        "5b393ede-760a-41e5-b4ba-adf2e1b869ee"
+      ],
+      "top_k_inspiration_ids": [
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e"
+      ],
+      "generation": 3,
+      "timestamp": 1774022707.2878096,
+      "combined_score": 0.781429,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7814290818592861,
+        "win_rate": 0.4632,
+        "hold_days": 11.67,
+        "sl_pct": 0.0332,
+        "sharpe": 2.953
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.781429
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.971,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 23.7,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "4975f13f-e097-4147-84cc-c7ba278f775e",
+      "language": "python",
+      "parent_id": "5b393ede-760a-41e5-b4ba-adf2e1b869ee",
+      "archive_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3",
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "top_k_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3"
+      ],
+      "generation": 3,
+      "timestamp": 1774022875.6467342,
+      "combined_score": 0.716722,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7167224485849998,
+        "win_rate": 0.3441,
+        "hold_days": 3.45,
+        "sl_pct": 0.0338,
+        "sharpe": 2.283
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.716722
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.038,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 10.88,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "b3a213b7-e45c-437e-9617-faab5a97ef3a",
+      "language": "python",
+      "parent_id": "3c64cf81-c474-4921-bd81-05928bd2ec7e",
+      "archive_inspiration_ids": [
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e",
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "top_k_inspiration_ids": [
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e"
+      ],
+      "generation": 3,
+      "timestamp": 1774022963.1534948,
+      "combined_score": 0.796278,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7962779304184145,
+        "win_rate": 0.621,
+        "hold_days": 6.99,
+        "sl_pct": 0.0474,
+        "sharpe": 2.951
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.796278
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.802,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 22.9,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "612678f2-826c-4885-b846-33c5004536a3",
+      "language": "python",
+      "parent_id": "906af160-cc3f-47c4-9f16-47ce293366c3",
+      "archive_inspiration_ids": [
+        "6ffc1387-0da5-459d-a7f1-e6a7d7d98991",
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "top_k_inspiration_ids": [
+        "6ffc1387-0da5-459d-a7f1-e6a7d7d98991"
+      ],
+      "generation": 3,
+      "timestamp": 1774023058.5589273,
+      "combined_score": 0.77904,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7790398371287562,
+        "win_rate": 0.6416,
+        "hold_days": 7.41,
+        "sl_pct": 0.014,
+        "sharpe": 2.27
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.77904
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.969,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 17.65,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "4faf89e2-d8f9-498e-a906-cdad29cd802c",
+      "language": "python",
+      "parent_id": "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+      "archive_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3",
+        "5b393ede-760a-41e5-b4ba-adf2e1b869ee"
+      ],
+      "top_k_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3"
+      ],
+      "generation": 3,
+      "timestamp": 1774023228.0246973,
+      "combined_score": 0.822886,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8228862385264049,
+        "win_rate": 0.6869,
+        "hold_days": 7.92,
+        "sl_pct": 0.0495,
+        "sharpe": 2.435
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.822886
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.027,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 5.2,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "0713831b-6642-42d1-8b0f-7719c1dfe2fa",
+      "language": "python",
+      "parent_id": "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+      "archive_inspiration_ids": [
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+        "3c64cf81-c474-4921-bd81-05928bd2ec7e"
+      ],
+      "top_k_inspiration_ids": [
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "generation": 3,
+      "timestamp": 1774023342.545001,
+      "combined_score": 0.81492,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8149195127229711,
+        "win_rate": 0.3855,
+        "hold_days": 4.46,
+        "sl_pct": 0.0184,
+        "sharpe": 2.547
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.81492
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.871,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 22.19,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "f5832a5d-96dc-48d6-9534-bf6d61513b5a",
+      "language": "python",
+      "parent_id": "6ffc1387-0da5-459d-a7f1-e6a7d7d98991",
+      "archive_inspiration_ids": [
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b",
+        "5b393ede-760a-41e5-b4ba-adf2e1b869ee"
+      ],
+      "top_k_inspiration_ids": [
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "generation": 3,
+      "timestamp": 1774023467.7608855,
+      "combined_score": 0.859097,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8590969809913098,
+        "win_rate": 0.3242,
+        "hold_days": 5.0,
+        "sl_pct": 0.0152,
+        "sharpe": 2.424
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.859097
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.19,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 9.04,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "d69e14cb-0516-4541-bb35-a9513ec9342e",
+      "language": "python",
+      "parent_id": "5b393ede-760a-41e5-b4ba-adf2e1b869ee",
+      "archive_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3",
+        "6819e0c9-a02f-425e-a762-f3c02c354e8b"
+      ],
+      "top_k_inspiration_ids": [
+        "906af160-cc3f-47c4-9f16-47ce293366c3"
+      ],
+      "generation": 3,
+      "timestamp": 1774023588.0757012,
+      "combined_score": 0.776925,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7769247645417172,
+        "win_rate": 0.6204,
+        "hold_days": 3.05,
+        "sl_pct": 0.0151,
+        "sharpe": 2.432
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.776925
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.854,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 27.47,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "985bdf58-6d5f-4684-96d4-be9e9990724c",
+      "language": "python",
+      "parent_id": "906af160-cc3f-47c4-9f16-47ce293366c3",
+      "archive_inspiration_ids": [
+        "6ffc1387-0da5-459d-a7f1-e6a7d7d98991",
+        "5b393ede-760a-41e5-b4ba-adf2e1b869ee"
+      ],
+      "top_k_inspiration_ids": [
+        "6ffc1387-0da5-459d-a7f1-e6a7d7d98991"
+      ],
+      "generation": 3,
+      "timestamp": 1774023716.4302213,
+      "combined_score": 0.770444,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7704444511934728,
+        "win_rate": 0.7122,
+        "hold_days": 11.22,
+        "sl_pct": 0.0195,
+        "sharpe": 2.06
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.770444
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.781,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 25.0,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "c750b418-999c-409e-a506-a4f0d8cddd3a",
+      "language": "python",
+      "parent_id": "4975f13f-e097-4147-84cc-c7ba278f775e",
+      "archive_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa",
+        "b3a213b7-e45c-437e-9617-faab5a97ef3a"
+      ],
+      "top_k_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa"
+      ],
+      "generation": 4,
+      "timestamp": 1774026194.0083425,
+      "combined_score": 0.816969,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8169692708770349,
+        "win_rate": 0.7331,
+        "hold_days": 2.64,
+        "sl_pct": 0.0449,
+        "sharpe": 2.346
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.816969
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.129,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 10.56,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+      "language": "python",
+      "parent_id": "b3a213b7-e45c-437e-9617-faab5a97ef3a",
+      "archive_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa",
+        "4faf89e2-d8f9-498e-a906-cdad29cd802c"
+      ],
+      "top_k_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa"
+      ],
+      "generation": 4,
+      "timestamp": 1774026314.7161837,
+      "combined_score": 0.829948,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8299481355938219,
+        "win_rate": 0.3382,
+        "hold_days": 9.62,
+        "sl_pct": 0.024,
+        "sharpe": 3.09
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.829948
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.955,
+      "correct": 1,
+      "children_count": 4,
+      "metadata": {
+        "compute_time": 21.99,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "cfd119fb-9993-4788-a05e-53fd71c41a99",
+      "language": "python",
+      "parent_id": "ee063641-692d-476b-af2a-bb9c3bb7fc0a",
+      "archive_inspiration_ids": [
+        "4975f13f-e097-4147-84cc-c7ba278f775e",
+        "612678f2-826c-4885-b846-33c5004536a3"
+      ],
+      "top_k_inspiration_ids": [
+        "4975f13f-e097-4147-84cc-c7ba278f775e"
+      ],
+      "generation": 4,
+      "timestamp": 1774026420.2954319,
+      "combined_score": 0.89946,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8994599067473867,
+        "win_rate": 0.6281,
+        "hold_days": 5.13,
+        "sl_pct": 0.0415,
+        "sharpe": 3.406
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.89946
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.918,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 29.61,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+      "language": "python",
+      "parent_id": "985bdf58-6d5f-4684-96d4-be9e9990724c",
+      "archive_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa",
+        "ee063641-692d-476b-af2a-bb9c3bb7fc0a"
+      ],
+      "top_k_inspiration_ids": [
+        "0713831b-6642-42d1-8b0f-7719c1dfe2fa"
+      ],
+      "generation": 4,
+      "timestamp": 1774026569.195221,
+      "combined_score": 0.824432,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8244316235700018,
+        "win_rate": 0.7436,
+        "hold_days": 8.71,
+        "sl_pct": 0.0476,
+        "sharpe": 2.722
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.824432
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.069,
+      "correct": 1,
+      "children_count": 3,
+      "metadata": {
+        "compute_time": 9.93,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "e69c34a8-42a0-4d05-b0fb-6574b01da8e6",
+      "language": "python",
+      "parent_id": "cfd119fb-9993-4788-a05e-53fd71c41a99",
+      "archive_inspiration_ids": [
+        "c750b418-999c-409e-a506-a4f0d8cddd3a",
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "top_k_inspiration_ids": [
+        "c750b418-999c-409e-a506-a4f0d8cddd3a"
+      ],
+      "generation": 5,
+      "timestamp": 1774029832.00281,
+      "combined_score": 0.80278,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8027803983298079,
+        "win_rate": 0.5789,
+        "hold_days": 8.5,
+        "sl_pct": 0.023,
+        "sharpe": 2.26
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.80278
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.049,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 18.86,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "7d6087df-adb6-4b4b-914d-947e02dc6aa1",
+      "language": "python",
+      "parent_id": "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+      "archive_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99",
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "top_k_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "generation": 5,
+      "timestamp": 1774029930.8762329,
+      "combined_score": 0.806915,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.806914888835984,
+        "win_rate": 0.3002,
+        "hold_days": 4.51,
+        "sl_pct": 0.0272,
+        "sharpe": 2.001
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.806915
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.99,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 21.37,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "89138c0b-bc84-4f6a-9c90-c2d8fa30cdb4",
+      "language": "python",
+      "parent_id": "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+      "archive_inspiration_ids": [
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "top_k_inspiration_ids": [
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "generation": 5,
+      "timestamp": 1774030023.0877323,
+      "combined_score": 0.774101,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7741011532726632,
+        "win_rate": 0.5835,
+        "hold_days": 8.15,
+        "sl_pct": 0.0234,
+        "sharpe": 2.44
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.774101
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.109,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 23.78,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "36ce5de4-68e3-4d3a-87c9-8b61f940bee3",
+      "language": "python",
+      "parent_id": "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+      "archive_inspiration_ids": [
+        "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "top_k_inspiration_ids": [
+        "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b"
+      ],
+      "generation": 5,
+      "timestamp": 1774030188.9842618,
+      "combined_score": 0.852397,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8523971253945174,
+        "win_rate": 0.3401,
+        "hold_days": 5.85,
+        "sl_pct": 0.0352,
+        "sharpe": 2.801
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.852397
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.797,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 22.41,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "d8d18c63-e2e5-4be0-b59f-4377621192ee",
+      "language": "python",
+      "parent_id": "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+      "archive_inspiration_ids": [
+        "c750b418-999c-409e-a506-a4f0d8cddd3a",
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "top_k_inspiration_ids": [
+        "c750b418-999c-409e-a506-a4f0d8cddd3a"
+      ],
+      "generation": 5,
+      "timestamp": 1774030271.1304681,
+      "combined_score": 0.842652,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8426522920962425,
+        "win_rate": 0.7423,
+        "hold_days": 8.81,
+        "sl_pct": 0.0286,
+        "sharpe": 2.67
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.842652
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.979,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 27.94,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "2d61cb1f-1b82-4c4e-9497-fba4b7d91d4e",
+      "language": "python",
+      "parent_id": "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+      "archive_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99",
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "top_k_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "generation": 5,
+      "timestamp": 1774030414.7591393,
+      "combined_score": 0.786167,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.7861667453020624,
+        "win_rate": 0.6956,
+        "hold_days": 6.8,
+        "sl_pct": 0.0432,
+        "sharpe": 1.741
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.786167
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.974,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 27.43,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "556130ab-1df7-465b-9a4b-d26af8af2541",
+      "language": "python",
+      "parent_id": "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+      "archive_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99",
+        "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b"
+      ],
+      "top_k_inspiration_ids": [
+        "cfd119fb-9993-4788-a05e-53fd71c41a99"
+      ],
+      "generation": 5,
+      "timestamp": 1774030527.075821,
+      "combined_score": 0.84326,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8432599258857914,
+        "win_rate": 0.4316,
+        "hold_days": 6.12,
+        "sl_pct": 0.0385,
+        "sharpe": 2.924
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.84326
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.817,
+      "correct": 1,
+      "children_count": 2,
+      "metadata": {
+        "compute_time": 13.4,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "2a245fff-854a-4539-8f02-9d1cce9db992",
+      "language": "python",
+      "parent_id": "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+      "archive_inspiration_ids": [
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3",
+        "c750b418-999c-409e-a506-a4f0d8cddd3a"
+      ],
+      "top_k_inspiration_ids": [
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "generation": 5,
+      "timestamp": 1774030642.8920739,
+      "combined_score": 0.85223,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8522304161733315,
+        "win_rate": 0.482,
+        "hold_days": 6.39,
+        "sl_pct": 0.0125,
+        "sharpe": 3.186
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.85223
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.116,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 14.74,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "8abf61c2-8ed1-43a0-9347-f704837ab8ec",
+      "language": "python",
+      "parent_id": "c750b418-999c-409e-a506-a4f0d8cddd3a",
+      "archive_inspiration_ids": [
+        "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b",
+        "2ea560b7-b253-4de9-9204-fda5aebf1fb3"
+      ],
+      "top_k_inspiration_ids": [
+        "122d99cd-b3c9-432d-a7fd-7e4cce7cc85b"
+      ],
+      "generation": 5,
+      "timestamp": 1774030738.353765,
+      "combined_score": 0.887343,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8873432453941056,
+        "win_rate": 0.4935,
+        "hold_days": 9.41,
+        "sl_pct": 0.0441,
+        "sharpe": 2.439
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.887343
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.177,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 15.48,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "c2ad595c-27f9-4093-8553-d8d5ab9f4285",
+      "language": "python",
+      "parent_id": "36ce5de4-68e3-4d3a-87c9-8b61f940bee3",
+      "archive_inspiration_ids": [
+        "2a245fff-854a-4539-8f02-9d1cce9db992",
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6"
+      ],
+      "top_k_inspiration_ids": [
+        "2a245fff-854a-4539-8f02-9d1cce9db992"
+      ],
+      "generation": 6,
+      "timestamp": 1774033401.331432,
+      "combined_score": 0.83815,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8381503713064153,
+        "win_rate": 0.6679,
+        "hold_days": 9.88,
+        "sl_pct": 0.039,
+        "sharpe": 2.7
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.83815
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.12,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 27.99,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "dbe02427-162c-4037-b369-3a7b524d9954",
+      "language": "python",
+      "parent_id": "556130ab-1df7-465b-9a4b-d26af8af2541",
+      "archive_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1",
+        "556130ab-1df7-465b-9a4b-d26af8af2541"
+      ],
+      "top_k_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1"
+      ],
+      "generation": 6,
+      "timestamp": 1774033506.1419692,
+      "combined_score": 0.820567,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8205673393683302,
+        "win_rate": 0.5539,
+        "hold_days": 2.03,
+        "sl_pct": 0.0252,
+        "sharpe": 2.384
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.820567
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.806,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 13.17,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "4699904c-2463-48de-9a8d-83019b14c111",
+      "language": "python",
+      "parent_id": "556130ab-1df7-465b-9a4b-d26af8af2541",
+      "archive_inspiration_ids": [
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6",
+        "8abf61c2-8ed1-43a0-9347-f704837ab8ec"
+      ],
+      "top_k_inspiration_ids": [
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6"
+      ],
+      "generation": 6,
+      "timestamp": 1774033677.9944696,
+      "combined_score": 0.869764,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8697639904497962,
+        "win_rate": 0.4925,
+        "hold_days": 8.33,
+        "sl_pct": 0.0412,
+        "sharpe": 2.907
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.869764
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.026,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 23.86,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80",
+      "language": "python",
+      "parent_id": "e69c34a8-42a0-4d05-b0fb-6574b01da8e6",
+      "archive_inspiration_ids": [
+        "2a245fff-854a-4539-8f02-9d1cce9db992",
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1"
+      ],
+      "top_k_inspiration_ids": [
+        "2a245fff-854a-4539-8f02-9d1cce9db992"
+      ],
+      "generation": 6,
+      "timestamp": 1774033771.8381748,
+      "combined_score": 0.848643,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8486432682033993,
+        "win_rate": 0.4199,
+        "hold_days": 8.84,
+        "sl_pct": 0.0407,
+        "sharpe": 2.563
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.848643
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.784,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 20.18,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "7b10c36c-42ab-423a-b3f2-a622c63f1f55",
+      "language": "python",
+      "parent_id": "89138c0b-bc84-4f6a-9c90-c2d8fa30cdb4",
+      "archive_inspiration_ids": [
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6",
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee"
+      ],
+      "top_k_inspiration_ids": [
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6"
+      ],
+      "generation": 6,
+      "timestamp": 1774033892.5478036,
+      "combined_score": 0.888665,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8886650644532901,
+        "win_rate": 0.7994,
+        "hold_days": 5.44,
+        "sl_pct": 0.0477,
+        "sharpe": 2.812
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.888665
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.799,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 19.8,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "61274fa3-75dc-4e22-8a93-6ddebbdca906",
+      "language": "python",
+      "parent_id": "d8d18c63-e2e5-4be0-b59f-4377621192ee",
+      "archive_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1",
+        "e69c34a8-42a0-4d05-b0fb-6574b01da8e6"
+      ],
+      "top_k_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1"
+      ],
+      "generation": 6,
+      "timestamp": 1774033998.8322258,
+      "combined_score": 0.901927,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.9019266532455782,
+        "win_rate": 0.5356,
+        "hold_days": 5.39,
+        "sl_pct": 0.0302,
+        "sharpe": 2.558
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.901927
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.871,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 26.24,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "dfd19233-22ca-466f-ad5b-06698b5fc15f",
+      "language": "python",
+      "parent_id": "2d61cb1f-1b82-4c4e-9497-fba4b7d91d4e",
+      "archive_inspiration_ids": [
+        "89138c0b-bc84-4f6a-9c90-c2d8fa30cdb4",
+        "556130ab-1df7-465b-9a4b-d26af8af2541"
+      ],
+      "top_k_inspiration_ids": [
+        "89138c0b-bc84-4f6a-9c90-c2d8fa30cdb4"
+      ],
+      "generation": 6,
+      "timestamp": 1774034108.5682178,
+      "combined_score": 0.820517,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8205165660145016,
+        "win_rate": 0.587,
+        "hold_days": 8.33,
+        "sl_pct": 0.0346,
+        "sharpe": 2.202
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.820517
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.16,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 24.37,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "762b6847-353e-42d2-9ad4-2421fd9f3e5b",
+      "language": "python",
+      "parent_id": "d8d18c63-e2e5-4be0-b59f-4377621192ee",
+      "archive_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1",
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee"
+      ],
+      "top_k_inspiration_ids": [
+        "7d6087df-adb6-4b4b-914d-947e02dc6aa1"
+      ],
+      "generation": 6,
+      "timestamp": 1774034270.897871,
+      "combined_score": 0.856825,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8568245357641374,
+        "win_rate": 0.4341,
+        "hold_days": 6.38,
+        "sl_pct": 0.0344,
+        "sharpe": 2.944
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.856825
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.889,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 5.72,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "715bda61-be24-4967-ad02-a1ef27126d8c",
+      "language": "python",
+      "parent_id": "36ce5de4-68e3-4d3a-87c9-8b61f940bee3",
+      "archive_inspiration_ids": [
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee",
+        "8abf61c2-8ed1-43a0-9347-f704837ab8ec"
+      ],
+      "top_k_inspiration_ids": [
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee"
+      ],
+      "generation": 6,
+      "timestamp": 1774034371.3474617,
+      "combined_score": 0.851072,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8510721022517471,
+        "win_rate": 0.5841,
+        "hold_days": 3.51,
+        "sl_pct": 0.0197,
+        "sharpe": 2.907
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.851072
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.903,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 18.88,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "eee2d719-33f1-47f5-89c8-12d250fd1efa",
+      "language": "python",
+      "parent_id": "2a245fff-854a-4539-8f02-9d1cce9db992",
+      "archive_inspiration_ids": [
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee",
+        "36ce5de4-68e3-4d3a-87c9-8b61f940bee3"
+      ],
+      "top_k_inspiration_ids": [
+        "d8d18c63-e2e5-4be0-b59f-4377621192ee"
+      ],
+      "generation": 6,
+      "timestamp": 1774034482.2640676,
+      "combined_score": 0.862932,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.862931510823791,
+        "win_rate": 0.4338,
+        "hold_days": 8.47,
+        "sl_pct": 0.0248,
+        "sharpe": 2.779
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.862932
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.977,
+      "correct": 1,
+      "children_count": 1,
+      "metadata": {
+        "compute_time": 13.59,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "c1935d08-9203-4bc0-ada4-dc66e6640dcc",
+      "language": "python",
+      "parent_id": "762b6847-353e-42d2-9ad4-2421fd9f3e5b",
+      "archive_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954",
+        "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80"
+      ],
+      "top_k_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954"
+      ],
+      "generation": 7,
+      "timestamp": 1774036996.9328766,
+      "combined_score": 0.891011,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8910110618782934,
+        "win_rate": 0.7086,
+        "hold_days": 11.48,
+        "sl_pct": 0.0376,
+        "sharpe": 3.078
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.891011
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.796,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 23.47,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "e3740a70-550f-4531-b967-9f15dda10ad2",
+      "language": "python",
+      "parent_id": "715bda61-be24-4967-ad02-a1ef27126d8c",
+      "archive_inspiration_ids": [
+        "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80",
+        "7b10c36c-42ab-423a-b3f2-a622c63f1f55"
+      ],
+      "top_k_inspiration_ids": [
+        "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80"
+      ],
+      "generation": 7,
+      "timestamp": 1774037111.64899,
+      "combined_score": 0.802872,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8028716828626586,
+        "win_rate": 0.3987,
+        "hold_days": 1.65,
+        "sl_pct": 0.0314,
+        "sharpe": 2.088
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.802872
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.837,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 29.36,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "073c6043-2fc8-498a-b70b-218bdc18245f",
+      "language": "python",
+      "parent_id": "4699904c-2463-48de-9a8d-83019b14c111",
+      "archive_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954",
+        "c2ad595c-27f9-4093-8553-d8d5ab9f4285"
+      ],
+      "top_k_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954"
+      ],
+      "generation": 7,
+      "timestamp": 1774037252.4438531,
+      "combined_score": 0.851687,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.851687273502358,
+        "win_rate": 0.5582,
+        "hold_days": 6.12,
+        "sl_pct": 0.0174,
+        "sharpe": 2.343
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.851687
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.726,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 28.53,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 1,
+      "system_prompt_id": null
+    },
+    {
+      "id": "231f95df-9e12-4272-93ab-07ac7be02b69",
+      "language": "python",
+      "parent_id": "dbe02427-162c-4037-b369-3a7b524d9954",
+      "archive_inspiration_ids": [
+        "c2ad595c-27f9-4093-8553-d8d5ab9f4285",
+        "4699904c-2463-48de-9a8d-83019b14c111"
+      ],
+      "top_k_inspiration_ids": [
+        "c2ad595c-27f9-4093-8553-d8d5ab9f4285"
+      ],
+      "generation": 7,
+      "timestamp": 1774037346.9518552,
+      "combined_score": 0.882262,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8822623657998748,
+        "win_rate": 0.6096,
+        "hold_days": 4.69,
+        "sl_pct": 0.0498,
+        "sharpe": 2.892
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.882262
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.759,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 24.11,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 2,
+      "system_prompt_id": null
+    },
+    {
+      "id": "ff7e50f3-bd3f-40fa-9430-1ca4028197d9",
+      "language": "python",
+      "parent_id": "eee2d719-33f1-47f5-89c8-12d250fd1efa",
+      "archive_inspiration_ids": [
+        "762b6847-353e-42d2-9ad4-2421fd9f3e5b",
+        "eee2d719-33f1-47f5-89c8-12d250fd1efa"
+      ],
+      "top_k_inspiration_ids": [
+        "762b6847-353e-42d2-9ad4-2421fd9f3e5b"
+      ],
+      "generation": 7,
+      "timestamp": 1774037475.841188,
+      "combined_score": 0.902402,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.9024015640096346,
+        "win_rate": 0.6237,
+        "hold_days": 6.0,
+        "sl_pct": 0.0327,
+        "sharpe": 3.248
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.902402
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 0.73,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 29.0,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    },
+    {
+      "id": "10f720fc-9f0e-45f5-93c9-da29c24f6df6",
+      "language": "python",
+      "parent_id": "c2ebfb27-4888-4cb9-b397-58ec8b8f2a80",
+      "archive_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954",
+        "4699904c-2463-48de-9a8d-83019b14c111"
+      ],
+      "top_k_inspiration_ids": [
+        "dbe02427-162c-4037-b369-3a7b524d9954"
+      ],
+      "generation": 7,
+      "timestamp": 1774037592.3919106,
+      "combined_score": 0.872894,
+      "public_metrics": {
+        "reported_sum_of_radii": 0.8728942934804076,
+        "win_rate": 0.6036,
+        "hold_days": 3.14,
+        "sl_pct": 0.0263,
+        "sharpe": 2.626
+      },
+      "private_metrics": {
+        "reported_sum_of_radii": 0.872894
+      },
+      "text_feedback": "Improved circle packing efficiency.",
+      "complexity": 1.045,
+      "correct": 1,
+      "children_count": 0,
+      "metadata": {
+        "compute_time": 16.75,
+        "embed_cost": 0.0,
+        "novelty_cost": 0.0
+      },
+      "migration_history": [],
+      "island_idx": 0,
+      "system_prompt_id": null
+    }
+  ]
+}
