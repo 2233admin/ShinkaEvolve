@@ -1,0 +1,16510 @@
+
+        // Basic error handling
+        window.onerror = function(msg, url, lineNo, columnNo, error) {
+            console.error('Error: ' + msg + '\nURL: ' + url + '\nLine: ' + lineNo + '\nColumn: ' + columnNo + '\nError object: ' + JSON.stringify(error));
+            return false;
+        };
+
+        console.log("Script starting...");
+
+        try {
+            // ALWAYS use DOMContentLoaded to ensure the full initial DOM is ready
+            console.log("Adding DOMContentLoaded listener...");
+            document.addEventListener('DOMContentLoaded', initialize);
+        } catch (error) {
+            console.error("Error in initial script setup:", error);
+        }
+
+        // Data store for available databases and organized data
+        let availableDatabases = [];
+        let tasksAndResults = {}; // Structure: { taskName: [{ name: "result_timestamp", path: "full/path" }] }
+        let sortState = { key: 'rank', dir: 'asc' };
+        
+        // Auto-refresh variables
+        let autoRefreshInterval = null;
+        let autoRefreshEnabled = false;
+        let lastDataTimestamp = null;
+
+        function initialize() {
+            console.log("[DEBUG] Page loaded, starting initialization");
+            try {
+                // Add custom styles
+                addStylesToDom();
+                window.pendingNodeSelectionId = null;
+                
+                // Add arrow marker definition for connection lines
+                d3.select("svg").append("defs").append("marker")
+                    .attr("id", "arrowhead")
+                    .attr("viewBox", "0 -5 10 10")
+                    .attr("refX", 4)
+                    .attr("refY", 0)
+                    .attr("markerWidth", 6)
+                    .attr("markerHeight", 6)
+                    .attr("orient", "auto")
+                    .append("path")
+                    .attr("class", "arrow")
+                    .attr("d", "M0,-5L10,0L0,5");
+                
+                // Restore user preferences from localStorage
+                restorePreferences();
+                
+                // Initialize database list
+                findDatabases();
+                
+                // Add task and result selection handlers
+                const taskSelect = document.getElementById('task-select');
+                const resultSelect = document.getElementById('result-select');
+                
+                taskSelect.addEventListener('change', function() {
+                    // Stop current auto-refresh before changing tasks
+                    stopAutoRefresh();
+                    
+                    populateResultSelect(this.value);
+                    
+                    // Auto-select the first result if available
+                    if (this.value && tasksAndResults[this.value] && tasksAndResults[this.value].length > 0) {
+                        const firstResult = tasksAndResults[this.value][0].path;
+                        resultSelect.value = firstResult;
+                        loadDatabase(firstResult);
+                        updateURL();
+                    } else {
+                        // Clear result selection if no results available
+                        resultSelect.value = '';
+                    }
+                });
+                
+                resultSelect.addEventListener('change', function() {
+                    if (this.value) {
+                        // Stop current auto-refresh before loading new database
+                        stopAutoRefresh();
+                        loadDatabase(this.value);
+                        updateURL();
+                    }
+                });
+                
+                // Add refresh button handler
+                const refreshButton = document.getElementById('refresh-files');
+                refreshButton.addEventListener('click', function() {
+                    console.log("[DEBUG] Refresh button clicked");
+                    findDatabases(true); // Force refresh of DB list
+                });
+                
+                // Initialize the reload data button handler
+                const reloadButton = document.getElementById('reload-data');
+                reloadButton.addEventListener('click', function() {
+                    console.log("[DEBUG] Reload data button clicked");
+                    if (window.currentDbPath) {
+                        window.isReloadingData = true; // Prevent state saving during reload
+                        console.log("[DEBUG] Reloading data from:", window.currentDbPath);
+                        // Show loading state
+                        reloadButton.classList.add('loading');
+                        const scanStatus = document.getElementById("scan-status");
+                        scanStatus.textContent = "Reloading data...";
+                        
+                        // Reload the current data file
+                        loadDatabase(window.currentDbPath);
+                        
+                        // Remove loading state after a short delay
+                        setTimeout(() => {
+                            reloadButton.classList.remove('loading');
+                        }, 1000);
+                    } else {
+                        console.log("[DEBUG] No file currently loaded to reload");
+                        alert("Please select a database file first");
+                    }
+                });
+
+                // Initialize auto-refresh functionality
+                initializeAutoRefresh();
+
+                // Add auto-refresh toggle button handler
+                const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+                autoRefreshToggle.addEventListener('click', function() {
+                    if (autoRefreshEnabled) {
+                        stopAutoRefresh();
+                        autoRefreshToggle.classList.remove('active');
+                        autoRefreshToggle.title = "Enable auto-refresh (every 3 seconds)";
+                        console.log("[DEBUG] Auto-refresh disabled by user");
+                    } else {
+                        if (window.currentDbPath) {
+                            startAutoRefresh();
+                            autoRefreshToggle.classList.add('active');
+                            autoRefreshToggle.title = "Disable auto-refresh";
+                            console.log("[DEBUG] Auto-refresh enabled by user");
+                        } else {
+                            alert("Please select a database file first");
+                        }
+                    }
+                });
+                
+                // Initialize copy and download button handlers
+                const copyBtn = document.getElementById('copy-code-btn');
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', () => {
+                        const codeElement = document.querySelector('#agent-code-wrapper pre code');
+                        if (codeElement) {
+                            navigator.clipboard.writeText(codeElement.innerText).then(() => {
+                                copyBtn.innerHTML = '✅ Copied!';
+                                setTimeout(() => { copyBtn.innerHTML = '📋 Copy'; }, 2000);
+                            }).catch(err => {
+                                console.error('Failed to copy text: ', err);
+                                alert('Failed to copy code.');
+                            });
+                        }
+                    });
+                }
+
+                const downloadBtn = document.getElementById('download-code-btn');
+                if (downloadBtn) {
+                    downloadBtn.addEventListener('click', () => {
+                        const codeElement = document.querySelector('#agent-code-wrapper pre code');
+                        const selectedNodeId = getSelectedNodeId();
+                        
+                        if (codeElement && window.treeData && selectedNodeId) {
+                            const nodeData = window.treeData.find(d => d.id === selectedNodeId);
+                            if (nodeData) {
+                                try {
+                                    const code = codeElement.innerText;
+                                    const blob = new Blob([code], { type: 'text/plain;charset=utf-8' });
+                                    const url = URL.createObjectURL(blob);
+                                    const a = document.createElement('a');
+                                    a.href = url;
+                                    const agentName = (nodeData.metadata.patch_name || 'agent').replace(/\s+/g, '_');
+                                    const gen = nodeData.generation;
+                                    const language = nodeData.language || 'py';
+                                    const extension = {
+                                        'python': 'py',
+                                        'cpp': 'cpp',
+                                        'javascript': 'js',
+                                        'cuda': 'cu'
+                                    }[language] || language;
+
+                                    a.download = `${agentName}_gen${gen}.${extension}`;
+                                    document.body.appendChild(a);
+                                    a.click();
+                                    document.body.removeChild(a);
+                                    URL.revokeObjectURL(url);
+                                } catch (e) {
+                                    console.error('Download failed:', e);
+                                    alert('Failed to download code.');
+                                }
+                            }
+                        } else {
+                            alert('Could not get code or node data to download.');
+                        }
+                    });
+                }
+
+                // Initialize the score type radio buttons
+                initializeScoreTypeListeners();
+                
+                // Add tab handling with state persistence
+                document.querySelectorAll('.tab').forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+                        this.classList.add('active');
+                        
+                        const tabId = this.getAttribute('data-tab');
+                        document.querySelectorAll('.content-section').forEach(section => {
+                            section.classList.remove('active');
+                        });
+                        document.getElementById(tabId).classList.add('active');
+                        
+                        // Save state and update URL
+                        saveState();
+                        
+                        // Redraw charts if we're switching to the agent-info tab
+                        if (tabId === 'agent-info' && !window.isResizing) {
+                            console.log("[DEBUG] Switching to Meta Info tab, redrawing charts");
+                            // Small delay to ensure the tab is visible before redrawing charts
+                            setTimeout(() => {
+                                createCharts(null);
+                            }, 100);
+                        }
+                        if (tabId === 'pareto-front') {
+                            updateParetoView();
+                        }
+                        if (tabId === 'analysis') {
+                            setTimeout(() => {
+                                updateAnalysisTab(window.selectedNodeId || null);
+                            }, 100);
+                        }
+                        if (tabId === 'throughput') {
+                            setTimeout(() => {
+                                updateThroughputTab(window.selectedNodeId || null);
+                            }, 100);
+                        }
+                    });
+                });
+                
+                // Initialize panel resizing functionality
+                initializeResizer();
+                setupTableSorting();
+                
+                // Add left panel tab handling with state persistence
+                document.querySelectorAll('.left-tab').forEach(tab => {
+                    tab.addEventListener('click', function() {
+                        document.querySelectorAll('.left-tab').forEach(t => t.classList.remove('active'));
+                        document.querySelectorAll('.left-content-section').forEach(s => {
+                            s.classList.remove('active');
+                            // Reset display for meta-prompt-view
+                            if (s.id === 'meta-prompt-view') {
+                                s.style.display = 'none';
+                            }
+                        });
+                        
+                        this.classList.add('active');
+                        const tabId = this.getAttribute('data-tab');
+                        const tabElement = document.getElementById(tabId);
+                        tabElement.classList.add('active');
+                        
+                        // Set display: flex for meta-prompt-view
+                        if (tabId === 'meta-prompt-view') {
+                            tabElement.style.display = 'flex';
+                        }
+                        
+                        // Save state and update URL
+                        saveState();
+                        
+                        const legend = document.getElementById('tree-legend');
+                        const treeControls = document.getElementById('tree-controls');
+                        if (tabId === 'tree-view') {
+                            if (window.treeData) {
+                                legend.style.display = 'block';
+                                treeControls.style.display = 'block';
+                                renderGraph(window.treeData);
+                            }
+                        } else {
+                            legend.style.display = 'none';
+                            treeControls.style.display = 'none';
+                        }
+                        
+                        // Initialize embeddings view when tab is clicked
+                        if (tabId === 'embeddings-view') {
+                            // Use the helper function to ensure heatmap is created
+                            setTimeout(() => {
+                                ensureEmbeddingsHeatmap();
+                            }, 100);
+                        } else if (tabId === 'islands-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createIslandsVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'best-path-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createBestPathVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'cost-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createCostVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'maps-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createMAPsVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'battle-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createBattleVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'diversity-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createDiversityVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'model-posteriors-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createModelPosteriorsVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'clusters-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    createClusterPlots(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'metrics-view') {
+                            setTimeout(() => {
+                                if (window.treeData) {
+                                    // Force clear the metrics container before recreating
+                                    const metricsContainer = document.getElementById('metrics-plots');
+                                    if (metricsContainer) {
+                                        metricsContainer.innerHTML = '';
+                                    }
+                                    createMetricsVisualization(window.treeData);
+                                }
+                            }, 100);
+                        } else if (tabId === 'meta-prompt-view') {
+                            setTimeout(() => {
+                                loadAndRenderMetaPrompts();
+                            }, 100);
+                        }
+                    });
+                });
+
+                // Add embedding controls event handlers with state persistence
+                const initializeEmbeddingControls = () => {
+                    const sortMethodSelect = document.getElementById('embedding-sort-method');
+                    const colorScale = document.getElementById('color-scale');
+                    const cellSize = document.getElementById('cell-size');
+                    const cellSizeValue = document.getElementById('cell-size-value');
+                    const heatMin = document.getElementById('heat-min');
+                    const heatMax = document.getElementById('heat-max');
+                    
+                    if (sortMethodSelect) {
+                        sortMethodSelect.addEventListener('change', () => {
+                            savePreferences();
+                            if (window.treeData) refreshEmbeddingsHeatmap();
+                        });
+                    }
+                    
+                    if (colorScale) {
+                        colorScale.addEventListener('change', () => {
+                            savePreferences();
+                            if (window.treeData) refreshEmbeddingsHeatmap();
+                        });
+                    }
+                    
+                    if (cellSize && cellSizeValue) {
+                        cellSize.addEventListener('input', () => {
+                            cellSizeValue.textContent = cellSize.value + 'px';
+                            savePreferences();
+                            if (window.treeData) refreshEmbeddingsHeatmap();
+                        });
+                    }
+                    
+                    if (heatMin) {
+                        heatMin.addEventListener('input', () => {
+                            savePreferences();
+                            if (window.treeData) refreshEmbeddingsHeatmap();
+                        });
+                    }
+                    
+                    if (heatMax) {
+                        heatMax.addEventListener('input', () => {
+                            savePreferences();
+                            if (window.treeData) refreshEmbeddingsHeatmap();
+                        });
+                    }
+                };
+                
+                // Initialize embedding controls after DOM is ready
+                initializeEmbeddingControls();
+                
+                // Initialize table controls
+                const showIncorrectCheckbox = document.getElementById('show-incorrect-programs');
+                if (showIncorrectCheckbox) {
+                    showIncorrectCheckbox.addEventListener('change', function() {
+                        if (window.treeData) {
+                            populateProgramsTable(window.treeData);
+                        }
+                    });
+                }
+                
+                // Initialize transpose tree checkbox
+                const transposeTreeCheckbox = document.getElementById('transpose-tree-checkbox');
+                if (transposeTreeCheckbox) {
+                    transposeTreeCheckbox.addEventListener('change', function() {
+                        if (window.treeData) {
+                            renderGraph(window.treeData, true);  // Force render on layout change
+                        }
+                    });
+                }
+                
+                // Initialize animate tree checkbox
+                const animateTreeCheckbox = document.getElementById('animate-tree-checkbox');
+                if (animateTreeCheckbox) {
+                    animateTreeCheckbox.addEventListener('change', function() {
+                        if (this.checked && window.treeData) {
+                            // Stop any existing animation timers
+                            if (window.treeAnimationTimers) {
+                                window.treeAnimationTimers.forEach(t => clearTimeout(t));
+                                window.treeAnimationTimers = [];
+                            }
+                            // Trigger animation by re-rendering
+                            renderGraph(window.treeData, true);  // Force render for animation
+                        } else {
+                            // Stop animation and restore full visibility
+                            if (window.treeAnimationTimers) {
+                                window.treeAnimationTimers.forEach(t => clearTimeout(t));
+                                window.treeAnimationTimers = [];
+                            }
+                            // Make all nodes and links visible
+                            d3.selectAll('#tree .node').style("opacity", 1);
+                            d3.selectAll('#tree .link').style("opacity", d => {
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    for (let path of window.allBestPaths) {
+                                        if (path.pathIds.has(d.source.data.id) && path.pathIds.has(d.target.data.id)) {
+                                            return 1;
+                                        }
+                                    }
+                                }
+                                return 0.8;
+                            });
+                        }
+                    });
+                }
+                
+                // Initialize meta analysis controls
+                initializeMetaAnalysis();
+
+                // Restore state from URL after everything is initialized
+                restoreFromURL();
+                
+                // Add cleanup on page unload
+                window.addEventListener('beforeunload', function() {
+                    stopAutoRefresh();
+                });
+                
+                console.log("[DEBUG] Initialization complete");
+            } catch (error) {
+                console.error("[DEBUG] Fatal error during initialization:", error);
+            }
+        }
+        
+        // Function to initialize meta analysis controls
+        function initializeMetaAnalysis() {
+            const generationSlider = document.getElementById('generation-slider');
+            const generationValue = document.getElementById('generation-value');
+            const refreshMetaBtn = document.getElementById('refresh-meta-btn');
+            // Store available meta files for current database
+            window.availableMetaFiles = [];
+            window.metaContentCache = {};
+            
+            if (generationSlider && generationValue) {
+                generationSlider.addEventListener('input', function() {
+                    let selectedGen = parseInt(this.value);
+                    
+                    // Get available generations
+                    const availableGensStr = this.getAttribute('data-available-generations');
+                    if (availableGensStr) {
+                        const availableGens = JSON.parse(availableGensStr);
+                        
+                        // Find the closest available generation
+                        const closest = availableGens.reduce((prev, curr) => {
+                            return Math.abs(curr - selectedGen) < Math.abs(prev - selectedGen) ? curr : prev;
+                        });
+                        
+                        selectedGen = closest;
+                        this.value = selectedGen; // Update slider to show correct value
+                    }
+                    
+                    generationValue.textContent = selectedGen;
+                    loadMetaContent(selectedGen);
+                });
+            }
+
+            
+            if (refreshMetaBtn) {
+                refreshMetaBtn.addEventListener('click', function() {
+                    if (window.currentDbPath) {
+                        loadAvailableMetaFiles(window.currentDbPath);
+                    }
+                });
+            }
+            
+            const downloadPdfBtn = document.getElementById('download-pdf-btn');
+            if (downloadPdfBtn) {
+                downloadPdfBtn.addEventListener('click', function() {
+                    downloadMetaAsPDF();
+                });
+            }
+
+            // Initialize meta sub-tab functionality
+            const metaSubTabs = document.querySelectorAll('.meta-sub-tab');
+            metaSubTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    // Remove active class from all sub-tabs and reset border
+                    metaSubTabs.forEach(t => {
+                        t.classList.remove('active');
+                        t.style.borderBottom = '2px solid transparent';
+                        t.style.backgroundColor = '';
+                    });
+                    
+                    // Add active class to clicked tab and set active border
+                    this.classList.add('active');
+                    this.style.borderBottom = '2px solid #007bff';
+                    this.style.backgroundColor = '#f8f9fa';
+                    
+                    // Show the corresponding section
+                    showMetaSection(this.getAttribute('data-section'));
+                });
+            });
+        }
+
+        
+        // Function to download meta content as PDF using backend conversion
+        function downloadMetaAsPDF() {
+            if (!window.currentDbPath) {
+                alert('Please select a database first.');
+                return;
+            }
+            
+            // Get the current meta update identifier
+            const currentGen = document.getElementById('generation-value').textContent;
+            
+            console.log('[DEBUG] Starting PDF download process...');
+            
+            // Use the downloadMetaPdf function which calls the backend endpoint
+            downloadMetaPdf(window.currentDbPath, currentGen);
+        }
+        
+        // Function to download text content as a formatted text file
+        function generateSimplePDFFromText(rawText, filename, dbName, generation, downloadBtn, originalText) {
+            try {
+                console.log('[DEBUG] Creating downloadable text file from content');
+                console.log('[DEBUG] Raw text length:', rawText.length);
+                console.log('[DEBUG] First 200 chars:', rawText.substring(0, 200));
+                
+                // Add header to the content
+                const header = `Meta Analysis - Update ${generation}
+Database: ${dbName}
+${'='.repeat(80)}
+`;
+                
+                // Combine header and content
+                const fullContent = header + rawText;
+                
+                // Create a blob with the text content
+                const blob = new Blob([fullContent], { type: 'text/plain;charset=utf-8' });
+                
+                // Create download link
+                const url = window.URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename.replace('.pdf', '.txt'); // Change extension to .txt
+                
+                // Trigger download
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // Clean up URL
+                window.URL.revokeObjectURL(url);
+                
+                // Reset button state
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+                console.log('[DEBUG] Text file download triggered successfully');
+                    
+            } catch (error) {
+                console.error('Text file generation failed:', error);
+                alert('Failed to generate text file. Please try again.');
+                downloadBtn.textContent = originalText;
+                downloadBtn.disabled = false;
+            }
+        }
+
+        
+        // Function to load available meta files for a database
+        function loadAvailableMetaFiles(dbPath) {
+            console.log("[DEBUG] Loading available meta files for:", dbPath);
+            
+            // Clear the cache when loading a new database
+            window.metaContentCache = {};
+            
+            // Make request to server to get list of meta files
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/get_meta_files?db_path=${encodeURIComponent(dbPath)}`, true);
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const metaFiles = JSON.parse(xhr.responseText);
+                            window.availableMetaFiles = metaFiles;
+                            console.log("[DEBUG] Found meta files:", metaFiles);
+                            
+                            // Update slider range based on available files
+                            updateMetaSlider(metaFiles);
+                            
+                            // Load the highest update file by default
+                            if (metaFiles.length > 0) {
+                                const highestGen = metaFiles[metaFiles.length - 1].processed_count;
+                                const slider = document.getElementById('generation-slider');
+                                if (slider) {
+                                    slider.value = highestGen;
+                                    document.getElementById('generation-value').textContent = highestGen;
+                                    loadMetaContent(highestGen);
+                                }
+                            }
+                        } catch (e) {
+                            console.error("[ERROR] Failed to parse meta files response:", e);
+                            showMetaError("Failed to load meta files list.");
+                        }
+                    } else if (xhr.status === 404) {
+                        console.log("[DEBUG] No meta files found for this database");
+                        showMetaMessage("No meta analysis files found for this database.");
+                        window.availableMetaFiles = [];
+                    } else {
+                        console.error("[ERROR] Failed to load meta files:", xhr.status, xhr.statusText);
+                        showMetaError("Failed to load meta files.");
+                    }
+                }
+            };
+            
+            xhr.send();
+        }
+        
+        // Function to update slider based on available meta files
+        function updateMetaSlider(metaFiles) {
+            const slider = document.getElementById('generation-slider');
+            if (!slider) return;
+            
+            if (metaFiles.length === 0) {
+                // If no meta files, disable slider and show message
+                slider.disabled = true;
+                showMetaMessage("No meta analysis files found for this database.");
+                return;
+            }
+            
+            const generations = metaFiles
+                .map(f => f.processed_count ?? f.generation)
+                .sort((a, b) => a - b);
+            const minGen = Math.min(...generations);
+            const maxGen = Math.max(...generations);
+            
+            // Update slider attributes - use step of 1 for better control
+            slider.disabled = false;
+            slider.min = minGen;
+            slider.max = maxGen;
+            slider.step = 1;
+            
+            // Store available generations for validation
+            slider.setAttribute('data-available-generations', JSON.stringify(generations));
+            
+            console.log(`[DEBUG] Updated slider range: ${minGen} - ${maxGen}, available: ${generations.join(', ')}`);
+        }
+        
+        // Function to show a message in the meta content area
+        function showMetaMessage(message) {
+            const metaContent = document.getElementById('meta-content');
+            if (metaContent) {
+                metaContent.innerHTML = `<p style="text-align: center; color: #666; margin-top: 50px;">${message}</p>`;
+            }
+        }
+        
+        // Function to load meta content for a specific meta update
+        function loadMetaContent(generation) {
+            if (!window.currentDbPath) {
+                showMetaMessage("Please select a database first.");
+                return;
+            }
+
+            if (generation === undefined || generation === null || generation === '') {
+                showMetaMessage("Meta analysis for this update is not available.");
+                return;
+            }
+            
+            // Check if this update is available
+            const availableGen = window.availableMetaFiles.find(
+                f => (f.processed_count ?? f.generation) == generation
+            );
+            if (!availableGen) {
+                showMetaMessage(`Meta analysis for update ${generation} is not available.`);
+                return;
+            }
+            
+            console.log("[DEBUG] Loading meta analysis for update:", generation);
+            
+            // Show loading state
+            const metaContent = document.getElementById('meta-content');
+            if (metaContent) {
+                metaContent.innerHTML = '<p style="text-align: center; color: #666; margin-top: 50px;">Loading meta analysis...</p>';
+            }
+            
+            // Make request to server to get meta content
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/get_meta_content?db_path=${encodeURIComponent(window.currentDbPath)}&processed_count=${generation}`, true);
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200) {
+                        try {
+                            const response = JSON.parse(xhr.responseText);
+                            // Cache the content
+                            window.metaContentCache[generation] = response;
+                            displayMetaContent(response);
+                            
+                            // Preload previous generation for diff comparison
+                            const availableGens = window.availableMetaFiles
+                                .map(f => f.processed_count ?? f.generation)
+                                .sort((a, b) => a - b);
+                            const currentIndex = availableGens.indexOf(parseInt(generation));
+                            if (currentIndex > 0) {
+                                const prevGen = availableGens[currentIndex - 1];
+                                loadMetaContentForDiff(prevGen);
+                            }
+                        } catch (e) {
+                            console.error("[ERROR] Failed to parse meta content response:", e);
+                            showMetaError("Failed to parse meta analysis content.");
+                        }
+                    } else {
+                        console.error("[ERROR] Failed to load meta content:", xhr.status, xhr.statusText);
+                        showMetaError(`Failed to load meta analysis for update ${generation}.`);
+                    }
+                }
+            };
+            
+            xhr.send();
+        }
+        
+        // Function to convert structured meta content to HTML
+        function convertStructuredMetaToHTML(content) {
+            // Split content into sections (# INDIVIDUAL PROGRAM SUMMARIES, # GLOBAL INSIGHTS SCRATCHPAD, # META RECOMMENDATIONS)
+            const sections = content.split(/^(#\s*(?:INDIVIDUAL PROGRAM SUMMARIES|GLOBAL INSIGHTS SCRATCHPAD|META RECOMMENDATIONS))$/m);
+            let html = '';
+            let inSection = false;
+            
+            for (let i = 0; i < sections.length; i++) {
+                const section = sections[i];
+                
+                if (section.match(/^#\s*(?:INDIVIDUAL PROGRAM SUMMARIES|GLOBAL INSIGHTS SCRATCHPAD|META RECOMMENDATIONS)$/)) {
+                    // This is a section header - start a new section box
+                    if (inSection) {
+                        html += '</div></div>'; // Close previous section
+                    }
+                    const headerText = section.replace(/^#\s*/, '');
+                    html += `
+                        <div class="meta-section" style="margin-bottom: 25px; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                            <div class="meta-section-header" style="background-color: #f8f9fa; padding: 15px; border-bottom: 1px solid #ddd;">
+                                <h2 style="margin: 0; color: #2c3e50; font-size: 18px;">${headerText}</h2>
+                            </div>
+                            <div class="meta-section-content" style="padding: 20px;">
+                    `;
+                    inSection = true;
+                } else if (section.trim()) {
+                    // This is section content
+                    if (!inSection) {
+                        // Content before first section - treat as introduction
+                        html += `<div style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">`;
+                        html += marked.parse(section);
+                        html += `</div>`;
+                    } else {
+                        // Content within a section - just use regular markdown parsing
+                        html += marked.parse(section);
+                    }
+                }
+            }
+            
+            // Close the last section if we're in one
+            if (inSection) {
+                html += '</div></div>';
+            }
+            
+            return html;
+        }
+        
+        // Function to format program summaries with **Program Name:** structure
+        function formatProgramSummaries(content) {
+            // Preprocess content to remove double asterisks
+            content = content.replace(/\*\*Program Name:\*\*/g, 'Program Name:');
+            content = content.replace(/\*\*Implementation:\*\*/g, 'Implementation:');
+            content = content.replace(/\*\*Performance:\*\*/g, 'Performance:');
+            content = content.replace(/\*\*Feedback:\*\*/g, 'Feedback:');
+            
+            // Split by Program Name: to get individual program entries
+            const parts = content.split(/Program Name:\s*/);
+            let html = '';
+            
+            // Handle the first part (before any "Program Name:") as introductory text
+            if (parts[0] && parts[0].trim()) {
+                const introText = processSimpleMarkdown(parts[0].trim());
+                html += `<div style="margin-bottom: 20px; line-height: 1.5;">${introText}</div>`;
+            }
+            
+            // Process the actual program entries (skip the first part which is intro text)
+            const programEntries = parts.slice(1).filter(entry => entry.trim());
+            
+            programEntries.forEach(entry => {
+                const lines = entry.trim().split('\n');
+                if (lines.length === 0) return;
+                
+                let entryHtml = '<div class="meta-entry" style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">';
+                
+                // First line should be the program name (after the **Program Name: prefix)
+                const programName = lines[0].replace(/\*\*$/, '').trim();
+                entryHtml += `<div class="meta-name" style="font-weight: bold; color: #2c3e50; margin-bottom: 12px; font-size: 16px;">Program Name: ${programName}</div>`;
+                
+                // Process the rest of the lines
+                let currentField = '';
+                for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    if (line.startsWith('Implementation:')) {
+                        currentField = 'implementation';
+                        const content = processSimpleMarkdown(line.replace(/^Implementation:\s*/, ''));
+                        entryHtml += `<div class="meta-implementation" style="margin-bottom: 8px;"><strong>Implementation:</strong> ${content}</div>`;
+                    } else if (line.startsWith('Performance:')) {
+                        currentField = 'performance';
+                        const content = processSimpleMarkdown(line.replace(/^Performance:\s*/, ''));
+                        entryHtml += `<div class="meta-performance" style="margin-bottom: 8px;"><strong>Performance:</strong> ${content}</div>`;
+                    } else if (line.startsWith('Feedback:')) {
+                        currentField = 'feedback';
+                        const content = processSimpleMarkdown(line.replace(/^Feedback:\s*/, ''));
+                        entryHtml += `<div class="meta-feedback" style="margin-bottom: 8px;"><strong>Feedback:</strong> ${content}</div>`;
+                    } else if (line.startsWith('-') || currentField) {
+                        // Continuation line or bullet point
+                        const cleanLine = line.replace(/^-\s*/, '');
+                        // Process markdown in the content
+                        const processedLine = processSimpleMarkdown(cleanLine);
+                        const indentStyle = line.startsWith('-') ? 'margin-left: 0px;' : 'margin-left: 15px;';
+                        entryHtml += `<div style="${indentStyle} margin-bottom: 5px; line-height: 1.5;">${processedLine}</div>`;
+                    } else {
+                        // Other content
+                        const processedLine = processSimpleMarkdown(line);
+                        entryHtml += `<div style="margin-bottom: 5px; line-height: 1.5;">${processedLine}</div>`;
+                    }
+                }
+                
+                entryHtml += '</div>';
+                html += entryHtml;
+            });
+            
+            return html;
+        }
+        
+        // Helper function to process simple markdown formatting
+        function processSimpleMarkdown(text) {
+            return text
+                // Convert **text** to <strong>text</strong>
+                .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                // Convert *text* to <em>text</em>
+                .replace(/\*(.*?)\*/g, '<em>$1</em>');
+        }
+        
+        // Function to format structured entries (Name/Summary/Performance)
+        function formatStructuredEntries(content) {
+            // First try to fix entries that may be missing proper separations
+            let fixedContent = content
+                // Add double newlines before Name: if missing (handles both cases)
+                .replace(/([^\n])\nName:/g, '$1\n\nName:')
+                .replace(/(Performance:.*?)(Name:)/g, '$1\n\n$2')
+                // Clean up any triple+ newlines
+                .replace(/\n{3,}/g, '\n\n');
+            
+            // Split by double newlines to get individual entries
+            const entries = fixedContent.split(/\n\s*\n/).filter(entry => entry.trim());
+            let html = '';
+            
+            entries.forEach(entry => {
+                const lines = entry.trim().split('\n');
+                let entryHtml = '<div class="meta-entry" style="margin-bottom: 20px; padding: 15px; background-color: #f9f9f9; border-radius: 5px;">';
+                
+                let currentField = '';
+                lines.forEach(line => {
+                    const trimmedLine = line.trim();
+                    if (trimmedLine.startsWith('Name:')) {
+                        currentField = 'name';
+                        entryHtml += `<div class="meta-name" style="font-weight: bold; color: #2c3e50; margin-bottom: 8px;">${trimmedLine}</div>`;
+                    } else if (trimmedLine.startsWith('Summary:')) {
+                        currentField = 'summary';
+                        entryHtml += `<div class="meta-summary" style="margin-bottom: 8px; line-height: 1.5;">${trimmedLine}</div>`;
+                    } else if (trimmedLine.startsWith('Performance:')) {
+                        currentField = 'performance';
+                        entryHtml += `<div class="meta-performance" style="font-style: italic; color: #34495e;">${trimmedLine}</div>`;
+                    } else if (trimmedLine) {
+                        // Continuation of previous field
+                        const indentStyle = currentField === 'name' ? 'margin-left: 0px;' : 'margin-left: 10px;';
+                        entryHtml += `<div style="${indentStyle} margin-bottom: 5px; line-height: 1.5;">${trimmedLine}</div>`;
+                    }
+                });
+                
+                entryHtml += '</div>';
+                html += entryHtml;
+            });
+            
+            return html;
+        }
+
+        // Store parsed meta sections globally
+        window.parsedMetaSections = {};
+
+        // Function to show specific meta section based on sub-tab selection
+        function showMetaSection(sectionType) {
+            const sectionContent = document.getElementById('meta-section-content');
+            if (!sectionContent || !window.parsedMetaSections) {
+                console.log("[DEBUG] showMetaSection: Missing elements or data", {
+                    sectionContent: !!sectionContent,
+                    parsedMetaSections: !!window.parsedMetaSections
+                });
+                return;
+            }
+            
+            const sections = window.parsedMetaSections;
+            let content = '';
+            
+            console.log("[DEBUG] showMetaSection:", sectionType);
+            
+            switch(sectionType) {
+                case 'individual-programs':
+                    content = sections.individualPrograms || '<p>No individual program summaries available.</p>';
+                    break;
+                case 'global-insights':
+                    content = sections.globalInsights || '<p>No global insights available.</p>';
+                    break;
+                case 'meta-recommendations':
+                    content = sections.metaRecommendations || '<p>No meta recommendations available.</p>';
+                    break;
+                default:
+                    content = '<p>Section not found.</p>';
+            }
+            
+            console.log("[DEBUG] Final content length:", content.length);
+            sectionContent.innerHTML = content;
+        }
+
+        // Function to parse meta content into sections
+        function parseMetaIntoSections(content) {
+            const sections = {
+                individualPrograms: '',
+                globalInsights: '',
+                metaRecommendations: ''
+            };
+            
+            // Also store raw content for diff comparison
+            const rawSections = {
+                individualPrograms: '',
+                globalInsights: '',
+                metaRecommendations: ''
+            };
+            
+            // Split content by main section headers
+            const parts = content.split(/^#\s*(INDIVIDUAL PROGRAM SUMMARIES|GLOBAL INSIGHTS SCRATCHPAD|META RECOMMENDATIONS)$/m);
+            
+            for (let i = 1; i < parts.length; i += 2) {
+                const sectionTitle = parts[i].trim();
+                const sectionContent = parts[i + 1] || '';
+                
+                if (sectionTitle === 'INDIVIDUAL PROGRAM SUMMARIES') {
+                    rawSections.individualPrograms = sectionContent.trim();
+                    // Use the formatProgramSummaries function to create program boxes
+                    sections.individualPrograms = formatProgramSummaries(sectionContent.trim());
+                } else if (sectionTitle === 'GLOBAL INSIGHTS SCRATCHPAD') {
+                    rawSections.globalInsights = sectionContent.trim();
+                    sections.globalInsights = marked.parse(sectionContent.trim());
+                } else if (sectionTitle === 'META RECOMMENDATIONS') {
+                    rawSections.metaRecommendations = sectionContent.trim();
+                    sections.metaRecommendations = marked.parse(sectionContent.trim());
+                }
+            }
+            
+            // Store raw sections globally for diff comparison
+            sections._rawSections = rawSections;
+            
+            return sections;
+        }
+
+
+
+        // Function to display meta content with markdown rendering and optional diff highlighting
+        function displayMetaContent(metaData, skipAsyncLoad = false) {
+            const metaContent = document.getElementById('meta-content');
+            if (!metaContent) return;
+            
+            try {
+                const currentGen = metaData.processed_count ?? metaData.generation;
+                
+                // Parse content into sections
+                window.parsedMetaSections = parseMetaIntoSections(metaData.content);
+                
+                console.log("[DEBUG] Displaying meta content for update", currentGen);
+                
+                // Show the content for the currently active sub-tab
+                const activeSubTab = document.querySelector('.meta-sub-tab.active');
+                const activeSection = activeSubTab ? activeSubTab.getAttribute('data-section') : 'individual-programs';
+                
+                console.log("[DEBUG] Active sub-tab:", activeSubTab, "Active section:", activeSection);
+                
+                // Display the header info
+                metaContent.innerHTML = `
+                    <div style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid #eee;">
+                        <h3 style="margin: 0; color: #333;">Scratchpad - Update ${currentGen}</h3>
+                        <p style="margin: 5px 0 0 0; color: #666; font-size: 14px;">File: ${metaData.filename}</p>
+                    </div>
+                    <div class="meta-content-body" style="line-height: 1.6;" id="meta-section-content">
+                        <!-- Content will be loaded by showMetaSection -->
+                    </div>
+                `;
+                
+                // Show the appropriate section (use setTimeout to ensure DOM is updated)
+                setTimeout(() => {
+                    showMetaSection(activeSection);
+                }, 0);
+                
+                console.log("[DEBUG] Successfully displayed meta content for update", currentGen);
+            } catch (e) {
+                console.error("[ERROR] Failed to render meta content:", e);
+                showMetaError("Failed to render meta analysis content.");
+            }
+        }
+        
+        // Function to generate simple diff HTML that preserves markdown structure
+        function generateSimpleDiffHTML(oldText, newText) {
+            if (typeof Diff === 'undefined') {
+                console.warn("[WARN] Diff library not loaded, showing markdown");
+                return marked.parse(newText);
+            }
+            
+            try {
+                // Use line-based diff for better markdown preservation
+                const diff = Diff.diffLines(oldText, newText);
+                let result = '';
+                
+                diff.forEach(function(part) {
+                    const lines = part.value.split('\n');
+                    lines.forEach(function(line, index) {
+                        if (line.trim() === '' && index === lines.length - 1) return; // Skip final empty line
+                        
+                        if (part.added) {
+                            result += `<div class="diff-added" style="display: block; margin: 2px 0;">${marked.parseInline(line)}</div>\n`;
+                        } else if (part.removed) {
+                            result += `<div class="diff-removed" style="display: block; margin: 2px 0;">${marked.parseInline(line)}</div>\n`;
+                        } else {
+                            result += `${marked.parseInline(line)}<br>\n`;
+                        }
+                    });
+                });
+                
+                return result;
+            } catch (e) {
+                console.error("[ERROR] Failed to generate simple diff:", e);
+                return marked.parse(newText);
+            }
+        }
+        
+        // Function to download meta content as PDF
+        function downloadMetaPdf(dbPath, generation) {
+            console.log(`Downloading meta PDF for DB: ${dbPath}, Update: ${generation}`);
+            const url = `/download_meta_pdf?db_path=${encodeURIComponent(dbPath)}&processed_count=${generation}`;
+            window.open(url, '_blank');
+        }
+        
+        // Function to load meta content specifically for diff comparison (without displaying)
+        function loadMetaContentForDiff(generation, onComplete) {
+            if (window.metaContentCache[generation]) {
+                if (onComplete) onComplete();
+                return; // Already cached
+            }
+            
+            console.log("[DEBUG] Loading meta content for diff comparison:", generation);
+            
+            const xhr = new XMLHttpRequest();
+            xhr.open('GET', `/get_meta_content?db_path=${encodeURIComponent(window.currentDbPath)}&processed_count=${generation}`, true);
+            
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        window.metaContentCache[generation] = response;
+                        console.log("[DEBUG] Cached meta content for update", generation);
+                        
+                        // Call the completion callback if provided
+                        if (onComplete) onComplete();
+                    } catch (e) {
+                        console.error("[ERROR] Failed to cache meta content for diff:", e);
+                    }
+                }
+            };
+            
+            xhr.send();
+        }
+        
+
+        
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
+        // Helper function to show meta error message
+        function showMetaError(message) {
+            const metaContent = document.getElementById('meta-content');
+            if (metaContent) {
+                metaContent.innerHTML = `<p style="text-align: center; color: #e74c3c; margin-top: 50px;">${message}</p>`;
+            }
+        }
+        
+
+        
+        // Function to initialize the panel resizer
+        function initializeResizer() {
+            const divider = document.getElementById('divider');
+            const treePanel = document.getElementById('tree-panel');
+            const container = document.getElementById('container');
+            let isDragging = false;
+            
+            // Store original width percentages
+            let initialTreePanelWidth;
+            let initialClientX;
+            
+            // Flag to prevent other updates during resize
+            window.isResizing = false;
+            
+            // Mouse down event on the divider
+            divider.addEventListener('mousedown', function(e) {
+                // Prevent default selection behavior
+                e.preventDefault();
+                
+                // Set dragging flag
+                isDragging = true;
+                window.isResizing = true;
+                divider.classList.add('dragging');
+                
+                // Store initial positions
+                initialTreePanelWidth = treePanel.offsetWidth;
+                initialClientX = e.clientX;
+            });
+            
+            // Mouse move event (only active when dragging)
+            document.addEventListener('mousemove', function(e) {
+                if (!isDragging) return;
+                
+                // Calculate the new width
+                const containerWidth = container.offsetWidth;
+                const delta = e.clientX - initialClientX;
+                let newWidth = initialTreePanelWidth + delta;
+                
+                // Enforce min and max constraints
+                const minWidth = 200; // Minimum width in pixels
+                const maxWidth = containerWidth * 0.8; // Maximum width at 80% of container
+                
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+                
+                // Calculate the percentage width
+                const newWidthPercent = (newWidth / containerWidth) * 100;
+                
+                // Update the tree panel width
+                treePanel.style.width = `${newWidthPercent}%`;
+                
+                // Save panel width preference
+                savePreferences();
+                
+                // Update the tree without complete redraw
+                if (window.currentTreeRoot) {
+                    // Use requestAnimationFrame for smoother updates
+                    if (window.treeUpdateRAF) {
+                        cancelAnimationFrame(window.treeUpdateRAF);
+                    }
+                    window.treeUpdateRAF = requestAnimationFrame(function() {
+                        renderTree(window.currentTreeRoot, true); // true = reuse existing elements
+                    });
+                }
+            });
+            
+            // Mouse up event to stop dragging (listen on entire document)
+            document.addEventListener('mouseup', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    divider.classList.remove('dragging');
+                    
+                    // Final update with reuse to ensure everything is correctly positioned
+                    if (window.currentTreeRoot) {
+                        renderTree(window.currentTreeRoot, true);
+                    }
+                    
+                    // Delay resetting the resize flag to prevent immediate refreshes
+                    setTimeout(() => {
+                        window.isResizing = false;
+                    }, 300);
+                }
+            });
+            
+            // Prevent cursor changes when dragging extends outside the divider
+            document.addEventListener('mouseleave', function() {
+                if (isDragging) {
+                    isDragging = false;
+                    divider.classList.remove('dragging');
+                    window.isResizing = false;
+                }
+            });
+            
+            // Add a visual indicator when hovering over divider
+            divider.addEventListener('mouseenter', function() {
+                divider.classList.add('hover');
+            });
+            
+            divider.addEventListener('mouseleave', function() {
+                if (!isDragging) {
+                    divider.classList.remove('hover');
+                }
+            });
+        }
+
+        // Setup meta-prompt panel divider for resizing
+        function setupMetaPromptDivider() {
+            const metaPromptDivider = document.getElementById('meta-prompt-divider');
+            const metaPromptContainer = document.getElementById('meta-prompt-container');
+            const metaPromptRight = document.getElementById('meta-prompt-right');
+            const metaPromptTree = document.getElementById('meta-prompt-tree');
+            
+            if (!metaPromptDivider || !metaPromptContainer || !metaPromptRight) {
+                console.warn('Meta-prompt divider elements not found');
+                return;
+            }
+            
+            let isMetaDragging = false;
+            let initialRightWidth;
+            let initialMetaClientX;
+            
+            // Mouse down event on the meta-prompt divider
+            metaPromptDivider.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                isMetaDragging = true;
+                metaPromptDivider.classList.add('dragging');
+                
+                initialRightWidth = metaPromptRight.offsetWidth;
+                initialMetaClientX = e.clientX;
+            });
+            
+            // Mouse move event for meta-prompt divider
+            document.addEventListener('mousemove', function(e) {
+                if (!isMetaDragging) return;
+                
+                const containerWidth = metaPromptContainer.offsetWidth;
+                const delta = initialMetaClientX - e.clientX; // Reversed because we're resizing from the left edge
+                let newWidth = initialRightWidth + delta;
+                
+                // Enforce min and max constraints
+                const minWidth = 200;
+                const maxWidth = containerWidth * 0.6;
+                
+                if (newWidth < minWidth) newWidth = minWidth;
+                if (newWidth > maxWidth) newWidth = maxWidth;
+                
+                // Update the right panel width
+                metaPromptRight.style.width = `${newWidth}px`;
+                
+                // The tree will auto-adjust because the left panel uses flex: 1
+            });
+            
+            // Mouse up event to stop dragging
+            document.addEventListener('mouseup', function() {
+                if (isMetaDragging) {
+                    isMetaDragging = false;
+                    metaPromptDivider.classList.remove('dragging');
+                }
+            });
+            
+            // Visual hover feedback
+            metaPromptDivider.addEventListener('mouseenter', function() {
+                metaPromptDivider.classList.add('hover');
+            });
+            
+            metaPromptDivider.addEventListener('mouseleave', function() {
+                if (!isMetaDragging) {
+                    metaPromptDivider.classList.remove('hover');
+                }
+            });
+        }
+        
+        // Initialize meta-prompt divider when DOM is ready
+        document.addEventListener('DOMContentLoaded', setupMetaPromptDivider);
+
+        // Function to find all .db files in the results directory
+        async function findDatabases(force = false) {
+            const taskSelect = document.getElementById("task-select");
+            const resultSelect = document.getElementById("result-select");
+            const scanStatus = document.getElementById("scan-status");
+
+            // Use cached list unless forcing a refresh
+            if (availableDatabases.length > 0 && !force) {
+                organizeDatabases(availableDatabases);
+                return;
+            }
+
+            scanStatus.textContent = "Loading available databases...";
+
+            try {
+                const response = await fetch('/list_databases');
+                if (!response.ok) {
+                    throw new Error(`Failed to load database list (HTTP ${response.status})`);
+                }
+                const dbs = await response.json();
+                console.log("[DEBUG] Server returned databases:", dbs);
+
+                availableDatabases = dbs;
+                organizeDatabases(dbs);
+
+                // Auto-load a DB if one is specified in the URL
+                const urlParams = new URLSearchParams(window.location.search);
+                const dbPathFromUrl = urlParams.get('db_path');
+                if (dbPathFromUrl) {
+                    const matchingDb = availableDatabases.find(db => db.path === dbPathFromUrl);
+                    if (matchingDb) {
+                        // Use task from the matchingDb object (provided by server)
+                        const task = matchingDb.task;
+                        if (task) {
+                            taskSelect.value = task;
+                            populateResultSelect(task);
+                            resultSelect.value = dbPathFromUrl;
+                        }
+                        loadDatabase(dbPathFromUrl);
+                    } else {
+                        // Database not in available list but try to load directly anyway
+                        console.log("[DEBUG] DB path from URL not found in available databases, loading directly:", dbPathFromUrl);
+                        loadDatabase(dbPathFromUrl);
+                    }
+                } else if (dbs.length > 0 && !force) {
+                    // Auto-select the first task and result
+                    const firstTask = Object.keys(tasksAndResults)[0];
+                    if (firstTask && tasksAndResults[firstTask].length > 0) {
+                        taskSelect.value = firstTask;
+                        populateResultSelect(firstTask);
+                        const firstResult = tasksAndResults[firstTask][0].path;
+                        resultSelect.value = firstResult;
+                        loadDatabase(firstResult);
+                    }
+                }
+
+            } catch (error) {
+                console.error("[DEBUG] Error fetching database list:", error);
+                scanStatus.textContent = "Error loading database list.";
+                taskSelect.innerHTML = '<option value="">Error loading databases</option>';
+                resultSelect.innerHTML = '<option value="">Select a result...</option>';
+            }
+        }
+        
+        function organizeDatabases(dbs) {
+            const scanStatus = document.getElementById("scan-status");
+            
+            // Clear existing data
+            tasksAndResults = {};
+            
+            if (dbs.length === 0) {
+                scanStatus.textContent = "No databases found.";
+                return;
+            }
+
+            // Organize databases by task
+            dbs.forEach(db => {
+                const pathParts = db.path.split('/');
+                // Use db.task if provided, otherwise fall back to path-based extraction
+                const task = db.task || (pathParts.length >= 3 ? pathParts.slice(0, -2).join('/') : pathParts[0]);
+                // Use db.name if available, otherwise fall back to path-based extraction
+                const result = db.name || pathParts[pathParts.length - 2];
+                
+                if (!tasksAndResults[task]) {
+                    tasksAndResults[task] = [];
+                }
+                
+                tasksAndResults[task].push({
+                    name: result,
+                    path: db.path,
+                    sortKey: db.sort_key || '0'
+                });
+            });
+
+            // Sort results within each task by date (newest first)
+            Object.keys(tasksAndResults).forEach(task => {
+                tasksAndResults[task].sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+            });
+
+            populateTaskSelect();
+            scanStatus.textContent = `Found ${dbs.length} database(s) across ${Object.keys(tasksAndResults).length} task(s).`;
+        }
+
+        function populateTaskSelect() {
+            const taskSelect = document.getElementById("task-select");
+            
+            // Clear existing options
+            taskSelect.innerHTML = '<option value="">Select a task...</option>';
+            
+            const tasks = Object.keys(tasksAndResults).sort();
+            tasks.forEach(task => {
+                const option = document.createElement("option");
+                option.value = task;
+                option.textContent = task;
+                taskSelect.appendChild(option);
+            });
+        }
+
+        function populateResultSelect(selectedTask) {
+            const resultSelect = document.getElementById("result-select");
+            
+            // Clear existing options
+            resultSelect.innerHTML = '<option value="">Select a result...</option>';
+            
+            if (!selectedTask || !tasksAndResults[selectedTask]) {
+                return;
+            }
+
+            tasksAndResults[selectedTask].forEach(result => {
+                const option = document.createElement("option");
+                option.value = result.path;
+                option.textContent = result.name;
+                resultSelect.appendChild(option);
+            });
+        }
+
+        // Configuration
+        const config = {
+            // This section is now managed by fetching from the server
+        };
+
+        // Helper function to format timestamps from YYYYMMDD_HHMMSS format to readable format
+        function formatTimestamp(timestamp) {
+            if (!timestamp) return 'unknown';
+            
+            const tsString = String(timestamp);
+            
+            // If it's already formatted or isn't in the expected format, return as is
+            if (tsString === 'latest' || tsString === 'unknown') {
+                return tsString;
+            }
+
+            // Check if it's a Unix timestamp (number, potentially with decimals)
+            if (!isNaN(parseFloat(tsString)) && isFinite(tsString)) {
+                const date = new Date(parseFloat(tsString) * 1000); // from seconds to ms
+                const pad = (num) => String(num).padStart(2, '0');
+                const year = date.getFullYear();
+                const month = pad(date.getMonth() + 1);
+                const day = pad(date.getDate());
+                const hour = pad(date.getHours());
+                const minute = pad(date.getMinutes());
+                const second = pad(date.getSeconds());
+                return `${year}-${month}-${day} ${hour}:${minute}:${second}`;
+            }
+            
+            // Check if the timestamp matches our expected format
+            const tsRegex = /^(\d{4})(\d{2})(\d{2})_(\d{2})(\d{2})(\d{2})$/;
+            const match = tsString.match(tsRegex);
+            
+            if (match) {
+                const [_, year, month, day, hour, minute, second] = match;
+                // Format as YYYY-MM-DD HH:MM
+                return `${year}-${month}-${day} ${hour}:${minute}`;
+            }
+            
+            return tsString;
+        }
+
+        // Auto-refresh functionality
+        function initializeAutoRefresh() {
+            console.log("[DEBUG] Initializing auto-refresh functionality");
+            
+            // Start auto-refresh when a database is loaded
+            if (window.currentDbPath) {
+                startAutoRefresh();
+            }
+        }
+
+        function startAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+            }
+            
+            autoRefreshEnabled = true;
+            console.log("[DEBUG] Starting auto-refresh with 3 second intervals");
+            
+            // Update button state
+            const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+            if (autoRefreshToggle) {
+                autoRefreshToggle.classList.add('active');
+                autoRefreshToggle.title = "Disable auto-refresh";
+            }
+            
+            autoRefreshInterval = setInterval(() => {
+                if (autoRefreshEnabled && window.currentDbPath && !window.isReloadingData && !window.isResizing) {
+                    checkForNewData();
+                }
+            }, 3000); // Check every 3 seconds
+        }
+
+        function stopAutoRefresh() {
+            if (autoRefreshInterval) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+            }
+            autoRefreshEnabled = false;
+            
+            // Update button state
+            const autoRefreshToggle = document.getElementById('auto-refresh-toggle');
+            if (autoRefreshToggle) {
+                autoRefreshToggle.classList.remove('active');
+                autoRefreshToggle.title = "Enable auto-refresh (every 3 seconds)";
+            }
+            
+
+            
+            console.log("[DEBUG] Auto-refresh stopped");
+        }
+        async function checkForNewData() {
+            if (!window.currentDbPath) return;
+            
+            try {
+                // Use lightweight count endpoint to check for changes
+                const response = await fetch(`/get_program_count?db_path=${encodeURIComponent(window.currentDbPath)}`);
+                if (!response.ok) {
+                    console.log("[DEBUG] Auto-refresh: Failed to check for new data");
+                    return;
+                }
+                
+                const result = await response.json();
+                const currentDataCount = window.treeData ? window.treeData.length : 0;
+                
+                // Check if count or timestamp changed
+                const countChanged = result.count !== currentDataCount;
+                const timestampChanged = result.max_timestamp && lastDataTimestamp && 
+                                        result.max_timestamp > lastDataTimestamp;
+                
+                if (countChanged || timestampChanged) {
+                    console.log("[DEBUG] Auto-refresh: New data detected", 
+                               {countChanged, timestampChanged, 
+                                serverCount: result.count, localCount: currentDataCount});
+                    
+                    const scanStatus = document.getElementById("scan-status");
+                    scanStatus.textContent = "Auto-refreshing...";
+                    
+                    window.isReloadingData = true;
+                    await loadDatabaseSilent(window.currentDbPath);
+                }
+                
+                // Update stored timestamp
+                if (result.max_timestamp) {
+                    lastDataTimestamp = result.max_timestamp;
+                }
+            } catch (error) {
+                console.log("[DEBUG] Auto-refresh: Error checking for new data:", error);
+            }
+        }
+
+        // Silent version of loadDatabase that doesn't show loading states
+        async function loadDatabaseSilent(dbPath) {
+            try {
+                // Fetch lightweight summaries and prompts in parallel
+                const [programResponse, promptResponse] = await Promise.all([
+                    fetch(`/get_programs_summary?db_path=${encodeURIComponent(dbPath)}`),
+                    fetch(`/get_system_prompts?db_path=${encodeURIComponent(dbPath)}`).catch(() => null)
+                ]);
+                
+                if (!programResponse.ok) {
+                    throw new Error(`Failed to load data (HTTP ${programResponse.status})`);
+                }
+                
+                const data = await programResponse.json();
+                let prompts = [];
+                if (promptResponse && promptResponse.ok) {
+                    try {
+                        prompts = await promptResponse.json();
+                    } catch (e) {
+                        console.log("[DEBUG] Silent refresh: Failed to parse prompts JSON:", e);
+                    }
+                }
+                
+                if (!data || data.length === 0) {
+                    console.log("[DEBUG] Auto-refresh: No new data received");
+                    return;
+                }
+                
+                console.log("[DEBUG] Auto-refresh: Processing", data.length, "programs,", prompts.length, "prompts");
+                window.rawDbData = data;
+                if (prompts.length > 0) {
+                    window.metaPromptData = prompts;
+                }
+                
+                // Update the scan status with new program count and timestamp
+                const scanStatus = document.getElementById("scan-status");
+                if (scanStatus) {
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    const baseText = `Loaded ${data.length} programs [${timeStr}]`;
+                    scanStatus.textContent = baseText;
+                }
+                
+                // Store the current selected node and active right tab to restore after refresh
+                const selectedNodeId = getSelectedNodeId();
+                const currentRightTab = document.querySelector('.tab.active');
+                const currentRightTabId = currentRightTab ? currentRightTab.getAttribute('data-tab') : null;
+                
+                processData(data);
+                
+                // Try to restore the selected node if it still exists
+                if (selectedNodeId && window.treeData) {
+                    const nodeStillExists = window.treeData.find(d => d.id === selectedNodeId);
+                    if (nodeStillExists) {
+                        // Use a timeout to ensure the DOM has been updated
+                        setTimeout(() => {
+                            selectNodeById(selectedNodeId, false, false); // Don't force right tab switch during re-render
+                            
+                            // Restore the right tab after node selection
+                            if (currentRightTabId && currentRightTabId !== 'agent-code') {
+                                setTimeout(() => {
+                                    const tabElement = document.querySelector(`.tab[data-tab="${currentRightTabId}"]`);
+                                    if (tabElement) {
+                                        tabElement.click();
+                                    }
+                                }, 50);
+                            }
+                        }, 100);
+                    }
+                } else {
+                    // No node was selected, but still restore right tab if it's not the default
+                    if (currentRightTabId && currentRightTabId !== 'agent-info') {
+                        setTimeout(() => {
+                            const tabElement = document.querySelector(`.tab[data-tab="${currentRightTabId}"]`);
+                            if (tabElement) {
+                                tabElement.click();
+                            }
+                        }, 150);
+                    }
+                }
+                
+                // Also refresh the meta-prompt tree if it's visible or has been loaded
+                if (window.metaPromptData !== null) {
+                    console.log("[DEBUG] Auto-refresh: Also refreshing meta-prompt tree");
+                    await refreshMetaPromptssilent();
+                }
+                
+            } catch (error) {
+                console.log("[DEBUG] Auto-refresh: Failed to load data silently:", error);
+            } finally {
+                window.isReloadingData = false;
+            }
+        }
+        
+        // Silent version of meta-prompt refresh
+        async function refreshMetaPromptssilent() {
+            if (!window.currentDbPath) return;
+            
+            try {
+                const response = await fetch(`/get_system_prompts?db_path=${encodeURIComponent(window.currentDbPath)}`);
+                if (!response.ok) {
+                    console.log("[DEBUG] Auto-refresh: Failed to load prompts");
+                    return;
+                }
+                
+                const prompts = await response.json();
+                
+                if (!prompts || prompts.length === 0) {
+                    return;
+                }
+                
+                // Calculate new best prompt first
+                const minPrograms = 1;  // Any prompt with at least 1 program can be best
+                const eligiblePrompts = prompts.filter(p => p.program_count >= minPrograms);
+                const bestPrompt = [...eligiblePrompts].sort((a, b) => b.fitness - a.fitness)[0];
+                
+                // Check if data has changed
+                const oldCount = window.metaPromptData ? window.metaPromptData.length : 0;
+                const oldBestId = window.metaPromptBestId || null;
+                const newBestId = bestPrompt ? bestPrompt.id : null;
+                
+                // Check for changes: count, best prompt, or total fitness
+                let hasChanged = false;
+                if (prompts.length !== oldCount) {
+                    hasChanged = true;
+                    console.log("[DEBUG] Auto-refresh: Prompt count changed:", oldCount, "->", prompts.length);
+                } else if (newBestId !== oldBestId) {
+                    hasChanged = true;
+                    console.log("[DEBUG] Auto-refresh: Best prompt changed:", oldBestId?.substring(0, 8), "->", newBestId?.substring(0, 8));
+                } else {
+                    // Also check if any fitness values changed significantly
+                    const oldTotalFitness = window.metaPromptData ? 
+                        window.metaPromptData.reduce((sum, p) => sum + (p.fitness || 0), 0) : 0;
+                    const newTotalFitness = prompts.reduce((sum, p) => sum + (p.fitness || 0), 0);
+                    if (Math.abs(oldTotalFitness - newTotalFitness) > 0.0001) {
+                        hasChanged = true;
+                        console.log("[DEBUG] Auto-refresh: Total fitness changed:", oldTotalFitness.toFixed(4), "->", newTotalFitness.toFixed(4));
+                    }
+                }
+                
+                if (!hasChanged) {
+                    return; // No significant change
+                }
+                
+                console.log("[DEBUG] Auto-refresh: Meta-prompt data changed, updating tree");
+                window.metaPromptData = prompts;
+                window.metaPromptBestId = newBestId;  // Track best prompt ID
+                
+                // Store currently selected prompt
+                const selectedPromptId = window.selectedPromptId;
+                
+                // Update status
+                const statusEl = document.getElementById('meta-prompt-status');
+                
+                if (statusEl) {
+                    statusEl.textContent = `Loaded ${prompts.length} prompts` + 
+                        (bestPrompt ? ` | Best fitness: ${bestPrompt.fitness.toFixed(4)}` : '');
+                }
+                
+                // Re-render tree
+                renderMetaPromptTree(prompts, bestPrompt);
+                
+                // Restore selected prompt if it still exists
+                if (selectedPromptId) {
+                    const promptStillExists = prompts.find(p => p.id === selectedPromptId);
+                    if (promptStillExists) {
+                        setTimeout(() => {
+                            selectPromptNode(promptStillExists);
+                            d3.selectAll(".prompt-node").classed("selected", false);
+                            d3.selectAll(".prompt-node")
+                                .filter(d => d.data.id === selectedPromptId)
+                                .classed("selected", true);
+                        }, 100);
+                    }
+                }
+                
+            } catch (error) {
+                console.log("[DEBUG] Auto-refresh: Error refreshing meta-prompts:", error);
+            }
+        }
+
+        function getSelectedNodeId() {
+            const selectedNode = document.querySelector('.node.selected');
+            if (selectedNode) {
+                // Extract node ID from D3 data
+                const d3Node = d3.select(selectedNode).datum();
+                return d3Node ? d3Node.data.id : null;
+            }
+            return null;
+        }
+
+        // Function to load and process data from a database file
+        function loadDatabase(dbPath) {
+            console.log("[DEBUG] Attempting to load DB from:", dbPath);
+
+            document.getElementById("node-summary").innerHTML = "";
+            d3.selectAll('.node').classed('selected', false);
+            
+            document.getElementById("agent-code-wrapper").innerHTML = "<p>Select a node from the tree to view code.</p>";
+            document.querySelector('#agent-code .code-controls').style.display = 'none';
+            document.getElementById("node-details").innerHTML = "<p>Select a node to view its details.</p>";
+            document.getElementById("code-diff-content").innerHTML = "<p>Select a node to view its code diff.</p>";
+            document.querySelector('#code-diff .diff-controls').style.display = 'none';
+            document.getElementById("code-diff").classList.remove('hide-unchanged');
+            const toggleBtn = document.getElementById('toggle-unchanged-btn');
+            if (toggleBtn) {
+                toggleBtn.classList.remove('active');
+                toggleBtn.textContent = 'Show Changes Only';
+            }
+            // Reset diff mode
+            window.currentDiffMode = 'parent';
+            window.currentDiffData = { parentDiff: null, initialDiff: null, currentCode: null, initialCode: null };
+            const diffParentBtn = document.getElementById('diff-vs-parent-btn');
+            const diffInitialBtn = document.getElementById('diff-vs-initial-btn');
+            if (diffParentBtn) diffParentBtn.classList.add('active');
+            if (diffInitialBtn) diffInitialBtn.classList.remove('active');
+            
+            // Clear content of other left-panel tabs to force re-render on click
+            document.getElementById("embeddings-heatmap").innerHTML = "";
+            document.getElementById("islands-container").innerHTML = "";
+            document.getElementById("best-path-container").innerHTML = "";
+            // Clear meta-prompt view
+            document.getElementById("meta-prompt-tree").innerHTML = "";
+            document.getElementById("meta-prompt-status").textContent = "No meta-prompt database found";
+            const metaPromptLegend = document.getElementById("meta-prompt-legend");
+            if (metaPromptLegend) metaPromptLegend.style.display = "none";
+            const metaPromptDetails = document.getElementById("meta-prompt-details");
+            if (metaPromptDetails) {
+                metaPromptDetails.innerHTML = '<p style="color: #888; font-size: 13px; text-align: center; margin-top: 30px;">Select a prompt node to view details</p>';
+            }
+            window.metaPromptData = null;
+            window.selectedPromptId = null;
+            // Don't clear the model-posteriors-container completely, just the chart content
+            const modelPosteriorsChart = document.getElementById("model-posteriors-chart");
+            if (modelPosteriorsChart) {
+                modelPosteriorsChart.innerHTML = "";
+            }
+
+
+            // Reset Pareto plot controls
+            paretoListenersAdded = false;
+            const ySelect = document.getElementById('pareto-y-axis');
+            const xSelect = document.getElementById('pareto-x-axis');
+            if (ySelect) ySelect.innerHTML = '';
+            if (xSelect) xSelect.innerHTML = '';
+
+
+
+            window.currentDbPath = dbPath;
+            
+            if (window.isResizing) {
+                console.log("[DEBUG] Skipping DB loading during resize");
+                return;
+            }
+            
+            const scanStatus = document.getElementById("scan-status");
+            scanStatus.textContent = "Loading data...";
+            
+            // Fetch lightweight program summaries and prompts in parallel
+            // Using summary endpoint for faster initial load (excludes code/embeddings)
+            Promise.all([
+                fetch(`/get_programs_summary?db_path=${encodeURIComponent(dbPath)}`).then(r => {
+                    if (!r.ok) throw new Error(`Failed to load data (HTTP ${r.status})`);
+                    return r.json();
+                }),
+                fetch(`/get_system_prompts?db_path=${encodeURIComponent(dbPath)}`).then(r => {
+                    if (!r.ok) {
+                        console.log("[DEBUG] Prompts request failed (HTTP " + r.status + "), continuing without prompts");
+                        return [];
+                    }
+                    return r.json().catch(e => {
+                        console.log("[DEBUG] Failed to parse prompts JSON:", e);
+                        return [];
+                    });
+                }).catch(e => {
+                    console.log("[DEBUG] Prompts fetch failed:", e);
+                    return [];
+                }) // If prompts fail, continue with empty array
+            ])
+                .then(([data, prompts]) => {
+                    console.log("[DEBUG] Summary data received:", data.length, "programs,", prompts.length, "prompts");
+                    
+                    if (!data || data.length === 0) {
+                        throw new Error("Database contains no programs.");
+                    }
+                    
+                    window.rawDbData = data;
+                    window.metaPromptData = prompts.length > 0 ? prompts : null;
+                    
+                    // Update status with timestamp
+                    const now = new Date();
+                    const timeStr = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                    scanStatus.textContent = `Loaded ${data.length} programs [${timeStr}]`;
+                    scanStatus.style.color = '#666'; // Reset to default color on success
+                    
+                    // Clear any previous error messages from file-list
+                    const fileList = document.getElementById("file-list");
+                    if (fileList) fileList.innerHTML = '';
+                    
+                    // Set initial timestamp for auto-refresh comparison
+                    lastDataTimestamp = Date.now();
+                    
+                    processData(data);
+                    
+                    // Start auto-refresh for this database
+                    startAutoRefresh();
+                })
+                .catch(error => {
+                    console.error(`[DEBUG] Failed to load database: ${error.message}`);
+                    
+                    // Check if this is a concurrent access issue (503 = Service Unavailable)
+                    const isConcurrentAccess = error.message.includes('503') || 
+                                             error.message.includes('temporarily unavailable');
+                    
+                    if (isConcurrentAccess) {
+                        scanStatus.textContent = "Database busy - evolution may be running";
+                        scanStatus.style.color = '#ffc107'; // Warning yellow
+                        
+                        // Show concurrent access warning in the file list area
+                        const fileList = document.getElementById("file-list");
+                        fileList.innerHTML = `
+                            <div style="padding: 20px; text-align: center; color: #ffc107; background-color: #fff3cd; border: 1px solid #ffc107; border-radius: 5px; margin: 10px 0;">
+                                <h3>⚠️ Database Temporarily Unavailable</h3>
+                                <p>The database appears to be in use by a running evolution process.</p>
+                                <p><strong>With WAL mode enabled:</strong> This should resolve shortly.</p>
+                                <p>Try refreshing in a few seconds, or wait for the evolution to complete.</p>
+                                <button onclick="loadDatabase('${dbPath}')" style="margin-top: 10px; padding: 8px 16px; background-color: #ffc107; border: none; border-radius: 3px; cursor: pointer;">
+                                    🔄 Retry Now
+                                </button>
+                            </div>
+                        `;
+                        
+                        // Don't stop auto-refresh for concurrent access - it might resolve
+                        console.log("[DEBUG] Database busy, keeping auto-refresh active");
+                    } else {
+                        scanStatus.textContent = "Error loading data.";
+                        scanStatus.style.color = '#dc3545'; // Error red
+                        
+                        // Show general error message
+                        const fileList = document.getElementById("file-list");
+                        fileList.innerHTML = `
+                            <div style="padding: 20px; text-align: center; color: #dc3545; background-color: #f8d7da; border: 1px solid #dc3545; border-radius: 5px; margin: 10px 0;">
+                                <h3>❌ Failed to Load Database</h3>
+                                <p>Error: ${error.message}</p>
+                                <p>Please check the database file and try again.</p>
+                            </div>
+                        `;
+                        
+                        // Stop auto-refresh on general errors
+                        stopAutoRefresh();
+                    }
+                })
+                .finally(() => {
+                    window.isReloadingData = false; // Re-enable state saving
+                    console.log("[DEBUG] Data reloading finished.");
+                });
+        }
+
+        // Process the data and generate the tree
+        function processData(data) {
+            if (!data || data.length === 0) {
+                console.error("[DEBUG] No data to process!");
+                document.getElementById("tree-legend").style.display = "none"; // Hide the legend when no data
+                return;
+            }
+            
+            console.log("[DEBUG] Processing data:", data.length, "rows");
+            try {
+                // Determine the active tabs *before* doing anything else
+                const activeLeftTab = document.querySelector('.left-tab.active');
+                const activeLeftTabId = activeLeftTab ? activeLeftTab.getAttribute('data-tab') : 'tree-view';
+                const activeRightTab = document.querySelector('.tab.active');
+                const activeRightTabId = activeRightTab ? activeRightTab.getAttribute('data-tab') : 'agent-info';
+
+                // Sort and process data
+                data.sort((a, b) => {
+                    if (a.generation !== b.generation) return a.generation - b.generation;
+                    return a.timestamp - b.timestamp;
+                });
+                const genCounters = {};
+                data.forEach(row => {
+                    if (!genCounters[row.generation]) genCounters[row.generation] = 0;
+                    row.iter_id = genCounters[row.generation]++;
+                });
+                // Ensure no virtual root nodes ever get into the global data
+                window.treeData = data.filter(d => !d.id || !d.id.includes('___virtual_root'));
+                
+                // Update views that are always visible or independent of the left tab
+                populateProgramsTable(data);
+                updateMetaInfoTab(data);
+                updateParetoView();
+                
+                // Restore the right-side tab state instead of hardcoded click
+                if (activeRightTabId && document.querySelector(`.tab[data-tab="${activeRightTabId}"]`)) {
+                    document.querySelector(`.tab[data-tab="${activeRightTabId}"]`).click();
+                } else {
+                    document.querySelector('.tab[data-tab="agent-info"]').click();
+                }
+                
+                updateScoreHeatbar();
+                
+                // Clear any cached view data to force refreshes when new data is loaded
+                window.embeddingsCreated = false;
+                
+                // Clear all visualization containers to force complete refresh
+                const clearContainer = (id) => {
+                    const container = document.getElementById(id);
+                    if (container) container.innerHTML = '';
+                };
+                
+                clearContainer('embeddings-heatmap');
+                clearContainer('islands-container');
+                clearContainer('best-path-container');
+                clearContainer('maps-container');
+                clearContainer('battle-container');
+
+                clearContainer('cluster-plot-2d');
+                clearContainer('cluster-plot-3d');
+                clearContainer('metrics-plots');
+                
+                // Now, render the correct left-hand view based on the stored activeLeftTabId
+                if (activeLeftTabId === 'tree-view') {
+                    document.getElementById("tree-legend").style.display = "block";
+                    renderGraph(data);
+                } else {
+                    document.getElementById("tree-legend").style.display = "none";
+                    // Process the active view to improve performance
+                    setTimeout(() => {
+                        if (activeLeftTabId === 'embeddings-view') {
+                            ensureEmbeddingsHeatmap();
+                        } else if (activeLeftTabId === 'islands-view') {
+                            createIslandsVisualization(data);
+                        } else if (activeLeftTabId === 'best-path-view') {
+                            createBestPathVisualization(data);
+                        } else if (activeLeftTabId === 'cost-view') {
+                            createCostVisualization(data);
+                        } else if (activeLeftTabId === 'maps-view') {
+                            createMAPsVisualization(data);
+                        } else if (activeLeftTabId === 'battle-view') {
+                            createBattleVisualization(data);
+                        } else if (activeLeftTabId === 'diversity-view') {
+                            createDiversityVisualization(data);
+                        } else if (activeLeftTabId === 'model-posteriors-view') {
+                            createModelPosteriorsVisualization(data);
+                        } else if (activeLeftTabId === 'clusters-view') {
+                            createClusterPlots(data);
+                        } else if (activeLeftTabId === 'metrics-view') {
+                            createMetricsVisualization(data);
+                        }
+                        
+                        // Also always refresh metrics in background for quick tab switching
+                        setTimeout(() => {
+                            createMetricsVisualization(data);
+                        }, 200);
+                    }, 100);
+                }
+                
+                // Store data refresh flag to ensure views update when switching tabs
+                window.dataRefreshed = true;
+                
+                // Load available meta files for the current database
+                if (window.currentDbPath) {
+                    loadAvailableMetaFiles(window.currentDbPath);
+                }
+                
+                // Update analysis tab if it's active
+                if (document.getElementById('analysis') && document.getElementById('analysis').classList.contains('active')) {
+                    setTimeout(() => {
+                        updateAnalysisTab(window.selectedNodeId || null);
+                    }, 200);
+                }
+                if (document.getElementById('throughput') && document.getElementById('throughput').classList.contains('active')) {
+                    setTimeout(() => {
+                        updateThroughputTab(window.selectedNodeId || null);
+                    }, 200);
+                }
+            } catch (error) {
+console.error("[DEBUG] Error in processData:", error);
+            }
+        }
+        // Cache for D3 tree rendering to avoid unnecessary rebuilds
+        let lastRenderedDataHash = null;
+        
+        function computeDataHash(data) {
+            // Simple hash based on program count, max generation, and max timestamp
+            if (!data || data.length === 0) return null;
+            const count = data.length;
+            const maxGen = Math.max(...data.map(d => d.generation || 0));
+            const maxTs = Math.max(...data.map(d => d.timestamp || 0));
+            return `${count}-${maxGen}-${maxTs}`;
+        }
+        
+        function renderGraph(data, forceRender = false) {
+            console.log("[DEBUG] Starting graph rendering with D3 tree layout");
+
+            try {
+                // Skip render if data hasn't changed (unless forced)
+                const currentHash = computeDataHash(data);
+                if (!forceRender && currentHash === lastRenderedDataHash && document.querySelector("#tree svg")) {
+                    console.log("[DEBUG] Skipping render - data unchanged");
+                    return;
+                }
+                lastRenderedDataHash = currentHash;
+                
+                d3.select("#tree").html(""); // Clear existing tree
+
+                const margin = {top: 300, right: 120, bottom: 300, left: 120};
+                const treeView = document.getElementById('tree-view');
+                if (!treeView) {
+                    console.error("[DEBUG] tree-view element not found");
+                    return;
+                }
+                const panelWidth = treeView.offsetWidth;
+                const panelHeight = treeView.offsetHeight;
+
+                const svg = d3.select("#tree").append("svg")
+                    .attr("width", panelWidth)
+                    .attr("height", panelHeight)
+                    .attr("preserveAspectRatio", "xMidYMid meet")
+                    .call(d3.zoom().extent([[0, 0], [panelWidth, panelHeight]]).scaleExtent([0.1, 8]).on("zoom", e => g.attr("transform", e.transform)))
+                    .append("g");
+                
+                const g = svg.append("g");
+
+                // Create unified root structure for generation 0 programs
+                let processedData = [...data];
+                const gen0Programs = data.filter(d => d.generation === 0);
+                const unifiedRootId = '___unified_root___';
+                
+                if (gen0Programs.length > 1) {
+                    // Create a unified root node representing the common origin
+                    const firstGen0 = gen0Programs[0];
+                    const unifiedRoot = {
+                        id: unifiedRootId,
+                        parent_id: null,
+                        code: firstGen0.code,
+                        language: firstGen0.language,
+                        generation: 0,
+                        timestamp: Math.min(...gen0Programs.map(p => p.timestamp)),
+                        agent_name: 'Initial Program',
+                        combined_score: firstGen0.combined_score,
+                        public_metrics: firstGen0.public_metrics,
+                        private_metrics: firstGen0.private_metrics,
+                        text_feedback: firstGen0.text_feedback,
+                        metadata: { ...firstGen0.metadata, patch_name: 'Initial Program' },
+                        complexity: firstGen0.complexity,
+                        embedding: firstGen0.embedding,
+                        embedding_pca_2d: firstGen0.embedding_pca_2d,
+                        embedding_pca_3d: firstGen0.embedding_pca_3d,
+                        island_idx: null, // No specific island for the unified root
+                        isUnifiedRoot: true
+                    };
+                    
+                    // Add the unified root to the data
+                    processedData.push(unifiedRoot);
+                    
+                    // Update all generation 0 programs to point to the unified root
+                    // Note: We don't increment generations here to preserve original data for other views
+                    processedData = processedData.map(d => {
+                        if (d.generation === 0 && d.id !== unifiedRootId) {
+                            return {
+                                ...d,
+                                parent_id: unifiedRootId
+                            };
+                        }
+                        return d;
+                    });
+                    
+                    console.log(`[DEBUG] Created unified root for ${gen0Programs.length} generation 0 programs`);
+                }
+                
+                const nodes = processedData.map(d => ({...d, agent_name: d.metadata.patch_name || d.agent_name || "unnamed_agent"}));
+                const nodeMap = new Map(nodes.map(node => [node.id, node]));
+
+                let hierarchyData = JSON.parse(JSON.stringify(nodes));
+                const rootNodes = hierarchyData.filter(n => !n.parent_id || !nodeMap.has(n.parent_id));
+                const virtualRootId = '___virtual_root___';
+
+                // Only create virtual root if we have multiple roots AND we don't have a unified root
+                const hasUnifiedRoot = rootNodes.some(n => n.isUnifiedRoot);
+                if (rootNodes.length > 1 && !hasUnifiedRoot) {
+                    hierarchyData.push({ id: virtualRootId, parent_id: '', agent_name: 'VIRTUAL ROOT', isVirtual: true, generation: -1 });
+                    rootNodes.forEach(rn => {
+                        rn.parent_id = virtualRootId;
+                    });
+                }
+                
+                const root = d3.stratify()
+                    .id(d => d.id)
+                    .parentId(d => d.parent_id)
+                    (hierarchyData);
+
+                root.sort((a, b) => a.data.generation - b.data.generation || a.data.timestamp - b.data.timestamp);
+
+                // Check if tree should be transposed
+                const transposeCheckbox = document.getElementById('transpose-tree-checkbox');
+                const isTransposed = transposeCheckbox && transposeCheckbox.checked;
+
+                const nodeWidth = 100;
+                const nodeHeight = 200;
+                
+                // For transposed (horizontal) layout, swap width and height in nodeSize
+                const treeLayout = d3.tree().nodeSize(isTransposed ? [nodeHeight, nodeWidth] : [nodeWidth, nodeHeight]);
+                treeLayout(root);
+
+                // Calculate dimensions based on orientation
+                let treeWidth, treeHeight;
+                let minX = Infinity, maxX = -Infinity;
+                let minY = Infinity, maxY = -Infinity;
+                
+                root.each(d => {
+                    if (d.x < minX) minX = d.x;
+                    if (d.x > maxX) maxX = d.x;
+                    if (d.y < minY) minY = d.y;
+                    if (d.y > maxY) maxY = d.y;
+                });
+                
+                if (isTransposed) {
+                    // In transposed mode, x is vertical (breadth), y is horizontal (depth)
+                    treeWidth = maxY - minY;
+                    treeHeight = maxX - minX;
+                    const calculatedLeftMargin = (panelWidth - treeWidth) / 2;
+                    margin.left = Math.max(120, calculatedLeftMargin);
+                    d3.select("#tree svg")
+                        .attr("viewBox", `0 ${minX - margin.top} ${treeWidth + margin.left + margin.right} ${treeHeight + margin.top + margin.bottom}`);
+                    g.attr("transform", `translate(${margin.left}, 0)`);
+                } else {
+                    // Standard vertical mode
+                    treeWidth = maxX - minX;
+                    treeHeight = root.height * nodeHeight;
+                    const calculatedTopMargin = (panelHeight - treeHeight) / 2;
+                    margin.top = Math.max(100, calculatedTopMargin);
+                    d3.select("#tree svg")
+                        .attr("viewBox", `${minX - margin.left} 0 ${treeWidth + margin.left + margin.right} ${treeHeight + margin.top + margin.bottom}`);
+                    g.attr("transform", `translate(0, ${margin.top})`);
+                }
+                
+                // Clear any stale best path data first
+                window.bestNodeId = null;
+                window.allBestPaths = [];
+                window.bestScoreNodes = [];
+                
+                // Find the actual best score among correct nodes only
+                const correctValidNodes = nodes.filter(d => {
+                    const isCorrect = d.correct === true || d.correct === 'true' || d.correct === 1;
+                    const hasValidScore = d.combined_score !== null && 
+                                         d.combined_score !== undefined && 
+                                         !isNaN(d.combined_score);
+                    if (hasValidScore && !isCorrect) {
+                        console.log("[DEBUG] Excluding incorrect node:", d.id.substring(0, 8), "correct:", d.correct, "score:", d.combined_score);
+                    }
+                    return isCorrect && hasValidScore;
+                });
+                console.log("[DEBUG] Total correct valid nodes for scoring:", correctValidNodes.length);
+                
+                // Debug: show some examples of correct vs incorrect nodes
+                const allValidNodes = nodes.filter(d => d.combined_score !== null && d.combined_score !== undefined && !isNaN(d.combined_score));
+                const incorrectNodes = allValidNodes.filter(d => !(d.correct === true || d.correct === 'true' || d.correct === 1));
+                console.log("[DEBUG] Total valid nodes:", allValidNodes.length, "Incorrect nodes:", incorrectNodes.length);
+                if (incorrectNodes.length > 0) {
+                    console.log("[DEBUG] Sample incorrect nodes:", incorrectNodes.slice(0, 3).map(d => ({id: d.id.substring(0, 8), correct: d.correct, score: d.combined_score})));
+                }
+                if (correctValidNodes.length > 0) {
+                    console.log("[DEBUG] Sample correct nodes:", correctValidNodes.slice(0, 3).map(d => ({id: d.id.substring(0, 8), correct: d.correct, score: d.combined_score})));
+                }
+                
+                // Fallback to all valid nodes if no correct nodes exist
+                let scoringNodes = correctValidNodes;
+                if (correctValidNodes.length === 0) {
+                    console.warn("[DEBUG] No correct nodes found for scoring, falling back to all valid nodes");
+                    scoringNodes = allValidNodes;
+                    if (scoringNodes.length === 0) {
+                        console.warn("[DEBUG] No valid nodes found for scoring");
+                        window.allBestPaths = [];
+                        return;
+                    }
+                }
+                
+                // Find the highest score among the selected nodes
+                const actualBestScore = Math.max(...scoringNodes.map(d => d.combined_score));
+                console.log("[DEBUG] Actual best score found:", actualBestScore);
+                
+                // Use a more robust epsilon for floating-point comparison
+                const epsilon = Math.max(1e-6, Math.abs(actualBestScore) * 1e-10);
+                console.log("[DEBUG] Using epsilon:", epsilon);
+                
+                // Find all nodes with the best score (from the correct scoring nodes)
+                const allNodesWithBestScore = scoringNodes.filter(d => {
+                    const scoreDiff = Math.abs(d.combined_score - actualBestScore);
+                    const isEqual = scoreDiff < epsilon;
+                    if (isEqual) {
+                        console.log("[DEBUG] Found node with best score:", d.id.substring(0, 8), "score:", d.combined_score, "correct:", d.correct, "diff:", scoreDiff);
+                    }
+                    return isEqual;
+                });
+
+                // Double-check: ensure only correct nodes are included for path highlighting
+                const correctNodesWithBestScore = allNodesWithBestScore.filter(d => {
+                    const isCorrect = d.correct === true || d.correct === 'true' || d.correct === 1;
+                    if (!isCorrect) {
+                        console.log("[DEBUG] EXCLUDING incorrect node from best score paths:", d.id.substring(0, 8), "correct:", d.correct, "score:", d.combined_score);
+                    }
+                    return isCorrect;
+                });
+                
+                // FORCE SINGLE PATH: Use best correct node, or fallback to best incorrect node if none exist
+                let nodesWithBestScore;
+                let usingFallbackNode = false;
+                
+                if (correctNodesWithBestScore.length > 0) {
+                    // Use the best correct node
+                    nodesWithBestScore = [correctNodesWithBestScore[0]];
+                    console.log("[DEBUG] SINGLE PATH MODE: Using best correct node:", nodesWithBestScore[0].id.substring(0, 8));
+                } else if (allNodesWithBestScore.length > 0) {
+                    // No correct nodes - fallback to best incorrect node for visualization
+                    nodesWithBestScore = [allNodesWithBestScore[0]];
+                    usingFallbackNode = true;
+                    console.warn("[DEBUG] SINGLE PATH MODE: No correct nodes! Using best incorrect node as fallback:", nodesWithBestScore[0].id.substring(0, 8));
+                } else {
+                    // No nodes at all - create empty array and bail out early
+                    nodesWithBestScore = [];
+                    console.warn("[DEBUG] SINGLE PATH MODE: No nodes available for best path");
+                }
+                
+                // Handle case where no best node is available
+                if (nodesWithBestScore.length === 0) {
+                    console.warn("[DEBUG] No nodes available for visualization - skipping best path setup");
+                    window.bestNodeId = null;
+                    window.bestScoreNodes = [];
+                    window.currentBestPathIndex = 0;
+                    window.allBestPaths = [];
+                    // Continue with rendering but without best path highlighting
+                } else {
+                    // Set the best node
+                    const bestNode = nodesWithBestScore[0];
+                    
+                    if (usingFallbackNode) {
+                        console.warn("[DEBUG] Using fallback (incorrect) node:", bestNode.id.substring(0, 8), "score:", bestNode.combined_score, "correct:", bestNode.correct);
+                    } else {
+                        console.log("[DEBUG] Using best correct node:", bestNode.id.substring(0, 8), "score:", bestNode.combined_score, "correct:", bestNode.correct);
+                    }
+                
+                    window.bestNodeId = bestNode.id;
+                
+                    // Store information about multiple best paths (only correct nodes)
+                    window.bestScoreNodes = nodesWithBestScore;
+                    window.currentBestPathIndex = 0;
+                }
+
+                let bestNodeD3 = null;
+                if (window.bestNodeId) {
+                    root.each(d => {
+                        if (d.data.id === window.bestNodeId) {
+                            bestNodeD3 = d;
+                        }
+                    });
+                }
+
+                const ancestorIds = new Set();
+                if (bestNodeD3 && window.bestNodeId) {
+                    // For correct nodes, populate ancestor path; for incorrect fallback nodes, still show path but with warning
+                    const bestNodeDataIsCorrect = bestNodeD3.data.correct === true || bestNodeD3.data.correct === 'true' || bestNodeD3.data.correct === 1;
+                    
+                    // Always populate ancestors for visualization (even for incorrect fallback nodes)
+                    bestNodeD3.ancestors().forEach(ancestor => {
+                        ancestorIds.add(ancestor.data.id);
+                    });
+                    
+                    if (bestNodeDataIsCorrect) {
+                        console.log("[DEBUG] Populated ancestorIds for correct best node:", window.bestNodeId.substring(0, 8), "path length:", ancestorIds.size);
+                    } else {
+                        console.warn("[DEBUG] Populated ancestorIds for FALLBACK (incorrect) node:", window.bestNodeId.substring(0, 8), "path length:", ancestorIds.size);
+                    }
+                } else {
+                    console.log("[DEBUG] No ancestorIds populated - no valid best node found");
+                }
+                
+                // Store all best paths for highlighting - FORCE SINGLE PATH
+                window.allBestPaths = [];
+                let foundNodesCount = 0;
+                
+                // SINGLE PATH MODE: Only process the first (and only) node
+                if (nodesWithBestScore.length > 0) {
+                    const singleBestNode = nodesWithBestScore[0];
+                    console.log("[DEBUG] SINGLE PATH: Processing only one node:", singleBestNode.id.substring(0, 8));
+                
+                    // Process only the single best node
+                    [singleBestNode].forEach((node, index) => {
+                    let nodeD3 = null;
+                    
+                    // First try to find the node in the D3 tree
+                    root.each(d => {
+                        if (d.data.id === node.id) {
+                            nodeD3 = d;
+                        }
+                    });
+                    
+                    if (nodeD3) {
+                        foundNodesCount++;
+                        const pathIds = new Set();
+                        const pathNodes = nodeD3.ancestors();
+                        
+                        // Add the node itself to the path
+                        pathIds.add(nodeD3.data.id);
+                        
+                        // Add all ancestors
+                        pathNodes.forEach(ancestor => {
+                            pathIds.add(ancestor.data.id);
+                        });
+                        
+                        console.log("[DEBUG] Path", index + 1, "- Node:", node.id.substring(0, 8), 
+                                   "Path length:", pathIds.size, "Score:", node.combined_score, "Generation:", node.generation);
+                        
+                        window.allBestPaths.push({
+                            nodeId: node.id,
+                            pathIds: pathIds,
+                            score: node.combined_score,
+                            generation: node.generation
+                        });
+                    } else {
+                        console.warn("[DEBUG] Could not find D3 node for best score node:", node.id.substring(0, 8), 
+                                    "- attempting manual path reconstruction");
+                        
+                        // Fallback: try to reconstruct path manually using the original nodes data
+                        const pathIds = new Set();
+                        pathIds.add(node.id);
+                        
+                        // Try to trace back through parent relationships
+                        let currentNode = node;
+                        while (currentNode && currentNode.parent_id) {
+                            const parentNode = nodes.find(n => n.id === currentNode.parent_id);
+                            if (parentNode) {
+                                pathIds.add(parentNode.id);
+                                currentNode = parentNode;
+                            } else {
+                                console.warn("[DEBUG] Could not find parent node:", currentNode.parent_id);
+                                break;
+                            }
+                        }
+                        
+                        if (pathIds.size > 1) {
+                            console.log("[DEBUG] Reconstructed path", index + 1, "- Node:", node.id.substring(0, 8), 
+                                       "Path length:", pathIds.size, "Score:", node.combined_score);
+                            
+                            window.allBestPaths.push({
+                                nodeId: node.id,
+                                pathIds: pathIds,
+                                score: node.combined_score,
+                                generation: node.generation,
+                                reconstructed: true
+                            });
+                            foundNodesCount++;
+                        }
+                    }
+                    });
+                } else {
+                    console.log("[DEBUG] SINGLE PATH: No valid best node found");
+                }
+                
+                console.log("[DEBUG] SINGLE PATH: Successfully found", foundNodesCount, "path(s)");
+                
+                // FORCE SINGLE PATH: Truncate to only the first path if multiple exist
+                if (window.allBestPaths.length > 1) {
+                    console.log("[DEBUG] FORCE TRUNCATING to single path from", window.allBestPaths.length, "paths");
+                    window.allBestPaths = [window.allBestPaths[0]];
+                }
+                
+                // FORCE SINGLE NODE: Ensure bestScoreNodes only has one node
+                if (window.bestScoreNodes.length > 1) {
+                    console.log("[DEBUG] FORCE TRUNCATING bestScoreNodes to single node from", window.bestScoreNodes.length, "nodes");
+                    window.bestScoreNodes = [window.bestScoreNodes[0]];
+                }
+                
+                // Summary for debugging - SINGLE PATH MODE
+                if (window.allBestPaths.length === 1) {
+                    console.log("[DEBUG] SINGLE PATH MODE: One path found to:", window.allBestPaths[0].nodeId.substring(0, 8), "Score:", window.allBestPaths[0].score);
+                } else {
+                    console.warn("[DEBUG] SINGLE PATH MODE: No paths found");
+                }
+
+                const scores = nodes
+                    .filter(d => d.correct && d.combined_score !== null && !isNaN(d.combined_score))
+                    .map(d => d.combined_score);
+
+                const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+                const maxScore = scores.length > 0 ? Math.max(...scores) : 1;
+                const colorScale = d3.scaleSequential(d3.interpolateViridis).domain([minScore, maxScore]);
+                
+                const shapeMap = {
+                    'init': d3.symbolDiamond,
+                    'full': d3.symbolCircle,
+                    'diff': d3.symbolSquare,
+                    'cross': d3.symbolCross,
+                    'fix': d3.symbolTriangle
+                };
+                const getShape = (patchType) => shapeMap[patchType] || d3.symbolCircle;
+                const symbol = d3.symbol().size(2500);
+
+                // Create color scale for islands with distinctive colors (avoiding orange used for best path)
+                const islandColors = [
+                    "#1f77b4", // blue
+                    "#2ca02c", // green  
+                    "#9467bd", // purple
+                    "#8c564b", // brown
+                    "#e377c2", // pink
+                    "#7f7f7f", // gray
+                    "#bcbd22", // olive
+                    "#17becf", // cyan
+                    "#aec7e8"  // light blue
+                ];
+                const islandColorScale = d3.scaleOrdinal(islandColors);
+                
+                const usedPatchTypes = [...new Set(nodes.map(d => d.metadata.patch_type).filter(Boolean))];
+                const usedIslands = [...new Set(nodes.map(d => d.island_idx).filter(idx => idx !== null && idx !== undefined))].sort((a, b) => a - b);
+                updateShapeLegend(shapeMap, usedPatchTypes, usedIslands, islandColorScale);
+
+                const defs = g.append("defs");
+                defs.append("marker")
+                    .attr("id", "arrowhead-standard")
+                    .attr("viewBox", "-10 -5 10 10").attr("refX", 20).attr("refY", 0).attr("orient", "auto")
+                    .attr("markerWidth", 8).attr("markerHeight", 8)
+                    .append("path").attr("d", "M -10,-5 L 0,0 L -10,5 Z").attr('fill', '#999');
+
+                defs.append("marker")
+                    .attr("id", "arrowhead-selected")
+                    .attr("viewBox", "-10 -5 10 10").attr("refX", 20).attr("refY", 0).attr("orient", "auto")
+                    .attr("markerWidth", 10).attr("markerHeight", 10)
+                    .append("path").attr("d", "M -10,-5 L 0,0 L -10,5 Z").attr('fill', '#e58e26');
+                
+                const visibleLinks = root.links().filter(d => !d.source.data.isVirtual);
+
+                const link = g.append("g")
+                    .attr("class", "links")
+                    .selectAll("path")
+                    .data(visibleLinks)
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("fill", "none")
+                    .style("stroke", d => {
+                        // Check if this link is on the SINGLE best path
+                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                            // FORCE SINGLE PATH: Only check the first path
+                            const singlePath = window.allBestPaths[0];
+                            if (singlePath.pathIds.has(d.source.data.id) && singlePath.pathIds.has(d.target.data.id)) {
+                                // Additional safety: ensure both nodes are correct before highlighting
+                                const sourceCorrect = d.source.data.correct === true || d.source.data.correct === 'true' || d.source.data.correct === 1;
+                                const targetCorrect = d.target.data.correct === true || d.target.data.correct === 'true' || d.target.data.correct === 1;
+                                if (sourceCorrect && targetCorrect) {
+                                    return '#ff8c00'; // Always use orange for the single path
+                                } else {
+                                    console.log("[DEBUG] Blocking orange highlight for link with incorrect node(s):", d.source.data.id.substring(0, 8), "->", d.target.data.id.substring(0, 8));
+                                    return "#999";
+                                }
+                            }
+                        }
+                        return "#999"; // Default color for non-best paths
+                    })
+                    .style("stroke-width", d => {
+                        // Check if this link is on any best path
+                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                            for (let path of window.allBestPaths) {
+                                if (path.pathIds.has(d.source.data.id) && path.pathIds.has(d.target.data.id)) {
+                                    return 4;
+                                }
+                            }
+                        }
+                        return 1.5; // Default width
+                    })
+                    .style("stroke-opacity", d => {
+                        // Check if this link is on any best path
+                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                            for (let path of window.allBestPaths) {
+                                if (path.pathIds.has(d.source.data.id) && path.pathIds.has(d.target.data.id)) {
+                                    return 1;
+                                }
+                            }
+                        }
+                        return 0.8; // Default opacity
+                    })
+                    .attr("d", isTransposed 
+                        ? d3.linkHorizontal()
+                            .x(d => d.y)
+                            .y(d => d.x)
+                        : d3.linkVertical()
+                            .x(d => d.x)
+                            .y(d => d.y)
+                    );
+
+                const visibleNodes = root.descendants().filter(d => !d.data.isVirtual);
+                
+                const node = g.append("g").attr("class", "nodes").selectAll("g").data(visibleNodes)
+                    .enter().append("g")
+                    .attr("class", d => d.data.id === window.bestNodeId ? "node best-node" : "node")
+                    .attr("transform", d => isTransposed ? `translate(${d.y},${d.x})` : `translate(${d.x},${d.y})`)
+                    .on('click', (event, d) => {
+                        d3.selectAll('.node').classed('selected', false);
+                        d3.select(event.currentTarget).classed('selected', true);
+                        
+                        const selectedNodeId = d.data.id;
+                        const selectedAncestors = new Set(d.ancestors().map(n => n.data.id));
+
+                        // Update link styles - FORCE SINGLE PATH
+                        link.style("stroke", l => {
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    // FORCE SINGLE PATH: Only check the first path
+                                    const singlePath = window.allBestPaths[0];
+                                    if (singlePath.pathIds.has(l.source.data.id) && singlePath.pathIds.has(l.target.data.id)) {
+                                        return '#ff8c00'; // Always orange for single path
+                                    }
+                                }
+                                
+                                // Check if this link is on the selected path (non-best paths)
+                                const onSelectedPath = selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id);
+                                if (onSelectedPath) {
+                                    return "gold";
+                                }
+                                return "#999";
+                            })
+                            .style("stroke-width", l => {
+                                // Check if this link is on any best path
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    for (let path of window.allBestPaths) {
+                                        if (path.pathIds.has(l.source.data.id) && path.pathIds.has(l.target.data.id)) {
+                                            return 4;
+                                        }
+                                    }
+                                }
+                                // Check if this link is on the selected path
+                                const onSelectedPath = selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id);
+                                return onSelectedPath ? 5 : 1.5;
+                            })
+                            .style("stroke-opacity", l => {
+                                // Check if this link is on any best path or selected path
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    for (let path of window.allBestPaths) {
+                                        if (path.pathIds.has(l.source.data.id) && path.pathIds.has(l.target.data.id)) {
+                                            return 1;
+                                        }
+                                    }
+                                }
+                                const onSelectedPath = selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id);
+                                return onSelectedPath ? 1 : 0.8;
+                            });
+                        
+                        // Update node styles - FORCE SINGLE PATH
+                        node.selectAll('path')
+                            .style("stroke", n => {
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    // FORCE SINGLE PATH: Only check the first path
+                                    const singlePath = window.allBestPaths[0];
+                                    if (singlePath.pathIds.has(n.data.id)) {
+                                        return '#ff8c00'; // Always orange for single path
+                                    }
+                                }
+                                return "#000"; // Default stroke
+                            })
+                            .style("stroke-width", n => {
+                                // Check if this node is on any best path
+                                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                    for (let path of window.allBestPaths) {
+                                        if (path.pathIds.has(n.data.id)) {
+                                            return 4;
+                                        }
+                                    }
+                                }
+                                return 3; // Default width
+                            })
+                            .style("filter", n => n.data.id === window.bestNodeId ? "drop-shadow(0px 3px 6px rgba(255, 140, 0, 0.5))" : "drop-shadow(0px 2px 4px rgba(0,0,0,0.2))");
+                        
+                        node.filter('.selected')
+                            .select('path')
+                            .style("stroke", "#e58e26").style("stroke-width", 4)
+                            .style("filter", "drop-shadow(0px 3px 8px rgba(229, 130, 38, 0.6))");
+
+                        displayNodeDetails(d.data);
+                        document.querySelector('.tab[data-tab="agent-code"]').click();
+                    })
+                    .on('mouseover', (event, d) => {
+                        const tooltip = d3.select("body").append("div")
+                            .attr("class", "node-tooltip")
+                            .style("opacity", 0);
+
+                        tooltip.transition().duration(200).style("opacity", 1);
+                        
+                        const patchName = d.data.metadata.patch_name || 'unnamed';
+                        const score = formatScore(d.data.combined_score);
+                        const patchType = d.data.metadata.patch_type || 'N/A';
+                        const islandIdx = d.data.island_idx !== null && d.data.island_idx !== undefined ? d.data.island_idx : 'N/A';
+                        const rawModelName = d.data.metadata?.model_name ||
+                                         d.data.metadata?.llm_result?.model ||
+                                         d.data.metadata?.model ||
+                                         d.data.model_name ||
+                                         d.data.model ||
+                                         'N/A';
+                        const modelName = rawModelName !== 'N/A' ? ((rawModelName.includes('@') ? rawModelName.split('@')[0] : rawModelName).split('/').pop()) : 'N/A';
+                        
+                        if (d.data.isUnifiedRoot) {
+                            tooltip.html(`
+                                <strong style="color: #9b59b6; font-size: 13px;">⭐ ${patchName}</strong><br>
+                                <strong>Type:</strong> Unified Root<br>
+                                <strong>Score:</strong> ${score}<br>
+                                <em>Common origin for all islands</em>
+                            `);
+                        } else {
+                            tooltip.html(`
+                                <strong style="color: #58a6ff; font-size: 13px;">${patchName}</strong><br>
+                                <strong>Score:</strong> ${score}<br>
+                                <strong>Type:</strong> ${patchType}<br>
+                                <strong>Island:</strong> ${islandIdx}<br>
+                                <strong>Model:</strong> ${modelName}
+                            `);
+                        }
+                        
+                        tooltip.style("left", (event.pageX + 15) + "px")
+                               .style("top", (event.pageY - 10) + "px");
+                    })
+                    .on('mousemove', (event, d) => {
+                        d3.select(".node-tooltip")
+                            .style("left", (event.pageX + 15) + "px")
+                            .style("top", (event.pageY - 10) + "px");
+                    })
+                    .on('mouseout', (event, d) => {
+                        d3.selectAll(".node-tooltip").transition().duration(200).style("opacity", 0).remove();
+                    });
+
+                node.append("path")
+                    .attr("d", d => {
+                        // Use a star shape for the unified root
+                        if (d.data.isUnifiedRoot) {
+                            symbol.type(d3.symbolStar).size(750);
+                        } else {
+                            symbol.type(getShape(d.data.metadata.patch_type));
+                        }
+                        return symbol();
+                    })
+                    .style("fill", d => {
+                        if (d.data.isUnifiedRoot) return '#9b59b6'; // Purple for unified root
+                        if (d.data.id === window.bestNodeId) return '#ffd700';
+                        if (!d.data.correct) return '#e74c3c';
+                        const score = d.data.combined_score;
+                        if (score !== null && !isNaN(score)) {
+                            return colorScale(score);
+                        }
+                        return '#3498db';
+                    })
+                    .style("stroke", d => {
+                        // Check if this node is on the SINGLE best path
+                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                            // FORCE SINGLE PATH: Only check the first path
+                            const singlePath = window.allBestPaths[0];
+                            if (singlePath.pathIds.has(d.data.id)) {
+                                // Additional safety: ensure node is correct before highlighting
+                                const nodeCorrect = d.data.correct === true || d.data.correct === 'true' || d.data.correct === 1;
+                                if (nodeCorrect) {
+                                    return '#ff8c00'; // Always use orange for the single path
+                                } else {
+                                    console.log("[DEBUG] Blocking orange highlight for incorrect node:", d.data.id.substring(0, 8), "correct:", d.data.correct);
+                                    return "#000";
+                                }
+                            }
+                        }
+                        return "#000"; // Default stroke
+                    })
+                    .style("stroke-width", d => {
+                        // Check if this node is on any best path
+                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                            for (let path of window.allBestPaths) {
+                                if (path.pathIds.has(d.data.id)) {
+                                    return 4;
+                                }
+                            }
+                        }
+                        return 3; // Default width
+                    })
+                    .style("filter", d => d.data.id === window.bestNodeId ? "drop-shadow(0px 3px 6px rgba(255, 140, 0, 0.5))" : "drop-shadow(0px 2px 4px rgba(0,0,0,0.2))");
+
+                // Add animated rings for the SINGLE best node
+                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                    // FORCE SINGLE PATH: Only process the first path, always use orange
+                    const singlePath = window.allBestPaths[0];
+                    [singlePath].forEach((path, index) => {
+                        const pathColor = '#ff8c00'; // Always orange for single path
+                        const shadowColor = 'rgba(255, 140, 0, 0.3)'; // Always orange shadow
+                        
+                        node.filter(d => d.data.id === path.nodeId)
+                            .insert("circle", ":first-child")
+                            .attr("r", 24)
+                            .style("fill", "none")
+                            .style("stroke", pathColor)
+                            .style("stroke-width", 3)
+                            .style("stroke-dasharray", "5,3")
+                            .style("opacity", 0.8)
+                            .style("filter", `drop-shadow(0px 2px 4px ${shadowColor})`)
+                            .style("animation", "pulse 2s infinite");
+                    });
+                } else {
+                    // Fallback: add ring for the single best node if no paths detected
+                    node.filter(d => d.data.id === window.bestNodeId)
+                        .insert("circle", ":first-child")
+                        .attr("r", 24).style("fill", "none").style("stroke", "#ff8c00")
+                        .style("stroke-width", 3).style("stroke-dasharray", "5,3").style("opacity", 0.8)
+                        .style("filter", "drop-shadow(0px 2px 4px rgba(255, 140, 0, 0.3))")
+                        .style("animation", "pulse 2s infinite");
+                }
+
+                node.append("text")
+                    .attr("dy", "0.75em")
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "24px").style("font-weight", "bold").style("fill", "white")
+                    .style("pointer-events", "none")
+                    .text(d => d.data.generation);
+
+                // Add island index indicator with background
+                const islandNodes = node.filter(d => d.data.island_idx !== null && d.data.island_idx !== undefined);
+                
+                // Add background rectangle for island text
+                islandNodes.append("rect")
+                    .attr("x", -15)
+                    .attr("y", -35)
+                    .attr("width", 30)
+                    .attr("height", 20)
+                    .attr("rx", 4)
+                    .style("fill", d => islandColorScale(d.data.island_idx))
+                    .style("stroke", "#2c3e50")
+                    .style("stroke-width", "1px")
+                    .style("pointer-events", "none");
+                
+                // Add island text (centered in the rectangle)
+                islandNodes.append("text")
+                    .attr("x", 0)
+                    .attr("y", -15)  // Adjusted for larger rectangle
+                    .attr("text-anchor", "middle")
+                    .attr("dy", "0.35em")  // Better vertical centering
+                    .style("font-size", "17px")
+                    .style("font-weight", "bold")
+                    .style("fill", "white")
+                    .style("pointer-events", "none")
+                    .text(d => `I${d.data.island_idx}`);
+
+                // Handle tree animation if enabled
+                const animateCheckbox = document.getElementById('animate-tree-checkbox');
+                const shouldAnimate = animateCheckbox && animateCheckbox.checked;
+                
+                if (shouldAnimate) {
+                    // Stop any existing animation timers
+                    if (window.treeAnimationTimers) {
+                        window.treeAnimationTimers.forEach(t => clearTimeout(t));
+                    }
+                    window.treeAnimationTimers = [];
+                    
+                    // Get max depth (generation) for animation
+                    let maxDepth = 0;
+                    visibleNodes.forEach(d => {
+                        if (d.depth > maxDepth) maxDepth = d.depth;
+                    });
+                    
+                    console.log("[DEBUG] Starting tree animation, max depth:", maxDepth);
+                    
+                    // Animation settings - dynamic delay based on tree depth
+                    // Target total animation time of ~4-5 seconds for the tree reveal
+                    const targetTotalTime = 5000; // ms for entire tree reveal
+                    const minDelay = 100; // minimum ms between depths (for very deep trees)
+                    const maxDelay = 1000; // maximum ms between depths (for shallow trees)
+                    const depthDelay = Math.max(minDelay, Math.min(maxDelay, targetTotalTime / Math.max(1, maxDepth)));
+                    const transitionDuration = Math.min(500, depthDelay * 0.8); // fade-in scales with delay
+                    const pauseBeforeRestart = 1500; // ms pause before restarting loop
+                    
+                    console.log("[DEBUG] Animation timing - depthDelay:", depthDelay.toFixed(0), "ms, transitionDuration:", transitionDuration.toFixed(0), "ms");
+                    
+                    // Function to run one animation cycle
+                    function runAnimationCycle() {
+                        // Check if animation should still run
+                        if (!animateCheckbox.checked) {
+                            console.log("[DEBUG] Animation stopped (checkbox unchecked)");
+                            return;
+                        }
+                        
+                        // Clear any existing timers
+                        if (window.treeAnimationTimers) {
+                            window.treeAnimationTimers.forEach(t => clearTimeout(t));
+                        }
+                        window.treeAnimationTimers = [];
+                        
+                        // Reset all nodes and links to hidden
+                        node.style("opacity", 0);
+                        link.style("opacity", 0);
+                        
+                        // Animate each depth sequentially
+                        for (let depth = 0; depth <= maxDepth; depth++) {
+                            const timer = setTimeout(() => {
+                                // Check if still animating
+                                if (!animateCheckbox.checked) return;
+                                
+                                // Animate nodes at this depth
+                                node.filter(d => d.depth === depth)
+                                    .transition()
+                                    .duration(transitionDuration)
+                                    .ease(d3.easeCubicOut)
+                                    .style("opacity", 1);
+                                
+                                // Animate links connecting to this depth (where target is at this depth)
+                                link.filter(d => d.target.depth === depth)
+                                    .transition()
+                                    .duration(transitionDuration)
+                                    .ease(d3.easeCubicOut)
+                                    .style("opacity", d => {
+                                        // Restore the original opacity logic
+                                        if (window.allBestPaths && window.allBestPaths.length > 0) {
+                                            for (let path of window.allBestPaths) {
+                                                if (path.pathIds.has(d.source.data.id) && path.pathIds.has(d.target.data.id)) {
+                                                    return 1;
+                                                }
+                                            }
+                                        }
+                                        return 0.8;
+                                    });
+                            }, depth * depthDelay);
+                            window.treeAnimationTimers.push(timer);
+                        }
+                        
+                        // Schedule next cycle after this one completes
+                        const restartTimer = setTimeout(() => {
+                            if (animateCheckbox.checked) {
+                                console.log("[DEBUG] Restarting animation cycle");
+                                runAnimationCycle();
+                            }
+                        }, (maxDepth + 1) * depthDelay + transitionDuration + pauseBeforeRestart);
+                        window.treeAnimationTimers.push(restartTimer);
+                    }
+                    
+                    // Start the first animation cycle
+                    runAnimationCycle();
+                }
+
+                if (window.pendingNodeSelectionId) {
+                    const nodeIdToSelect = window.pendingNodeSelectionId;
+                    window.pendingNodeSelectionId = null; // Clear it immediately
+
+                    // Use a short timeout to ensure D3 has finished DOM manipulations
+                    setTimeout(() => {
+                        const nodeElement = d3.selectAll('.node')
+                            .filter(d => d.data.id === nodeIdToSelect)
+                            .node();
+                        
+                        if (nodeElement) {
+                            console.log('[DEBUG] Applying pending node selection:', nodeIdToSelect);
+                            nodeElement.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+                        } else {
+                            console.warn('[DEBUG] Could not find node for pending selection:', nodeIdToSelect);
+                        }
+                    }, 100);
+                }
+                
+
+            } catch (error) {
+                console.error("[DEBUG] Error in renderGraph:", error);
+            }
+        }
+
+        function updateShapeLegend(shapeMap, usedPatchTypes, usedIslands = [], islandColorScale = null) {
+            const legendContainer = d3.select("#shape-legend");
+            legendContainer.selectAll(".shape-legend-item").remove(); // Clear previous items
+
+            const legendSymbol = d3.symbol().size(64);
+
+            // Add patch type legend items
+            for (const type in shapeMap) {
+                if (usedPatchTypes.includes(type)) {
+                    const legendItem = legendContainer.append("div")
+                        .attr("class", "shape-legend-item")
+                        .style("display", "flex")
+                        .style("align-items", "center");
+
+                    const svg = legendItem.append("svg")
+                        .attr("width", 16)
+                        .attr("height", 16)
+                        .style("margin-right", "5px");
+
+                    legendSymbol.type(shapeMap[type]);
+
+                    svg.append("path")
+                        .attr("d", legendSymbol)
+                        .attr("class", "legend-shape")
+                        .attr("transform", "translate(8, 8)");
+
+                    legendItem.append("span").text(type);
+                }
+            }
+
+            // Add island legend items to the dedicated islands legend container
+            const islandsLegendContainer = d3.select("#islands-legend-items");
+            islandsLegendContainer.selectAll(".island-legend-item").remove(); // Clear previous island items
+            
+            if (usedIslands.length > 0 && islandColorScale) {
+                // Show the islands legend section
+                d3.select("#islands-legend").style("display", "block");
+                
+                // Update the header with island count
+                const islandTitle = document.getElementById("islands-legend-title");
+                islandTitle.textContent = `${usedIslands.length} Island${usedIslands.length !== 1 ? 's' : ''}`;
+                
+                // Setup toggle functionality
+                const header = document.getElementById("islands-legend-header");
+                const arrow = document.getElementById("islands-toggle-arrow");
+                const items = document.getElementById("islands-legend-items");
+                
+                // Remove any existing click listeners
+                const newHeader = header.cloneNode(true);
+                header.parentNode.replaceChild(newHeader, header);
+                
+                newHeader.addEventListener("click", function() {
+                    const currentDisplay = items.style.display;
+                    if (currentDisplay === "none" || currentDisplay === "") {
+                        items.style.display = "flex";
+                        document.getElementById("islands-toggle-arrow").style.transform = "rotate(90deg)";
+                    } else {
+                        items.style.display = "none";
+                        document.getElementById("islands-toggle-arrow").style.transform = "rotate(0deg)";
+                    }
+                });
+                
+                usedIslands.forEach(islandIdx => {
+                    const legendItem = islandsLegendContainer.append("div")
+                        .attr("class", "island-legend-item")
+                        .style("display", "flex")
+                        .style("align-items", "center");
+
+                    const svg = legendItem.append("svg")
+                        .attr("width", 16)
+                        .attr("height", 16)
+                        .style("margin-right", "5px");
+
+                    // Create a small colored rectangle for island
+                    svg.append("rect")
+                        .attr("x", 2)
+                        .attr("y", 4)
+                        .attr("width", 12)
+                        .attr("height", 8)
+                        .attr("rx", 2)
+                        .style("fill", islandColorScale(islandIdx))
+                        .style("stroke", "#2c3e50")
+                        .style("stroke-width", "1px");
+
+                    // Add small text inside the rectangle
+                    svg.append("text")
+                        .attr("x", 8)
+                        .attr("y", 8)
+                        .attr("text-anchor", "middle")
+                        .attr("dy", "0.35em")
+                        .style("font-size", "8px")
+                        .style("font-weight", "bold")
+                        .style("fill", "white")
+                        .text(`I${islandIdx}`);
+
+                    legendItem.append("span").text(`Island ${islandIdx}`);
+                });
+            } else {
+                // Hide the islands legend section if no islands
+                d3.select("#islands-legend").style("display", "none");
+            }
+        }
+
+        // Global variables for chart data and instances
+        let cumulativeMaxScores = [];
+        let cumulativeMeanScores = [];
+        let cumulativeTotalCosts = [];
+        let cumulativeApiCosts = [];
+        let cumulativeEmbedCosts = [];
+        let cumulativeNoveltyCosts = [];
+        let cumulativeMetaCosts = [];
+        let cumulativePromptCosts = [];
+        let generationCosts = [];
+        let generationEmbedCosts = [];
+        let generationNoveltyCosts = [];
+        let generationMetaCosts = [];
+        let generationPromptCosts = [];
+        let generationRuntimes = [];
+        let individualScores = []; // Added array to store individual performance scores
+        let bestPathScores = [];
+        let cumulativeRuntimes = [];
+        let scoreChartInstance = null;
+        let costChartInstance = null;
+        let scoreBudgetChartInstance = null;
+        let scoreRuntimeChartInstance = null;
+        let runtimeChartInstance = null;
+        
+        // Initialize the Meta Info tab with default content
+        function initializeMetaInfoTab() {
+            document.getElementById("agent-info").innerHTML = `
+                <h3>Meta Information</h3>
+                <p id="meta-placeholder" class="placeholder-text">Loading data... Select a CSV file to visualize metrics.</p>
+                
+                <div style="display: flex; flex-wrap: wrap; gap: 20px; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 200px; background-color: #f8f9fa; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <h4 style="margin-top: 0;">Overview</h4>
+                        <p><strong>Total Generations:</strong> <span id="meta-total-generations">N/A</span></p>
+                        <p><strong>Correct:</strong> <span id="meta-correct-programs">N/A</span></p>
+                        <p><strong>Total Cost:</strong> <span id="meta-total-cost">N/A</span></p>
+                        <p><strong>Avg Cost/Program:</strong> <span id="meta-cost-avg">N/A</span></p>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 150px; background-color: #f8f9fa; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <h4 style="margin-top: 0;">Best Solution</h4>
+                        <p><strong>Best Score:</strong> <span id="meta-best-score" class="metric-good">N/A</span></p>
+                        <p><strong>Name:</strong> <span id="meta-best-agent-name" class="truncated-name-span">N/A</span></p>
+                        <p><strong>Generation:</strong> <span id="meta-best-agent-gen">N/A</span></p>
+                        <p><strong>Island:</strong> <span id="meta-best-agent-island">N/A</span></p>
+                    </div>
+                    
+                    <div style="flex: 1; min-width: 100px; background-color: #f8f9fa; padding: 15px; border-radius: 5px; box-shadow: 0 1px 3px rgba(0,0,0,0.1);">
+                        <h4 style="margin-top: 0;">Cost Breakdown</h4>
+                        <p><strong>API Cost:</strong> <span id="meta-cost-api">N/A</span></p>
+                        <p><strong>Embed Cost:</strong> <span id="meta-cost-embed">N/A</span></p>
+                        <p><strong>Novelty Cost:</strong> <span id="meta-cost-novelty">N/A</span></p>
+                        <p><strong>Meta Cost:</strong> <span id="meta-cost-meta">N/A</span></p>
+                        <p><strong>PromptEvo Cost:</strong> <span id="meta-cost-prompt">N/A</span></p>
+                    </div>
+            </div>
+
+            <div id="selected-node-details" style="display: none;"></div>
+
+            <div style="display: flex; flex-wrap: wrap; margin-top: 20px;">
+                <div style="width: 100%; margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0;">Performance Score Across Program Evaluations</h4>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-y-min">Min:</label>
+                                <input type="number" id="score-y-min" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-y-max">Max:</label>
+                                <input type="number" id="score-y-max" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="scoreChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+                <div style="width: 100%; margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0;">Performance Score Across API Budget</h4>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-budget-y-min">Min:</label>
+                                <input type="number" id="score-budget-y-min" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-budget-y-max">Max:</label>
+                                <input type="number" id="score-budget-y-max" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="scoreBudgetChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+                <div style="width: 100%; margin-bottom: 0;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                        <h4 style="margin: 0;">Performance Score Across ShinkaEvolve Runtime</h4>
+                        <div style="display: flex; align-items: center; gap: 10px;">
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-runtime-y-min">Min:</label>
+                                <input type="number" id="score-runtime-y-min" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 5px; font-size: 14px;">
+                                <label for="score-runtime-y-max">Max:</label>
+                                <input type="number" id="score-runtime-y-max" style="width: 70px; padding: 2px 5px; border: 1px solid #ddd; border-radius: 3px;" placeholder="Auto" oninput="setTimeout(() => createCharts(null), 10)" step="0.1">
+                            </div>
+                        </div>
+                    </div>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="scoreRuntimeChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+                <div style="width: 100%; margin-bottom: 20px;">
+                    <h4 style="margin-top: 15px;">Cumulative API Cost Breakdown</h4>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="costChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+                <div style="width: 100%; margin-bottom: 20px;">
+                    <h4 style="margin-top: 15px;">Cumulative Runtime Across Program Evaluations</h4>
+                    <div style="height: 250px; position: relative;">
+                        <canvas id="runtimeChart" width="400" height="250"></canvas>
+                    </div>
+                </div>
+            </div>
+            `;
+        }
+        // Update the Meta Info tab with global data
+        function updateMetaInfoTab(data) {
+            console.log("[DEBUG] Updating Meta Info tab with data");
+
+            // First, ensure the tab is set up with the correct HTML structure
+            initializeMetaInfoTab();
+
+            // Ensure metric arrays are initialized for this update cycle
+            cumulativeMaxScores = [];
+            cumulativeMeanScores = [];
+            cumulativeTotalCosts = [];
+            cumulativeApiCosts = [];
+            cumulativeEmbedCosts = [];
+            cumulativeNoveltyCosts = [];
+            cumulativeMetaCosts = [];
+            cumulativePromptCosts = [];
+            cumulativeRuntimes = [];
+            generationCosts = [];
+            generationEmbedCosts = [];
+            generationNoveltyCosts = [];
+            generationMetaCosts = [];
+            generationPromptCosts = [];
+            generationRuntimes = [];
+            individualScores = []; // Reset individual scores array
+            bestPathScores = [];
+            let allScoresForMeanCalc = [];
+            
+            // Hide placeholder
+            const placeholder = document.getElementById("meta-placeholder");
+            if (placeholder) placeholder.style.display = 'none';
+            
+            // Calculate overall statistics
+            const generations = [...new Set(data.map(d => d.generation))].sort((a, b) => a - b);
+            const numGenerations = generations.length;
+            const numAgents = data.length;
+            
+            // Filter valid scores
+            const validScores = data.filter(d => d.correct)
+                .map(d => d.combined_score)
+                .filter(s => s !== null && s !== undefined && !isNaN(parseFloat(s)))
+                .map(s => parseFloat(s));
+            
+            // Determine best score based on max selection
+            const bestScore = validScores.length > 0 ? 
+                Math.max(...validScores) : 'N/A';
+            
+            // Find the agent with the best score
+            let bestAgent = null;
+            if (validScores.length > 0 && typeof bestScore === 'number') {
+                bestAgent = data.find(d => parseFloat(d.combined_score) === bestScore);
+            }
+            
+            if (bestAgent) {
+                const nodeMap = new Map(data.map(node => [node.id, node]));
+                const path = [];
+                let currentNode = bestAgent;
+                while (currentNode) {
+                    path.unshift(currentNode);
+                    currentNode = nodeMap.get(currentNode.parent_id);
+                }
+                bestPathScores = path.map(node => ({
+                    x: node.generation,
+                    y: node.combined_score,
+                    id: node.id,
+                    agent_name: node.metadata.patch_name || 'unnamed'
+                }));
+            }
+
+            // Calculate total costs
+            let totalApiCostNum = 0;
+            let totalEmbedCostNum = 0;
+            let totalNoveltyCostNum = 0;
+            let totalMetaCostNum = 0;
+            let totalPromptCostNum = 0;
+            data.forEach(d => {
+                const apiCost = d.metadata?.api_costs ? parseFloat(d.metadata.api_costs) : 0;
+                const embedCost = d.metadata?.embed_cost ? parseFloat(d.metadata.embed_cost) : 0;
+                const noveltyCost = d.metadata?.novelty_cost ? parseFloat(d.metadata.novelty_cost) : 0;
+                const metaCost = d.metadata?.meta_cost ? parseFloat(d.metadata.meta_cost) : 0;
+                totalApiCostNum += isNaN(apiCost) ? 0 : apiCost;
+                totalEmbedCostNum += isNaN(embedCost) ? 0 : embedCost;
+                totalNoveltyCostNum += isNaN(noveltyCost) ? 0 : noveltyCost;
+                totalMetaCostNum += isNaN(metaCost) ? 0 : metaCost;
+            });
+            // Calculate total prompt evolution cost from metaPromptData
+            if (window.metaPromptData && Array.isArray(window.metaPromptData)) {
+                window.metaPromptData.forEach(prompt => {
+                    if (prompt.metadata && prompt.metadata.llm && typeof prompt.metadata.llm.cost === 'number') {
+                        totalPromptCostNum += prompt.metadata.llm.cost;
+                    }
+                });
+            }
+            const totalCombinedCost = totalApiCostNum + totalEmbedCostNum + totalNoveltyCostNum + totalMetaCostNum + totalPromptCostNum;
+
+            // Calculate cumulative minimum and maximum scores for each generation
+            let currentMax = -Infinity;
+            
+            generations.forEach(genId => {
+                const genData = data.filter(d => d.generation === genId);
+                const genScores = genData.filter(d => d.correct).map(d => {
+                    const score = d.combined_score;
+                    if (score === null || score === undefined) {
+                        return null;
+                    }
+                    const numScore = typeof score === 'string' ? parseFloat(score) : score;
+                    return isNaN(numScore) ? null : numScore;
+                })
+                .filter(s => s !== null);
+                
+                // Add individual data points for each valid score in this generation
+                genData.forEach(d => {
+                    const score = d.combined_score;
+                    if (score !== null && score !== undefined && d.correct) {
+                        const numScore = typeof score === 'string' ? parseFloat(score) : score;
+                        if (!isNaN(numScore)) {
+                            individualScores.push({
+                                x: genId,
+                                y: numScore,
+                                id: d.id,
+                                agent_name: d.metadata?.patch_name || 'unnamed',
+                                iter_id: d.iter_id
+                            });
+                        }
+                    }
+                });
+                
+                if (genScores.length > 0) {
+                    const maxScore = Math.max(...genScores);
+                    currentMax = Math.max(currentMax, maxScore);
+                    allScoresForMeanCalc.push(...genScores);
+                }
+                
+                if (currentMax !== -Infinity) {
+                    cumulativeMaxScores.push({ 
+                        x: genId, 
+                        y: currentMax
+                    });
+                }
+
+                if (allScoresForMeanCalc.length > 0) {
+                    const meanScore = allScoresForMeanCalc.reduce((a, b) => a + b, 0) / allScoresForMeanCalc.length;
+                    cumulativeMeanScores.push({
+                        x: genId,
+                        y: meanScore
+                    });
+                }
+            });
+            
+            // Calculate cumulative costs using api_costs, embed_cost, novelty_cost, and meta_cost from metadata
+            let cumulativeCost = 0;
+            let cumulativeApiCost = 0;
+            let cumulativeEmbedCost = 0;
+            let cumulativeNoveltyCost = 0;
+            let cumulativeMetaCost = 0;
+            let cumulativePromptCost = 0;
+            let cumulativeRuntime = 0;
+            
+            // Pre-calculate prompt costs per program generation from window.metaPromptData
+            const promptCostsByGen = {};
+            if (window.metaPromptData && Array.isArray(window.metaPromptData)) {
+                window.metaPromptData.forEach(prompt => {
+                    const progGen = prompt.program_generation || 0;
+                    // Extract cost from metadata.llm.cost
+                    let promptCost = 0;
+                    if (prompt.metadata && prompt.metadata.llm && typeof prompt.metadata.llm.cost === 'number') {
+                        promptCost = prompt.metadata.llm.cost;
+                    }
+                    if (!promptCostsByGen[progGen]) {
+                        promptCostsByGen[progGen] = 0;
+                    }
+                    promptCostsByGen[progGen] += promptCost;
+                });
+                console.log("[DEBUG] Prompt costs by generation:", promptCostsByGen);
+            }
+            
+            generations.forEach(genId => {
+                const genData = data.filter(d => d.generation === genId);
+                let genCost = 0;
+                let genEmbedCost = 0;
+                let genNoveltyCost = 0;
+                let genMetaCost = 0;
+                let genPromptCost = promptCostsByGen[genId] || 0;
+                let genRuntime = 0;
+                
+                genData.forEach(d => {
+                    const cost = d.metadata && d.metadata.api_costs ? parseFloat(d.metadata.api_costs) : 0;
+                    const embedCost = d.metadata && d.metadata.embed_cost ? parseFloat(d.metadata.embed_cost) : 0;
+                    const noveltyCost = d.metadata && d.metadata.novelty_cost ? parseFloat(d.metadata.novelty_cost) : 0;
+                    const metaCost = d.metadata && d.metadata.meta_cost ? parseFloat(d.metadata.meta_cost) : 0;
+                    const computeTime = d.metadata && d.metadata.compute_time ? parseFloat(d.metadata.compute_time) : 0;
+                    genCost += isNaN(cost) ? 0 : cost;
+                    genEmbedCost += isNaN(embedCost) ? 0 : embedCost;
+                    genNoveltyCost += isNaN(noveltyCost) ? 0 : noveltyCost;
+                    genMetaCost += isNaN(metaCost) ? 0 : metaCost;
+                    genRuntime += isNaN(computeTime) ? 0 : computeTime;
+                    
+                    // Debug logging for first few items
+                    if (genData.indexOf(d) < 2) {
+                        console.log("[DEBUG] Gen", genId, "Program:", d.id.substring(0, 8), 
+                                  "API Cost:", cost, "Embed Cost:", embedCost, "Novelty Cost:", noveltyCost, "Meta Cost:", metaCost,
+                                  "Metadata keys:", d.metadata ? Object.keys(d.metadata) : 'no metadata');
+                    }
+                });
+                
+                console.log("[DEBUG] Generation", genId, "Total API Cost:", genCost, "Total Embed Cost:", genEmbedCost, "Total Novelty Cost:", genNoveltyCost, "Total Meta Cost:", genMetaCost, "Prompt Cost:", genPromptCost);
+                
+                generationCosts.push({
+                    x: genId,
+                    y: genCost
+                });
+
+                generationEmbedCosts.push({
+                    x: genId,
+                    y: genEmbedCost
+                });
+
+                generationNoveltyCosts.push({
+                    x: genId,
+                    y: genNoveltyCost
+                });
+
+                generationMetaCosts.push({
+                    x: genId,
+                    y: genMetaCost
+                });
+
+                generationPromptCosts.push({
+                    x: genId,
+                    y: genPromptCost
+                });
+
+                generationRuntimes.push({
+                    x: genId,
+                    y: genRuntime
+                });
+
+                cumulativeApiCost += genCost;
+                cumulativeEmbedCost += genEmbedCost;
+                cumulativeNoveltyCost += genNoveltyCost;
+                cumulativeMetaCost += genMetaCost;
+                cumulativePromptCost += genPromptCost;
+                cumulativeRuntime += genRuntime;
+                cumulativeCost += (genCost + genEmbedCost + genNoveltyCost + genMetaCost + genPromptCost);
+                
+                cumulativeApiCosts.push({
+                    x: genId,
+                    y: cumulativeApiCost
+                });
+                
+                cumulativeEmbedCosts.push({
+                    x: genId,
+                    y: cumulativeEmbedCost
+                });
+
+                cumulativeNoveltyCosts.push({
+                    x: genId,
+                    y: cumulativeNoveltyCost
+                });
+
+                cumulativeMetaCosts.push({
+                    x: genId,
+                    y: cumulativeMetaCost
+                });
+
+                cumulativePromptCosts.push({
+                    x: genId,
+                    y: cumulativePromptCost
+                });
+                
+                cumulativeTotalCosts.push({
+                    x: genId,
+                    y: cumulativeCost
+                });
+                
+                cumulativeRuntimes.push({
+                    x: genId,
+                    y: cumulativeRuntime
+                });
+            });
+            
+            // Clear other cost arrays as they are no longer used
+            cumulativeAgentCosts = [];
+            cumulativeSolutionCosts = [];
+            
+            // Add detailed logging before updating DOM
+            console.log("[DEBUG] Calculated Stats:", {
+                numGenerations,
+                numAgents,
+                totalCost: totalApiCostNum.toFixed(2),
+                bestScore: typeof bestScore === 'number' ? bestScore.toFixed(6) : bestScore,
+                bestAgentName: bestAgent ? bestAgent.agent_name : 'N/A',
+                bestAgentGen: bestAgent ? bestAgent.gen_id : 'N/A',
+                bestAgentIter: bestAgent ? bestAgent.iter_id : 'N/A',
+            });
+
+            // Update Overview section
+            document.getElementById('meta-total-generations').textContent = numGenerations;
+            
+            // Calculate and update success rate (correct programs / total agents)
+            const correctAgents = data.filter(d => d.correct).length;
+            const correctRate = numAgents > 0 ? (correctAgents / numAgents) * 100 : 0;
+            document.getElementById('meta-correct-programs').textContent = 
+                `${correctRate.toFixed(1)}% (${correctAgents}/${numAgents})`;
+            
+            document.getElementById('meta-total-cost').textContent = '$' + totalCombinedCost.toFixed(4);
+
+            // Update Best Solution section
+            const bestScoreEl = document.getElementById('meta-best-score');
+            bestScoreEl.textContent = typeof bestScore === 'number' ? bestScore.toFixed(6) : bestScore;
+            bestScoreEl.className = typeof bestScore === 'number' ? 'metric-good' : '';
+            
+            const bestAgentName = bestAgent ? (bestAgent.metadata.patch_name || 'unnamed') : 'N/A';
+            document.getElementById('meta-best-agent-name').textContent = bestAgentName;
+            document.getElementById('meta-best-agent-gen').textContent = bestAgent ? bestAgent.generation : 'N/A';
+            document.getElementById('meta-best-agent-island').textContent = bestAgent ? bestAgent.island_idx : 'N/A';
+
+            // Update Cost Breakdown section
+            document.getElementById('meta-cost-api').textContent = '$' + totalApiCostNum.toFixed(4);
+            document.getElementById('meta-cost-embed').textContent = '$' + totalEmbedCostNum.toFixed(4);
+            document.getElementById('meta-cost-novelty').textContent = '$' + totalNoveltyCostNum.toFixed(4);
+            document.getElementById('meta-cost-meta').textContent = '$' + totalMetaCostNum.toFixed(4);
+            document.getElementById('meta-cost-prompt').textContent = '$' + totalPromptCostNum.toFixed(4);
+            document.getElementById('meta-cost-avg').textContent = numAgents > 0 ? '$' + (totalCombinedCost / numAgents).toFixed(4) : 'N/A';
+            
+            console.log("[DEBUG] Meta Info tab text content updated");
+        }
+
+        // Helper function to display code content in the code wrapper
+        function displayCodeContent(data, codeWrapper) {
+            if (!data.code) {
+                document.querySelector('#agent-code .code-controls').style.display = 'none';
+                codeWrapper.innerHTML = "<p>No code available for this node.</p>";
+                return;
+            }
+            
+            document.querySelector('#agent-code .code-controls').style.display = 'flex';
+            
+            const sanitizedCode = escapeHtml(data.code);
+            const lines = data.code.split('\n');
+            const lineNumbers = Array.from({length: lines.length}, (_, i) => `<span>${i + 1}</span>`).join('');
+
+            codeWrapper.innerHTML = `
+                <div class="code-container">
+                    <div class="line-numbers-gutter">${lineNumbers}</div>
+                    <pre><code class="language-${data.language || 'python'}">${sanitizedCode}</code></pre>
+                </div>
+            `;
+
+            // Use a slight delay to ensure the DOM has updated
+            setTimeout(() => {
+                const codeBlock = codeWrapper.querySelector('code');
+                if (codeBlock) {
+                    if (typeof hljs !== 'undefined') {
+                        hljs.highlightElement(codeBlock);
+                    } else {
+                        console.warn('highlight.js not found, skipping syntax highlighting.');
+                    }
+                }
+            }, 50);
+        }
+
+        // Display node details in the right panel
+        function displayNodeDetails(data) {
+            console.log("[DEBUG] Displaying node details for:", data.agent_name, "Gen:", data.generation, "ID:", data.id);
+            
+            // Store selected node ID globally
+            window.selectedNodeId = data.id;
+            
+            // Sync selection in the program table
+            const tableBody = document.querySelector("#program-table tbody");
+            if (tableBody) {
+                tableBody.querySelectorAll('tr').forEach(r => r.classList.remove('selected'));
+                const row = tableBody.querySelector(`tr[data-node-id="${data.id}"]`);
+                if (row) {
+                    row.classList.add('selected');
+                }
+            }
+            
+            // Sync selection in the best path timeline
+            const bestPathContainer = document.querySelector("#best-path-container");
+            if (bestPathContainer) {
+                bestPathContainer.querySelectorAll('.timeline-item').forEach(i => i.classList.remove('selected'));
+                const item = bestPathContainer.querySelector(`.timeline-item[data-node-id="${data.id}"]`);
+                if (item) {
+                    item.classList.add('selected');
+                }
+            }
+            
+            // Save state when node is selected
+            saveState();
+            
+            const agentName = data.metadata.patch_name || data.agent_name || "unnamed_agent";
+            const score = data.combined_score;
+            
+            // Update node summary
+            document.getElementById("node-summary").innerHTML = `
+                <h3>${agentName} (Gen ${data.generation})</h3>
+                <p><strong>ID:</strong> <span style="font-family: monospace;">${data.id}</span></p>
+                <p><strong>Parent ID:</strong> <span style="font-family: monospace;">${data.parent_id || 'None'}</span></p>
+                <p><strong>Score:</strong> <span class="${getScoreClass(score)}">${formatScore(score)}</span></p>
+                ${data.error ? `<p><strong>Error:</strong> <span class="metric-bad">${data.error}</span></p>` : ''}
+            `;
+            
+
+
+            // Update charts in Meta Info tab to highlight this generation
+            if (document.querySelector('.tab[data-tab="agent-info"]').classList.contains('active') && !window.isResizing) {
+                createCharts(data.generation);
+            }
+
+            // --- Update Node Details Tab ---
+            const nodeDetailsContainer = document.getElementById('node-details');
+
+            let publicMetricsHtml = '';
+            if (data.public_metrics && Object.keys(data.public_metrics).length > 0) {
+                for (const [key, value] of Object.entries(data.public_metrics)) {
+                    publicMetricsHtml += `<p><strong>${key}:</strong> ${formatScore(value)}</p>`;
+                }
+            } else {
+                publicMetricsHtml = '<p>No public metrics available.</p>';
+            }
+
+            let privateMetricsHtml = '';
+            if (data.private_metrics && Object.keys(data.private_metrics).length > 0) {
+                for (const [key, value] of Object.entries(data.private_metrics)) {
+                    privateMetricsHtml += `<p><strong>${key}:</strong> ${formatScore(value)}</p>`;
+                }
+            } else {
+                privateMetricsHtml = '<p>No private metrics available.</p>';
+            }
+
+            let metadataHtml = '';
+            let privateMetaFieldsHtml = '';
+            
+            if (data.metadata) {
+                for (const [key, value] of Object.entries(data.metadata)) {
+                    if (key !== 'thought' && key !== 'code_analysis_metrics' && key !== 'patch_description' && key !== 'stdout_log' && key !== 'stderr_log' && key !== 'llm_result') {
+                        
+                        let valueHtml;
+                        if (typeof value === 'object' && value !== null) {
+                            valueHtml = `<pre style="white-space: pre-wrap; word-wrap: break-word; background-color: #f6f8fa; padding: 10px; border-radius: 3px; margin-top: 5px;">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+                            metadataHtml += `<div style="margin-bottom: 10px;"><strong>${key}:</strong>${valueHtml}</div>`;
+                        } else {
+                            const valueStr = String(value);
+                            
+                            // Check if this is one of the fields that should be moved to Private Metrics & Feedback
+                            if (key === 'meta_recommendations' || key === 'novelty_explanation' || key === 'meta_summary' || key === 'meta_scratch_pad') {
+                                valueHtml = `
+                                    <details class="metadata-details">
+                                        <summary class="metadata-summary">Expand to view</summary>
+                                        <div class="metadata-value-expandable">
+                                            <pre><code class="nohighlight">${escapeHtml(valueStr)}</code></pre>
+                                        </div>
+                                    </details>
+                                `;
+                                privateMetaFieldsHtml += `<p><strong>${key}:</strong>${valueHtml}</p>`;
+                            } else {
+                                const isLongValue = valueStr.length > 50;
+                                const valueClass = isLongValue ? 'metadata-value' : '';
+                                valueHtml = `<span class="${valueClass}">${escapeHtml(valueStr)}</span>`;
+                                metadataHtml += `<p><strong>${key}:</strong> ${valueHtml}</p>`;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!metadataHtml) {
+                metadataHtml = '<p>No metadata available.</p>';
+            }
+
+            let analysisMetricsHtml = '';
+            if (data.metadata && data.metadata.code_analysis_metrics) {
+                analysisMetricsHtml = `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+                        <thead>
+                            <tr style="background-color: #f0f0f0;">
+                                <th style="border: 1px solid #ddd; padding: 6px; text-align: left; width: 60%;">Metric</th>
+                                <th style="border: 1px solid #ddd; padding: 6px; text-align: right; width: 40%;">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                for (const [key, value] of Object.entries(data.metadata.code_analysis_metrics)) {
+                    const formattedValue = typeof value === 'number' ? value.toFixed(2) : value;
+                    const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    
+                    analysisMetricsHtml += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 6px;">${displayKey}</td>
+                            <td style="border: 1px solid #ddd; padding: 6px; text-align: right; font-family: monospace;">${formattedValue}</td>
+                        </tr>`;
+                }
+                
+                analysisMetricsHtml += `
+                        </tbody>
+                    </table>`;
+            } else {
+                analysisMetricsHtml = '<p>No analysis metrics.</p>';
+            }
+
+            let gridItemsHtml = `
+                    <div class="details-section">
+                        <h5>General</h5>
+                        <p><strong>Language:</strong> ${data.language || 'N/A'}</p>
+                        <p><strong>Island:</strong> ${data.island_idx !== null && data.island_idx !== undefined ? data.island_idx : 'N/A'}</p>
+                        <p><strong>Timestamp:</strong> ${formatTimestamp(data.timestamp)}</p>
+                        <p><strong>Correct:</strong> ${data.correct ? 'Yes' : 'No'}</p>
+                        <p><strong>Children:</strong> ${data.children_count || 0}</p>
+                        <p><strong>Complexity:</strong> ${data.complexity || 'N/A'}</p>
+        </div>
+                    <div class="details-section">
+                        <h5>Performance Score</h5>
+                        <p><strong>Combined Score:</strong> ${formatScore(data.combined_score)}</p>
+                    </div>
+                    <div class="details-section">
+                        <h5>Public Metrics</h5>
+                        ${publicMetricsHtml}
+                    </div>
+                    <div class="details-section">
+                        <h5>Private Metrics & Feedback</h5>
+                        ${privateMetricsHtml}
+                        ${privateMetaFieldsHtml ? `
+                            <div style="margin-top: 15px;">
+                                <h6 style="color: #666; margin-bottom: 10px;">Meta Analysis:</h6>
+                                ${privateMetaFieldsHtml}
+                            </div>
+                        ` : ''}
+                        ${data.text_feedback && data.text_feedback.trim() ? `
+                            <div style="margin-top: 15px;">
+                                <details class="metadata-details">
+                                    <summary class="metadata-summary" style="cursor: pointer; font-weight: bold; color: #007bff; margin-bottom: 8px;">📝 Text Feedback</summary>
+                                    <div style="background-color: #f8f9fa; padding: 10px; border-radius: 5px; border-left: 4px solid #007bff; margin-top: 8px; white-space: pre-wrap; word-wrap: break-word;">${escapeHtml(data.text_feedback)}</div>
+                                </details>
+                            </div>
+                        ` : '<p style="margin-top: 15px; color: #666; font-style: italic;">No text feedback available.</p>'}
+                    </div>
+                    <div class="details-section">
+                        <h5>Metadata</h5>
+                        ${metadataHtml}
+                    </div>
+                    <div class="details-section">
+                        <h5>Code Analysis</h5>
+                        ${analysisMetricsHtml}
+                </div>
+            `;
+
+            if (!(data.metadata && data.metadata.thought)) {
+                const patchType = data.metadata.patch_type || 'N/A';
+                const patchName = data.metadata.patch_name || 'N/A';
+                const patchDescription = data.metadata.patch_description || '';
+                
+                let patchDescriptionHtml = '';
+                if (patchDescription) {
+                    patchDescriptionHtml = `
+                        <p><strong>Description:</strong> 
+                        <span class="tooltip">
+                            <span class="truncated-text">${patchDescription}</span>
+                            <span class="tooltip-text">${patchDescription}</span>
+                        </span>
+                        </p>
+                    `;
+                }
+                
+                let inspirationHtml = '';
+                const topKIds = data.top_k_inspiration_ids || [];
+                const archiveIds = data.archive_inspiration_ids || [];
+                const parentId = data.parent_id;
+                
+                if (parentId || topKIds.length > 0 || archiveIds.length > 0) {
+                    inspirationHtml = `
+                        <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+                            <thead>
+                                <tr style="background-color: #f0f0f0;">
+                                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Type</th>
+                                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Node ID</th>
+                                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Gen</th>
+                                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">I</th>
+                                    <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Score</th>
+                                </tr>
+                            </thead>
+                            <tbody>`;
+                    
+                    // Add parent node first if it exists
+                    if (parentId) {
+                        // Debug: Check if we're looking for a virtual root
+                        if (parentId.includes('___virtual_root')) {
+                            console.error("[DEBUG] Virtual root found in inspiration data! ParentId:", parentId);
+                            console.error("[DEBUG] window.treeData contains virtual roots:", window.treeData.some(n => n.id.includes('___virtual_root')));
+                        }
+                        
+                        const parentNode = window.treeData ? window.treeData.find(n => n.id === parentId) : null;
+                        const gen = parentNode ? parentNode.generation : 'N/A';
+                        const island = parentNode && parentNode.island_idx !== null && parentNode.island_idx !== undefined ? parentNode.island_idx : 'N/A';
+                        const score = parentNode && parentNode.combined_score !== null && parentNode.combined_score !== undefined ? parentNode.combined_score.toFixed(2) : 'N/A';
+                        const shortId = parentId.length > 8 ? parentId.substring(0, 8) + '...' : parentId;
+                        
+                        inspirationHtml += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 4px;">Parent</td>
+                                <td style="border: 1px solid #ddd; padding: 4px; font-family: monospace; color: #007bff; cursor: pointer; text-decoration: underline;" onclick="selectNodeById('${parentId}')">${shortId}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${gen}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${island}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${score}</td>
+                            </tr>`;
+                    }
+                    
+                    topKIds.forEach(id => {
+                        const node = window.treeData ? window.treeData.find(n => n.id === id) : null;
+                        const gen = node ? node.generation : 'N/A';
+                        const island = node && node.island_idx !== null && node.island_idx !== undefined ? node.island_idx : 'N/A';
+                        const score = node && node.combined_score !== null && node.combined_score !== undefined ? node.combined_score.toFixed(2) : 'N/A';
+                        const shortId = id.length > 8 ? id.substring(0, 8) + '...' : id;
+                        
+                        inspirationHtml += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 4px;">Top-K</td>
+                                <td style="border: 1px solid #ddd; padding: 4px; font-family: monospace; color: #007bff; cursor: pointer; text-decoration: underline;" onclick="selectNodeById('${id}')">${shortId}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${gen}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${island}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${score}</td>
+                            </tr>`;
+                    });
+                    
+                    archiveIds.forEach(id => {
+                        const node = window.treeData ? window.treeData.find(n => n.id === id) : null;
+                        const gen = node ? node.generation : 'N/A';
+                        const island = node && node.island_idx !== null && node.island_idx !== undefined ? node.island_idx : 'N/A';
+                        const score = node && node.combined_score !== null && node.combined_score !== undefined ? node.combined_score.toFixed(2) : 'N/A';
+                        const shortId = id.length > 8 ? id.substring(0, 8) + '...' : id;
+                        
+                        inspirationHtml += `
+                            <tr>
+                                <td style="border: 1px solid #ddd; padding: 4px;">Archive</td>
+                                <td style="border: 1px solid #ddd; padding: 4px; font-family: monospace; color: #007bff; cursor: pointer; text-decoration: underline;" onclick="selectNodeById('${id}')">${shortId}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${gen}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${island}</td>
+                                <td style="border: 1px solid #ddd; padding: 4px;">${score}</td>
+                            </tr>`;
+                    });
+                    
+                    inspirationHtml += `
+                            </tbody>
+                        </table>`;
+            } else {
+                    inspirationHtml = '<p>No inspiration nodes available.</p>';
+                }
+
+                gridItemsHtml += `
+                    <div class="details-section">
+                        <h5>Patch Information</h5>
+                        <div class="details-section-content">
+                        <p><strong>Patch Type:</strong> ${patchType}</p>
+                        <p><strong>Patch Name:</strong> ${patchName}</p>
+                            ${patchDescriptionHtml}
+                        </div>
+                    </div>
+                    <div class="details-section">
+                        <h5>Inspiration</h5>
+                        <div class="details-section-content">
+                            ${inspirationHtml}
+                    </div>
+                    </div>
+                `;
+            }
+
+            let migrationHistoryHtml = '';
+            if (data.migration_history && data.migration_history.length > 0) {
+                migrationHistoryHtml = `
+                    <table style="width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 10px;">
+                        <thead>
+                            <tr style="background-color: #f0f0f0;">
+                                <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Gen</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">From</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">To</th>
+                                <th style="border: 1px solid #ddd; padding: 4px; text-align: left;">Timestamp</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+                
+                data.migration_history.forEach(m => {
+                    migrationHistoryHtml += `
+                        <tr>
+                            <td style="border: 1px solid #ddd; padding: 4px;">${m.generation}</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">${m.from}</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">${m.to}</td>
+                            <td style="border: 1px solid #ddd; padding: 4px;">${formatTimestamp(m.timestamp)}</td>
+                        </tr>`;
+                });
+                
+                migrationHistoryHtml += `</tbody></table>`;
+            } else {
+                migrationHistoryHtml = '<p>No migration history.</p>';
+            }
+
+            gridItemsHtml += `
+                <div class="details-section">
+                    <h5>Migration History</h5>
+                    <div class="details-section-content">
+                        ${migrationHistoryHtml}
+                    </div>
+                </div>
+            `;
+
+            let longContentHtml = '';
+            if (data.metadata && data.metadata.thought) {
+                longContentHtml += `
+                    <div class="details-section" style="margin-top: 15px;">
+                        <h5>Thought Process</h5>
+                        <div class="markdown">${marked.parse(data.metadata.thought)}</div>
+                    </div>
+                `;
+            }
+
+            const nodeDetailsHtml = `
+                <h4>Selected Node Details</h4>
+                <div class="details-grid">
+                    ${gridItemsHtml}
+                </div>
+                ${longContentHtml}
+            `;
+            
+            nodeDetailsContainer.innerHTML = nodeDetailsHtml;
+            
+            // Update code tab - lazy load if code not in summary data
+            const codeWrapper = document.getElementById("agent-code-wrapper");
+            const diffContentWrapper = document.getElementById("code-diff-content");
+            const diffControls = document.querySelector('#code-diff .diff-controls');
+            
+            // Reset diff cache and mode for new node
+            window.currentDiffData = {
+                parentDiff: null,
+                initialDiff: null,
+                currentCode: null,
+                initialCode: null
+            };
+            window.currentDiffMode = 'parent';
+            document.getElementById('diff-vs-parent-btn').classList.add('active');
+            document.getElementById('diff-vs-initial-btn').classList.remove('active');
+            
+            if (data.code) {
+                // Code already loaded, display it
+                displayCodeContent(data, codeWrapper);
+            } else if (window.currentDbPath && data.id) {
+                // Lazy load: fetch full program details
+                document.querySelector('#agent-code .code-controls').style.display = 'none';
+                codeWrapper.innerHTML = `<p style="color: #666;">Loading code...</p>`;
+                diffContentWrapper.innerHTML = `<p style="color: #666;">Loading diff...</p>`;
+                diffControls.style.display = 'none';
+                
+                fetch(`/get_program_details?db_path=${encodeURIComponent(window.currentDbPath)}&id=${encodeURIComponent(data.id)}`)
+                    .then(r => {
+                        if (!r.ok) throw new Error(`Failed to load program details`);
+                        return r.json();
+                    })
+                    .then(fullData => {
+                        // Update the cached data with full details
+                        Object.assign(data, fullData);
+                        
+                        // Also update in treeData for future access
+                        const treeNode = window.treeData?.find(d => d.id === data.id);
+                        if (treeNode) {
+                            Object.assign(treeNode, fullData);
+                        }
+                        
+                        // Display the loaded code
+                        displayCodeContent(fullData, codeWrapper);
+                        
+                        // Store diff data in cache
+                        window.currentDiffData.parentDiff = fullData.code_diff || null;
+                        window.currentDiffData.currentCode = fullData.code || null;
+                        
+                        // Update diff tab (shows parent diff by default)
+                        if (fullData.code_diff || fullData.code) {
+                            diffControls.style.display = 'flex';
+                            displayCurrentDiff();
+                        } else {
+                            diffContentWrapper.innerHTML = "<p>No code diff available for this node.</p>";
+                            diffControls.style.display = 'none';
+                        }
+                    })
+                    .catch(err => {
+                        console.error("[DEBUG] Failed to load program details:", err);
+                        codeWrapper.innerHTML = `<p style="color: #dc3545;">Failed to load code: ${err.message}</p>`;
+                        diffContentWrapper.innerHTML = "<p>Failed to load diff.</p>";
+                        diffControls.style.display = 'none';
+                    });
+            } else {
+                document.querySelector('#agent-code .code-controls').style.display = 'none';
+                codeWrapper.innerHTML = "<p>No code available for this node.</p>";
+                diffContentWrapper.innerHTML = "<p>No code diff available for this node.</p>";
+                diffControls.style.display = 'none';
+            }
+            
+            // Populate Log Output tab
+            const logOutputContainer = document.getElementById("log-output");
+            const stdoutLog = data.metadata?.stdout_log;
+            const stderrLog = data.metadata?.stderr_log;
+            let logHtml = '';
+
+            if (stdoutLog) {
+                logHtml += `<h5>STDOUT</h5><pre><code class="nohighlight">${escapeHtml(stdoutLog)}</code></pre>`;
+            }
+
+            if (stderrLog) {
+                logHtml += `<h5>STDERR</h5><pre><code class="nohighlight">${escapeHtml(stderrLog)}</code></pre>`;
+            }
+
+            if (!stdoutLog && !stderrLog) {
+                logHtml = "<p>No log output available for this node.</p>";
+            }
+            
+            // Add placeholder for plots
+            logHtml += `<div id="plots-container" style="margin-top: 20px;"></div>`;
+            logOutputContainer.innerHTML = logHtml;
+            
+            // Fetch and display plots
+            if (window.currentDbPath && data.generation !== undefined && data.id) {
+                fetchAndDisplayPlots(data.generation, data.id);
+            }
+
+            // Populate LLM Result tab
+            const llmResultContainer = document.getElementById("llm-result");
+            const llmResult = data.metadata?.llm_result;
+            let llmResultHtml = renderLlmResultTable(llmResult); // Try to render as a table first
+
+            if (!llmResultHtml) {
+                // Fallback to pretty-printing the whole object
+                if (llmResult && typeof llmResult === 'object') {
+                    llmResultHtml = `<pre style="white-space: pre-wrap; word-wrap: break-word; background-color: #f6f8fa; padding: 10px; border-radius: 3px;">${escapeHtml(JSON.stringify(llmResult, null, 2))}</pre>`;
+                } else if (llmResult) {
+                    llmResultHtml = `<pre><code class="nohighlight">${escapeHtml(String(llmResult))}</code></pre>`;
+                } else {
+                    llmResultHtml = "<p>No LLM result available for this node.</p>";
+                }
+            }
+            llmResultContainer.innerHTML = llmResultHtml;
+
+            // Apply syntax highlighting to code blocks
+            document.querySelectorAll('pre code:not(.nohighlight)').forEach((block) => {
+                hljs.highlightElement(block);
+            });
+            
+            // Update analysis tab if it's active
+            if (document.getElementById('analysis') && document.getElementById('analysis').classList.contains('active')) {
+                updateAnalysisTab(data.id);
+            }
+            if (document.getElementById('throughput') && document.getElementById('throughput').classList.contains('active')) {
+                updateThroughputTab(data.id);
+            }
+        }
+        
+        function renderLlmResultTable(llmResult) {
+            if (!llmResult || typeof llmResult !== 'object' || Array.isArray(llmResult) || Object.keys(llmResult).length === 0) {
+                return null; // Not a non-empty object
+            }
+
+            const expandableKeys = ['content', 'msg', 'system_msg', 'new_msg_history', 'thought'];
+            let html = '<table class="llm-result-table"><tbody>';
+
+            for (const [key, value] of Object.entries(llmResult)) {
+                html += `<tr><th>${escapeHtml(key)}</th><td>`;
+
+                let contentHtml;
+                if (typeof value === 'object' && value !== null) {
+                    // Pretty-print nested objects/arrays as JSON
+                    contentHtml = `<pre><code class="language-json">${escapeHtml(JSON.stringify(value, null, 2))}</code></pre>`;
+                } else {
+                    const valueStr = String(value);
+                    // Use <pre> to preserve all formatting of string values
+                    contentHtml = `<pre><code class="nohighlight">${escapeHtml(valueStr)}</code></pre>`;
+                }
+                
+                if (expandableKeys.includes(key)) {
+                    html += `
+                        <details class="llm-result-details">
+                            <summary class="llm-result-summary">Expand to view</summary>
+                            <div class="llm-result-value">
+                                ${contentHtml}
+                            </div>
+                        </details>
+                    `;
+                } else {
+                    html += contentHtml;
+                }
+
+                html += `</td></tr>`;
+            }
+
+            html += '</tbody></table>';
+            return html;
+        }
+
+        // Helper function to escape HTML content to prevent XSS and formatting issues
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Function to fetch and display plots for a program
+        async function fetchAndDisplayPlots(generation, programId) {
+            const plotsContainer = document.getElementById('plots-container');
+            if (!plotsContainer || !window.currentDbPath) return;
+            
+            try {
+                const url = `/get_plots?db_path=${encodeURIComponent(window.currentDbPath)}&generation=${generation}&program_id=${programId}`;
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    console.log('[DEBUG] No plots available for this program');
+                    return;
+                }
+                
+                const plots = await response.json();
+                
+                if (!plots || plots.length === 0) {
+                    return;
+                }
+                
+                let plotsHtml = '<h5 style="margin-top: 20px; border-top: 1px solid #ddd; padding-top: 15px;">📊 Plots & Visualizations</h5>';
+                plotsHtml += '<div id="plots-grid" style="display: flex; flex-direction: column; gap: 15px; margin-top: 10px;"></div>';
+                
+                plotsContainer.innerHTML = plotsHtml;
+                const plotsGrid = document.getElementById('plots-grid');
+                
+                // Load images and arrange based on aspect ratio
+                const imagePromises = plots.map(plot => {
+                    return new Promise((resolve) => {
+                        const img = new Image();
+                        img.onload = () => resolve({ plot, img, width: img.naturalWidth, height: img.naturalHeight });
+                        img.onerror = () => resolve({ plot, img: null, width: 400, height: 300 });
+                        img.src = `/plot_file/${encodeURIComponent(plot.path)}`;
+                    });
+                });
+                
+                Promise.all(imagePromises).then(results => {
+                    let currentRow = null;
+                    let currentRowFraction = 0; // Track how much of the row is filled (0-1)
+                    
+                    for (const { plot, width, height } of results) {
+                        const fileUrl = `/plot_file/${encodeURIComponent(plot.path)}`;
+                        const aspectRatio = width / height;
+                        const icon = (plot.type === 'animation' || plot.ext === '.gif') ? '🎬' : '📈';
+                        
+                        // Determine layout based on aspect ratio
+                        // widthFraction: how much of row width this image should take
+                        let widthFraction, minWidth, maxWidth;
+                        
+                        if (aspectRatio >= 2.0) {
+                            // Very wide: full row
+                            widthFraction = 1.0;
+                            minWidth = '100%';
+                            maxWidth = '100%';
+                        } else if (aspectRatio >= 1.5) {
+                            // Wide: ~60-80% of row
+                            widthFraction = 0.5;
+                            minWidth = '400px';
+                            maxWidth = '700px';
+                        } else if (aspectRatio >= 1.0) {
+                            // Landscape/square: ~40-50% of row
+                            widthFraction = 0.45;
+                            minWidth = '300px';
+                            maxWidth = '500px';
+                        } else if (aspectRatio >= 0.7) {
+                            // Slightly tall: ~35% of row
+                            widthFraction = 0.35;
+                            minWidth = '250px';
+                            maxWidth = '400px';
+                        } else {
+                            // Very tall/portrait: ~25-30% of row
+                            widthFraction = 0.28;
+                            minWidth = '200px';
+                            maxWidth = '300px';
+                        }
+                        
+                        const plotDiv = document.createElement('div');
+                        plotDiv.style.cssText = 'border: 1px solid #ddd; border-radius: 8px; padding: 10px; background: #fafafa;';
+                        plotDiv.innerHTML = `
+                            <div style="font-weight: bold; margin-bottom: 8px; color: #333;">${icon} ${escapeHtml(plot.filename)}</div>
+                            <img src="${fileUrl}" alt="${escapeHtml(plot.filename)}" style="max-width: 100%; height: auto; border-radius: 4px; cursor: pointer;" onclick="window.open('${fileUrl}', '_blank')">
+                        `;
+                        
+                        // Check if we need a new row
+                        const needsNewRow = !currentRow || 
+                            widthFraction >= 1.0 || 
+                            (currentRowFraction + widthFraction > 1.05);
+                        
+                        if (needsNewRow) {
+                            currentRow = document.createElement('div');
+                            currentRow.style.cssText = 'display: flex; flex-wrap: wrap; gap: 15px; align-items: flex-start;';
+                            plotsGrid.appendChild(currentRow);
+                            currentRowFraction = 0;
+                        }
+                        
+                        plotDiv.style.flex = `${widthFraction} 1 ${minWidth}`;
+                        plotDiv.style.maxWidth = maxWidth;
+                        currentRow.appendChild(plotDiv);
+                        currentRowFraction += widthFraction;
+                        
+                        // If this was a full-width item, reset for next
+                        if (widthFraction >= 1.0) {
+                            currentRow = null;
+                            currentRowFraction = 0;
+                        }
+                    }
+                });
+                
+                console.log(`[DEBUG] Loading ${plots.length} plot(s)`);
+                
+            } catch (error) {
+                console.log('[DEBUG] Error fetching plots:', error);
+            }
+        }
+
+        function formatDiff(diffText) {
+            if (!diffText) return '';
+            return diffText.split('\n').map(line => {
+                const escapedLine = escapeHtml(line);
+                if (line.startsWith('+') && !line.startsWith('+++')) {
+                    return `<span class="diff-line added">${escapedLine}</span>`;
+                } else if (line.startsWith('-') && !line.startsWith('---')) {
+                    return `<span class="diff-line removed">${escapedLine}</span>`;
+                } else if (line.startsWith('@@')) {
+                    return `<span class="diff-line hunk-header">${escapedLine}</span>`;
+                }
+                return `<span class="diff-line unchanged">${escapedLine}</span>`;
+            }).join('');
+        }
+        
+        // Toggle showing only modified lines in the diff
+        function toggleUnchangedLines() {
+            const diffContainer = document.getElementById('code-diff');
+            const btn = document.getElementById('toggle-unchanged-btn');
+            
+            if (diffContainer.classList.contains('hide-unchanged')) {
+                diffContainer.classList.remove('hide-unchanged');
+                btn.classList.remove('active');
+                btn.textContent = 'Show Changes Only';
+            } else {
+                diffContainer.classList.add('hide-unchanged');
+                btn.classList.add('active');
+                btn.textContent = 'Show All Lines';
+            }
+        }
+        
+        // Current diff mode: 'parent' or 'initial'
+        window.currentDiffMode = 'parent';
+        // Cache for diff data
+        window.currentDiffData = {
+            parentDiff: null,
+            initialDiff: null,
+            currentCode: null,
+            initialCode: null
+        };
+        
+        // Set diff comparison mode (parent or initial)
+        function setDiffMode(mode) {
+            if (mode === window.currentDiffMode) return;
+            
+            window.currentDiffMode = mode;
+            
+            // Update button states
+            const parentBtn = document.getElementById('diff-vs-parent-btn');
+            const initialBtn = document.getElementById('diff-vs-initial-btn');
+            
+            if (mode === 'parent') {
+                parentBtn.classList.add('active');
+                initialBtn.classList.remove('active');
+                displayCurrentDiff();
+            } else if (mode === 'initial') {
+                parentBtn.classList.remove('active');
+                initialBtn.classList.add('active');
+                
+                // If we don't have the initial diff cached, compute it
+                if (!window.currentDiffData.initialDiff && window.currentDiffData.currentCode) {
+                    computeInitialDiff();
+                } else {
+                    displayCurrentDiff();
+                }
+            }
+        }
+        
+        // Display the current diff based on mode
+        function displayCurrentDiff() {
+            const diffContentWrapper = document.getElementById('code-diff-content');
+            
+            if (window.currentDiffMode === 'parent') {
+                if (window.currentDiffData.parentDiff) {
+                    diffContentWrapper.innerHTML = `<pre class="diff">${formatDiff(window.currentDiffData.parentDiff)}</pre>`;
+                } else {
+                    diffContentWrapper.innerHTML = "<p>No parent diff available for this node.</p>";
+                }
+            } else {
+                if (window.currentDiffData.initialDiff) {
+                    diffContentWrapper.innerHTML = `<pre class="diff">${formatDiff(window.currentDiffData.initialDiff)}</pre>`;
+                } else {
+                    diffContentWrapper.innerHTML = "<p>No initial diff available for this node.</p>";
+                }
+            }
+        }
+        
+        // Compute diff between current code and initial program
+        function computeInitialDiff() {
+            const diffContentWrapper = document.getElementById('code-diff-content');
+            
+            // First check if we already have the initial code
+            if (window.currentDiffData.initialCode !== null) {
+                // Generate the diff
+                window.currentDiffData.initialDiff = generateUnifiedDiff(
+                    window.currentDiffData.initialCode,
+                    window.currentDiffData.currentCode,
+                    'initial',
+                    'current'
+                );
+                displayCurrentDiff();
+                return;
+            }
+            
+            // Need to fetch the initial program's code
+            diffContentWrapper.innerHTML = `<p style="color: #666;">Loading initial program code...</p>`;
+            
+            // Find the initial node (generation 0)
+            const initialNode = window.treeData?.find(d => d.generation === 0);
+            if (!initialNode) {
+                diffContentWrapper.innerHTML = "<p>Could not find initial program.</p>";
+                return;
+            }
+            
+            // Fetch the initial program's code
+            fetch(`/get_program_details?db_path=${encodeURIComponent(window.currentDbPath)}&id=${encodeURIComponent(initialNode.id)}`)
+                .then(r => {
+                    if (!r.ok) throw new Error('Failed to load initial program');
+                    return r.json();
+                })
+                .then(data => {
+                    window.currentDiffData.initialCode = data.code || '';
+                    
+                    // Generate the diff
+                    window.currentDiffData.initialDiff = generateUnifiedDiff(
+                        window.currentDiffData.initialCode,
+                        window.currentDiffData.currentCode,
+                        'initial',
+                        'current'
+                    );
+                    displayCurrentDiff();
+                })
+                .catch(err => {
+                    console.error('[DEBUG] Failed to load initial program:', err);
+                    diffContentWrapper.innerHTML = `<p style="color: #dc3545;">Failed to load initial program: ${err.message}</p>`;
+                });
+        }
+        
+        // Generate unified diff format from two strings
+        function generateUnifiedDiff(oldText, newText, oldName, newName) {
+            if (typeof Diff === 'undefined') {
+                console.warn('[WARN] Diff library not loaded');
+                return null;
+            }
+            
+            if (!oldText && !newText) return null;
+            oldText = oldText || '';
+            newText = newText || '';
+            
+            // Use the Diff library to create a unified diff
+            const patch = Diff.createPatch('code', oldText, newText, oldName, newName);
+            
+            // Remove the first 4 lines (diff header) if present, keeping just the hunks
+            // Actually, let's keep the full format but make it cleaner
+            return patch;
+        }
+
+        // Get CSS class for score display
+        function getScoreClass(score) {
+            if (score === null || score === undefined) {
+                return "metric-bad";
+            }
+            return "metric-good";
+        }
+
+        // Format score for display
+        function formatScore(score) {
+            if (score === null || score === undefined) {
+                return "N/A";
+            }
+            
+            // Convert to number if it's a string
+            const numScore = typeof score === 'string' ? parseFloat(score) : score;
+            
+            // Check if it's a valid number
+            if (typeof numScore === 'number' && !isNaN(numScore)) {
+                return numScore.toFixed(6);
+            } else {
+                // Return the original value as string if it's not a valid number
+                return String(score);
+            }
+        }
+        // Create charts for the Meta Info tab
+        function createCharts(currentGenId) {
+            console.log("[DEBUG] Creating charts, currentGenId:", currentGenId);
+            
+            // Skip chart creation during panel resizing
+            if (window.isResizing) {
+                console.log("[DEBUG] Skipping chart creation during resize");
+                return;
+            }
+            
+            try {
+                // Check if Chart.js is loaded
+                if (typeof Chart === 'undefined') {
+                    console.error("[DEBUG] Chart.js is not loaded!");
+                    return;
+                }
+                
+                // Also update the best solution panel when chart type changes
+                if (!currentGenId) {
+                    // Get all available data
+                    const allData = window.treeData || [];
+                    if (allData.length > 0) {
+                        updateBestSolutionPanel(allData);
+                    }
+                }
+                
+                // Get canvas elements
+                const scoreCanvas = document.getElementById('scoreChart');
+                const scoreBudgetCanvas = document.getElementById('scoreBudgetChart');
+                const scoreRuntimeCanvas = document.getElementById('scoreRuntimeChart');
+                const costCanvas = document.getElementById('costChart');
+                const runtimeCanvas = document.getElementById('runtimeChart');
+                
+                if (!scoreCanvas || !scoreBudgetCanvas || !scoreRuntimeCanvas || !costCanvas || !runtimeCanvas) {
+                    console.error("[DEBUG] Canvas elements not found!");
+                    return;
+                }
+                
+                // Ensure canvas is visible and properly sized before attempting to draw
+                if (scoreCanvas.offsetWidth === 0 || scoreBudgetCanvas.offsetWidth === 0 || costCanvas.offsetWidth === 0 || runtimeCanvas.offsetWidth === 0) {
+                    console.error("[DEBUG] Canvas has zero width, tab may not be visible");
+                    // Force redraw after a short delay to allow DOM to update
+                    setTimeout(() => createCharts(currentGenId), 500);
+                    return;
+                }
+                
+                console.log("[DEBUG] Canvas dimensions - scoreChart:", 
+                          scoreCanvas.offsetWidth, "x", scoreCanvas.offsetHeight,
+                          "scoreBudgetChart:", scoreBudgetCanvas.offsetWidth, "x", scoreBudgetCanvas.offsetHeight,
+                          "scoreRuntimeChart:", scoreRuntimeCanvas.offsetWidth, "x", scoreRuntimeCanvas.offsetHeight,
+                          "costChart:", costCanvas.offsetWidth, "x", costCanvas.offsetHeight,
+                          "runtimeChart:", runtimeCanvas.offsetWidth, "x", runtimeCanvas.offsetHeight);
+                
+                // Clear existing canvases to force redraw
+                const clearCanvas = (canvas) => {
+                    const ctx = canvas.getContext('2d');
+                    ctx.clearRect(0, 0, canvas.width, canvas.height);
+                };
+                
+                clearCanvas(scoreCanvas);
+                clearCanvas(scoreBudgetCanvas);
+                clearCanvas(costCanvas);
+                clearCanvas(runtimeCanvas);
+                
+                // Filter data to ensure it's valid for Chart.js
+                const validScoreData = (cumulativeMaxScores || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                
+                const validCumulativeMeanScoreData = (cumulativeMeanScores || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                
+                const validIndividualScoreData = (individualScores || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({
+                        x: item.x, 
+                        y: parseFloat(item.y),
+                        id: item.id,
+                        agent_name: item.agent_name,
+                        iter_id: item.iter_id
+                    }));
+                
+                const validBestPathScoreData = (bestPathScores || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y), id: item.id, agent_name: item.agent_name}));
+
+                const validAgentCostData = (cumulativeAgentCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                    
+                const validSolutionCostData = (cumulativeSolutionCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                    
+                const validTotalCostData = (cumulativeTotalCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                
+                const validGenerationCostData = (generationCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validEmbedCostData = (generationEmbedCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validNoveltyCostData = (generationNoveltyCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validCumulativeApiCostData = (cumulativeApiCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validCumulativeEmbedCostData = (cumulativeEmbedCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validCumulativeNoveltyCostData = (cumulativeNoveltyCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validMetaCostData = (generationMetaCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validCumulativeMetaCostData = (cumulativeMetaCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validPromptCostData = (generationPromptCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                const validCumulativePromptCostData = (cumulativePromptCosts || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+
+                console.log("[DEBUG] Valid score data points:", validScoreData.length);
+                console.log("[DEBUG] Valid agent cost data points:", validAgentCostData.length);
+                console.log("[DEBUG] Valid solution cost data points:", validSolutionCostData.length);
+                console.log("[DEBUG] Valid total cost data points:", validTotalCostData.length);
+                console.log("[DEBUG] Valid generation cost data points:", validGenerationCostData.length);
+                console.log("[DEBUG] Valid embed cost data points:", validEmbedCostData.length);
+                console.log("[DEBUG] Valid novelty cost data points:", validNoveltyCostData.length);
+                console.log("[DEBUG] Valid meta cost data points:", validMetaCostData.length);
+                console.log("[DEBUG] Valid prompt cost data points:", validPromptCostData.length);
+                
+                if (validScoreData.length === 0 && validTotalCostData.length === 0) {
+                    console.error("[DEBUG] No valid data for charts!");
+                    // Display a message on the canvas
+                    const displayNoDataMessage = (canvas, message) => {
+                        const ctx = canvas.getContext('2d');
+                        ctx.font = '14px Arial';
+                        ctx.fillStyle = '#666';
+                        ctx.textAlign = 'center';
+                        ctx.fillText(message, canvas.width / 2, canvas.height / 2);
+                    };
+                    
+                    displayNoDataMessage(scoreCanvas, 'No valid score data available');
+                    displayNoDataMessage(costCanvas, 'No valid cost data available');
+                    return;
+                }
+                
+                // Create score chart if we have valid data
+                if (validScoreData.length > 0) {
+                    console.log("[DEBUG] Creating score chart with", validScoreData.length, "points");
+                    console.log("[DEBUG] Adding", validIndividualScoreData.length, "individual score points");
+                    
+                    // Read Y-axis min/max values first, for cleaner debugging
+                    const yMinValue = document.getElementById('score-y-min').value;
+                    const yMaxValue = document.getElementById('score-y-max').value;
+                    const yMin = yMinValue !== '' ? parseFloat(yMinValue) : undefined;
+                    const yMax = yMaxValue !== '' ? parseFloat(yMaxValue) : undefined;
+                    
+                    console.log("[DEBUG] Y-axis settings - Min:", yMin, "Max:", yMax);
+                    
+                    // Destroy existing chart instance if it exists
+                    if (scoreChartInstance) {
+                        scoreChartInstance.destroy();
+                        scoreChartInstance = null;
+                    }
+                    
+                    // Create a new chart with the updated Y-axis settings
+                    scoreChartInstance = new Chart(scoreCanvas, {
+                        type: 'line',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Cumulative Max',
+                                    data: validScoreData,
+                                    borderColor: '#3498db',
+                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                    borderWidth: 2,
+                                    pointBackgroundColor: validScoreData.map(p => p.x === currentGenId ? '#e74c3c' : '#3498db'),
+                                    pointRadius: validScoreData.map(p => p.x === currentGenId ? 6 : 4),
+                                    pointHoverRadius: 8,
+                                    fill: false,
+                                    tension: 0.2
+                                },
+                                {
+                                    label: 'Best Path',
+                                    data: validBestPathScoreData,
+                                    borderColor: '#ff8c00',
+                                    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+                                    borderWidth: 3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    fill: false,
+                                    tension: 0.2,
+                                    type: 'line'
+                                },
+                                {
+                                    label: 'Cumulative Mean',
+                                    data: validCumulativeMeanScoreData,
+                                    borderColor: '#2ecc71',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    fill: false,
+                                    tension: 0.2
+                                },
+                                {
+                                    label: 'Individual Solutions',
+                                    data: validIndividualScoreData,
+                                    type: 'scatter',
+                                    backgroundColor: 'rgba(231, 76, 60, 0.5)',
+                                    borderColor: 'rgba(231, 76, 60, 0.8)',
+                                    pointRadius: 4,
+                                    pointHoverRadius: 6,
+                                    borderWidth: 1,
+                                    showLine: false
+                                }
+                            ]
+                        },
+                        options: {
+                            onClick: (evt, elements, chart) => {
+                                if (elements.length === 0) return;
+                                const firstPoint = elements[0];
+                                const datasetIndex = firstPoint.datasetIndex;
+                                const index = firstPoint.index;
+
+                                if (datasetIndex === 2) { // Individual Solution Scores
+                                    const dataPoint = validIndividualScoreData[index];
+                                    if (dataPoint && dataPoint.id) {
+                                        selectNodeById(dataPoint.id);
+                                    }
+                                } else if (datasetIndex === 0) { // Cumulative Max Score
+                                    const generation = chart.data.datasets[datasetIndex].data[index].x;
+                                    if (generation !== undefined && window.treeData) {
+                                        const programsInGen = window.treeData.filter(p => p.generation === generation && p.correct);
+                                        if (programsInGen.length > 0) {
+                                            const bestProgramInGen = programsInGen.reduce((best, current) => {
+                                                const bestScore = best.combined_score ?? -Infinity;
+                                                const currentScore = current.combined_score ?? -Infinity;
+                                                return currentScore > bestScore ? current : best;
+                                            });
+                                            if (bestProgramInGen && bestProgramInGen.id) {
+                                                selectNodeById(bestProgramInGen.id);
+                                            }
+                                        }
+                                    }
+                                } else if (datasetIndex === 1) { // Best Path Score
+                                    const dataPoint = validBestPathScoreData[index];
+                                    if (dataPoint && dataPoint.id) {
+                                        selectNodeById(dataPoint.id);
+                                    }
+                                }
+                            },
+                            onHover: (event, elements, chart) => {
+                                const canvas = chart.canvas;
+                                // Set cursor to pointer for any point on the chart
+                                canvas.style.cursor = (elements.length > 0) ? 'pointer' : 'default';
+                            },
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: {
+                                        display: true,
+                                        text: 'Number of LLM Proposals/Program Evaluations'
+                                    },
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Combined Score (⬆ is better)'
+                                    },
+                                    min: yMin,
+                                    max: yMax
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => {
+                                            if (items.length === 0) return '';
+                                            const item = items[0];
+                                            if (item.datasetIndex === 2) { // Individual score dataset
+                                                const dataPoint = validIndividualScoreData[item.dataIndex];
+                                                if (dataPoint && dataPoint.agent_name) {
+                                                    return `Generation ${item.parsed.x}, Agent: ${dataPoint.agent_name}`;
+                                                }
+                                            }
+                                            if (item.datasetIndex === 1) { // Best path score dataset
+                                                const dataPoint = validBestPathScoreData[item.dataIndex];
+                                                if (dataPoint && dataPoint.agent_name) {
+                                                    return `Best Path: ${dataPoint.agent_name} (Gen ${item.parsed.x})`;
+                                                }
+                                                return `Best Path at Generation ${item.parsed.x}`;
+                                            }
+                                            return `Generation ${item.parsed.x}`;
+                                        },
+                                        label: (item) => {
+                                            if (item.datasetIndex === 2) { // Individual score dataset
+                                                return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                            }
+                                            if (item.datasetIndex === 1) { // Best path score dataset
+                                                const dataPoint = validBestPathScoreData[item.dataIndex];
+                                                if (dataPoint && dataPoint.y !== undefined && dataPoint.y !== null) {
+                                                    return `Best Path Score: ${dataPoint.y.toFixed(6)}`;
+                                                }
+                                                return 'Best Path Score: N/A';
+                                            }
+                                            return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log("[DEBUG] Score chart created");
+                }
+                
+                // Create score budget chart (scores vs cumulative cost)
+                try {
+                if (validScoreData.length > 0 && validTotalCostData.length > 0) {
+                    console.log("[DEBUG] Creating score budget chart");
+                    
+                    // Map score data to cumulative total cost (including prompt costs) instead of generation
+                    // For each score point, find the cumulative total cost at that generation
+                    const scoreBudgetMaxData = validScoreData.map(point => {
+                        const costPoint = validTotalCostData.find(c => c.x === point.x);
+                        if (costPoint) {
+                            return {x: costPoint.y, y: point.y};
+                        }
+                        return null;
+                    }).filter(p => p !== null);
+                    
+                    const scoreBudgetMeanData = validCumulativeMeanScoreData.map(point => {
+                        const costPoint = validTotalCostData.find(c => c.x === point.x);
+                        if (costPoint) {
+                            return {x: costPoint.y, y: point.y};
+                        }
+                        return null;
+                    }).filter(p => p !== null);
+                    
+                    const scoreBudgetIndividualData = validIndividualScoreData.map(point => {
+                        const costPoint = validTotalCostData.find(c => c.x === point.x);
+                        if (costPoint) {
+                            return {
+                                x: costPoint.y, 
+                                y: point.y,
+                                id: point.id,
+                                agent_name: point.agent_name,
+                                iter_id: point.iter_id,
+                                generation: point.x
+                            };
+                        }
+                        return null;
+                    }).filter(p => p !== null);
+                    
+                    const scoreBudgetBestPathData = validBestPathScoreData.map(point => {
+                        const costPoint = validTotalCostData.find(c => c.x === point.x);
+                        if (costPoint) {
+                            return {
+                                x: costPoint.y, 
+                                y: point.y, 
+                                id: point.id, 
+                                agent_name: point.agent_name,
+                                generation: point.x
+                            };
+                        }
+                        return null;
+                    }).filter(p => p !== null);
+                    
+                    // Read Y-axis min/max values
+                    const yMinBudgetValue = document.getElementById('score-budget-y-min').value;
+                    const yMaxBudgetValue = document.getElementById('score-budget-y-max').value;
+                    const yMinBudget = yMinBudgetValue !== '' ? parseFloat(yMinBudgetValue) : undefined;
+                    const yMaxBudget = yMaxBudgetValue !== '' ? parseFloat(yMaxBudgetValue) : undefined;
+                    
+                    console.log("[DEBUG] Score Budget Y-axis settings - Min:", yMinBudget, "Max:", yMaxBudget);
+                    
+                    // Calculate tight x-axis bounds based on cumulative API cost data
+                    const allCostValues = [
+                        ...scoreBudgetMaxData.map(p => p.x),
+                        ...scoreBudgetMeanData.map(p => p.x),
+                        ...scoreBudgetIndividualData.map(p => p.x),
+                        ...scoreBudgetBestPathData.map(p => p.x)
+                    ];
+                    const minCost = Math.max(-0.1, Math.min(...allCostValues) - 0.025); // Add slack but don't go below -0.025
+                    const maxCost = Math.max(...allCostValues) + 0.025;
+                    
+                    console.log("[DEBUG] Score Budget X-axis range - Min cost:", minCost, "Max cost:", maxCost);
+                    
+                    // Destroy existing chart instance if it exists
+                    if (scoreBudgetChartInstance) {
+                        scoreBudgetChartInstance.destroy();
+                        scoreBudgetChartInstance = null;
+                    }
+                    
+                    // Create the chart
+                    scoreBudgetChartInstance = new Chart(scoreBudgetCanvas, {
+                        type: 'line',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Cumulative Max',
+                                    data: scoreBudgetMaxData,
+                                    borderColor: '#3498db',
+                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 4,
+                                    pointHoverRadius: 8,
+                                    fill: false,
+                                    tension: 0.2
+                                },
+                                {
+                                    label: 'Best Path',
+                                    data: scoreBudgetBestPathData,
+                                    borderColor: '#ff8c00',
+                                    backgroundColor: 'rgba(255, 140, 0, 0.1)',
+                                    borderWidth: 3,
+                                    pointRadius: 5,
+                                    pointHoverRadius: 7,
+                                    fill: false,
+                                    tension: 0.2,
+                                    type: 'line'
+                                },
+                                {
+                                    label: 'Cumulative Mean',
+                                    data: scoreBudgetMeanData,
+                                    borderColor: '#2ecc71',
+                                    borderWidth: 2,
+                                    pointRadius: 0,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.2
+                                },
+                                {
+                                    label: 'Individual Scores',
+                                    data: scoreBudgetIndividualData,
+                                    borderColor: 'transparent',
+                                    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    showLine: false
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: {
+                                mode: 'nearest',
+                                axis: 'x',
+                                intersect: false
+                            },
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: {
+                                        display: true,
+                                        text: 'Cumulative Total Cost ($): Σ Proposal, Embed, Novelty, Meta, Prompt'
+                                    },
+                                    min: minCost,
+                                    max: maxCost
+                                },
+                                y: {
+                                    title: {
+                                        display: true,
+                                        text: 'Combined Score (⬆ is better)'
+                                    },
+                                    min: yMinBudget,
+                                    max: yMaxBudget
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => {
+                                            if (items.length === 0) return '';
+                                            const item = items[0];
+                                            if (item.datasetIndex === 3) { // Individual score dataset
+                                                const dataPoint = scoreBudgetIndividualData[item.dataIndex];
+                                                if (dataPoint && dataPoint.agent_name) {
+                                                    return `Cost: $${item.parsed.x.toFixed(2)}, Agent: ${dataPoint.agent_name} (Gen ${dataPoint.generation})`;
+                                                }
+                                            }
+                                            if (item.datasetIndex === 1) { // Best path score dataset
+                                                const dataPoint = scoreBudgetBestPathData[item.dataIndex];
+                                                if (dataPoint && dataPoint.agent_name) {
+                                                    return `Best Path: ${dataPoint.agent_name} (Gen ${dataPoint.generation}, Cost: $${item.parsed.x.toFixed(2)})`;
+                                                }
+                                                return `Best Path at Cost $${item.parsed.x.toFixed(2)}`;
+                                            }
+                                            return `Cumulative Cost: $${item.parsed.x.toFixed(2)}`;
+                                        },
+                                        label: (item) => {
+                                            if (item.datasetIndex === 3) { // Individual score dataset
+                                                return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                            }
+                                            if (item.datasetIndex === 1) { // Best path score dataset
+                                                const dataPoint = scoreBudgetBestPathData[item.dataIndex];
+                                                if (dataPoint && dataPoint.y !== undefined && dataPoint.y !== null) {
+                                                    return `Best Path Score: ${dataPoint.y.toFixed(6)}`;
+                                                }
+                                                return 'Best Path Score: N/A';
+                                            }
+                                            return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log("[DEBUG] Score budget chart created");
+                }
+                } catch (error) {
+                    console.error("[ERROR] Score budget chart creation failed:", error);
+                }
+                
+                // Create score runtime chart (scores vs timestamp)
+                try {
+                const allData = window.rawDbData || window.treeData || [];
+                if (validScoreData.length > 0 && allData.length > 0) {
+                    console.log("[DEBUG] Creating score runtime chart");
+                    console.log("[DEBUG] Sample timestamp from data:", allData[0]?.timestamp);
+                    
+                    // Helper function to parse timestamp to numeric value (seconds since epoch)
+                    const parseTimestamp = (ts) => {
+                        if (!ts) return 0;
+                        if (typeof ts === 'number') return ts;
+                        // Try parsing as Date string
+                        const date = new Date(ts);
+                        if (!isNaN(date.getTime())) {
+                            return date.getTime() / 1000; // Convert ms to seconds
+                        }
+                        return 0;
+                    };
+                    
+                    // Helper function to format seconds as HH:MM:SS
+                    const formatTime = (seconds) => {
+                        const hours = Math.floor(seconds / 3600);
+                        const minutes = Math.floor((seconds % 3600) / 60);
+                        const secs = Math.floor(seconds % 60);
+                        return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+                    };
+                    
+                    console.log("[DEBUG] Sample parsed timestamp:", parseTimestamp(allData[0]?.timestamp));
+                    
+                    // Sort all data by timestamp to get the time-based progression
+                    const sortedByTime = [...allData].sort((a, b) => {
+                        const timeA = parseTimestamp(a.timestamp);
+                        const timeB = parseTimestamp(b.timestamp);
+                        return timeA - timeB;
+                    });
+                    
+                    // Get minimum timestamp to normalize times (show elapsed time from start)
+                    const allTimestamps = sortedByTime.map(d => parseTimestamp(d.timestamp)).filter(t => t > 0);
+                    
+                    console.log("[DEBUG] Valid timestamps count:", allTimestamps.length);
+                    if (allTimestamps.length > 0) {
+                        console.log("[DEBUG] Min timestamp:", Math.min(...allTimestamps), "Max timestamp:", Math.max(...allTimestamps));
+                        const minTimestamp = Math.min(...allTimestamps);
+                        
+                        // Build cumulative max and mean over time
+                        const scoreRuntimeMaxData = [];
+                        const scoreRuntimeMeanData = [];
+                        const scoreRuntimeIndividualData = [];
+                        const scoreRuntimeBestPathData = [];
+                        
+                        let currentMaxScore = -Infinity;
+                        let allScoresSeenSoFar = [];
+                        
+                        sortedByTime.forEach((prog, idx) => {
+                            const progTimestamp = parseTimestamp(prog.timestamp);
+                            if (progTimestamp <= 0) return;
+                            
+                            const elapsedTime = progTimestamp - minTimestamp; // Time since start
+                            
+                            // Add individual score point if valid
+                            if (prog.correct && prog.combined_score !== null && prog.combined_score !== undefined) {
+                                const score = typeof prog.combined_score === 'string' ? parseFloat(prog.combined_score) : prog.combined_score;
+                                if (!isNaN(score)) {
+                                    scoreRuntimeIndividualData.push({
+                                        x: elapsedTime,
+                                        y: score,
+                                        id: prog.id,
+                                        agent_name: prog.metadata?.patch_name || 'unnamed',
+                                        iter_id: prog.iter_id,
+                                        generation: prog.generation
+                                    });
+                                    
+                                    allScoresSeenSoFar.push(score);
+                                    
+                                    // Update cumulative max
+                                    if (score > currentMaxScore) {
+                                        currentMaxScore = score;
+                                    }
+                                    
+                                    // Record cumulative max at this timestamp
+                                    scoreRuntimeMaxData.push({
+                                        x: elapsedTime,
+                                        y: currentMaxScore
+                                    });
+                                    
+                                    // Record cumulative mean at this timestamp
+                                    const meanScore = allScoresSeenSoFar.reduce((sum, s) => sum + s, 0) / allScoresSeenSoFar.length;
+                                    scoreRuntimeMeanData.push({
+                                        x: elapsedTime,
+                                        y: meanScore
+                                    });
+                                }
+                            }
+                        });
+                        
+                        // Add best path data points sorted by timestamp
+                        if (validBestPathScoreData && validBestPathScoreData.length > 0) {
+                            validBestPathScoreData.forEach(point => {
+                                // Find the program data to get its timestamp
+                                const prog = allData.find(d => d.generation === point.x);
+                                if (prog && prog.timestamp) {
+                                    const progTimestamp = parseTimestamp(prog.timestamp);
+                                    if (progTimestamp > 0) {
+                                        const elapsedTime = progTimestamp - minTimestamp;
+                                        scoreRuntimeBestPathData.push({
+                                            x: elapsedTime,
+                                            y: point.y,
+                                            id: point.id,
+                                            agent_name: point.agent_name,
+                                            iter_id: point.iter_id,
+                                            generation: point.x
+                                        });
+                                    }
+                                }
+                            });
+                            // Sort best path by timestamp
+                            scoreRuntimeBestPathData.sort((a, b) => a.x - b.x);
+                        }
+                        
+                        console.log("[DEBUG] Runtime data arrays built - Max:", scoreRuntimeMaxData.length, 
+                                  "Mean:", scoreRuntimeMeanData.length, 
+                                  "Individual:", scoreRuntimeIndividualData.length, 
+                                  "BestPath:", scoreRuntimeBestPathData.length);
+                        
+                        // Read Y-axis min/max values
+                        const yMinRuntimeValue = document.getElementById('score-runtime-y-min').value;
+                        const yMaxRuntimeValue = document.getElementById('score-runtime-y-max').value;
+                        const yMinRuntime = yMinRuntimeValue !== '' ? parseFloat(yMinRuntimeValue) : undefined;
+                        const yMaxRuntime = yMaxRuntimeValue !== '' ? parseFloat(yMaxRuntimeValue) : undefined;
+                        
+                        console.log("[DEBUG] Score Runtime Y-axis settings - Min:", yMinRuntime, "Max:", yMaxRuntime);
+                        
+                        // Calculate tight x-axis bounds based on timestamp data
+                        const allTimeValues = [
+                            ...scoreRuntimeMaxData.map(p => p.x),
+                            ...scoreRuntimeMeanData.map(p => p.x),
+                            ...scoreRuntimeIndividualData.map(p => p.x),
+                            ...scoreRuntimeBestPathData.map(p => p.x)
+                        ].filter(t => t !== undefined && !isNaN(t));
+                        
+                        if (allTimeValues.length === 0) {
+                            console.log("[DEBUG] No valid timestamp data for runtime chart");
+                        } else {
+                        const minTime = Math.max(0, Math.min(...allTimeValues) - 60); // Add 60 seconds slack but don't go below 0
+                        const maxTime = Math.max(...allTimeValues) + 60;
+                        
+                        console.log("[DEBUG] Score Runtime X-axis range - Min time:", minTime, "Max time:", maxTime);
+                        
+                        // Destroy existing chart instance if it exists
+                        if (scoreRuntimeChartInstance) {
+                            scoreRuntimeChartInstance.destroy();
+                            scoreRuntimeChartInstance = null;
+                        }
+                        
+                        // Create the chart
+                        scoreRuntimeChartInstance = new Chart(scoreRuntimeCanvas, {
+                            type: 'line',
+                            data: {
+                                datasets: [
+                                    {
+                                        label: 'Cumulative Max',
+                                        data: scoreRuntimeMaxData,
+                                        borderColor: '#3498db',
+                                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                        borderWidth: 2,
+                                        pointRadius: 4,
+                                        pointHoverRadius: 8,
+                                        fill: false,
+                                        tension: 0.2
+                                    },
+                                    {
+                                        label: 'Best Path',
+                                        data: scoreRuntimeBestPathData,
+                                        borderColor: '#ff8c00',
+                                        backgroundColor: 'rgba(255, 140, 0, 0.1)',
+                                        borderWidth: 3,
+                                        pointRadius: 5,
+                                        pointHoverRadius: 7,
+                                        fill: false,
+                                        tension: 0.2,
+                                        type: 'line'
+                                    },
+                                    {
+                                        label: 'Cumulative Mean',
+                                        data: scoreRuntimeMeanData,
+                                        borderColor: '#2ecc71',
+                                        borderWidth: 2,
+                                        pointRadius: 0,
+                                        pointHoverRadius: 6,
+                                        fill: false,
+                                        tension: 0.2
+                                    },
+                                    {
+                                        label: 'Individual Scores',
+                                        data: scoreRuntimeIndividualData,
+                                        borderColor: 'transparent',
+                                        backgroundColor: 'rgba(0, 0, 0, 0.15)',
+                                        pointRadius: 3,
+                                        pointHoverRadius: 6,
+                                        showLine: false
+                                    }
+                                ]
+                            },
+                            options: {
+                                responsive: true,
+                                maintainAspectRatio: false,
+                                interaction: {
+                                    mode: 'nearest',
+                                    axis: 'x',
+                                    intersect: false
+                                },
+                                scales: {
+                                    x: {
+                                        type: 'linear',
+                                        title: {
+                                            display: true,
+                                            text: 'Elapsed Time (HH:MM:SS)'
+                                        },
+                                        min: minTime,
+                                        max: maxTime,
+                                        ticks: {
+                                            callback: function(value, index, ticks) {
+                                                return formatTime(value);
+                                            }
+                                        }
+                                    },
+                                    y: {
+                                        title: {
+                                            display: true,
+                                            text: 'Combined Score (⬆ is better)'
+                                        },
+                                        min: yMinRuntime,
+                                        max: yMaxRuntime
+                                    }
+                                },
+                                plugins: {
+                                    tooltip: {
+                                        callbacks: {
+                                            title: (items) => {
+                                                if (items.length === 0) return '';
+                                                const item = items[0];
+                                                const timeFormatted = formatTime(item.parsed.x);
+                                                if (item.datasetIndex === 3) { // Individual score dataset
+                                                    const dataPoint = scoreRuntimeIndividualData[item.dataIndex];
+                                                    if (dataPoint && dataPoint.agent_name) {
+                                                        return `Time: ${timeFormatted}, Agent: ${dataPoint.agent_name} (Gen ${dataPoint.generation})`;
+                                                    }
+                                                }
+                                                if (item.datasetIndex === 1) { // Best path score dataset
+                                                    const dataPoint = scoreRuntimeBestPathData[item.dataIndex];
+                                                    if (dataPoint && dataPoint.agent_name) {
+                                                        return `Best Path: ${dataPoint.agent_name} (Gen ${dataPoint.generation}, Time: ${timeFormatted})`;
+                                                    }
+                                                    return `Best Path at Time ${timeFormatted}`;
+                                                }
+                                                return `Elapsed Time: ${timeFormatted}`;
+                                            },
+                                            label: (item) => {
+                                                if (item.datasetIndex === 3) { // Individual score dataset
+                                                    return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                                }
+                                                if (item.datasetIndex === 1) { // Best path score dataset
+                                                    const dataPoint = scoreRuntimeBestPathData[item.dataIndex];
+                                                    if (dataPoint && dataPoint.y !== undefined && dataPoint.y !== null) {
+                                                        return `Best Path Score: ${dataPoint.y.toFixed(6)}`;
+                                                    }
+                                                    return 'Best Path Score: N/A';
+                                                }
+                                                return `Score: ${item.parsed.y?.toFixed(6) || 'N/A'}`;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        });
+                        
+                        console.log("[DEBUG] Score runtime chart created");
+                        }
+                    } else {
+                        console.log("[DEBUG] No valid timestamps found for runtime chart");
+                    }
+                }
+                } catch (error) {
+                    console.error("[ERROR] Score runtime chart creation failed:", error);
+                }
+                
+                // Create cost chart
+                try {
+                if (validTotalCostData.length > 0) {
+                    console.log("[DEBUG] Creating cost chart with API, embedding, and novelty costs breakdown");
+                    
+                    // Destroy existing chart instance if it exists
+                    if (costChartInstance) {
+                        costChartInstance.destroy();
+                        costChartInstance = null;
+                    }
+                    
+                    // Define a custom mixed chart type with stacked bars and a line
+                    costChartInstance = new Chart(costCanvas, {
+                        type: 'bar',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Proposal/G.',
+                                    data: validGenerationCostData,
+                                    backgroundColor: 'rgba(52, 152, 219, 0.8)',
+                                    borderColor: 'rgba(52, 152, 219, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: 'Embed/G.',
+                                    data: validEmbedCostData,
+                                    backgroundColor: 'rgba(155, 89, 182, 0.8)',
+                                    borderColor: 'rgba(155, 89, 182, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: 'Novelty/G.',
+                                    data: validNoveltyCostData,
+                                    backgroundColor: 'rgba(230, 126, 34, 0.8)',
+                                    borderColor: 'rgba(230, 126, 34, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: 'Meta/G.',
+                                    data: validMetaCostData,
+                                    backgroundColor: 'rgba(142, 68, 173, 0.8)',
+                                    borderColor: 'rgba(142, 68, 173, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: 'Prompt/G.',
+                                    data: validPromptCostData,
+                                    backgroundColor: 'rgba(46, 204, 113, 0.8)',
+                                    borderColor: 'rgba(46, 204, 113, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: '∑ Proposal',
+                                    data: validCumulativeApiCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(52, 152, 219, 1)',
+                                    backgroundColor: 'rgba(52, 152, 219, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '∑ Embed',
+                                    data: validCumulativeEmbedCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(155, 89, 182, 1)',
+                                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '∑ Novelty',
+                                    data: validCumulativeNoveltyCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(230, 126, 34, 1)',
+                                    backgroundColor: 'rgba(230, 126, 34, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '∑ Meta',
+                                    data: validCumulativeMetaCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(142, 68, 173, 1)',
+                                    backgroundColor: 'rgba(142, 68, 173, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '∑ Prompt',
+                                    data: validCumulativePromptCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(46, 204, 113, 1)',
+                                    backgroundColor: 'rgba(46, 204, 113, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                },
+                                {
+                                    label: '∑ Total',
+                                    data: validTotalCostData,
+                                    type: 'line',
+                                    borderColor: 'rgba(231, 76, 60, 1)',
+                                    backgroundColor: 'rgba(231, 76, 60, 0.1)',
+                                    borderWidth: 3,
+                                    pointBackgroundColor: validTotalCostData.map(p => p.x === currentGenId ? 
+                                        'rgba(231, 76, 60, 1)' : 'rgba(231, 76, 60, 0.7)'),
+                                    pointRadius: validTotalCostData.map(p => p.x === currentGenId ? 6 : 4),
+                                    pointHoverRadius: 8,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                }
+                            ]
+                        },
+                        options: {
+                            barPercentage: 0.8,
+                            categoryPercentage: 1.0,
+                            onClick: (evt, elements, chart) => {
+                                console.log('[DEBUG] Cost chart clicked.', { elements });
+                                if (elements.length === 0) return;
+                                const firstPoint = elements[0];
+                                const generation = chart.data.datasets[firstPoint.datasetIndex].data[firstPoint.index].x;
+                                
+                                if (generation !== undefined && window.treeData) {
+                                    const programsInGen = window.treeData.filter(p => p.generation === generation && p.correct);
+                                    if (programsInGen.length > 0) {
+                                        const bestProgramInGen = programsInGen.reduce((best, current) => {
+                                            const bestScore = best.combined_score ?? -Infinity;
+                                            const currentScore = current.combined_score ?? -Infinity;
+                                            return currentScore > bestScore ? current : best;
+                                        });
+                                        if (bestProgramInGen && bestProgramInGen.id) {
+                                            selectNodeById(bestProgramInGen.id);
+                                        }
+                                    }
+                                }
+                            },
+                            onHover: (event, elements, chart) => {
+                                const canvas = chart.canvas;
+                                canvas.style.cursor = elements.length > 0 ? 'pointer' : 'default';
+                            },
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: {
+                                        display: true,
+                                        text: 'Number of LLM Proposals/Program Evaluations'
+                                    },
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Cumulative Cost ($)'
+                                    }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Per-Generation Cost ($)'
+                                    },
+                                    grid: {
+                                        drawOnChartArea: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => `Generation ${items[0].parsed.x}`,
+                                        label: (item) => {
+                                            const dataset = item.dataset;
+                                            const value = item.parsed.y;
+                                            return `${dataset.label}: $${value.toFixed(4)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log("[DEBUG] Cost chart created");
+                }
+                } catch (error) {
+                    console.error("[ERROR] Cost chart creation failed:", error);
+                }
+                
+                // Create runtime chart
+                try {
+                const validRuntimeData = (cumulativeRuntimes || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                
+                const validGenerationRuntimeData = (generationRuntimes || [])
+                    .filter(item => item.y !== null && item.y !== undefined && !isNaN(parseFloat(item.y)))
+                    .map(item => ({x: item.x, y: parseFloat(item.y)}));
+                
+                if (validRuntimeData.length > 0) {
+                    console.log("[DEBUG] Creating runtime chart with cumulative and per-generation data");
+                    
+                    // Destroy existing chart instance if it exists
+                    if (runtimeChartInstance) {
+                        runtimeChartInstance.destroy();
+                        runtimeChartInstance = null;
+                    }
+                    
+                    // Helper function to format seconds to human-readable time
+                    const formatTime = (seconds) => {
+                        const days = Math.floor(seconds / 86400);
+                        const hours = Math.floor((seconds % 86400) / 3600);
+                        const minutes = Math.floor((seconds % 3600) / 60);
+                        const secs = Math.floor(seconds % 60);
+                        
+                        const parts = [];
+                        if (days > 0) parts.push(`${days}d`);
+                        if (hours > 0) parts.push(`${hours}h`);
+                        if (minutes > 0) parts.push(`${minutes}m`);
+                        if (secs > 0 || parts.length === 0) parts.push(`${secs}s`);
+                        
+                        return parts.join(' ');
+                    };
+                    
+                    // Create the runtime chart with bars and line
+                    runtimeChartInstance = new Chart(runtimeCanvas, {
+                        type: 'bar',
+                        data: {
+                            datasets: [
+                                {
+                                    label: 'Runtime/G.',
+                                    data: validGenerationRuntimeData,
+                                    backgroundColor: 'rgba(155, 89, 182, 0.8)',
+                                    borderColor: 'rgba(155, 89, 182, 1)',
+                                    borderWidth: 1,
+                                    yAxisID: 'y1'
+                                },
+                                {
+                                    label: '∑ Runtime',
+                                    data: validRuntimeData,
+                                    type: 'line',
+                                    borderColor: 'rgba(155, 89, 182, 1)',
+                                    backgroundColor: 'rgba(155, 89, 182, 0.1)',
+                                    borderWidth: 2,
+                                    pointRadius: 3,
+                                    pointHoverRadius: 6,
+                                    fill: false,
+                                    tension: 0.1,
+                                    yAxisID: 'y'
+                                }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: {
+                                    type: 'linear',
+                                    title: {
+                                        display: true,
+                                        text: 'Number of LLM Proposals/Program Evaluations'
+                                    },
+                                    ticks: {
+                                        stepSize: 1
+                                    }
+                                },
+                                y: {
+                                    type: 'linear',
+                                    position: 'left',
+                                    title: {
+                                        display: true,
+                                        text: 'Cumulative Runtime'
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return formatTime(value);
+                                        }
+                                    }
+                                },
+                                y1: {
+                                    type: 'linear',
+                                    position: 'right',
+                                    title: {
+                                        display: true,
+                                        text: 'Runtime per Generation'
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return formatTime(value);
+                                        }
+                                    },
+                                    grid: {
+                                        drawOnChartArea: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                tooltip: {
+                                    callbacks: {
+                                        title: (items) => {
+                                            if (items.length === 0) return '';
+                                            const item = items[0];
+                                            return `Generation ${item.parsed.x}`;
+                                        },
+                                        label: (item) => {
+                                            const datasetLabel = item.dataset.label || '';
+                                            return `${datasetLabel}: ${formatTime(item.parsed.y)}`;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    
+                    console.log("[DEBUG] Runtime chart created");
+                }
+                } catch (error) {
+                    console.error("[ERROR] Runtime chart creation failed:", error);
+                }
+            } catch (error) {
+                console.error("[DEBUG] Error in createCharts:", error);
+            }
+        }
+
+        // Add window resize event listener to redraw the tree
+        window.addEventListener('resize', function() {
+            console.log("[DEBUG] Window resized");
+            
+            // Skip reload during manual panel resizing
+            if (window.isResizing) {
+                console.log("[DEBUG] Skipping window resize handler during panel resize");
+                return;
+            }
+            
+            // Debounce resize handler to prevent multiple rapid updates
+            if (window.resizeTimeout) {
+                clearTimeout(window.resizeTimeout);
+            }
+            
+            window.resizeTimeout = setTimeout(function() {
+                if (window.treeData) {
+                    renderGraph(window.treeData, true);  // Force render on resize
+                } else {
+                    // Full reload only if necessary
+                                    const resultSelect = document.getElementById('result-select');
+                if (resultSelect.value) {
+                    loadDatabase(resultSelect.value);
+                    }
+                }
+            }, 300);
+        });
+        
+        // Add specific panel resize handling to redraw the tree when panels are resized
+        const observer = new ResizeObserver(() => {
+            console.log("[DEBUG] Panel resized");
+            const resultSelect = document.getElementById('result-select');
+            
+            if (resultSelect.value) {
+                loadDatabase(resultSelect.value);
+            }
+        });
+        
+        // Observe the tree panel for size changes
+        observer.observe(document.getElementById('tree-panel'));
+
+        // Add this new function
+        function updateBestSolutionPanel(data) {
+            // Filter valid scores
+            const validScores = data.filter(d => d.correct).map(d => d.combined_score)
+                .filter(s => s !== null && s !== undefined && !isNaN(parseFloat(s)))
+                .map(s => parseFloat(s));
+            
+            // Determine best score based on max selection
+            const bestScore = validScores.length > 0 ? 
+                Math.max(...validScores) : 'N/A';
+            
+            // Find the agent with the best score
+            let bestAgent = null;
+            if (validScores.length > 0 && typeof bestScore === 'number') {
+                bestAgent = data.find(d => parseFloat(d.combined_score) === bestScore);
+            }
+            
+            // Update Best Solution section
+            const bestScoreEl = document.getElementById('meta-best-score');
+            bestScoreEl.textContent = typeof bestScore === 'number' ? bestScore.toFixed(6) : bestScore;
+            bestScoreEl.className = typeof bestScore === 'number' ? 'metric-good' : ''; // Adjust class if needed
+            
+            document.getElementById('meta-best-agent-name').textContent = bestAgent ? (bestAgent.metadata.patch_name || 'unnamed') : 'N/A';
+            document.getElementById('meta-best-agent-gen').textContent = bestAgent ? bestAgent.generation : 'N/A';
+
+            console.log("[DEBUG] Updated best solution panel with max score:", bestScore);
+        }
+
+        // Initialize the score type radio buttons
+        function initializeScoreTypeListeners() {
+            console.log("[DEBUG] Initializing score type radio button listeners");
+            const radioButtons = document.querySelectorAll('input[name="score-type"]');
+            
+            // Log how many radio buttons we found
+            console.log("[DEBUG] Found", radioButtons.length, "score type radio buttons");
+            
+            radioButtons.forEach(radio => {
+                radio.addEventListener('change', function() {
+                    console.log("[DEBUG] Radio button change event fired");
+                    const useMinScore = document.querySelector('input[name="score-type"][value="min"]').checked;
+                    console.log("[DEBUG] Score type changed to:", useMinScore ? "min" : "max");
+                    
+                    // Use the window.treeData directly to update the best solution panel
+                    if (window.treeData && window.treeData.length > 0) {
+                        console.log("[DEBUG] Tree data available, length:", window.treeData.length);
+                        
+                        // First update the best solution panel
+                        updateBestSolutionPanel(window.treeData, useMinScore);
+                        
+                        // Rebuild the tree with the new best node
+                        console.log("[DEBUG] Rebuilding tree with useMinScore =", useMinScore);
+                        const root = buildTree(window.treeData);
+                        
+                        // Force a complete rebuild of the tree by clearing the container first
+                        console.log("[DEBUG] Clearing and rerendering tree");
+                        d3.select("#tree").html("");
+                        renderTree(root, false);
+                        console.log("[DEBUG] Tree rerendering complete");
+                        
+                        // Then redraw the charts
+                        createCharts(null);
+                        
+                        // Update the score heatbar
+                        updateScoreHeatbar();
+                    } else {
+                        console.error("[DEBUG] No tree data available for rerendering");
+                    }
+                });
+            });
+            
+            // Update y-axis scale controls when inputs change
+            const yMinInput = document.getElementById('score-y-min');
+            const yMaxInput = document.getElementById('score-y-max');
+            
+            if (yMinInput && yMaxInput) {
+                // Create a function that updates charts with a slight delay
+                const updateChartsOnInput = () => {
+                    console.log("[DEBUG] Y axis value changed - Triggering chart update");
+                    // Use setTimeout to ensure the input value is properly processed
+                    setTimeout(() => createCharts(null), 10);
+                };
+                
+                // Use input event for real-time updates as user types
+                yMinInput.addEventListener('input', updateChartsOnInput);
+                yMaxInput.addEventListener('input', updateChartsOnInput);
+                
+                // Keep change events for completeness
+                yMinInput.addEventListener('change', updateChartsOnInput);
+                yMaxInput.addEventListener('change', updateChartsOnInput);
+            }
+            
+            // Set up event listeners for island y-axis controls
+            const islandYMinInput = document.getElementById('island-y-min');
+            const islandYMaxInput = document.getElementById('island-y-max');
+            
+            if (islandYMinInput && islandYMaxInput) {
+                const updateIslandChartsOnInput = () => {
+                    console.log("[DEBUG] Island Y axis value changed - Triggering island visualization update");
+                    // Use setTimeout to ensure the input value is properly processed
+                    setTimeout(() => {
+                        if (window.treeData) {
+                            createIslandsVisualization(window.treeData);
+                        }
+                    }, 10);
+                };
+                
+                // Use input event for real-time updates as user types
+                islandYMinInput.addEventListener('input', updateIslandChartsOnInput);
+                islandYMaxInput.addEventListener('input', updateIslandChartsOnInput);
+                
+                // Keep change events for completeness
+                islandYMinInput.addEventListener('change', updateIslandChartsOnInput);
+                islandYMaxInput.addEventListener('change', updateIslandChartsOnInput);
+            }
+        }
+
+        // Function to handle score type changes
+        function handleScoreTypeChange(isMinScore) {
+            console.log("[DEBUG] handleScoreTypeChange called with isMinScore =", isMinScore);
+            
+            // Make sure the radio button state is synchronized
+            document.querySelector('input[name="score-type"][value="min"]').checked = isMinScore;
+            document.querySelector('input[name="score-type"][value="max"]').checked = !isMinScore;
+            
+            // If we have raw data, reprocess it completely
+            if (window.rawDbData && window.rawDbData.length > 0) {
+                console.log("[DEBUG] Reprocessing raw data with", window.rawDbData.length, "rows");
+                
+                // Simulate a complete data reload by reprocessing the data
+                processData(window.rawDbData);
+                return;
+            }
+            
+            // Fallback to using the existing tree data
+            if (window.treeData && window.treeData.length > 0) {
+                console.log("[DEBUG] Using existing tree data with", window.treeData.length, "rows");
+                
+                // First update the best solution panel
+                updateBestSolutionPanel(window.treeData, isMinScore);
+                
+                // Rebuild the tree with the new best node
+                console.log("[DEBUG] Rebuilding tree with isMinScore =", isMinScore);
+                const root = buildTree(window.treeData);
+                
+                // Force a complete rebuild of the tree by clearing the container first
+                console.log("[DEBUG] Clearing and rerendering tree");
+                d3.select("#tree").html("");
+                renderTree(root, false);
+                console.log("[DEBUG] Tree rerendering complete");
+                
+                // Then redraw the charts
+                createCharts(null);
+                
+                // Update the score heatbar
+                updateScoreHeatbar();
+            } else if (window.currentDbPath) {
+                // If all else fails but we have a file path, reload the file
+                console.log("[DEBUG] Reloading file from path:", window.currentDbPath);
+                loadDatabase(window.currentDbPath);
+            } else {
+                console.error("[DEBUG] No data available for rerendering");
+            }
+        }
+
+        // Add some CSS to make the tree connections look better
+        function addStylesToDom() {
+            const styleElement = document.createElement('style');
+            styleElement.textContent = `
+                .conn-line {
+                    pointer-events: none;
+                    transition: all 0.3s ease;
+                }
+                
+                .node.selected .conn-line {
+                    stroke: #e58e26;
+                    stroke-width: 3px;
+                    stroke-opacity: 1;
+                }
+                
+                .node:hover circle {
+                    filter: brightness(1.2);
+                }
+                
+                /* Style for connected nodes */
+                .node.connected circle {
+                    stroke-width: 2.5px;
+                    filter: drop-shadow(0 0 2px rgba(123, 154, 196, 0.5));
+                }
+                
+                /* Add arrow markers */
+                .arrow {
+                    fill: #7b9ac4;
+                }
+                
+                /* Make node text more compact */
+                .node text {
+                    font-size: 10px;
+                    text-anchor: middle;
+                    transform: translate(0, -10px);
+                    max-width: 120px;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+                
+                /* Add truncation for node labels */
+                .node-label {
+                    max-width: 150px;
+                    white-space: nowrap;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                }
+            `;
+            document.head.appendChild(styleElement);
+        }
+
+        // Add this new function before the createCharts function
+        function updateScoreHeatbar() {
+            const heatbarContainer = document.getElementById("score-heatbar");
+            if (!heatbarContainer || !window.treeData) return;
+            
+            // Get valid scores from the data, excluding non-correct nodes
+            const validScores = window.treeData
+                .filter(d => d.correct && d.combined_score != null && !isNaN(parseFloat(d.combined_score)))
+                .map(d => parseFloat(d.combined_score));
+
+            if (validScores.length === 0) {
+                document.getElementById("min-score").textContent = "N/A";
+                document.getElementById("max-score").textContent = "N/A";
+                heatbarContainer.style.background = 'none';
+                return;
+            }
+
+            const minScore = Math.min(...validScores);
+            const maxScore = Math.max(...validScores);
+            
+            document.getElementById("min-score").textContent = minScore.toFixed(2);
+            document.getElementById("max-score").textContent = maxScore.toFixed(2);
+            
+            const colorScale = d3.scaleSequential(d3.interpolateViridis).domain([minScore, maxScore]);
+
+            const numStops = 10;
+            const colorStops = d3.range(numStops + 1).map(i => {
+                const t = i / numStops;
+                const score = minScore + t * (maxScore - minScore);
+                return `${colorScale(score)} ${t * 100}%`;
+            });
+
+            heatbarContainer.style.background = `linear-gradient(to right, ${colorStops.join(', ')})`;
+        }
+        // Pagination state for programs table
+        let programTablePage = 0;
+        const programTablePageSize = 100;  // Show 100 programs per page
+        let programTableSortedData = [];   // Cache sorted data for pagination
+        
+        function populateProgramsTable(data) {
+            const tableBody = document.querySelector("#program-table tbody");
+            if (!tableBody) return;
+
+            tableBody.innerHTML = "";
+            programTablePage = 0;  // Reset to first page when data changes
+
+            // Check if we should show incorrect programs
+            const showIncorrectCheckbox = document.getElementById('show-incorrect-programs');
+            const showIncorrect = showIncorrectCheckbox ? showIncorrectCheckbox.checked : false;
+
+            // Filter data based on checkbox state
+            let filteredData = data;
+            if (!showIncorrect) {
+                filteredData = data.filter(d => d.correct);
+            }
+
+            // Separate correct and incorrect programs for ranking
+            const correctPrograms = filteredData.filter(d => d.correct && d.combined_score !== null);
+            const incorrectPrograms = filteredData.filter(d => !d.correct);
+            
+            // Rank only correct programs
+            const rankedCorrectPrograms = correctPrograms
+                .sort((a, b) => b.combined_score - a.combined_score)
+                .map((p, i) => ({ ...p, original_rank: i + 1 }));
+            
+            // Add incorrect programs without ranks (or with special ranking)
+            const rankedIncorrectPrograms = incorrectPrograms
+                .map((p, i) => ({ ...p, original_rank: '—' }));
+            
+            // Combine the arrays
+            const rankedPrograms = [...rankedCorrectPrograms, ...rankedIncorrectPrograms];
+
+            let sortedPrograms = [...rankedPrograms];
+
+            sortedPrograms.sort((a, b) => {
+                let valA, valB;
+                const key = sortState.key;
+                const dir = sortState.dir;
+
+                switch (key) {
+                    case 'rank':
+                        valA = (typeof a.original_rank === 'number') ? a.original_rank : Infinity;
+                        valB = (typeof b.original_rank === 'number') ? b.original_rank : Infinity;
+                        break;
+                    case 'generation':
+                        valA = a.generation;
+                        valB = b.generation;
+                        break;
+                    case 'archive':
+                        valA = a.in_archive ? 1 : 0;
+                        valB = b.in_archive ? 1 : 0;
+                        break;
+                    case 'api_cost':
+                        valA = (a.metadata && a.metadata.api_costs !== null && a.metadata.api_costs !== undefined) ? parseFloat(a.metadata.api_costs) : -Infinity;
+                        valB = (b.metadata && b.metadata.api_costs !== null && b.metadata.api_costs !== undefined) ? parseFloat(b.metadata.api_costs) : -Infinity;
+                        break;
+                    case 'complexity':
+                        valA = (a.complexity !== null && a.complexity !== undefined) ? a.complexity : -Infinity;
+                        valB = (b.complexity !== null && b.complexity !== undefined) ? b.complexity : -Infinity;
+                        break;
+                    case 'island_idx':
+                        valA = (a.island_idx !== null && a.island_idx !== undefined) ? a.island_idx : -Infinity;
+                        valB = (b.island_idx !== null && b.island_idx !== undefined) ? b.island_idx : -Infinity;
+                        break;
+                    case 'novelty_attempt':
+                        valA = (a.metadata && a.metadata.novelty_attempt) ? a.metadata.novelty_attempt : 0;
+                        valB = (b.metadata && b.metadata.novelty_attempt) ? b.metadata.novelty_attempt : 0;
+                        break;
+                    case 'resample_attempt':
+                        valA = (a.metadata && a.metadata.resample_attempt) ? a.metadata.resample_attempt : 0;
+                        valB = (b.metadata && b.metadata.resample_attempt) ? b.metadata.resample_attempt : 0;
+                        break;
+                    case 'patch_attempt':
+                        valA = (a.metadata && a.metadata.patch_attempt) ? a.metadata.patch_attempt : 0;
+                        valB = (b.metadata && b.metadata.patch_attempt) ? b.metadata.patch_attempt : 0;
+                        break;
+                    default:
+                        return 0;
+                }
+
+                const aIsInvalid = valA === -Infinity;
+                const bIsInvalid = valB === -Infinity;
+
+                if (aIsInvalid && bIsInvalid) return a.original_rank - b.original_rank;
+                if (aIsInvalid) return 1;
+                if (bIsInvalid) return -1;
+
+                if (valA === valB) {
+                    return a.original_rank - b.original_rank;
+                }
+
+                const dirModifier = dir === 'asc' ? 1 : -1;
+                return (valA < valB ? -1 : 1) * dirModifier;
+            });
+
+            document.querySelectorAll('#program-table th.sortable .sort-arrow').forEach(arrow => {
+                arrow.textContent = '';
+            });
+            const activeHeader = document.querySelector(`#program-table th[data-sort="${sortState.key}"] .sort-arrow`);
+            if (activeHeader) {
+                activeHeader.textContent = sortState.dir === 'asc' ? ' ▲' : ' ▼';
+            }
+
+            // Store sorted data for pagination
+            programTableSortedData = sortedPrograms;
+            
+            // Render current page
+            renderProgramTablePage();
+        }
+        
+        function renderProgramTablePage() {
+            const tableBody = document.querySelector("#program-table tbody");
+            if (!tableBody) return;
+            
+            tableBody.innerHTML = "";
+            
+            const startIdx = programTablePage * programTablePageSize;
+            const endIdx = Math.min(startIdx + programTablePageSize, programTableSortedData.length);
+            const pageData = programTableSortedData.slice(startIdx, endIdx);
+            
+            pageData.forEach(prog => {
+                const row = document.createElement("tr");
+                row.setAttribute("data-node-id", prog.id);
+                
+                // Style incorrect programs differently
+                if (!prog.correct) {
+                    row.style.backgroundColor = '#fff5f5';
+                    row.style.color = '#721c24';
+                }
+                
+                const apiCost = (prog.metadata && prog.metadata.api_costs) ? '$' + parseFloat(prog.metadata.api_costs).toFixed(4) : 'N/A';
+                const complexity = prog.complexity ? prog.complexity.toFixed(3) : 'N/A';
+                const rawModel = (prog.metadata && prog.metadata.model_name) || 'N/A';
+                const model = rawModel !== 'N/A' ? ((rawModel.includes('@') ? rawModel.split('@')[0] : rawModel).split('/').pop()) : 'N/A';
+
+                const islandIdx = prog.island_idx !== null && prog.island_idx !== undefined ? prog.island_idx : 'N/A';
+                const archiveStatus = prog.in_archive ? '✓' : '';
+                const scoreDisplay = prog.combined_score !== null ? prog.combined_score.toFixed(6) : 'N/A';
+                
+                const noveltyAttempt = (prog.metadata && prog.metadata.novelty_attempt) || 0;
+                const resampleAttempt = (prog.metadata && prog.metadata.resample_attempt) || 0;
+                const patchAttempt = (prog.metadata && prog.metadata.patch_attempt) || 0;
+                
+                const patchName = (prog.metadata?.patch_name || 'unnamed').substring(0, 15);
+                
+                row.innerHTML = `
+                    <td>${prog.original_rank}</td>
+                    <td>${prog.generation}</td>
+                    <td style="text-align: center; color: ${prog.in_archive ? '#28a745' : '#6c757d'}; font-weight: bold;">${archiveStatus}</td>
+                    <td>${patchName}</td>
+                    <td>${prog.metadata?.patch_type || 'N/A'}</td>
+                    <td>${islandIdx}</td>
+                    <td>${scoreDisplay}</td>
+                    <td>${apiCost}</td>
+                    <td>${complexity}</td>
+                    <td>${noveltyAttempt}</td>
+                    <td>${resampleAttempt}</td>
+                    <td>${patchAttempt}</td>
+                    <td title="${rawModel}">${model}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+            
+            // Update pagination controls
+            updateProgramTablePagination();
+
+            tableBody.querySelectorAll('tr').forEach(row => {
+                row.addEventListener('click', function() {
+                    const nodeId = this.getAttribute('data-node-id');
+                    if (!nodeId) return;
+
+                    const nodeElement = d3.selectAll('.node')
+                        .filter(d => d.id === nodeId)
+                        .node();
+                    
+                    if (nodeElement) {
+                        nodeElement.dispatchEvent(new MouseEvent('click', { bubbles: true, view: window, cancelable: true }));
+                    } else {
+                        const nodeData = window.treeData.find(d => d.id === nodeId);
+                        if (nodeData) {
+                            displayNodeDetails(nodeData);
+                            document.querySelector('.tab[data-tab="agent-code"]').click();
+                        }
+                    }
+                });
+            });
+        }
+        
+        function updateProgramTablePagination() {
+            const totalPages = Math.ceil(programTableSortedData.length / programTablePageSize);
+            const paginationContainer = document.getElementById('program-table-pagination');
+            
+            if (!paginationContainer) {
+                // Create pagination container if it doesn't exist
+                const tableContainer = document.querySelector('#program-table')?.parentElement;
+                if (tableContainer) {
+                    const paginationDiv = document.createElement('div');
+                    paginationDiv.id = 'program-table-pagination';
+                    paginationDiv.style.cssText = 'display: flex; justify-content: center; align-items: center; gap: 10px; padding: 10px; font-size: 12px;';
+                    tableContainer.insertBefore(paginationDiv, tableContainer.querySelector('#program-table'));
+                    return updateProgramTablePagination();  // Retry after creating
+                }
+                return;
+            }
+            
+            if (programTableSortedData.length <= programTablePageSize) {
+                // Hide pagination if all data fits on one page
+                paginationContainer.style.display = 'none';
+                return;
+            }
+            
+            paginationContainer.style.display = 'flex';
+            
+            const startIdx = programTablePage * programTablePageSize + 1;
+            const endIdx = Math.min((programTablePage + 1) * programTablePageSize, programTableSortedData.length);
+            
+            paginationContainer.innerHTML = `
+                <button id="prev-page-btn" ${programTablePage === 0 ? 'disabled' : ''} 
+                        style="padding: 4px 8px; cursor: ${programTablePage === 0 ? 'not-allowed' : 'pointer'}; opacity: ${programTablePage === 0 ? '0.5' : '1'};">
+                    ◀ Prev
+                </button>
+                <span style="color: #666;">
+                    Showing ${startIdx}-${endIdx} of ${programTableSortedData.length} programs
+                </span>
+                <button id="next-page-btn" ${programTablePage >= totalPages - 1 ? 'disabled' : ''} 
+                        style="padding: 4px 8px; cursor: ${programTablePage >= totalPages - 1 ? 'not-allowed' : 'pointer'}; opacity: ${programTablePage >= totalPages - 1 ? '0.5' : '1'};">
+                    Next ▶
+                </button>
+            `;
+            
+            document.getElementById('prev-page-btn')?.addEventListener('click', () => {
+                if (programTablePage > 0) {
+                    programTablePage--;
+                    renderProgramTablePage();
+                }
+            });
+            
+            document.getElementById('next-page-btn')?.addEventListener('click', () => {
+                if (programTablePage < totalPages - 1) {
+                    programTablePage++;
+                    renderProgramTablePage();
+                }
+            });
+        }
+
+        function selectNodeById(nodeId, switchToTreeView = true, forceRightTabSwitch = true) {
+            console.log(`[DEBUG] Selecting node ID: ${nodeId}, switch to tree: ${switchToTreeView}`);
+            window.pendingNodeSelectionId = nodeId;
+
+            if (switchToTreeView) {
+                const treeTab = document.querySelector('.left-tab[data-tab="tree-view"]');
+                if (treeTab && !treeTab.classList.contains('active')) {
+                    treeTab.click();
+                } else if (window.treeData) {
+                    renderGraph(window.treeData);
+                }
+            } else {
+                // Don't switch tab, just show details
+                const nodeData = window.treeData.find(d => d.id === nodeId);
+                if (!nodeData) {
+                    console.warn("[DEBUG] Could not find node data for ID:", nodeId);
+                    return;
+                };
+
+                displayNodeDetails(nodeData);
+                if (forceRightTabSwitch) {
+                    document.querySelector('.tab[data-tab="agent-code"]').click();
+                }
+            }
+        }
+
+        // Embedding Analysis Functions
+        function cosineSimilarity(vecA, vecB) {
+            if (vecA.length !== vecB.length) return 0;
+            
+            let dotProduct = 0;
+            let normA = 0;
+            let normB = 0;
+            
+            for (let i = 0; i < vecA.length; i++) {
+                dotProduct += vecA[i] * vecB[i];
+                normA += vecA[i] * vecA[i];
+                normB += vecB[i] * vecB[i];
+            }
+            
+            if (normA === 0 || normB === 0) return 0;
+            return dotProduct / (Math.sqrt(normA) * Math.sqrt(normB));
+        }
+
+        function computeSimilarityMatrix(embeddings) {
+            const n = embeddings.length;
+            const matrix = new Array(n);
+            
+            for (let i = 0; i < n; i++) {
+                matrix[i] = new Array(n);
+                for (let j = 0; j < n; j++) {
+                    matrix[i][j] = cosineSimilarity(embeddings[i], embeddings[j]);
+                }
+            }
+            
+            return matrix;
+        }
+
+        function hierarchicalClustering(similarityMatrix) {
+            const n = similarityMatrix.length;
+            const clusters = Array.from({length: n}, (_, i) => [i]);
+            const distances = [];
+            
+            // Convert similarity to distance (1 - similarity)
+            const distMatrix = similarityMatrix.map(row => 
+                row.map(sim => 1 - sim)
+            );
+            
+            while (clusters.length > 1) {
+                let minDist = Infinity;
+                let mergeI = -1, mergeJ = -1;
+                
+                // Find closest clusters
+                for (let i = 0; i < clusters.length; i++) {
+                    for (let j = i + 1; j < clusters.length; j++) {
+                        let dist = 0;
+                        let count = 0;
+                        
+                        // Average linkage
+                        for (let a of clusters[i]) {
+                            for (let b of clusters[j]) {
+                                dist += distMatrix[a][b];
+                                count++;
+                            }
+                        }
+                        dist /= count;
+                        
+                        if (dist < minDist) {
+                            minDist = dist;
+                            mergeI = i;
+                            mergeJ = j;
+                        }
+                    }
+                }
+                
+                // Merge clusters
+                const merged = [...clusters[mergeI], ...clusters[mergeJ]];
+                clusters.splice(Math.max(mergeI, mergeJ), 1);
+                clusters.splice(Math.min(mergeI, mergeJ), 1);
+                clusters.push(merged);
+            }
+            
+            return clusters[0]; // Return the final ordering
+        }
+
+        function filterEmbeddingHeatmapData(data) {
+            if (!Array.isArray(data)) {
+                return [];
+            }
+
+            let filteredData = [...data];
+            const gen0Programs = filteredData.filter(d => d.generation === 0);
+
+            if (gen0Programs.length > 1) {
+                const gen0Groups = {};
+                gen0Programs.forEach(prog => {
+                    const key = prog.code || prog.id || 'no-code';
+                    if (!gen0Groups[key]) {
+                        gen0Groups[key] = [];
+                    }
+                    gen0Groups[key].push(prog);
+                });
+
+                const duplicateIds = new Set();
+                Object.values(gen0Groups).forEach(group => {
+                    if (group.length > 1) {
+                        group.sort((a, b) => (a.island_idx || 0) - (b.island_idx || 0));
+                        group.slice(1).forEach(prog => duplicateIds.add(prog.id));
+                    }
+                });
+
+                filteredData = filteredData.filter(d => !duplicateIds.has(d.id));
+            }
+
+            return filteredData;
+        }
+
+        function datasetHasCompleteEmbeddings(data) {
+            const filteredData = filterEmbeddingHeatmapData(data);
+            const programsNeedingEmbeddings = filteredData.filter(
+                d => d && d.id && !String(d.id).includes('___virtual_root')
+            );
+
+            if (programsNeedingEmbeddings.length === 0) {
+                return false;
+            }
+
+            return programsNeedingEmbeddings.every(
+                d => d.embedding && Array.isArray(d.embedding) && d.embedding.length > 0
+            );
+        }
+
+        function createEmbeddingsHeatmap(data) {
+            console.log("[DEBUG] Creating embeddings heatmap");
+            
+            // Add validation checks
+            if (!data || !Array.isArray(data) || data.length === 0) {
+                console.warn("[DEBUG] No data available for embeddings heatmap");
+                const container = document.getElementById('embeddings-heatmap');
+                if (container) {
+                    container.innerHTML = '<div style="text-align: center; color: #666; margin-top: 50px;">No data available for embeddings visualization.</div>';
+                }
+                return;
+            }
+            
+            // Check if the embeddings tab is visible
+            const embeddingsView = document.getElementById('embeddings-view');
+            if (!embeddingsView || !embeddingsView.classList.contains('active')) {
+                console.log("[DEBUG] Embeddings view not active, skipping heatmap creation");
+                return;
+            }
+            
+            // Clear existing heatmap
+            d3.select("#embeddings-heatmap").selectAll("*").remove();
+            
+            const filteredData = filterEmbeddingHeatmapData(data);
+            if (filteredData.length !== data.length) {
+                console.log(
+                    `[DEBUG] Embeddings: Filtered out ${data.length - filteredData.length} duplicate generation 0 programs`
+                );
+            }
+
+            if (!datasetHasCompleteEmbeddings(filteredData)) {
+                d3.select("#embeddings-heatmap")
+                    .append("div")
+                    .style("text-align", "center")
+                    .style("color", "#666")
+                    .style("margin-top", "50px")
+                    .text("Loading full embedding data...");
+                return;
+            }
+
+            // Filter data with embeddings
+            const dataWithEmbeddings = filteredData.filter(d => d.embedding && Array.isArray(d.embedding) && d.embedding.length > 0);
+            
+            if (dataWithEmbeddings.length === 0) {
+                d3.select("#embeddings-heatmap")
+                    .append("div")
+                    .style("text-align", "center")
+                    .style("color", "#666")
+                    .style("margin-top", "50px")
+                    .text("No embedding data available for visualization.");
+                return;
+            }
+            
+            // Find best node within the current set of programs with embeddings
+            const correctEmbedNodes = dataWithEmbeddings.filter(d => d.correct && d.combined_score !== null && !isNaN(d.combined_score));
+            let bestEmbedNodeId = null;
+            if (correctEmbedNodes.length > 0) {
+                const bestEmbedNode = correctEmbedNodes.reduce((best, current) => (current.combined_score > best.combined_score) ? current : best);
+                bestEmbedNodeId = bestEmbedNode.id;
+            }
+            
+            console.log(`[DEBUG] Found ${dataWithEmbeddings.length} programs with embeddings`);
+            
+            // Create main container div
+            const mainContainer = d3.select("#embeddings-heatmap")
+                .append("div")
+                .style("display", "flex")
+                .style("flex-direction", "column")
+                .style("align-items", "stretch")
+                .style("width", "100%")
+                .style("height", "100%")
+                .style("overflow-y", "auto")
+                .style("padding", "10px")
+                .style("box-sizing", "border-box");
+
+            // Add main heatmap title
+            mainContainer.append("h3")
+                .style("margin", "0 0 10px 0")
+                .style("color", "#2c3e50")
+                .style("font-size", "18px")
+                .style("text-align", "center")
+                .text("All Programs - Embedding Similarity Matrix");
+
+            // Keep the matrix at its true pixel size and scroll when it
+            // outgrows the left panel.
+            const mainHeatmapScroll = mainContainer.append("div")
+                .attr("id", "main-heatmap-scroll")
+                .style("width", "100%")
+                .style("overflow", "auto")
+                .style("padding-bottom", "10px");
+
+            const mainHeatmapContainer = mainHeatmapScroll.append("div")
+                .attr("id", "main-heatmap")
+                .style("width", "max-content")
+                .style("margin", "0 auto");
+
+            createSingleEmbeddingHeatmap(dataWithEmbeddings, mainHeatmapContainer, "All Programs", bestEmbedNodeId);
+
+            // Group data by islands for subplots
+            const islands = [...new Set(dataWithEmbeddings.filter(d => d.island_idx !== null && d.island_idx !== undefined).map(d => d.island_idx))].sort((a, b) => a - b);
+            
+            if (islands.length > 1) {
+                // Add section title for island subplots
+                mainContainer.append("h3")
+                    .style("margin", "5px 0 10px 0")
+                    .style("color", "#2c3e50")
+                    .style("font-size", "18px")
+                    .text("Individual Islands - Embedding Similarity Matrices");
+
+                // Create island color scale (same as main visualization)
+                const islandColors = [
+                    "#1f77b4", "#2ca02c", "#9467bd", "#8c564b", "#e377c2",
+                    "#7f7f7f", "#bcbd22", "#17becf", "#aec7e8"
+                ];
+                const islandColorScale = d3.scaleOrdinal(islandColors);
+
+                // Create subplots container
+                const subplotsContainer = mainContainer.append("div")
+                    .style("display", "flex")
+                    .style("flex-wrap", "wrap")
+                    .style("justify-content", "center")
+                    .style("gap", "20px")
+                    .style("width", "100%");
+
+                // Create subplot for each island
+                islands.forEach(islandId => {
+                    const islandData = dataWithEmbeddings.filter(d => d.island_idx === islandId);
+                    
+                    if (islandData.length > 1) { // Only create subplot if there are multiple programs
+                        // Find best node in this island
+                        const correctIslandNodes = islandData.filter(d => d.correct && d.combined_score !== null && !isNaN(d.combined_score));
+                        let bestIslandNodeId = null;
+                        if (correctIslandNodes.length > 0) {
+                            const bestIslandNode = correctIslandNodes.reduce((best, current) => (current.combined_score > best.combined_score) ? current : best);
+                            bestIslandNodeId = bestIslandNode.id;
+                        }
+
+                        const subplotContainer = subplotsContainer.append("div")
+                            .style("border", `2px solid ${islandColorScale(islandId)}`)
+                            .style("border-radius", "8px")
+                            .style("padding", "15px")
+                            .style("background-color", "#fafafa")
+                            .style("min-width", "300px")
+                            .style("max-width", "500px")
+                            .style("display", "flex")
+                            .style("flex-direction", "column")
+                            .style("align-items", "center");
+
+                        // Add island title with color coding
+                        const titleContainer = subplotContainer.append("div")
+                            .style("display", "flex")
+                            .style("align-items", "center")
+                            .style("margin-bottom", "15px");
+
+                        titleContainer.append("div")
+                            .style("width", "20px")
+                            .style("height", "20px")
+                            .style("background-color", islandColorScale(islandId))
+                            .style("border-radius", "4px")
+                            .style("margin-right", "10px");
+
+                        titleContainer.append("h4")
+                            .style("margin", "0")
+                            .style("color", "#2c3e50")
+                            .style("font-size", "16px")
+                            .text(`Island ${islandId} (${islandData.length} programs)`);
+
+                        createSingleEmbeddingHeatmap(islandData, subplotContainer, `Island ${islandId}`, bestIslandNodeId, true);
+                    }
+                });
+            }
+        }
+
+        // Helper function to create a single embedding heatmap
+        function createSingleEmbeddingHeatmap(dataWithEmbeddings, container, title, bestNodeId, isSubplot = false) {
+            
+            // Extract embeddings and metadata
+            const embeddings = dataWithEmbeddings.map(d => d.embedding);
+            const labelsData = dataWithEmbeddings.map(d => ({ gen: d.generation, name: d.metadata.patch_name || 'unnamed' }));
+            const nodeIds = dataWithEmbeddings.map(d => d.id);
+            
+            // Compute similarity matrix
+            const similarityMatrix = computeSimilarityMatrix(embeddings);
+
+            // Get scores for performance bar
+            const scores = dataWithEmbeddings
+                .filter(d => d.correct && d.combined_score !== null && !isNaN(d.combined_score))
+                .map(d => d.combined_score);
+            const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+            const maxScore = scores.length > 0 ? Math.max(...scores) : 1;
+            const scoreColorScale = d3.scaleSequential(d3.interpolatePlasma).domain([minScore, maxScore]);
+            
+            // Calculate actual min/max similarity values for auto-setting defaults
+            let allSimilarities = [];
+            for (let i = 0; i < similarityMatrix.length; i++) {
+                for (let j = 0; j < similarityMatrix[i].length; j++) {
+                    if (i !== j) { // Exclude diagonal (self-similarity = 1.0)
+                        allSimilarities.push(similarityMatrix[i][j]);
+                    }
+                }
+            }
+            
+            const actualMinSim = allSimilarities.length > 0 ? Math.min(...allSimilarities) : 0;
+            const actualMaxSim = allSimilarities.length > 0 ? Math.max(...allSimilarities) : 1;
+            
+            // For subplots, use the same controls as main plot
+            // For main plot, auto-set defaults for each database
+            let heatMin, heatMax;
+            if (isSubplot) {
+                // Use the same range as main plot
+                heatMin = parseFloat(document.getElementById('heat-min').value);
+                heatMax = parseFloat(document.getElementById('heat-max').value);
+            } else {
+                // Auto-set defaults for main plot
+                const heatMinInput = document.getElementById('heat-min');
+                const heatMaxInput = document.getElementById('heat-max');
+                
+                // Check if this is a different database or first time
+                const currentDbPath = window.currentDbPath;
+                const lastDbPath = window.lastEmbeddingsDbPath;
+                
+                if (heatMinInput && heatMaxInput && (currentDbPath !== lastDbPath)) {
+                    // Auto-set for new database
+                    heatMinInput.value = actualMinSim.toFixed(3);
+                    heatMaxInput.value = actualMaxSim.toFixed(3);
+                    window.lastEmbeddingsDbPath = currentDbPath;
+                    console.log(`[DEBUG] Auto-set similarity range for new database: ${actualMinSim.toFixed(3)} - ${actualMaxSim.toFixed(3)}`);
+                    
+                    // Save the new preferences
+                    savePreferences();
+                }
+                
+                heatMin = parseFloat(heatMinInput.value);
+                heatMax = parseFloat(heatMaxInput.value);
+            }
+            
+            // Apply sorting method (same for both main plot and subplots)
+            let ordering = Array.from({length: dataWithEmbeddings.length}, (_, i) => i);
+            
+            const sortMethod = document.getElementById('embedding-sort-method').value;
+            
+            if (sortMethod === 'cluster' && dataWithEmbeddings.length > 1) {
+                ordering = hierarchicalClustering(similarityMatrix);
+                console.log(`[DEBUG] Applied hierarchical clustering ${isSubplot ? 'to subplot' : 'to main plot'}`);
+            } else if (sortMethod === 'performance') {
+                const indexedPrograms = dataWithEmbeddings.map((p, i) => ({...p, originalIndex: i}));
+
+                indexedPrograms.sort((a, b) => {
+                    const scoreA = (a.correct && a.combined_score != null) ? a.combined_score : -Infinity;
+                    const scoreB = (b.correct && b.combined_score != null) ? b.combined_score : -Infinity;
+                    return scoreB - scoreA;
+                });
+
+                ordering = indexedPrograms.map(p => p.originalIndex);
+                console.log(`[DEBUG] Sorted by performance ${isSubplot ? 'for subplot' : 'for main plot'}`);
+            } else if (sortMethod === 'chronological') {
+                // The default ordering is chronological because dataWithEmbeddings preserves the order from the original data
+                console.log(`[DEBUG] Sorted chronologically ${isSubplot ? 'for subplot' : 'for main plot'}`);
+            }
+            
+            // Reorder data according to ordering
+            const orderedMatrix = ordering.map(i => ordering.map(j => similarityMatrix[i][j]));
+            const orderedLabelsData = ordering.map(i => labelsData[i]);
+            const orderedNodeIds = ordering.map(i => nodeIds[i]);
+            const orderedScores = ordering.map(i => dataWithEmbeddings[i].combined_score);
+            const orderedCorrectness = ordering.map(i => dataWithEmbeddings[i].correct);
+            
+            // Get visualization parameters
+            const cellSize = isSubplot ? Math.max(4, Math.min(parseInt(document.getElementById('cell-size').value), 8)) : parseInt(document.getElementById('cell-size').value);
+            const colorScale = document.getElementById('color-scale').value;
+            
+            // Create color scale
+            const colorScales = {
+                viridis: d3.scaleSequential(d3.interpolateViridis),
+                plasma: d3.scaleSequential(d3.interpolatePlasma),
+                inferno: d3.scaleSequential(d3.interpolateInferno),
+                magma: d3.scaleSequential(d3.interpolateMagma)
+            };
+            
+            const colorFn = colorScales[colorScale].domain([heatMin, heatMax]);
+            
+            // Calculate maximum label length for proper margins
+            const maxLabelLength = Math.max(...orderedLabelsData.map(label => label.name.length));
+            const estimatedLabelWidth = Math.min(maxLabelLength * (isSubplot ? 4 : 6), isSubplot ? 120 : 200);
+            
+            // Calculate the diagonal length needed for rotated labels
+            const diagonalLength = Math.sqrt(estimatedLabelWidth * estimatedLabelWidth + 100);
+            
+            // Set up dimensions with proper margins (smaller for subplots, no label space needed)
+            const margin = {
+                top: isSubplot ? 20 : diagonalLength + 10,
+                right: isSubplot ? 80 : 130,
+                bottom: isSubplot ? 50 : 120,
+                left: isSubplot ? 20 : estimatedLabelWidth + 30
+            };
+            
+            const heatmapWidth = orderedMatrix.length * cellSize;
+            const heatmapHeight = orderedMatrix.length * cellSize;
+            
+            // Calculate total SVG dimensions
+            const totalWidth = heatmapWidth + margin.left + margin.right;
+            const totalHeight = heatmapHeight + margin.top + margin.bottom;
+
+            if (!isSubplot) {
+                container
+                    .style("display", "inline-block")
+                    .style("width", "max-content")
+                    .style("min-width", totalWidth + "px");
+            }
+            
+            // Create SVG
+            const svg = container
+                .append("svg")
+                .attr("width", totalWidth)
+                .attr("height", totalHeight)
+                .style("display", "block");
+            
+            const g = svg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+            
+            // Create heatmap cells
+            const rows = g.selectAll(".row")
+                .data(orderedMatrix)
+                .enter().append("g")
+                .attr("class", "row")
+                .attr("transform", (d, i) => `translate(0,${i * cellSize})`);
+            
+            const cells = rows.selectAll(".cell")
+                .data(d => d)
+                .enter().append("rect")
+                .attr("class", "cell")
+                .attr("x", (d, i) => i * cellSize)
+                .attr("width", cellSize)
+                .attr("height", cellSize)
+                .style("fill", d => colorFn(d))
+                .style("stroke", "#fff")
+                .style("stroke-width", 0.5)
+                .style("cursor", "pointer")
+                .on("mouseover", function(event, d) {
+                    const [i, j] = [
+                        Math.floor(d3.select(this.parentNode).datum().indexOf(d)),
+                        Math.floor(Array.from(this.parentNode.parentNode.children).indexOf(this.parentNode))
+                    ];
+                    
+                    // Show tooltip
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "heatmap-tooltip")
+                        .style("position", "absolute")
+                        .style("background", "rgba(0,0,0,0.8)")
+                        .style("color", "white")
+                        .style("padding", "8px")
+                        .style("border-radius", "4px")
+                        .style("font-size", "12px")
+                        .style("pointer-events", "none")
+                        .style("z-index", "1000");
+
+                    const label1 = orderedLabelsData[j];
+                    const label2 = orderedLabelsData[i];
+                    
+                    tooltip.html(`
+                        <strong><b>${label1.gen}</b>: ${label1.name}</strong><br>
+                        <strong><b>${label2.gen}</b>: ${label2.name}</strong><br>
+                        Similarity: ${d.toFixed(3)}
+                    `)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.selectAll(".heatmap-tooltip").remove();
+                })
+                .on("click", function(event, d) {
+                    const [i, j] = [
+                        Math.floor(d3.select(this.parentNode).datum().indexOf(d)),
+                        Math.floor(Array.from(this.parentNode.parentNode.children).indexOf(this.parentNode))
+                    ];
+                    
+                    // Select the node corresponding to the row
+                    const nodeId = orderedNodeIds[j];
+                    updateDetailsForNode(nodeId);
+
+                    // Visually update selection in the heatmap view
+                    d3.selectAll(`#${isSubplot ? container.attr('id') || 'subplot' : 'main-heatmap'} .cell`)
+                        .style("stroke", "#fff")
+                        .style("stroke-width", 0.5);
+                    
+                    d3.select(this.parentNode)
+                        .selectAll('.cell')
+                        .style("stroke", "#e58e26")
+                        .style("stroke-width", 2);
+                });
+            
+            // Add performance score bar (smaller for subplots)
+            const perfBarWidth = isSubplot ? 12 : 20;
+            
+            const perfBar = g.append("g")
+                .attr("transform", `translate(${heatmapWidth + 10}, 0)`);
+
+            perfBar.selectAll(".perf-cell")
+                .data(orderedScores)
+                .enter().append("rect")
+                .attr("class", "perf-cell")
+                .attr("y", (d, i) => i * cellSize)
+                .attr("width", perfBarWidth)
+                .attr("height", cellSize)
+                .style("fill", (d, i) => {
+                    if (!orderedCorrectness[i] || d === null) {
+                        return "#ccc"; // Grey for incorrect or no score
+                    }
+                    return scoreColorScale(d);
+                })
+                .style("stroke", "#fff")
+                .style("stroke-width", 0.5)
+                .on("mouseover", function(event, d) {
+                    const i = Array.from(this.parentNode.childNodes).filter(n => n.nodeName === 'rect').indexOf(this);
+                    const program = dataWithEmbeddings[ordering[i]];
+                    
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "heatmap-tooltip")
+                        .style("position", "absolute")
+                        .style("background", "rgba(0,0,0,0.8)")
+                        .style("color", "white")
+                        .style("padding", "8px")
+                        .style("border-radius", "4px")
+                        .style("font-size", "12px")
+                        .style("pointer-events", "none")
+                        .style("z-index", "1000");
+
+                    tooltip.html(`
+                        <strong>${program.metadata.patch_name || 'unnamed'}</strong><br>
+                        Score: ${formatScore(d)}
+                    `)
+                    .style("left", (event.pageX + 10) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+                })
+                .on("mouseout", function() {
+                    d3.selectAll(".heatmap-tooltip").remove();
+                });
+
+            // Add a title for the performance bar
+            perfBar.append("text")
+                .attr("text-anchor", "middle")
+                .attr("transform", `translate(${perfBarWidth + (isSubplot ? 45 : 50)}, ${heatmapHeight / 2}) rotate(-90)`)
+                .style("font-size", isSubplot ? "11px" : "14px")
+                .style("font-weight", "bold")
+                .style("fill", "#333")
+                .text("Score");
+
+
+            
+            // Add color legend
+            const legendWidth = heatmapWidth;
+            const legendHeight = isSubplot ? 10 : 15;
+            
+            const legend = svg.append("g")
+                .attr("transform", `translate(${margin.left}, ${heatmapHeight + margin.top + (isSubplot ? 15 : 40)})`);
+            
+            const legendGradientId = isSubplot ? `legend-gradient-subplot-${Math.random().toString(36).substr(2, 9)}` : "legend-gradient";
+            const legendGradient = svg.append("defs")
+                .append("linearGradient")
+                .attr("id", legendGradientId)
+                .attr("x1", "0%")
+                .attr("x2", "100%");
+            
+            const steps = 10;
+            for (let i = 0; i <= steps; i++) {
+                const t = i / steps;
+                legendGradient.append("stop")
+                    .attr("offset", `${t * 100}%`)
+                    .attr("stop-color", colorFn(t));
+            }
+            
+            legend.append("rect")
+                .attr("width", legendWidth)
+                .attr("height", legendHeight)
+                .style("fill", `url(#${legendGradientId})`)
+                .style("stroke", "#333")
+                .style("stroke-width", 1);
+            
+            legend.append("text")
+                .attr("x", 0)
+                .attr("y", legendHeight + (isSubplot ? 15 : 20))
+                .style("font-size", isSubplot ? "10px" : "12px")
+                .style("text-anchor", "start")
+                .text(heatMin.toFixed(2));
+            
+            legend.append("text")
+                .attr("x", legendWidth)
+                .attr("y", legendHeight + (isSubplot ? 15 : 20))
+                .style("text-anchor", "end")
+                .style("font-size", isSubplot ? "10px" : "12px")
+                .text(heatMax.toFixed(2));
+            
+            legend.append("text")
+                .attr("x", legendWidth / 2)
+                .attr("y", -5)
+                .style("text-anchor", "middle")
+                .style("font-size", isSubplot ? "12px" : "14px")
+                .style("font-weight", "bold")
+                .text("Cosine Sim.");
+
+            // Add performance score legend
+            if (scores.length > 0) {
+                const perfLegendHeight = heatmapHeight;
+                const perfLegendWidth = isSubplot ? 10 : 15;
+                const perfLegend = svg.append("g")
+                    .attr("transform", `translate(${margin.left + heatmapWidth + 10 + perfBarWidth + (isSubplot ? 20 : 15)}, ${margin.top})`);
+
+                const perfLegendGradientId = isSubplot ? `perf-legend-gradient-subplot-${Math.random().toString(36).substr(2, 9)}` : "perf-legend-gradient";
+                const perfLegendGradient = svg.append("defs")
+                    .append("linearGradient")
+                    .attr("id", perfLegendGradientId)
+                    .attr("x1", "0%").attr("y1", "100%") // bottom to top
+                    .attr("x2", "0%").attr("y2", "0%");
+
+                const perfSteps = 10;
+                d3.range(perfSteps + 1).forEach(i => {
+                    const t = i / perfSteps;
+                    const score = minScore + t * (maxScore - minScore);
+                    perfLegendGradient.append("stop")
+                        .attr("offset", `${t * 100}%`)
+                        .attr("stop-color", scoreColorScale(score));
+                });
+
+                perfLegend.append("rect")
+                    .attr("width", perfLegendWidth)
+                    .attr("height", perfLegendHeight)
+                    .style("fill", `url(#${perfLegendGradientId})`)
+                    .style("stroke", "#333")
+                    .style("stroke-width", 1);
+
+                perfLegend.append("text")
+                    .attr("x", perfLegendWidth + (isSubplot ? 3 : 5))
+                    .attr("y", perfLegendHeight)
+                    .style("font-size", isSubplot ? "9px" : "12px")
+                    .style("text-anchor", "start")
+                    .attr("dy", "0.35em")
+                    .style("fill", "#666")
+                    .text(minScore.toFixed(2));
+
+                perfLegend.append("text")
+                    .attr("x", perfLegendWidth + (isSubplot ? 3 : 5))
+                    .attr("y", 0)
+                    .style("font-size", isSubplot ? "9px" : "12px")
+                    .style("text-anchor", "start")
+                    .attr("dy", "0.35em")
+                    .style("fill", "#666")
+                    .text(maxScore.toFixed(2));
+            }
+
+            // Calculate font size based on cell size to prevent overlap
+            const baseFontSize = isSubplot ? 4 : 6;
+            const minFontSize = isSubplot ? 3 : 4;
+            const maxFontSize = isSubplot ? 8 : 14;
+            // Scale font size proportionally to cell size, with reasonable bounds
+            const scaledFontSize = Math.max(minFontSize, Math.min(maxFontSize, (cellSize / 8) * baseFontSize));
+            
+            // Add row labels (only for main plot)
+            if (!isSubplot) {
+                g.selectAll(".row-label")
+                    .data(orderedLabelsData)
+                    .enter().append("text")
+                    .attr("class", "row-label")
+                    .attr("x", -10)
+                    .attr("y", (d, i) => i * cellSize + cellSize / 2)
+                    .attr("dy", "0.35em")
+                    .style("text-anchor", "end")
+                    .style("font-size", `${scaledFontSize}px`)
+                    .style("fill", "#333")
+                    .text(d => `${d.gen}: ${d.name}`);
+                
+                // Add column labels with better positioning
+                g.selectAll(".col-label")
+                    .data(orderedLabelsData)
+                    .enter().append("text")
+                    .attr("class", "col-label")
+                    .attr("transform", (d, i) => `translate(${i * cellSize + cellSize / 2}, -8) rotate(-45)`)
+                    .style("text-anchor", "start")
+                    .style("font-size", `${scaledFontSize}px`)
+                    .style("fill", "#333")
+                    .text(d => `${d.gen}: ${d.name}`);
+            }
+        }
+        function updateDetailsForNode(nodeId) {
+            if (!window.treeData) return;
+            const nodeData = window.treeData.find(d => d.id === nodeId);
+            if (!nodeData) return;
+
+            // Silently update selection in the main tree view for state persistence
+            d3.selectAll('.node.selected').classed('selected', false);
+            d3.selectAll('.node').filter(d => d.data.id === nodeId).classed('selected', true);
+
+            // Update details panel on the right
+            displayNodeDetails(nodeData);
+        }
+
+        // State persistence functions
+        function saveState() {
+            if (window.isReloadingData) {
+                console.log("[DEBUG] Skipping saveState during data reload.");
+                return;
+            }
+            try {
+                const state = {
+                    leftTab: document.querySelector('.left-tab.active')?.getAttribute('data-tab'),
+                    rightTab: document.querySelector('.tab.active')?.getAttribute('data-tab'),
+                    selectedNodeId: getSelectedNodeId(),
+                    dbPath: window.currentDbPath
+                };
+                
+                // Update URL without page reload
+                const url = new URL(window.location);
+                if (state.dbPath) url.searchParams.set('db_path', state.dbPath);
+                if (state.leftTab) url.searchParams.set('left_tab', state.leftTab);
+                if (state.rightTab) url.searchParams.set('right_tab', state.rightTab);
+                if (state.selectedNodeId) url.searchParams.set('selected_node', state.selectedNodeId);
+                
+                window.history.replaceState(null, '', url);
+                console.log("[DEBUG] State saved to URL");
+            } catch (error) {
+                console.error("[DEBUG] Error saving state:", error);
+            }
+        }
+        
+        function savePreferences() {
+            try {
+                const preferences = {
+                    embeddingSortMethod: document.getElementById('embedding-sort-method')?.value,
+                    colorScale: document.getElementById('color-scale')?.value,
+                    cellSize: document.getElementById('cell-size')?.value,
+                    heatMin: document.getElementById('heat-min')?.value,
+                    heatMax: document.getElementById('heat-max')?.value,
+                    panelWidth: document.getElementById('tree-panel')?.style.width
+                };
+                
+                localStorage.setItem('shinka_preferences', JSON.stringify(preferences));
+                console.log("[DEBUG] Preferences saved to localStorage");
+            } catch (error) {
+                console.error("[DEBUG] Error saving preferences:", error);
+            }
+        }
+        
+        function restorePreferences() {
+            try {
+                const saved = localStorage.getItem('shinka_preferences');
+                if (!saved) return;
+                
+                const preferences = JSON.parse(saved);
+                
+                // Restore embedding controls
+                if (preferences.embeddingSortMethod) {
+                    const select = document.getElementById('embedding-sort-method');
+                    if (select) select.value = preferences.embeddingSortMethod;
+                }
+                
+                if (preferences.colorScale) {
+                    const select = document.getElementById('color-scale');
+                    if (select) select.value = preferences.colorScale;
+                }
+                
+                if (preferences.cellSize) {
+                    const slider = document.getElementById('cell-size');
+                    const display = document.getElementById('cell-size-value');
+                    if (slider) {
+                        slider.value = preferences.cellSize;
+                        if (display) display.textContent = preferences.cellSize + 'px';
+                    }
+                }
+                
+                if (preferences.heatMin) {
+                    const input = document.getElementById('heat-min');
+                    if (input) input.value = preferences.heatMin;
+                }
+                
+                if (preferences.heatMax) {
+                    const input = document.getElementById('heat-max');
+                    if (input) input.value = preferences.heatMax;
+                }
+                
+                // Restore panel width
+                if (preferences.panelWidth) {
+                    const panel = document.getElementById('tree-panel');
+                    if (panel) panel.style.width = preferences.panelWidth;
+                }
+                
+                console.log("[DEBUG] Preferences restored from localStorage");
+            } catch (error) {
+                console.error("[DEBUG] Error restoring preferences:", error);
+            }
+        }
+        
+        function restoreFromURL() {
+            try {
+                const urlParams = new URLSearchParams(window.location.search);
+                
+                // Restore database selection
+                const dbPath = urlParams.get('db_path');
+                if (dbPath) {
+                    // NOTE: Database loading is handled by findDatabases() which also
+                    // checks URL params. We only set up the select elements here to
+                    // ensure the UI reflects the loaded database.
+                    // DO NOT call loadDatabase() here - it would cause duplicate loading.
+                    const pathParts = dbPath.split('/');
+                    if (pathParts.length >= 3) {
+                        const task = pathParts[pathParts.length - 3];
+                        const taskSelect = document.getElementById('task-select');
+                        const resultSelect = document.getElementById('result-select');
+                        
+                        if (taskSelect && resultSelect) {
+                            taskSelect.value = task;
+                            populateResultSelect(task);
+                            resultSelect.value = dbPath;
+                            // loadDatabase() removed - already called by findDatabases()
+                        }
+                    }
+                }
+                
+                // Restore left tab
+                const leftTab = urlParams.get('left_tab');
+                if (leftTab) {
+                    const tabElement = document.querySelector(`.left-tab[data-tab="${leftTab}"]`);
+                    if (tabElement) {
+                        setTimeout(() => tabElement.click(), 100);
+                    }
+                }
+                
+                // Restore selected node (after data loads) and then restore right tab
+                const selectedNodeId = urlParams.get('selected_node');
+                const rightTab = urlParams.get('right_tab');
+                
+                if (selectedNodeId) {
+                    // Wait for data to load before selecting node
+                    const checkDataAndSelect = () => {
+                        if (window.treeData) {
+                            setTimeout(() => {
+                                selectNodeById(selectedNodeId, true, false); // Don't force right tab switch
+                                // Restore right tab AFTER node selection
+                                if (rightTab) {
+                                    const tabElement = document.querySelector(`.tab[data-tab="${rightTab}"]`);
+                                    if (tabElement) {
+                                        setTimeout(() => tabElement.click(), 100);
+                                    }
+                                }
+                            }, 500);
+                        } else {
+                            setTimeout(checkDataAndSelect, 100);
+                        }
+                    };
+                    checkDataAndSelect();
+                } else {
+                    // No node selected, just restore right tab
+                    if (rightTab) {
+                        const tabElement = document.querySelector(`.tab[data-tab="${rightTab}"]`);
+                        if (tabElement) {
+                            setTimeout(() => tabElement.click(), 100);
+                        }
+                    }
+                }
+                
+                console.log("[DEBUG] State restored from URL");
+            } catch (error) {
+                console.error("[DEBUG] Error restoring from URL:", error);
+            }
+        }
+        
+        function updateURL() {
+            saveState();
+        }
+        
+        function getSelectedNodeId() {
+            try {
+                const selectedNodeElement = d3.select('.node.selected');
+                if (selectedNodeElement.empty()) {
+                    return null;
+                }
+                
+                const selectedNode = selectedNodeElement.datum();
+                return selectedNode ? selectedNode.id : null;
+            } catch (error) {
+                console.warn("[DEBUG] Error getting selected node ID:", error);
+                return null;
+            }
+        }
+
+        function mergeFullProgramData(existingData, fullData) {
+            const baseData = Array.isArray(existingData) ? existingData : [];
+            const fullPrograms = Array.isArray(fullData) ? fullData : [];
+            const fullDataMap = new Map(fullPrograms.map(program => [program.id, program]));
+
+            const merged = baseData.map(program => {
+                const fullProgram = fullDataMap.get(program.id);
+                return fullProgram ? { ...program, ...fullProgram } : program;
+            });
+
+            fullPrograms.forEach(program => {
+                if (!baseData.some(existing => existing.id === program.id)) {
+                    merged.push(program);
+                }
+            });
+
+            return merged;
+        }
+
+        function refreshEmbeddingsHeatmap() {
+            if (!window.treeData || window.treeData.length === 0) {
+                return;
+            }
+
+            if (datasetHasCompleteEmbeddings(window.treeData)) {
+                createEmbeddingsHeatmap(window.treeData);
+                return;
+            }
+
+            ensureEmbeddingsHeatmap();
+        }
+
+        // Helper function to ensure embeddings heatmap is loaded
+        function ensureEmbeddingsHeatmap() {
+            const embeddingsView = document.getElementById('embeddings-view');
+            if (!embeddingsView || !embeddingsView.classList.contains('active')) {
+                return;
+            }
+            
+            const heatmapContainer = document.getElementById('embeddings-heatmap');
+            if (!heatmapContainer) {
+                return;
+            }
+            
+            const existingHeatmap = heatmapContainer.querySelector('svg');
+            if (existingHeatmap && datasetHasCompleteEmbeddings(window.treeData)) {
+                console.log("[DEBUG] Embeddings heatmap already exists");
+                return;
+            }
+            
+            // If we have data but no heatmap, create it
+            if (window.treeData && window.treeData.length > 0) {
+                if (datasetHasCompleteEmbeddings(window.treeData)) {
+                    console.log("[DEBUG] Creating embeddings heatmap with existing data");
+                    createEmbeddingsHeatmap(window.treeData);
+                } else if (window.currentDbPath) {
+                    window.fullProgramDataByDb = window.fullProgramDataByDb || {};
+
+                    if (window.fullProgramDataByDb[window.currentDbPath]) {
+                        window.treeData = mergeFullProgramData(
+                            window.treeData,
+                            window.fullProgramDataByDb[window.currentDbPath]
+                        );
+                        window.rawDbData = mergeFullProgramData(
+                            window.rawDbData,
+                            window.fullProgramDataByDb[window.currentDbPath]
+                        );
+                        createEmbeddingsHeatmap(window.treeData);
+                        return;
+                    }
+
+                    if (window.loadingFullEmbeddings) {
+                        heatmapContainer.innerHTML = '<div style="text-align: center; color: #666; margin-top: 50px;">Loading embedding data...</div>';
+                        return;
+                    }
+
+                    console.log("[DEBUG] Fetching full data with embeddings for heatmap");
+                    heatmapContainer.innerHTML = '<div style="text-align: center; color: #666; margin-top: 50px;">Loading embedding data...</div>';
+                    window.loadingFullEmbeddings = true;
+                    
+                    fetch(`/get_programs?db_path=${encodeURIComponent(window.currentDbPath)}`)
+                        .then(r => {
+                            if (!r.ok) throw new Error('Failed to load full program data');
+                            return r.json();
+                        })
+                        .then(fullData => {
+                            window.fullProgramDataByDb[window.currentDbPath] = fullData;
+                            window.treeData = mergeFullProgramData(window.treeData, fullData);
+                            window.rawDbData = mergeFullProgramData(window.rawDbData, fullData);
+                            window.loadingFullEmbeddings = false;
+                            console.log("[DEBUG] Embeddings loaded, creating heatmap");
+                            createEmbeddingsHeatmap(window.treeData);
+                        })
+                        .catch(err => {
+                            console.error("[DEBUG] Failed to load embeddings:", err);
+                            window.loadingFullEmbeddings = false;
+                            heatmapContainer.innerHTML = '<div style="text-align: center; color: #dc3545; margin-top: 50px;">Failed to load embedding data.</div>';
+                        });
+                }
+            } else {
+                // Show loading message
+                heatmapContainer.innerHTML = '<div style="text-align: center; color: #666; margin-top: 50px;">Waiting for data to load...</div>';
+            }
+        }
+
+        function createIslandProgressionCurves(container, programs, islands, yMinOverride = null, yMaxOverride = null) {
+            console.log("[DEBUG] Creating island progression curves for", islands.length, "islands");
+            
+            // Clean up any existing tooltips
+            d3.selectAll(".island-curve-tooltip").remove();
+            
+            const containerWidth = container.node().getBoundingClientRect().width;
+            const containerHeight = container.node().getBoundingClientRect().height;
+            
+            // Create SVG for curves
+            const curvesSvg = container.append("svg")
+                .attr("width", containerWidth)
+                .attr("height", containerHeight)
+                .style("background", "white");
+
+            // Create tooltip
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "island-curve-tooltip")
+                .style("position", "absolute")
+                .style("visibility", "hidden")
+                .style("background", "rgba(0, 0, 0, 0.8)")
+                .style("color", "white")
+                .style("padding", "8px")
+                .style("border-radius", "4px")
+                .style("font-size", "12px")
+                .style("pointer-events", "none")
+                .style("z-index", "1000");
+
+            const margin = { top: 45, right: 20, bottom: 30, left: 50 };
+            const plotWidth = containerWidth - margin.left - margin.right;
+            const plotHeight = containerHeight - margin.top - margin.bottom;
+
+            const g = curvesSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Add title
+            curvesSvg.append("text")
+                .attr("x", containerWidth / 2)
+                .attr("y", 35)
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("font-weight", "bold")
+                .style("fill", "#333")
+                .text("Performance Progression by Island");
+
+            // Group programs by island and generation
+            const islandData = {};
+            islands.forEach(islandId => {
+                islandData[islandId] = {};
+            });
+
+            programs.forEach(program => {
+                const islandId = program.island_idx;
+                const generation = program.generation || 0;
+                const score = program.combined_score;
+                
+                if (islandId != null && score != null && !isNaN(score)) {
+                    if (!islandData[islandId][generation]) {
+                        islandData[islandId][generation] = [];
+                    }
+                    islandData[islandId][generation].push({
+                        score: score,
+                        program: program  // Keep reference to full program data
+                    });
+                }
+            });
+
+            // Find all unique generations across all islands
+            const allUniqueGenerations = new Set();
+            programs.forEach(program => {
+                const generation = program.generation || 0;
+                allUniqueGenerations.add(generation);
+            });
+            const sortedGenerations = Array.from(allUniqueGenerations).sort((a,b) => a-b);
+
+            // Calculate cumulative maximum score per generation for each island
+            const islandCurves = {};
+            const allScores = [];
+            
+            islands.forEach(islandId => {
+                islandCurves[islandId] = [];
+                let cumulativeMaxScore = -Infinity;
+                let cumulativeMaxProgram = null;
+                
+                sortedGenerations.forEach(gen => {
+                    const programData = islandData[islandId][gen];
+                    let generationBestData = null;
+                    let isNewMax = false;
+                    
+                    // Find the best program in this generation
+                    if (programData && programData.length > 0) {
+                        generationBestData = programData.reduce((best, current) => 
+                            current.score > best.score ? current : best
+                        );
+                        
+                        // Check if this generation's best beats the cumulative max
+                        if (generationBestData.score > cumulativeMaxScore) {
+                            cumulativeMaxScore = generationBestData.score;
+                            cumulativeMaxProgram = generationBestData.program;
+                            isNewMax = true;
+                        }
+                    }
+                    
+                    // Always add a point for this generation using cumulative max
+                    if (cumulativeMaxScore > -Infinity) {
+                        islandCurves[islandId].push({ 
+                            generation: gen, 
+                            bestScore: cumulativeMaxScore,
+                            bestProgram: cumulativeMaxProgram,
+                            isCarryForward: !isNewMax && islandCurves[islandId].length > 0,
+                            isNewMax: isNewMax
+                        });
+                        allScores.push(cumulativeMaxScore);
+                    }
+                });
+            });
+
+            if (allScores.length === 0) {
+                g.append("text")
+                    .attr("x", plotWidth / 2)
+                    .attr("y", plotHeight / 2)
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "14px")
+                    .style("fill", "#666")
+                    .text("No progression data available");
+                return;
+            }
+
+            const xDomain = d3.extent(sortedGenerations);
+            let yDomain = d3.extent(allScores);
+            
+            // Add some padding to y domain
+            const yPadding = (yDomain[1] - yDomain[0]) * 0.1;
+            yDomain[0] -= yPadding;
+            yDomain[1] += yPadding;
+            
+            // Apply user-defined overrides if provided
+            if (yMinOverride !== null && !isNaN(yMinOverride)) {
+                yDomain[0] = yMinOverride;
+            }
+            if (yMaxOverride !== null && !isNaN(yMaxOverride)) {
+                yDomain[1] = yMaxOverride;
+            }
+
+            const xScale = d3.scaleLinear()
+                .domain(xDomain)
+                .range([0, plotWidth]);
+
+            const yScale = d3.scaleLinear()
+                .domain(yDomain)
+                .range([plotHeight, 0]);
+
+            // Create line generator
+            const line = d3.line()
+                .x(d => xScale(d.generation))
+                .y(d => yScale(d.bestScore))
+                .curve(d3.curveMonotoneX);
+
+            // Use the same color scheme as the main tree plot
+            const islandColors = [
+                "#1f77b4", // blue
+                "#2ca02c", // green  
+                "#9467bd", // purple
+                "#8c564b", // brown
+                "#e377c2", // pink
+                "#7f7f7f", // gray
+                "#bcbd22", // olive
+                "#17becf", // cyan
+                "#aec7e8"  // light blue
+            ];
+            const color = d3.scaleOrdinal(islandColors);
+
+            // Draw axes
+            // Limit number of ticks to prevent overlap when there are many generations
+            let tickValues = sortedGenerations;
+            if (sortedGenerations.length > 15) {
+                // Show every nth generation to avoid overlap
+                const step = Math.ceil(sortedGenerations.length / 15);
+                tickValues = sortedGenerations.filter((_, i) => i % step === 0);
+                // Always include the last generation
+                if (tickValues[tickValues.length - 1] !== sortedGenerations[sortedGenerations.length - 1]) {
+                    tickValues.push(sortedGenerations[sortedGenerations.length - 1]);
+                }
+            }
+            
+            const xAxis = d3.axisBottom(xScale)
+                .tickValues(tickValues)
+                .tickFormat(d3.format("d"));
+            const yAxis = d3.axisLeft(yScale)
+                .ticks(4)
+                .tickFormat(d3.format(".2f"));
+
+            g.append("g")
+                .attr("class", "x-axis")
+                .attr("transform", `translate(0,${plotHeight})`)
+                .call(xAxis)
+                .append("text")
+                .attr("x", plotWidth / 2)
+                .attr("y", 25)
+                .attr("text-anchor", "middle")
+                .style("fill", "black")
+                .style("font-size", "12px")
+                .text("Generation");
+
+            g.append("g")
+                .attr("class", "y-axis")
+                .call(yAxis)
+                .append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("y", -35)
+                .attr("x", -plotHeight / 2)
+                .attr("text-anchor", "middle")
+                .style("fill", "black")
+                .style("font-size", "12px")
+                .text("Best Score");
+
+            // Draw curves and points for each island
+            islands.forEach((islandId, index) => {
+                const curveData = islandCurves[islandId];
+                if (curveData.length === 0) return;
+
+                const islandColor = color(islandId);
+
+                // Draw the max progression line
+                g.append("path")
+                    .datum(curveData)
+                    .attr("fill", "none")
+                    .attr("stroke", islandColor)
+                    .attr("stroke-width", 3)
+                    .attr("stroke-opacity", 1)
+                    .attr("d", line);
+            });
+
+            // Add legend (positioned at bottom-right) with collapsible arrow
+            const legend = g.append("g")
+                .attr("class", "curves-legend")
+                .attr("transform", `translate(${plotWidth - 140}, ${plotHeight - islands.length * 22 - 50})`);
+
+            // Add legend header with arrow
+            const legendHeader = legend.append("g")
+                .attr("transform", "translate(0, 0)")
+                .style("cursor", "pointer");
+
+            // Add clickable background for better interaction
+            legendHeader.append("rect")
+                .attr("x", -2)
+                .attr("y", -8)
+                .attr("width", 80)
+                .attr("height", 16)
+                .attr("fill", "transparent");
+
+            // Add arrow indicator (collapsible)
+            const arrow = legendHeader.append("text")
+                .attr("class", "legend-arrow")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("dy", "0.35em")
+                .style("font-size", "10px")
+                .style("fill", "#666")
+                .style("transition", "transform 0.2s")
+                .text("▼");
+
+            // Add legend title
+            legendHeader.append("text")
+                .attr("x", 12)
+                .attr("y", 0)
+                .attr("dy", "0.35em")
+                .style("font-size", "11px")
+                .style("font-weight", "bold")
+                .style("fill", "#333")
+                .text("Islands");
+
+            // Create a group for legend items
+            const legendItems = legend.append("g")
+                .attr("class", "legend-items");
+
+            islands.forEach((islandId, index) => {
+                const legendItem = legendItems.append("g")
+                    .attr("transform", `translate(0, ${(index + 1) * 22 + 8})`);
+
+                // Color square instead of line/dots
+                legendItem.append("rect")
+                    .attr("x", 0)
+                    .attr("y", -6)
+                    .attr("width", 12)
+                    .attr("height", 12)
+                    .attr("fill", color(islandId))
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 1);
+
+                legendItem.append("text")
+                    .attr("x", 18)
+                    .attr("y", 0)
+                    .attr("dy", "0.35em")
+                    .style("font-size", "11px")
+                    .style("fill", "#333")
+                    .text(`Island ${islandId}`);
+            });
+
+            // Add toggle functionality - start collapsed by default
+            let legendExpanded = false;
+            legendItems.style("display", "none");
+            arrow.text("▶");
+            
+            legendHeader.on("click", function() {
+                legendExpanded = !legendExpanded;
+                if (legendExpanded) {
+                    legendItems.style("display", null);
+                    arrow.text("▼");
+                } else {
+                    legendItems.style("display", "none");
+                    arrow.text("▶");
+                }
+            });
+
+            // Remove legend explanation about lines/dots since we simplified the legend
+        }
+
+        function createIslandPopulationCurves(container, programs, islands) {
+            console.log("[DEBUG] Creating island population curves for", islands.length, "islands");
+            
+            // Clean up any existing tooltips
+            d3.selectAll(".island-pop-tooltip").remove();
+            
+            const containerWidth = container.node().getBoundingClientRect().width;
+            const containerHeight = container.node().getBoundingClientRect().height;
+            
+            // Create SVG for curves
+            const curvesSvg = container.append("svg")
+                .attr("width", containerWidth)
+                .attr("height", containerHeight)
+                .style("background", "white");
+
+            // Create tooltip
+            const tooltip = d3.select("body").append("div")
+                .attr("class", "island-pop-tooltip")
+                .style("position", "absolute")
+                .style("visibility", "hidden")
+                .style("background", "rgba(0, 0, 0, 0.8)")
+                .style("color", "white")
+                .style("padding", "8px")
+                .style("border-radius", "4px")
+                .style("font-size", "12px")
+                .style("pointer-events", "none")
+                .style("z-index", "1000");
+
+            const margin = { top: 45, right: 20, bottom: 30, left: 50 };
+            const plotWidth = containerWidth - margin.left - margin.right;
+            const plotHeight = containerHeight - margin.top - margin.bottom;
+
+            const g = curvesSvg.append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Add title
+            curvesSvg.append("text")
+                .attr("x", containerWidth / 2)
+                .attr("y", 35)
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("font-weight", "bold")
+                .style("fill", "#333")
+                .text("Population Size by Island");
+
+            // Group programs by island and generation
+            const islandData = {};
+            islands.forEach(islandId => {
+                islandData[islandId] = {};
+            });
+
+            programs.forEach(program => {
+                const islandId = program.island_idx;
+                const generation = program.generation || 0;
+                
+                if (islandId != null) {
+                    if (!islandData[islandId][generation]) {
+                        islandData[islandId][generation] = 0;
+                    }
+                    islandData[islandId][generation]++;
+                }
+            });
+
+            // Find all unique generations across all islands
+            const allUniqueGenerations = new Set();
+            programs.forEach(program => {
+                const generation = program.generation || 0;
+                allUniqueGenerations.add(generation);
+            });
+            const sortedGenerations = Array.from(allUniqueGenerations).sort((a,b) => a-b);
+
+            // Calculate cumulative population per generation for each island
+            const islandCurves = {};
+            const allPopulations = [];
+            
+            islands.forEach(islandId => {
+                islandCurves[islandId] = [];
+                let cumulativeCount = 0;
+                
+                sortedGenerations.forEach(gen => {
+                    const countAtGen = islandData[islandId][gen] || 0;
+                    cumulativeCount += countAtGen;
+                    
+                    islandCurves[islandId].push({ 
+                        generation: gen, 
+                        population: cumulativeCount,
+                        addedThisGen: countAtGen
+                    });
+                    allPopulations.push(cumulativeCount);
+                });
+            });
+
+            if (allPopulations.length === 0) {
+                g.append("text")
+                    .attr("x", plotWidth / 2)
+                    .attr("y", plotHeight / 2)
+                    .attr("text-anchor", "middle")
+                    .text("No population data available");
+                return;
+            }
+
+            // Calculate total population for legend
+            const totalPopulation = programs.length;
+
+            // Create scales
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(sortedGenerations))
+                .range([0, plotWidth]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, d3.max(allPopulations) * 1.1])
+                .range([plotHeight, 0]);
+
+            // Color scale for islands - same as performance chart (no orange, which is used for best path)
+            const islandColors = [
+                "#1f77b4", // blue
+                "#2ca02c", // green  
+                "#9467bd", // purple
+                "#8c564b", // brown
+                "#e377c2", // pink
+                "#7f7f7f", // gray
+                "#bcbd22", // olive
+                "#17becf", // cyan
+                "#aec7e8"  // light blue
+            ];
+            const color = d3.scaleOrdinal(islandColors);
+
+            // Add X axis
+            g.append("g")
+                .attr("transform", `translate(0,${plotHeight})`)
+                .call(d3.axisBottom(xScale).ticks(10).tickFormat(d3.format("d")))
+                .append("text")
+                .attr("fill", "black")
+                .attr("x", plotWidth / 2)
+                .attr("y", 25)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .text("Generation");
+
+            // Add Y axis
+            g.append("g")
+                .call(d3.axisLeft(yScale).ticks(8))
+                .append("text")
+                .attr("fill", "black")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -plotHeight / 2)
+                .attr("y", -35)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .text("Cumulative Programs");
+
+            // Create line generator
+            const line = d3.line()
+                .x(d => xScale(d.generation))
+                .y(d => yScale(d.population))
+                .curve(d3.curveStepAfter);
+
+            // Draw lines for each island
+            islands.forEach(islandId => {
+                const curveData = islandCurves[islandId];
+                if (curveData.length === 0) return;
+
+                // Draw the line
+                g.append("path")
+                    .datum(curveData)
+                    .attr("fill", "none")
+                    .attr("stroke", color(islandId))
+                    .attr("stroke-width", 2)
+                    .attr("d", line);
+            });
+
+            // Add legend (positioned at bottom-right) with collapsible arrow - same style as performance chart
+            const legend = g.append("g")
+                .attr("class", "pop-curves-legend")
+                .attr("transform", `translate(${plotWidth - 140}, ${plotHeight - islands.length * 22 - 50})`);
+
+            // Add legend header with arrow
+            const legendHeader = legend.append("g")
+                .attr("transform", "translate(0, 0)")
+                .style("cursor", "pointer");
+
+            // Add clickable background for better interaction
+            legendHeader.append("rect")
+                .attr("x", -2)
+                .attr("y", -8)
+                .attr("width", 80)
+                .attr("height", 16)
+                .attr("fill", "transparent");
+
+            // Add arrow indicator (collapsible)
+            const arrow = legendHeader.append("text")
+                .attr("class", "legend-arrow")
+                .attr("x", 0)
+                .attr("y", 0)
+                .attr("dy", "0.35em")
+                .style("font-size", "10px")
+                .style("fill", "#666")
+                .style("transition", "transform 0.2s")
+                .text("▼");
+
+            // Add legend title
+            legendHeader.append("text")
+                .attr("x", 12)
+                .attr("y", 0)
+                .attr("dy", "0.35em")
+                .style("font-size", "11px")
+                .style("font-weight", "bold")
+                .style("fill", "#333")
+                .text("Islands");
+
+            // Create a group for legend items
+            const legendItems = legend.append("g")
+                .attr("class", "legend-items");
+
+            islands.forEach((islandId, index) => {
+                const islandPop = islandCurves[islandId].length > 0 ? 
+                    islandCurves[islandId][islandCurves[islandId].length - 1].population : 0;
+                
+                const legendItem = legendItems.append("g")
+                    .attr("transform", `translate(0, ${(index + 1) * 22 + 8})`);
+
+                // Color square instead of line/dots
+                legendItem.append("rect")
+                    .attr("x", 0)
+                    .attr("y", -6)
+                    .attr("width", 12)
+                    .attr("height", 12)
+                    .attr("fill", color(islandId))
+                    .attr("stroke", "white")
+                    .attr("stroke-width", 1);
+
+                legendItem.append("text")
+                    .attr("x", 18)
+                    .attr("y", 0)
+                    .attr("dy", "0.35em")
+                    .style("font-size", "11px")
+                    .style("fill", "#333")
+                    .text(`Island ${islandId}: ${islandPop}`);
+            });
+
+            // Add toggle functionality - start collapsed by default
+            let legendExpanded = false;
+            legendItems.style("display", "none");
+            arrow.text("▶");
+            
+            legendHeader.on("click", function() {
+                legendExpanded = !legendExpanded;
+                if (legendExpanded) {
+                    legendItems.style("display", null);
+                    arrow.text("▼");
+                } else {
+                    legendItems.style("display", "none");
+                    arrow.text("▶");
+                }
+            });
+        }
+
+        function createIslandsVisualization(data) {
+            console.log("[DEBUG] Creating islands visualization");
+            
+            // Check if the islands tab is visible
+            const islandsView = document.getElementById('islands-view');
+            if (!islandsView || !islandsView.classList.contains('active')) {
+                console.log("[DEBUG] Islands view not active, skipping visualization creation");
+                return;
+            }
+
+            const container = d3.select("#islands-container");
+            container.html(""); // Clear previous content
+
+            if (!data || data.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No data to visualize.");
+                return;
+            }
+
+            const programs = data.filter(d => 
+                (d.island_idx !== null && d.island_idx !== undefined && d.correct && d.combined_score != null) ||
+                (d.metadata && d.metadata.patch_type === 'init')
+            );
+
+            if (programs.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No correct programs with island assignments and scores found.");
+                return;
+            }
+
+            // Create containers for charts, plot and summary
+            const chartsContainer = container.append("div")
+                .style("height", "40%")
+                .style("display", "flex")
+                .style("gap", "5px")
+                .style("margin-bottom", "5px");
+
+            // Left chart: Performance Progression
+            const performanceContainer = chartsContainer.append("div")
+                .style("flex", "1")
+                .style("position", "relative")
+                .style("background", "white")
+                .style("border-radius", "8px 8px 0 0")
+                .style("border-bottom", "1px solid #dee2e6");
+
+            // Right chart: Population Size
+            const populationContainer = chartsContainer.append("div")
+                .style("flex", "1")
+                .style("position", "relative")
+                .style("background", "white")
+                .style("border-radius", "8px 8px 0 0")
+                .style("border-bottom", "1px solid #dee2e6");
+
+            const plotContainer = container.append("div")
+                .style("height", "40%")
+                .style("position", "relative")
+                .style("background", "white")
+                .style("margin-bottom", "5px")
+                .style("overflow-y", "auto")
+                .style("overflow-x", "hidden");
+
+            const summaryContainer = container.append("div")
+                .style("height", "18%")
+                .style("overflow-y", "auto")
+                .style("padding", "15px")
+                .style("border-top", "2px solid #dee2e6")
+                .style("background-color", "#ffffff")
+                .style("border-radius", "0 0 8px 8px")
+                .style("box-sizing", "border-box");
+            
+            // --- CHARTS FOR EACH ISLAND ---
+            const islands = [...new Set(programs.filter(p => p.island_idx != null).map(p => p.island_idx))].sort((a,b) => a-b);
+            const numIslands = islands.length;
+
+            // Get y-axis range values from controls
+            const yMinInput = document.getElementById('island-y-min');
+            const yMaxInput = document.getElementById('island-y-max');
+            const yMinValue = yMinInput && yMinInput.value !== '' ? parseFloat(yMinInput.value) : null;
+            const yMaxValue = yMaxInput && yMaxInput.value !== '' ? parseFloat(yMaxInput.value) : null;
+            
+            // Create progression curves for each island (left chart)
+            createIslandProgressionCurves(performanceContainer, programs, islands, yMinValue, yMaxValue);
+            
+            // Create population curves for each island (right chart)
+            createIslandPopulationCurves(populationContainer, programs, islands);
+
+            // --- TREE PLOT LOGIC FOR EACH ISLAND ---
+
+            const width = plotContainer.node().getBoundingClientRect().width;
+            const containerHeight = plotContainer.node().getBoundingClientRect().height;
+            
+            // Calculate required height based on number of rows
+            const islandsPerRow = 3;
+            const numRows = Math.ceil(numIslands / islandsPerRow);
+            const minHeightPerRow = 400; // Minimum height per row
+            const calculatedHeight = Math.max(containerHeight, numRows * minHeightPerRow);
+
+            const svg = plotContainer.append("svg")
+                .attr("width", width)
+                .attr("height", calculatedHeight)
+                .attr("viewBox", [0, 0, width, calculatedHeight]);
+
+            const g = svg.append("g");
+            
+            // Zoom behavior - disable wheel zoom to allow scrolling, keep drag to pan
+            const zoom = d3.zoom()
+                .on("zoom", (event) => g.attr("transform", event.transform))
+                .filter(function(event) {
+                    // Disable zoom on wheel events, allow drag and double-click
+                    return event.type !== 'wheel';
+                });
+            svg.call(zoom);
+
+            // Use the same color scheme as the main tree plot
+            const islandColors = [
+                "#1f77b4", // blue
+                "#2ca02c", // green  
+                "#9467bd", // purple
+                "#8c564b", // brown
+                "#e377c2", // pink
+                "#7f7f7f", // gray
+                "#bcbd22", // olive
+                "#17becf", // cyan
+                "#aec7e8"  // light blue
+            ];
+            const color = d3.scaleOrdinal(islandColors);
+
+            // Performance metrics
+            const scores = programs.map(p => p.combined_score).filter(s => s != null && !isNaN(s));
+            const minScore = scores.length > 0 ? Math.min(...scores) : 0;
+            const maxScore = scores.length > 0 ? Math.max(...scores) : 1;
+            const colorScale = d3.scaleSequential(d3.interpolateViridis).domain([minScore, maxScore]);
+            
+            const shapeMap = {
+                'init': d3.symbolDiamond,
+                'full': d3.symbolCircle,
+                'diff': d3.symbolSquare,
+                'cross': d3.symbolCross,
+                'fix': d3.symbolTriangle
+            };
+            const getShape = (patchType) => shapeMap[patchType] || d3.symbolCircle;
+            const symbol = d3.symbol().size(1500); // Smaller size for island trees
+
+            // Calculate island layout with max 3 islands per row
+            const margin = { top: 80, right: 20, bottom: 20, left: 20 };
+            const plotWidth = width - margin.left - margin.right;
+            
+            const rowHeight = (calculatedHeight - margin.top - margin.bottom) / numRows;
+            
+            const islandCenters = islands.map((d, i) => {
+                const row = Math.floor(i / islandsPerRow);
+                const col = i % islandsPerRow;
+                const islandsInThisRow = Math.min(islandsPerRow, numIslands - row * islandsPerRow);
+                const rowWidth = plotWidth;
+                const itemWidth = rowWidth / islandsInThisRow;
+                return {
+                    x: margin.left + (col + 0.5) * itemWidth,
+                    y: margin.top + row * rowHeight
+                };
+            });
+            
+            const plotHeight = rowHeight * numRows;
+
+            // Create a copy of programs data to avoid modifying the original
+            const programsCopy = programs.map(d => ({...d}));
+
+            // Group programs by island using the copy
+            const programsByIsland = {};
+            islands.forEach(island => {
+                programsByIsland[island] = programsCopy.filter(p => p.island_idx === island);
+            });
+
+            // Draw island backgrounds
+            g.selectAll(".island-bg")
+                .data(islands)
+                .enter().append("rect")
+                .attr("class", "island-bg")
+                .attr("x", (d, i) => {
+                    const col = i % islandsPerRow;
+                    const row = Math.floor(i / islandsPerRow);
+                    const islandsInRow = Math.min(islandsPerRow, numIslands - row * islandsPerRow);
+                    const itemWidth = plotWidth / islandsInRow;
+                    return margin.left + col * itemWidth + 10;
+                })
+                .attr("y", (d, i) => {
+                    const row = Math.floor(i / islandsPerRow);
+                    return margin.top + row * rowHeight + 10;
+                })
+                .attr("width", (d, i) => {
+                    const row = Math.floor(i / islandsPerRow);
+                    const islandsInRow = Math.min(islandsPerRow, numIslands - row * islandsPerRow);
+                    const itemWidth = plotWidth / islandsInRow;
+                    return itemWidth - 20;
+                })
+                .attr("height", rowHeight - 20)
+                .attr("fill", d => color(d))
+                .attr("fill-opacity", 0.05)
+                .attr("stroke", d => color(d))
+                .attr("stroke-width", 2)
+                .attr("stroke-opacity", 0.3)
+                .attr("rx", 12);
+
+            // Island headers
+            const headerGroup = g.selectAll(".island-header")
+                .data(islands)
+                .enter().append("g")
+                .attr("class", "island-header")
+                .attr("transform", (d, i) => `translate(${islandCenters[i].x}, ${islandCenters[i].y - 50})`);
+
+            headerGroup.append("rect")
+                .attr("x", -50)
+                .attr("y", -15)
+                .attr("width", 100)
+                .attr("height", 25)
+                .attr("fill", d => color(d))
+                .attr("fill-opacity", 0.15)
+                .attr("stroke", d => color(d))
+                .attr("stroke-width", 2)
+                .attr("rx", 6);
+
+            headerGroup.append("text")
+                .attr("text-anchor", "middle")
+                .style("font-size", "14px")
+                .style("font-weight", "bold")
+                .style("fill", d => color(d))
+                .text(d => `Island ${d}`);
+
+            // Create tree layout for each island
+            islands.forEach((islandId, islandIndex) => {
+                const islandPrograms = programsByIsland[islandId];
+                if (islandPrograms.length === 0) return;
+
+                // Create a node map for this island
+                const nodeMap = new Map(islandPrograms.map(node => [node.id, node]));
+                
+                // Create completely isolated hierarchical data for this island
+                let hierarchyData = JSON.parse(JSON.stringify(islandPrograms));
+                
+                // Clear parent_id for nodes whose parent is not in the same island
+                // This only affects the hierarchyData copy, not the original data
+                hierarchyData.forEach(node => {
+                    if (node.parent_id && !nodeMap.has(node.parent_id)) {
+                        node.parent_id = null; // Make it a root node in this island's view only
+                    }
+                });
+                
+                // Find root nodes (nodes with no parent_id)
+                const rootNodes = hierarchyData.filter(n => !n.parent_id);
+
+                // If there are multiple root nodes, create a virtual root
+                const virtualRootId = `___virtual_root_island_${islandId}___`;
+                if (rootNodes.length > 1) {
+                    // Create virtual root node that won't interfere with original data
+                    const virtualRoot = { 
+                        id: virtualRootId, 
+                        parent_id: '', 
+                        agent_name: 'VIRTUAL ROOT', 
+                        isVirtual: true, 
+                        generation: -1,
+                        island_idx: islandId,
+                        metadata: { patch_type: 'virtual', patch_name: 'Virtual Root' }
+                    };
+                    
+                    // Create a completely new hierarchy data array with virtual root connections
+                    const newHierarchyData = [];
+                    
+                    // Add the virtual root first
+                    newHierarchyData.push(virtualRoot);
+                    
+                    // Add all nodes, updating parent_id only for root nodes
+                    hierarchyData.forEach(node => {
+                        const isRootNode = rootNodes.some(rn => rn.id === node.id);
+                        if (isRootNode) {
+                            // Create a new object with updated parent_id
+                            newHierarchyData.push({
+                                ...node,
+                                parent_id: virtualRootId
+                            });
+                        } else {
+                            // Keep original node unchanged
+                            newHierarchyData.push(node);
+                        }
+                    });
+                    
+                    // Replace hierarchyData with the new structure
+                    hierarchyData = newHierarchyData;
+                }
+
+                // Create tree hierarchy
+                const root = d3.stratify()
+                    .id(d => d.id)
+                    .parentId(d => d.parent_id)
+                    (hierarchyData);
+
+                root.sort((a, b) => a.data.generation - b.data.generation || a.data.timestamp - b.data.timestamp);
+
+                // Tree layout settings for this island
+                const nodeWidth = 60;
+                const nodeHeight = 80;
+                const treeLayout = d3.tree().nodeSize([nodeWidth, nodeHeight]);
+                treeLayout(root);
+
+                // Calculate bounds for this tree
+                let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+                root.each(d => {
+                    if (d.x < minX) minX = d.x;
+                    if (d.x > maxX) maxX = d.x;
+                    if (d.y < minY) minY = d.y;
+                    if (d.y > maxY) maxY = d.y;
+                });
+
+                // Calculate equal padding on all sides
+                const padding = 50; // Equal padding on all sides
+                const headerStatsHeight = 60; // Space reserved for header and stats at top
+                
+                // Calculate actual island width for this row
+                const row = Math.floor(islandIndex / islandsPerRow);
+                const col = islandIndex % islandsPerRow;
+                const islandsInRow = Math.min(islandsPerRow, numIslands - row * islandsPerRow);
+                const actualIslandWidth = plotWidth / islandsInRow;
+                
+                const availableWidth = actualIslandWidth - (2 * padding); // Equal left/right padding
+                const availableHeight = rowHeight - headerStatsHeight - (2 * padding); // Equal top/bottom padding after header
+                
+                const treeWidth = maxX - minX || nodeWidth;
+                const treeHeight = maxY - minY || nodeHeight;
+                
+                const scaleX = availableWidth / Math.max(treeWidth, 1);
+                const scaleY = availableHeight / Math.max(treeHeight, 1);
+                const scale = Math.min(scaleX, scaleY, 1); // Don't scale up
+
+                // Calculate island boundaries for tree area (excluding header/stats)
+                const islandLeft = margin.left + col * actualIslandWidth + 10 + padding;
+                const islandTop = margin.top + row * rowHeight + 10 + 30; // Start trees much higher, just below headers
+                const islandTreeWidth = availableWidth;
+                const islandTreeHeight = availableHeight;
+                
+                // Center the tree within the available tree area
+                const treeCenterX = (minX + maxX) / 2;
+                const treeCenterY = (minY + maxY) / 2;
+                
+                const islandTreeCenterX = islandLeft + islandTreeWidth / 2;
+                const islandTreeCenterY = islandTop + islandTreeHeight / 2;
+                
+                // Position the tree so its center aligns with the island tree area center
+                const offsetX = islandTreeCenterX - treeCenterX * scale;
+                const offsetY = islandTreeCenterY - treeCenterY * scale;
+
+                // Create group for this island's tree
+                const islandGroup = g.append("g")
+                    .attr("class", `island-tree-${islandId}`)
+                    .attr("transform", `translate(${offsetX}, ${offsetY}) scale(${scale})`);
+
+                // Find best node for this island
+                const correctNodes = hierarchyData.filter(d => d.correct && d.combined_score !== null);
+                let bestNodeInIsland = null;
+                if (correctNodes.length > 0) {
+                    bestNodeInIsland = correctNodes.reduce((best, current) => 
+                        (current.combined_score > best.combined_score) ? current : best);
+                }
+
+                // Get ancestor path for best node
+                const ancestorIds = new Set();
+                if (bestNodeInIsland) {
+                    let bestNodeD3 = null;
+                    root.each(d => {
+                        if (d.data.id === bestNodeInIsland.id) {
+                            bestNodeD3 = d;
+                        }
+                    });
+                    if (bestNodeD3) {
+                        bestNodeD3.ancestors().forEach(ancestor => {
+                            ancestorIds.add(ancestor.data.id);
+                        });
+                    }
+                }
+
+                // Draw links
+                const visibleLinks = root.links().filter(d => !d.source.data.isVirtual);
+                
+                islandGroup.append("g")
+                    .attr("class", "links")
+                    .selectAll("path")
+                    .data(visibleLinks)
+                    .enter().append("path")
+                    .attr("class", "link")
+                    .attr("fill", "none")
+                    .style("stroke", d => {
+                        const onAncestorPath = ancestorIds.has(d.source.data.id) && ancestorIds.has(d.target.data.id);
+                        if (onAncestorPath) {
+                            // Double-check: ensure both nodes are correct before orange highlighting
+                            const sourceCorrect = d.source.data.correct === true || d.source.data.correct === 'true' || d.source.data.correct === 1;
+                            const targetCorrect = d.target.data.correct === true || d.target.data.correct === 'true' || d.target.data.correct === 1;
+                            if (sourceCorrect && targetCorrect) {
+                                return "#ff8c00";
+                            } else {
+                                console.log("[DEBUG] Blocking island view orange highlight for incorrect link:", d.source.data.id.substring(0, 8), "->", d.target.data.id.substring(0, 8));
+                                return "#999";
+                            }
+                        }
+                        return "#999";
+                    })
+                    .style("stroke-width", d => (ancestorIds.has(d.source.data.id) && ancestorIds.has(d.target.data.id)) ? 3 : 1)
+                    .style("stroke-opacity", d => (ancestorIds.has(d.source.data.id) && ancestorIds.has(d.target.data.id)) ? 1 : 0.6)
+                    .attr("d", d3.linkVertical()
+                        .x(d => d.x)
+                        .y(d => d.y)
+                    );
+
+                // Draw nodes
+                const visibleNodes = root.descendants().filter(d => !d.data.isVirtual);
+                
+                const node = islandGroup.append("g")
+                    .attr("class", "nodes")
+                    .selectAll("g")
+                    .data(visibleNodes)
+                    .enter().append("g")
+                    .attr("class", d => d.data.id === window.bestNodeId ? "node best-node" : "node")
+                    .attr("transform", d => `translate(${d.x},${d.y})`)
+                    .style("cursor", "pointer")
+                    .on('click', (event, d) => {
+                        // Update selection highlighting
+                        d3.selectAll('.node').classed('selected', false);
+                        d3.select(event.currentTarget).classed('selected', true);
+                        
+                        const selectedNodeId = d.data.id;
+                        const selectedAncestors = new Set(d.ancestors().map(n => n.data.id));
+
+                        // Update link styles for this island
+                        islandGroup.selectAll('.link')
+                            .style("stroke", l => {
+                                const onBestPath = ancestorIds.has(l.source.data.id) && ancestorIds.has(l.target.data.id);
+                                if (onBestPath) return "#ff8c00";
+                                const onSelectedPath = selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id);
+                                if (onSelectedPath) return "gold";
+                                return "#999";
+                            })
+                            .style("stroke-width", l => (selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id)) || (ancestorIds.has(l.source.data.id) && ancestorIds.has(l.target.data.id)) ? 3 : 1)
+                            .style("stroke-opacity", l => (selectedAncestors.has(l.source.data.id) && selectedAncestors.has(l.target.data.id)) || (ancestorIds.has(l.source.data.id) && ancestorIds.has(l.target.data.id)) ? 1 : 0.6);
+                        
+                        // Update node styles
+                        node.selectAll('path')
+                            .style("stroke", n => ancestorIds.has(n.data.id) ? '#ff8c00' : "#000")
+                            .style("stroke-width", n => ancestorIds.has(n.data.id) ? 3 : 2)
+                            .style("filter", n => n.data.id === window.bestNodeId ? "drop-shadow(0px 2px 4px rgba(255, 140, 0, 0.3))" : "drop-shadow(0px 1px 2px rgba(0,0,0,0.2))");
+                        
+                        node.filter('.selected')
+                            .select('path')
+                            .style("stroke", "#e58e26").style("stroke-width", 3)
+                            .style("filter", "drop-shadow(0px 2px 4px rgba(229, 130, 38, 0.4))");
+
+                        // Always use the original node data from window.treeData, not the modified hierarchy data
+                        const originalNodeData = window.treeData.find(node => node.id === d.data.id);
+                        if (originalNodeData) {
+                            displayNodeDetails(originalNodeData);
+                        } else {
+                            console.error("[DEBUG] Could not find original node data for:", d.data.id);
+                            displayNodeDetails(d.data);
+                        }
+                        document.querySelector('.tab[data-tab="agent-code"]').click();
+                    });
+
+                // Add hover tooltips
+                node.on('mouseover', (event, d) => {
+                    const tooltip = d3.select("body").append("div")
+                        .attr("class", "node-tooltip")
+                        .style("opacity", 0)
+                        .style("background", "rgba(0,0,0,0.8)")
+                        .style("color", "white")
+                        .style("padding", "8px 12px")
+                        .style("border-radius", "6px")
+                        .style("font-size", "12px")
+                        .style("position", "absolute")
+                        .style("pointer-events", "none")
+                        .style("z-index", "1000");
+
+                    tooltip.transition().duration(200).style("opacity", 1);
+                    
+                    const patchName = d.data.metadata.patch_name || 'unnamed';
+                    const score = formatScore(d.data.combined_score);
+                    const patchType = d.data.metadata.patch_type || 'N/A';
+                    const islandIdx = d.data.island_idx;
+                    
+                    tooltip.html(`
+                        <strong style="color: #58a6ff; font-size: 13px;">${patchName}</strong><br>
+                        <strong>Score:</strong> ${score}<br>
+                        <strong>Type:</strong> ${patchType}<br>
+                        <strong>Island:</strong> ${islandIdx}
+                    `)
+                    .style("left", (event.pageX + 15) + "px")
+                    .style("top", (event.pageY - 10) + "px");
+                })
+                .on('mousemove', (event) => {
+                    d3.select(".node-tooltip")
+                        .style("left", (event.pageX + 15) + "px")
+                        .style("top", (event.pageY - 10) + "px");
+                })
+                .on('mouseout', () => {
+                    d3.selectAll(".node-tooltip").transition().duration(200).style("opacity", 0).remove();
+                });
+
+                // Draw node shapes
+                node.append("path")
+                    .attr("d", d => {
+                        symbol.type(getShape(d.data.metadata.patch_type));
+                        return symbol();
+                    })
+                    .style("fill", d => {
+                        if (d.data.id === window.bestNodeId) return '#ffd700';
+                        if (!d.data.correct) return '#e74c3c';
+                        const score = d.data.combined_score;
+                        if (score !== null && !isNaN(score)) {
+                            return colorScale(score);
+                        }
+                        return '#3498db';
+                    })
+                    .style("stroke", d => {
+                        const onAncestorPath = ancestorIds.has(d.data.id);
+                        if (onAncestorPath) {
+                            // Double-check: ensure node is correct before orange highlighting
+                            const nodeCorrect = d.data.correct === true || d.data.correct === 'true' || d.data.correct === 1;
+                            if (nodeCorrect) {
+                                return '#ff8c00';
+                            } else {
+                                console.log("[DEBUG] Blocking island view orange highlight for incorrect node:", d.data.id.substring(0, 8), "correct:", d.data.correct);
+                                return "#000";
+                            }
+                        }
+                        return "#000";
+                    })
+                    .style("stroke-width", d => ancestorIds.has(d.data.id) ? 3 : 2)
+                    .style("filter", d => d.data.id === window.bestNodeId ? "drop-shadow(0px 2px 4px rgba(255, 140, 0, 0.3))" : "drop-shadow(0px 1px 2px rgba(0,0,0,0.2))");
+
+                // Add animated rings for the SINGLE best node (island view)
+                if (window.allBestPaths && window.allBestPaths.length > 0) {
+                    // FORCE SINGLE PATH: Only process the first path, always use orange
+                    const singlePath = window.allBestPaths[0];
+                    [singlePath].forEach((path, index) => {
+                        const pathColor = '#ff8c00'; // Always orange for single path
+                        const shadowColor = 'rgba(255, 140, 0, 0.2)'; // Always orange shadow
+                        
+                        node.filter(d => d.data.id === path.nodeId)
+                            .insert("circle", ":first-child")
+                            .attr("r", 18)
+                            .style("fill", "none")
+                            .style("stroke", pathColor)
+                            .style("stroke-width", 2)
+                            .style("stroke-dasharray", "4,2")
+                            .style("opacity", 0.8)
+                            .style("filter", `drop-shadow(0px 1px 2px ${shadowColor})`)
+                            .style("animation", "pulse 2s infinite");
+                    });
+                } else {
+                    // Fallback: add ring for the single best node if no paths detected
+                    node.filter(d => d.data.id === window.bestNodeId)
+                        .insert("circle", ":first-child")
+                        .attr("r", 18).style("fill", "none").style("stroke", "#ff8c00")
+                        .style("stroke-width", 2).style("stroke-dasharray", "4,2").style("opacity", 0.8)
+                        .style("filter", "drop-shadow(0px 1px 2px rgba(255, 140, 0, 0.2))")
+                        .style("animation", "pulse 2s infinite");
+                }
+
+                // Add generation labels (centered in nodes)
+                node.append("text")
+                    .attr("x", 0)
+                    .attr("y", 0)
+                    .attr("dy", "0.35em")
+                    .attr("text-anchor", "middle")
+                    .style("font-size", "12px").style("font-weight", "bold").style("fill", "white")
+                    .style("pointer-events", "none")
+                    .style("text-shadow", "1px 1px 1px rgba(0,0,0,0.5)")
+                    .text(d => d.data.generation);
+            });
+
+            // Add island statistics using the copy
+            const islandStats = islands.map(island_idx => {
+                const islandPrograms = programsCopy.filter(p => p.island_idx === island_idx);
+                const islandScores = islandPrograms.map(p => p.combined_score).filter(s => s != null);
+                return {
+                    island_idx: island_idx,
+                    count: islandPrograms.length,
+                    avgScore: islandScores.length > 0 ? d3.mean(islandScores) : null,
+                    bestScore: islandScores.length > 0 ? d3.max(islandScores) : null
+                };
+            });
+
+            const statsGroup = g.selectAll(".island-stats")
+                .data(islandStats)
+                .enter().append("g")
+                .attr("class", "island-stats")
+                .attr("transform", (d, i) => `translate(${islandCenters[i].x}, ${islandCenters[i].y - 25})`);
+            
+            // Stats background
+            statsGroup.append("rect")
+                .attr("x", -40)
+                .attr("y", -2)
+                .attr("width", 80)
+                .attr("height", 24)
+                .attr("fill", "white")
+                .attr("fill-opacity", 0.9)
+                .attr("stroke", "#dee2e6")
+                .attr("stroke-width", 1)
+                .attr("rx", 4);
+
+            statsGroup.append("text")
+                .attr("y", 6)
+                .attr("text-anchor", "middle").style("font-size", "9px").style("font-weight", "600")
+                .text(d => `${d.count} programs`);
+
+            statsGroup.append("text")
+                .attr("y", 16).attr("text-anchor", "middle").style("font-size", "8px").style("fill", "#666")
+                .text(d => `Best: ${d.bestScore ? d.bestScore.toFixed(2) : 'N/A'}`);
+
+            // --- SUMMARY LOGIC ---
+            const allProgramMigrations = [];
+            data.forEach(p => {
+                if (p.migration_history && p.migration_history.length > 0) {
+                    p.migration_history.forEach(m => {
+                        allProgramMigrations.push({ 
+                            migration_gen: m.generation, 
+                            from: m.from,
+                            to: m.to,
+                            program_id: p.id,
+                            program_gen: p.generation,
+                            score: p.combined_score
+                        });
+                    });
+                }
+            });
+            if (allProgramMigrations.length === 0) {
+                summaryContainer.html('<h5 style="margin-top:0;">Migration Summary</h5><p style="color: #666; font-size: 14px;">No migration events have been recorded.</p>');
+            } else {
+                const migrationsByGen = {};
+                allProgramMigrations.forEach(m => {
+                    if (!migrationsByGen[m.migration_gen]) {
+                        migrationsByGen[m.migration_gen] = [];
+                    }
+                    migrationsByGen[m.migration_gen].push(m);
+                });
+
+                const sortedGenerations = Object.keys(migrationsByGen).map(Number).sort((a, b) => a - b);
+                
+                let summaryHtml = `
+                    <h5 style="margin-top:0; margin-bottom: 10px;">Migration Summary</h5>
+                    <table class="llm-result-table" style="font-size: 13px; table-layout: auto;">
+                        <thead>
+                            <tr>
+                                <th style="width: 100px;">Generation</th>
+                                <th>Migration Details</th>
+                                <th style="width: 120px;">Total Migrated</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+
+                sortedGenerations.forEach(gen => {
+                    const events = migrationsByGen[gen];
+                    events.sort((a,b) => (a.from - b.from) || (a.to - b.to));
+                    
+                    const detailsString = events.map(p => {
+                        const shortId = p.program_id.substring(0, 8) + '...';
+                        const score = (p.score !== null && p.score !== undefined) ? p.score.toFixed(2) : 'N/A';
+                        const link = `<a href="#" onclick="event.preventDefault(); selectNodeById('${p.program_id}');" style="color: #007bff; text-decoration: underline;">${shortId}</a>`;
+                        return `Gen ${p.program_gen}, Program: ${link}, Score: ${score} (${p.from} → ${p.to})`;
+                    }).join('<br>');
+
+                    const totalCount = events.length;
+                    
+                    summaryHtml += `
+                        <tr>
+                            <td>${gen}</td>
+                            <td>${detailsString}</td>
+                            <td>${totalCount}</td>
+                        </tr>`;
+                });
+
+                summaryHtml += `</tbody></table>`;
+                summaryContainer.html(summaryHtml);
+            }
+        }
+
+        function createBestPathVisualization(data) {
+            console.log("[DEBUG] Creating best path visualization (three-in-one)");
+
+            const bestPathView = document.getElementById('best-path-view');
+            if (!bestPathView || !bestPathView.classList.contains('active')) return;
+
+            const container = d3.select("#best-path-container");
+            container.html("");
+
+            if (!data || data.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_no_data'));
+                return;
+            }
+
+            // Build best path
+            const correctNodes = data.filter(d => d.correct && d.combined_score !== null);
+            let bestNode;
+            if (correctNodes.length > 0) {
+                bestNode = correctNodes.reduce((a, b) => b.combined_score > a.combined_score ? b : a);
+            } else {
+                bestNode = data.reduce((a, b) => {
+                    return (b.combined_score || -Infinity) > (a.combined_score || -Infinity) ? b : a;
+                }, { combined_score: -Infinity });
+            }
+            if (!bestNode || !bestNode.id) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_no_best'));
+                return;
+            }
+
+            const nodeMap = new Map(data.map(n => [n.id, n]));
+            const path = [];
+            let cur = bestNode;
+            while (cur) { path.unshift(cur); cur = nodeMap.get(cur.parent_id); }
+            if (path.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text(t('path_empty'));
+                return;
+            }
+
+            // Track active selection
+            let activeIdx = null;
+            function setActive(idx) {
+                activeIdx = idx;
+                // Update flowchart
+                wrapper.querySelectorAll('.path-flow-node').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
+                });
+                // Update curve dots
+                wrapper.querySelectorAll('.path-curve-dot').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
+                });
+                // Update diff dots
+                wrapper.querySelectorAll('.path-diff-dot').forEach((el, i) => {
+                    el.classList.toggle('active', i === idx);
+                });
+                // Select in tree
+                selectNodeById(path[idx].id, false, false);
+            }
+
+            const wrapper = container.append("div").attr("class", "path-three-in-one").node();
+
+            // ===== SECTION 1: Flowchart =====
+            const flowTitle = document.createElement('div');
+            flowTitle.className = 'path-section-title';
+            flowTitle.textContent = '📐 ' + t('path_evolution_path');
+            wrapper.appendChild(flowTitle);
+
+            const flowchart = document.createElement('div');
+            flowchart.className = 'path-flowchart';
+            path.forEach((node, i) => {
+                if (i > 0) {
+                    const arrow = document.createElement('div');
+                    arrow.className = 'path-flow-arrow';
+                    const delta = (node.combined_score || 0) - (path[i-1].combined_score || 0);
+                    if (delta !== 0) {
+                        const deltaEl = document.createElement('div');
+                        deltaEl.className = 'path-flow-delta ' + (delta >= 0 ? 'positive' : 'negative');
+                        deltaEl.textContent = (delta >= 0 ? '+' : '') + delta.toFixed(3);
+                        arrow.appendChild(deltaEl);
+                    }
+                    flowchart.appendChild(arrow);
+                }
+                const el = document.createElement('div');
+                el.className = 'path-flow-node' + (i === path.length - 1 ? ' best' : '');
+                el.innerHTML = `
+                    <div class="gen">Gen ${node.generation}${i === path.length - 1 ? ' ★' : ''}</div>
+                    <div class="name" title="${node.metadata.patch_name || 'initial'}">${node.metadata.patch_name || 'initial'}</div>
+                    <div class="score">${formatScore(node.combined_score)}</div>
+                    <div class="type">${node.metadata.patch_type || 'init'}</div>
+                `;
+                el.addEventListener('click', () => setActive(i));
+                flowchart.appendChild(el);
+            });
+            wrapper.appendChild(flowchart);
+
+            // ===== SECTION 2: Score Curve =====
+            const curveTitle = document.createElement('div');
+            curveTitle.className = 'path-section-title';
+            curveTitle.textContent = '📈 ' + t('path_score_progression');
+            wrapper.appendChild(curveTitle);
+
+            const curveDiv = document.createElement('div');
+            curveDiv.className = 'path-curve-container';
+            const scores = path.map(n => n.combined_score || 0);
+            const minScore = Math.min(...scores);
+            const maxScore = Math.max(...scores);
+            const scoreRange = maxScore - minScore || 0.1;
+            const padTop = 35, padBottom = 25, padLeft = 55, padRight = 20;
+            const svgW = 600, svgH = 180;
+            const plotW = svgW - padLeft - padRight;
+            const plotH = svgH - padTop - padBottom;
+
+            function xPos(i) { return padLeft + (path.length > 1 ? (i / (path.length - 1)) * plotW : plotW / 2); }
+            function yPos(s) { return padTop + plotH - ((s - minScore) / scoreRange) * plotH; }
+
+            let svgParts = `<svg class="path-curve-svg" viewBox="0 0 ${svgW} ${svgH}">
+                <defs>
+                    <linearGradient id="pathCurveGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" style="stop-color:#D97706"/>
+                        <stop offset="100%" style="stop-color:#C2410C"/>
+                    </linearGradient>
+                    <linearGradient id="pathAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" style="stop-color:rgba(217,119,6,0.2)"/>
+                        <stop offset="100%" style="stop-color:rgba(217,119,6,0)"/>
+                    </linearGradient>
+                </defs>
+                <line x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${svgH - padBottom}" class="path-curve-axis"/>
+                <line x1="${padLeft}" y1="${svgH - padBottom}" x2="${svgW - padRight}" y2="${svgH - padBottom}" class="path-curve-axis"/>`;
+
+            // Y-axis labels (3 ticks)
+            [0, 0.5, 1].forEach(frac => {
+                const val = minScore + frac * scoreRange;
+                const y = yPos(val);
+                svgParts += `<line x1="${padLeft}" y1="${y}" x2="${svgW - padRight}" y2="${y}" class="path-curve-grid" stroke-dasharray="4"/>`;
+                svgParts += `<text x="${padLeft - 6}" y="${y + 3}" class="path-curve-label" text-anchor="end">${val.toFixed(2)}</text>`;
+            });
+
+            // Area
+            const areaPoints = path.map((_, i) => `${xPos(i)},${yPos(scores[i])}`).join(' ');
+            svgParts += `<polygon class="path-curve-area" points="${xPos(0)},${svgH - padBottom} ${areaPoints} ${xPos(path.length - 1)},${svgH - padBottom}"/>`;
+
+            // Line
+            const linePoints = path.map((_, i) => `${xPos(i)},${yPos(scores[i])}`).join(' ');
+            svgParts += `<polyline class="path-curve-line" points="${linePoints}"/>`;
+
+            // Dots + labels
+            path.forEach((node, i) => {
+                const cx = xPos(i), cy = yPos(scores[i]);
+                svgParts += `<circle cx="${cx}" cy="${cy}" r="5" class="path-curve-dot" data-idx="${i}"/>`;
+                svgParts += `<text x="${cx}" y="${svgH - padBottom + 14}" class="path-curve-label" text-anchor="middle">G${node.generation}</text>`;
+                svgParts += `<text x="${cx}" y="${cy - 10}" class="path-curve-value" text-anchor="middle">${scores[i].toFixed(3)}${i === path.length - 1 ? '★' : ''}</text>`;
+            });
+
+            svgParts += '</svg>';
+            curveDiv.innerHTML = svgParts;
+            wrapper.appendChild(curveDiv);
+
+            // Click on SVG dots
+            curveDiv.querySelectorAll('.path-curve-dot').forEach(dot => {
+                dot.addEventListener('click', () => setActive(parseInt(dot.dataset.idx)));
+            });
+
+            // ===== SECTION 3: Diff Chain =====
+            const diffTitle = document.createElement('div');
+            diffTitle.className = 'path-section-title';
+            diffTitle.textContent = '🔗 ' + t('path_diff_chain');
+            wrapper.appendChild(diffTitle);
+
+            const diffChain = document.createElement('div');
+            diffChain.className = 'path-diff-chain';
+
+            path.forEach((node, i) => {
+                const step = document.createElement('div');
+                step.className = 'path-diff-step';
+
+                const dot = document.createElement('div');
+                dot.className = 'path-diff-dot' + (i === 0 ? ' init' : '');
+                dot.textContent = i === path.length - 1 ? `${node.generation}★` : node.generation;
+                dot.addEventListener('click', () => setActive(i));
+                step.appendChild(dot);
+
+                const content = document.createElement('div');
+                content.className = 'path-diff-content';
+
+                // Header
+                const header = document.createElement('div');
+                header.className = 'path-diff-header';
+                header.innerHTML = `<span class="step-name">${node.metadata.patch_name || 'initial'}</span>
+                    <span class="step-score">${formatScore(node.combined_score)}</span>`;
+                if (i > 0) {
+                    const delta = (node.combined_score || 0) - (path[i-1].combined_score || 0);
+                    header.innerHTML += `<span class="step-delta ${delta >= 0 ? 'up' : 'down'}">${delta >= 0 ? '▲' : '▼'} ${delta >= 0 ? '+' : ''}${delta.toFixed(3)}</span>`;
+                }
+                header.innerHTML += `<span class="step-type">${node.metadata.patch_type || 'init'}</span>`;
+                content.appendChild(header);
+
+                // Diff code block (collapsed by default for non-first/non-last)
+                const codeBlock = document.createElement('div');
+                codeBlock.className = 'path-diff-code';
+                const diffText = node.metadata.diff || node.metadata.patch_diff || '';
+                if (diffText) {
+                    codeBlock.innerHTML = diffText.split('\n').map(line => {
+                        if (line.startsWith('+')) return `<span class="path-diff-add">${escapeHtml(line)}</span>`;
+                        if (line.startsWith('-')) return `<span class="path-diff-del">${escapeHtml(line)}</span>`;
+                        return `<span class="path-diff-ctx">${escapeHtml(line)}</span>`;
+                    }).join('\n');
+                } else {
+                    codeBlock.innerHTML = '<span class="path-diff-ctx">' + escapeHtml(t('path_no_diff')) + '</span>';
+                }
+
+                // Collapse middle items by default
+                if (i > 0 && i < path.length - 1 && path.length > 4) {
+                    codeBlock.style.display = 'none';
+                    const toggle = document.createElement('div');
+                    toggle.className = 'path-diff-toggle';
+                    toggle.textContent = '▸ ' + t('path_show_diff');
+                    toggle.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const shown = codeBlock.style.display !== 'none';
+                        codeBlock.style.display = shown ? 'none' : 'block';
+                        toggle.textContent = shown ? '▸ ' + t('path_show_diff') : '▾ ' + t('path_hide_diff');
+                    });
+                    content.appendChild(toggle);
+                }
+                content.appendChild(codeBlock);
+
+                // Description summary
+                if (node.metadata.patch_description) {
+                    const summary = document.createElement('div');
+                    summary.className = 'path-diff-summary';
+                    summary.textContent = node.metadata.patch_description;
+                    content.appendChild(summary);
+                }
+
+                step.appendChild(content);
+                diffChain.appendChild(step);
+            });
+
+            wrapper.appendChild(diffChain);
+        }
+
+        // --- MAPs (MAP-Elites) Visualization ---
+        let mapsListenersAdded = false;
+        
+        // Extended metric discovery for MAPs - includes deeply nested metrics
+        function getMAPsAvailableMetrics(data) {
+            if (!data || data.length === 0) return [];
+            const metricsMap = new Map();
+
+            const addMetric = (path, customName = null) => {
+                if (metricsMap.has(path)) return;
+                
+                // Check if at least one data point has this metric
+                const hasValue = data.some(p => {
+                    const val = getNestedValue(p, path);
+                    return typeof val === 'number' && !isNaN(val);
+                });
+                if (!hasValue) return;
+                
+                let name = customName;
+                if (!name) {
+                    name = path.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+                    name = name.replace(/_/g, ' ');
+                    if (path.startsWith('public_metrics')) name = `Public: ${path.split('.')[1]}`;
+                    if (path.startsWith('private_metrics')) name = `Private: ${path.split('.')[1]}`;
+                    if (path.startsWith('metadata.code_analysis_metrics')) name = `Code: ${path.split('.').pop().replace(/_/g, ' ')}`;
+                    if (path.startsWith('metadata.diff_summary')) name = `Diff: ${path.split('.').pop().replace(/_/g, ' ')}`;
+                }
+                
+                let objective = 'max';
+                const key = path.split('.').pop();
+                if (key.includes('cost') || key.includes('time') || key.includes('complexity') || key.includes('latency') || key.includes('deleted') || key.includes('lines_of_code')) {
+                    objective = 'min';
+                }
+                metricsMap.set(path, { name, path, objective });
+            };
+
+            const discoverInObject = (subObj, prefix, depth = 0) => {
+                if (!subObj || depth > 3) return;
+                for (const key in subObj) {
+                    const fullPath = `${prefix}.${key}`;
+                    if (typeof subObj[key] === 'number') {
+                        addMetric(fullPath);
+                    } else if (typeof subObj[key] === 'object' && subObj[key] !== null && !Array.isArray(subObj[key])) {
+                        discoverInObject(subObj[key], fullPath, depth + 1);
+                    }
+                }
+            };
+
+            // Core metrics
+            addMetric('combined_score', 'Combined Score');
+            addMetric('complexity', 'Complexity');
+            addMetric('generation', 'Generation');
+            
+            // Discover from data
+            data.forEach(p => {
+                // Metadata level metrics
+                if (p.metadata) {
+                    addMetric('metadata.compute_time', 'Compute Time');
+                    addMetric('metadata.api_costs', 'API Costs');
+                    
+                    // Code analysis metrics (deeply nested)
+                    if (p.metadata.code_analysis_metrics) {
+                        discoverInObject(p.metadata.code_analysis_metrics, 'metadata.code_analysis_metrics');
+                    }
+                    
+                    // Diff summary metrics
+                    if (p.metadata.diff_summary) {
+                        discoverInObject(p.metadata.diff_summary, 'metadata.diff_summary');
+                    }
+                }
+                
+                // Public/Private metrics
+                discoverInObject(p.public_metrics, 'public_metrics');
+                discoverInObject(p.private_metrics, 'private_metrics');
+            });
+            
+            return Array.from(metricsMap.values());
+        }
+        
+        function createMAPsVisualization(data) {
+            console.log("[DEBUG] Creating MAPs visualization");
+            
+            // Check if the MAPs tab is visible
+            const mapsView = document.getElementById('maps-view');
+            if (!mapsView || !mapsView.classList.contains('active')) {
+                console.log("[DEBUG] MAPs view not active, skipping visualization creation");
+                return;
+            }
+
+            const container = d3.select("#maps-container");
+            container.html(""); // Clear previous content
+
+            if (!data || data.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No data to visualize.");
+                return;
+            }
+
+            // Setup controls and listeners (only once)
+            if (!mapsListenersAdded) {
+                // Get base metrics from Pareto and add additional nested metrics for MAPs
+                const availableMetrics = getMAPsAvailableMetrics(data);
+                const xSelect = document.getElementById('maps-x-axis');
+                const ySelect = document.getElementById('maps-y-axis');
+                const binsSlider = document.getElementById('maps-bins-slider');
+                const binsValue = document.getElementById('maps-bins-value');
+                
+                // Populate dropdowns
+                xSelect.innerHTML = '';
+                ySelect.innerHTML = '';
+                availableMetrics.forEach(metric => {
+                    const optionX = document.createElement('option');
+                    optionX.value = metric.path;
+                    optionX.textContent = metric.name;
+                    xSelect.appendChild(optionX);
+                    
+                    const optionY = document.createElement('option');
+                    optionY.value = metric.path;
+                    optionY.textContent = metric.name;
+                    ySelect.appendChild(optionY);
+                });
+
+                // Set defaults
+                const locMetric = availableMetrics.find(m => m.path === 'metadata.code_analysis_metrics.lines_of_code');
+                const computeTimeMetric = availableMetrics.find(m => m.path === 'metadata.compute_time');
+                
+                if (locMetric) {
+                    xSelect.value = 'metadata.code_analysis_metrics.lines_of_code';
+                } else if (availableMetrics.length > 0) {
+                    xSelect.value = availableMetrics[0].path;
+                }
+                
+                if (computeTimeMetric) {
+                    ySelect.value = 'metadata.compute_time';
+                } else if (availableMetrics.length > 1) {
+                    ySelect.value = availableMetrics[1].path;
+                } else if (availableMetrics.length > 0) {
+                    ySelect.value = availableMetrics[0].path;
+                }
+
+                // Add event listeners
+                xSelect.addEventListener('change', () => createMAPsVisualization(window.treeData));
+                ySelect.addEventListener('change', () => createMAPsVisualization(window.treeData));
+                binsSlider.addEventListener('input', () => {
+                    binsValue.textContent = binsSlider.value;
+                    createMAPsVisualization(window.treeData);
+                });
+                
+                // Color range listeners
+                const vminInput = document.getElementById('maps-vmin');
+                const vmaxInput = document.getElementById('maps-vmax');
+                vminInput.addEventListener('change', () => createMAPsVisualization(window.treeData));
+                vmaxInput.addEventListener('change', () => createMAPsVisualization(window.treeData));
+                
+                // Generation slider listener
+                const genSlider = document.getElementById('maps-gen-slider');
+                const genValue = document.getElementById('maps-gen-value');
+                genSlider.addEventListener('input', () => {
+                    const maxGen = parseInt(genSlider.max, 10);
+                    const currentGen = parseInt(genSlider.value, 10);
+                    genValue.textContent = currentGen >= maxGen ? 'All' : `≤${currentGen}`;
+                    createMAPsVisualization(window.treeData);
+                });
+                
+                mapsListenersAdded = true;
+                
+                // Set generation slider to max on first load
+                window.mapsGenSliderInitialized = false;
+            }
+            
+            // Update generation slider max based on data
+            const maxGeneration = d3.max(data, d => d.generation) || 0;
+            const genSlider = document.getElementById('maps-gen-slider');
+            const genValue = document.getElementById('maps-gen-value');
+            genSlider.max = maxGeneration;
+            
+            // On first initialization or if slider is at/beyond max, set to max
+            if (!window.mapsGenSliderInitialized || parseInt(genSlider.value, 10) >= maxGeneration) {
+                genSlider.value = maxGeneration;
+                genValue.textContent = 'All';
+                window.mapsGenSliderInitialized = true;
+            }
+
+            // Get current settings
+            const xPath = document.getElementById('maps-x-axis').value;
+            const yPath = document.getElementById('maps-y-axis').value;
+            const numBins = parseInt(document.getElementById('maps-bins-slider').value, 10);
+            const selectedGen = parseInt(genSlider.value, 10);
+            const filterByGen = selectedGen < maxGeneration;
+
+            if (!xPath || !yPath) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("Please select axes.");
+                return;
+            }
+
+            // Filter to correct programs only (and optionally by generation)
+            let correctPrograms = data.filter(d => d.correct);
+            if (filterByGen) {
+                correctPrograms = correctPrograms.filter(d => d.generation <= selectedGen);
+            }
+            if (correctPrograms.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No correct programs found.");
+                return;
+            }
+
+            // Extract valid programs with both X and Y values
+            const validPrograms = correctPrograms.filter(d => {
+                const xVal = getNestedValue(d, xPath);
+                const yVal = getNestedValue(d, yPath);
+                return typeof xVal === 'number' && !isNaN(xVal) && typeof yVal === 'number' && !isNaN(yVal);
+            }).map(d => ({
+                ...d,
+                xVal: getNestedValue(d, xPath),
+                yVal: getNestedValue(d, yPath)
+            }));
+
+            if (validPrograms.length === 0) {
+                container.append("p").style('text-align', 'center').style('margin-top', '50px').text("No programs with valid values for selected axes.");
+                return;
+            }
+
+            // Compute min/max for each axis
+            const xMin = d3.min(validPrograms, d => d.xVal);
+            const xMax = d3.max(validPrograms, d => d.xVal);
+            const yMin = d3.min(validPrograms, d => d.yVal);
+            const yMax = d3.max(validPrograms, d => d.yVal);
+
+            // Create bins
+            const xBinSize = (xMax - xMin) / numBins || 1;
+            const yBinSize = (yMax - yMin) / numBins || 1;
+
+            // Assign each program to a cell and keep best per cell
+            const cellMap = new Map(); // key: "xBin,yBin", value: best program
+            
+            validPrograms.forEach(prog => {
+                let xBin = Math.floor((prog.xVal - xMin) / xBinSize);
+                let yBin = Math.floor((prog.yVal - yMin) / yBinSize);
+                
+                // Clamp to valid range
+                xBin = Math.min(xBin, numBins - 1);
+                yBin = Math.min(yBin, numBins - 1);
+                
+                const key = `${xBin},${yBin}`;
+                const existing = cellMap.get(key);
+                
+                if (!existing || (prog.combined_score !== null && prog.combined_score > (existing.combined_score || -Infinity))) {
+                    cellMap.set(key, { ...prog, xBin, yBin });
+                }
+            });
+
+            // Get score range for color scale
+            const scores = Array.from(cellMap.values()).map(d => d.combined_score).filter(s => s !== null && !isNaN(s));
+            const autoScoreMin = d3.min(scores) || 0;
+            const autoScoreMax = d3.max(scores) || 1;
+            
+            // Check for user-specified vmin/vmax
+            const vminInput = document.getElementById('maps-vmin');
+            const vmaxInput = document.getElementById('maps-vmax');
+            const vminVal = vminInput.value !== '' ? parseFloat(vminInput.value) : null;
+            const vmaxVal = vmaxInput.value !== '' ? parseFloat(vmaxInput.value) : null;
+            
+            const scoreMin = (vminVal !== null && !isNaN(vminVal)) ? vminVal : autoScoreMin;
+            const scoreMax = (vmaxVal !== null && !isNaN(vmaxVal)) ? vmaxVal : autoScoreMax;
+
+            // Create color scale (viridis)
+            const colorScale = d3.scaleSequential(d3.interpolateViridis)
+                .domain([scoreMin, scoreMax]);
+
+            // Setup SVG dimensions
+            const margin = { top: 40, right: 120, bottom: 80, left: 80 };
+            const containerNode = container.node();
+            const containerWidth = containerNode.clientWidth || 600;
+            const containerHeight = containerNode.clientHeight || 500;
+            const width = Math.max(300, containerWidth - margin.left - margin.right - 40);
+            const height = Math.max(300, containerHeight - margin.top - margin.bottom - 40);
+            const cellWidth = width / numBins;
+            const cellHeight = height / numBins;
+
+            // Create SVG
+            const svg = container.append("svg")
+                .attr("width", width + margin.left + margin.right)
+                .attr("height", height + margin.top + margin.bottom)
+                .append("g")
+                .attr("transform", `translate(${margin.left},${margin.top})`);
+
+            // Create tooltip
+            const tooltip = container.append("div")
+                .attr("class", "maps-tooltip")
+                .style("position", "absolute")
+                .style("visibility", "hidden")
+                .style("background-color", "rgba(0,0,0,0.8)")
+                .style("color", "white")
+                .style("padding", "10px")
+                .style("border-radius", "5px")
+                .style("font-size", "12px")
+                .style("max-width", "300px")
+                .style("z-index", "1000")
+                .style("pointer-events", "none");
+
+            // Draw grid cells
+            for (let xi = 0; xi < numBins; xi++) {
+                for (let yi = 0; yi < numBins; yi++) {
+                    const key = `${xi},${yi}`;
+                    const cellData = cellMap.get(key);
+                    
+                    const xStart = xMin + xi * xBinSize;
+                    const xEnd = xMin + (xi + 1) * xBinSize;
+                    const yStart = yMin + yi * yBinSize;
+                    const yEnd = yMin + (yi + 1) * yBinSize;
+                    
+                    const rect = svg.append("rect")
+                        .attr("class", cellData ? "maps-cell" : "maps-cell empty")
+                        .attr("x", xi * cellWidth)
+                        .attr("y", height - (yi + 1) * cellHeight) // Flip Y axis
+                        .attr("width", cellWidth)
+                        .attr("height", cellHeight)
+                        .attr("fill", cellData ? colorScale(cellData.combined_score) : "#f0f0f0")
+                        .attr("stroke", "#fff")
+                        .attr("stroke-width", 1);
+                    
+                    if (cellData) {
+                        rect.style("cursor", "pointer")
+                            .on("mouseover", function(event) {
+                                d3.select(this).attr("stroke", "#333").attr("stroke-width", 2);
+                                const xLabel = xPath.split('.').pop().replace(/_/g, ' ');
+                                const yLabel = yPath.split('.').pop().replace(/_/g, ' ');
+                                tooltip.html(`
+                                    <strong>${cellData.metadata?.patch_name || 'Unnamed'}</strong><br>
+                                    <strong>Score:</strong> ${formatScore(cellData.combined_score)}<br>
+                                    <strong>${xLabel}:</strong> ${xStart.toFixed(2)} - ${xEnd.toFixed(2)}<br>
+                                    <strong>${yLabel}:</strong> ${yStart.toFixed(2)} - ${yEnd.toFixed(2)}<br>
+                                    <strong>Generation:</strong> ${cellData.generation}
+                                `)
+                                .style("visibility", "visible");
+                            })
+                            .on("mousemove", function(event) {
+                                tooltip.style("top", (event.pageY - containerNode.getBoundingClientRect().top - window.scrollY + 10) + "px")
+                                       .style("left", (event.pageX - containerNode.getBoundingClientRect().left - window.scrollX + 10) + "px");
+                            })
+                            .on("mouseout", function() {
+                                d3.select(this).attr("stroke", "#fff").attr("stroke-width", 1);
+                                tooltip.style("visibility", "hidden");
+                            })
+                            .on("click", function() {
+                                selectNodeById(cellData.id, false, false);
+                            });
+                    }
+                }
+            }
+
+            // Create X axis
+            const xScale = d3.scaleLinear().domain([xMin, xMax]).range([0, width]);
+            const xAxis = d3.axisBottom(xScale).ticks(5);
+            svg.append("g")
+                .attr("transform", `translate(0,${height})`)
+                .call(xAxis);
+            
+            // X axis label
+            const xLabel = xPath.split('.').pop().replace(/_/g, ' ');
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", height + 45)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .text(xLabel);
+
+            // Create Y axis
+            const yScale = d3.scaleLinear().domain([yMin, yMax]).range([height, 0]);
+            const yAxis = d3.axisLeft(yScale).ticks(5);
+            svg.append("g")
+                .call(yAxis);
+            
+            // Y axis label
+            const yLabel = yPath.split('.').pop().replace(/_/g, ' ');
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -height / 2)
+                .attr("y", -55)
+                .attr("text-anchor", "middle")
+                .style("font-size", "12px")
+                .text(yLabel);
+
+            // Add title
+            svg.append("text")
+                .attr("x", width / 2)
+                .attr("y", -15)
+                .attr("text-anchor", "middle")
+                .style("font-size", "14px")
+                .style("font-weight", "bold")
+                .text(`MAP-Elites Grid (${cellMap.size} elite${cellMap.size !== 1 ? 's' : ''} from ${validPrograms.length} correct programs${filterByGen ? `, gen ≤${selectedGen}` : ''})`);
+
+            // Add color legend
+            const legendWidth = 20;
+            const legendHeight = height;
+            const legendX = width + 20;
+            
+            // Create gradient
+            const defs = svg.append("defs");
+            const gradient = defs.append("linearGradient")
+                .attr("id", "maps-color-gradient")
+                .attr("x1", "0%")
+                .attr("y1", "100%")
+                .attr("x2", "0%")
+                .attr("y2", "0%");
+            
+            const numStops = 10;
+            for (let i = 0; i <= numStops; i++) {
+                const t = i / numStops;
+                gradient.append("stop")
+                    .attr("offset", `${t * 100}%`)
+                    .attr("stop-color", colorScale(scoreMin + t * (scoreMax - scoreMin)));
+            }
+            
+            // Draw legend rectangle
+            svg.append("rect")
+                .attr("x", legendX)
+                .attr("y", 0)
+                .attr("width", legendWidth)
+                .attr("height", legendHeight)
+                .style("fill", "url(#maps-color-gradient)");
+            
+            // Legend axis
+            const legendScale = d3.scaleLinear().domain([scoreMin, scoreMax]).range([legendHeight, 0]);
+            const legendAxis = d3.axisRight(legendScale).ticks(5);
+            svg.append("g")
+                .attr("transform", `translate(${legendX + legendWidth}, 0)`)
+                .call(legendAxis);
+            
+            // Legend label
+            svg.append("text")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -legendHeight / 2)
+                .attr("y", legendX + legendWidth + 45)
+                .attr("text-anchor", "middle")
+                .style("font-size", "11px")
+                .text("Combined Score");
+
+            console.log(`[DEBUG] MAPs visualization created with ${cellMap.size} cells`);
+        }
+
+        function createModelPosteriorsVisualization(data) {
+            // Check if the model posteriors tab is visible
+            const modelPosteriorsView = document.getElementById('model-posteriors-view');
+            if (!modelPosteriorsView || !modelPosteriorsView.classList.contains('active')) {
+                return;
+            }
+
+            const container = d3.select("#model-posteriors-container");
+
+            // ── helpers ──────────────────────────────────────────────────────────
+            const getModelPosteriors = (program) => {
+                if (program.metadata?.llm_result?.model_posteriors)
+                    return program.metadata.llm_result.model_posteriors;
+                if (program.metadata?.model_posteriors)
+                    return program.metadata.model_posteriors;
+                return {};
+            };
+
+            const getReducedTicks = (gens, maxTicks = 10) => {
+                if (gens.length <= maxTicks) return gens;
+                const step = Math.ceil(gens.length / maxTicks);
+                return gens.filter((_, i) => i % step === 0 || i === gens.length - 1);
+            };
+
+            const shortName = (m) => {
+                const base = m.includes('@') ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            };
+
+            const AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            const MODEL_AVATAR_MAP = {
+                'glm': 'chatglm', 'chatglm': 'chatglm', 'zhipu': 'chatglm',
+                'deepseek': 'deepseek', 'ds': 'deepseek',
+                'doubao': 'doubao', 'bytedance': 'doubao',
+                'minimax': 'minimax', 'abab': 'minimax',
+                'kimi': 'kimi', 'moonshot': 'moonshot',
+                'qwen': 'qwen', 'alibaba': 'qwen',
+                'claude': 'claude', 'anthropic': 'claude',
+                'gpt': 'openai', 'openai': 'openai',
+                'gemini': 'google', 'google': 'google',
+                'llama': 'meta', 'meta': 'meta',
+                'mistral': 'mistral',
+            };
+            const modelAvatar = (modelName) => {
+                const lower = shortName(modelName).toLowerCase();
+                for (const [key, avatar] of Object.entries(MODEL_AVATAR_MAP)) {
+                    if (lower.includes(key)) return `${AVATAR_CDN}/${avatar}.webp`;
+                }
+                return null;
+            };
+
+            // ── data extraction ──────────────────────────────────────────────────
+            if (!data || data.length === 0) {
+                container.html(`<p style="text-align:center;padding:40px;color:#999">${t('ens_no_data')}</p>`);
+                return;
+            }
+
+            let programsWithPosteriors = data.filter(d =>
+                d.metadata?.llm_result?.model_posteriors &&
+                typeof d.metadata.llm_result.model_posteriors === 'object' &&
+                Object.keys(d.metadata.llm_result.model_posteriors).length > 0
+            );
+            if (programsWithPosteriors.length === 0) {
+                programsWithPosteriors = data.filter(d =>
+                    d.metadata?.model_posteriors &&
+                    typeof d.metadata.model_posteriors === 'object' &&
+                    Object.keys(d.metadata.model_posteriors).length > 0
+                );
+            }
+
+            if (programsWithPosteriors.length === 0) {
+                container.html(`<p style="text-align:center;padding:40px;color:#999">${t('ens_no_data')}</p>`);
+                return;
+            }
+
+            // All models appearing in posteriors
+            const allModels = new Set();
+            programsWithPosteriors.forEach(d => Object.keys(getModelPosteriors(d)).forEach(m => allModels.add(m)));
+            const models = Array.from(allModels).sort();
+
+            // 8-color palette aligned with d3.schemeTableau10
+            const palette = d3.schemeTableau10 || d3.schemeCategory10;
+            const colorScale = d3.scaleOrdinal(palette).domain(models);
+
+            // Group by generation, compute avg posterior per model per gen
+            const generationData = {};
+            programsWithPosteriors.forEach(d => {
+                const gen = d.generation;
+                if (!generationData[gen]) generationData[gen] = [];
+                generationData[gen].push(d);
+            });
+            const generations = Object.keys(generationData).map(Number).sort((a, b) => a - b);
+
+            const chartData = [];
+            generations.forEach(gen => {
+                const genProgs = generationData[gen];
+                models.forEach(model => {
+                    const vals = genProgs
+                        .map(p => getModelPosteriors(p)[model])
+                        .filter(v => v !== undefined && v !== null);
+                    if (vals.length > 0) {
+                        const avg = vals.reduce((s, v) => s + v, 0) / vals.length;
+                        chartData.push({ generation: gen, model, posterior: avg });
+                    }
+                });
+            });
+
+            // Per-model program counts (cumulative)
+            const actualGenerationCounts = {};
+            programsWithPosteriors.forEach(p => {
+                const gen = p.generation;
+                if (!actualGenerationCounts[gen]) actualGenerationCounts[gen] = {};
+                const m = p.metadata?.model_name || p.metadata?.llm_result?.model ||
+                          p.metadata?.model || p.model_name || p.model;
+                if (m) actualGenerationCounts[gen][m] = (actualGenerationCounts[gen][m] || 0) + 1;
+            });
+            const actualSortedGens = Object.keys(actualGenerationCounts).map(Number).sort((a, b) => a - b);
+            const actualModelsSet = new Set();
+            Object.values(actualGenerationCounts).forEach(g => Object.keys(g).forEach(m => actualModelsSet.add(m)));
+            const actualModelsArray = Array.from(actualModelsSet).sort();
+
+            const cumulativeData = {};
+            actualModelsArray.forEach(model => {
+                let cum = 0;
+                cumulativeData[model] = actualSortedGens.map(gen => {
+                    cum += actualGenerationCounts[gen][model] || 0;
+                    return { generation: gen, cumulativeCount: cum };
+                });
+            });
+
+            // Per-model cost + success stats
+            const modelCostStats = {};
+            data.forEach(program => {
+                const m = program.metadata?.model_name || program.metadata?.llm_result?.model ||
+                          program.metadata?.model || program.model_name || program.model;
+                if (!m || !models.includes(m)) return;
+                const api = parseFloat(program.metadata?.api_costs) || 0;
+                const emb = parseFloat(program.metadata?.embed_cost) || 0;
+                const nov = parseFloat(program.metadata?.novelty_cost) || 0;
+                const met = parseFloat(program.metadata?.meta_cost) || 0;
+                const tc = api + emb + nov + met;
+                if (!modelCostStats[m]) modelCostStats[m] = { totalCost: 0, count: 0, correct: 0 };
+                modelCostStats[m].totalCost += tc;
+                modelCostStats[m].count++;
+                if (program.score != null && program.score > 0) modelCostStats[m].correct++;
+            });
+
+            // Build model summary rows
+            const modelStats = models.map(model => {
+                const posts = chartData.filter(d => d.model === model).map(d => d.posterior);
+                const avgPost = posts.length ? posts.reduce((s, v) => s + v, 0) / posts.length : 0;
+                const latestPost = posts.length ? posts[posts.length - 1] : 0;
+                const finalCum = cumulativeData[model];
+                const totalPrograms = finalCum ? (finalCum[finalCum.length - 1]?.cumulativeCount || 0) : 0;
+                const cs = modelCostStats[model] || {};
+                return {
+                    model,
+                    totalPrograms,
+                    correct: cs.correct || 0,
+                    avgPosterior: avgPost,
+                    latestPosterior: latestPost,
+                    totalCost: cs.totalCost || 0
+                };
+            }).filter(s => s.totalPrograms > 0 || s.avgPosterior > 0);
+
+            // ── build DOM ────────────────────────────────────────────────────────
+            container.html(`
+                <div class="ens-three-in-one">
+                    <div class="ens-section-title" data-i18n="ens_model_overview">${t('ens_model_overview')}</div>
+                    <div id="ens-card-grid" class="ens-card-grid"></div>
+
+                    <div class="ens-section-title">
+                        <span data-i18n="ens_posterior_curves">${t('ens_posterior_curves')}</span>
+                        <div class="ens-viz-toggle">
+                            <button class="ens-viz-btn active" data-viz="lines">${t('ens_viz_lines')}</button>
+                            <button class="ens-viz-btn" data-viz="stacked">${t('ens_viz_stacked')}</button>
+                        </div>
+                    </div>
+                    <div id="ens-curve-wrap" class="ens-curve-container">
+                        <div id="ens-tooltip" class="ens-tooltip"></div>
+                    </div>
+                    <div id="ens-stacked-wrap" class="ens-curve-container" style="display:none">
+                        <div id="ens-stacked-tooltip" class="ens-tooltip"></div>
+                    </div>
+
+                    <div class="ens-section-title" data-i18n="ens_model_comparison">${t('ens_model_comparison')}</div>
+                    <div id="ens-table-wrap"></div>
+                </div>
+            `);
+
+            // ── Section 1: Card grid ─────────────────────────────────────────────
+            const cardGrid = container.select("#ens-card-grid");
+            let activeModel = null;
+
+            modelStats.forEach(stat => {
+                const successRate = stat.totalPrograms > 0 ? stat.correct / stat.totalPrograms : 0;
+                const barPct = (stat.latestPosterior * 100).toFixed(1);
+                const color = colorScale(stat.model);
+                const card = cardGrid.append("div")
+                    .attr("class", "ens-card")
+                    .attr("data-model", stat.model)
+                    .on("click", function() {
+                        const isActive = d3.select(this).classed("active");
+                        cardGrid.selectAll(".ens-card").classed("active", false);
+                        if (!isActive) {
+                            d3.select(this).classed("active", true);
+                            activeModel = stat.model;
+                        } else {
+                            activeModel = null;
+                        }
+                        // highlight curve
+                        container.selectAll(".ens-model-line")
+                            .attr("stroke-opacity", activeModel ? d => d.model === activeModel ? 1 : 0.15 : 1)
+                            .attr("stroke-width", activeModel ? d => d.model === activeModel ? 3 : 1.5 : 2.2);
+                    });
+
+                const avatarUrl = modelAvatar(stat.model);
+                const avatarHtml = avatarUrl
+                    ? `<img class="ens-model-avatar" src="${avatarUrl}" onerror="this.style.display='none'">`
+                    : '';
+                card.append("div")
+                    .attr("class", "ens-card-name")
+                    .attr("title", stat.model)
+                    .html(`${avatarHtml}<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`);
+
+                const meta = card.append("div").attr("class", "ens-card-meta");
+                meta.append("span").html(`<b>${stat.totalPrograms}</b>&nbsp;${t('ens_programs')}`);
+                meta.append("span").html(`${t('ens_success_rate')}: <b>${(successRate * 100).toFixed(1)}%</b>`);
+
+                card.append("div").attr("class", "ens-posterior-bar-wrap")
+                    .append("div").attr("class", "ens-posterior-bar")
+                    .style("width", barPct + "%");
+
+                card.append("div").attr("class", "ens-card-posterior-val")
+                    .text(`${t('ens_posterior')}: ${stat.latestPosterior.toFixed(4)}`);
+            });
+
+            // ── Section 2: Posterior curves (D3) ────────────────────────────────
+            const curveWrap = document.getElementById("ens-curve-wrap");
+            const totalW = curveWrap.getBoundingClientRect().width || 800;
+            const margin = { top: 14, right: 24, bottom: 36, left: 52 };
+            const svgW = totalW;
+            const svgH = 220;
+            const innerW = svgW - margin.left - margin.right;
+            const innerH = svgH - margin.top - margin.bottom;
+
+            const svg = d3.select("#ens-curve-wrap").append("svg")
+                .attr("class", "ens-curve-svg")
+                .attr("width", svgW)
+                .attr("height", svgH);
+
+            const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const xScale = d3.scaleLinear()
+                .domain(d3.extent(generations))
+                .range([0, innerW]);
+
+            const yScale = d3.scaleLinear()
+                .domain([0, 1])
+                .range([innerH, 0]);
+
+            // Grid
+            g.append("g").attr("class", "ens-curve-grid")
+                .call(d3.axisLeft(yScale).tickSize(-innerW).tickFormat(""))
+                .call(ag => ag.select(".domain").remove());
+
+            // Axes
+            const reducedGens = getReducedTicks([...new Set(generations)]);
+            g.append("g").attr("class", "ens-curve-axis")
+                .attr("transform", `translate(0,${innerH})`)
+                .call(d3.axisBottom(xScale).tickValues(reducedGens).tickFormat(d3.format("d")));
+            g.append("g").attr("class", "ens-curve-axis")
+                .call(d3.axisLeft(yScale).ticks(5));
+
+            // Axis labels
+            g.append("text").attr("class", "ens-curve-label")
+                .attr("transform", "rotate(-90)")
+                .attr("x", -innerH / 2).attr("y", -margin.left + 12)
+                .attr("text-anchor", "middle")
+                .text(t('ens_posterior'));
+            g.append("text").attr("class", "ens-curve-label")
+                .attr("x", innerW / 2).attr("y", innerH + margin.bottom - 4)
+                .attr("text-anchor", "middle")
+                .text(t('generation') || 'Generation');
+
+            // Lines
+            const lineGen = d3.line()
+                .x(d => xScale(d.generation))
+                .y(d => yScale(d.posterior))
+                .curve(d3.curveMonotoneX);
+
+            const modelDataMap = {};
+            chartData.forEach(d => {
+                if (!modelDataMap[d.model]) modelDataMap[d.model] = [];
+                modelDataMap[d.model].push(d);
+            });
+
+            const tooltip = document.getElementById("ens-tooltip");
+
+            models.forEach(model => {
+                const mData = (modelDataMap[model] || []).sort((a, b) => a.generation - b.generation);
+                if (!mData.length) return;
+                const color = colorScale(model);
+
+                g.append("path")
+                    .datum(mData)
+                    .attr("class", "ens-model-line ens-curve-line")
+                    .attr("data-model", model)
+                    .attr("stroke", color)
+                    .attr("stroke-opacity", 1)
+                    .attr("stroke-width", 2.2)
+                    .attr("d", lineGen);
+
+                // Dots with hover
+                g.selectAll(`.ens-dot-${model.replace(/[^a-z0-9]/gi, '_')}`)
+                    .data(mData)
+                    .enter().append("circle")
+                    .attr("class", "ens-curve-dot")
+                    .attr("r", 3.5)
+                    .attr("cx", d => xScale(d.generation))
+                    .attr("cy", d => yScale(d.posterior))
+                    .attr("stroke", color)
+                    .on("mouseover", function(event, d) {
+                        tooltip.style.opacity = "1";
+                        tooltip.innerHTML = `<b>${escapeHtml(shortName(d.model))}</b><br>Gen ${d.generation}: ${d.posterior.toFixed(4)}`;
+                    })
+                    .on("mousemove", function(event) {
+                        const rect = curveWrap.getBoundingClientRect();
+                        tooltip.style.left = (event.clientX - rect.left + 10) + "px";
+                        tooltip.style.top = (event.clientY - rect.top - 30) + "px";
+                    })
+                    .on("mouseout", function() {
+                        tooltip.style.opacity = "0";
+                    });
+            });
+
+            // ── Section 2b: Stacked area chart ──────────────────────────────────
+            const stackedWrap = document.getElementById("ens-stacked-wrap");
+            const stackedTooltip = document.getElementById("ens-stacked-tooltip");
+
+            // Build stacked data: for each generation, normalize posteriors to sum=1
+            const stackGens = generations.slice();
+            const stackRows = stackGens.map(gen => {
+                const row = { generation: gen };
+                const genPts = chartData.filter(d => d.generation === gen);
+                const total = genPts.reduce((s, d) => s + d.posterior, 0) || 1;
+                models.forEach(m => {
+                    const pt = genPts.find(d => d.model === m);
+                    row[m] = pt ? pt.posterior / total : 0;
+                });
+                return row;
+            });
+
+            const stackSvg = d3.select("#ens-stacked-wrap").append("svg")
+                .attr("class", "ens-curve-svg")
+                .attr("width", svgW).attr("height", svgH)
+                .attr("viewBox", `0 0 ${svgW} ${svgH}`);
+
+            const stackG = stackSvg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+            const stackX = d3.scaleLinear().domain(d3.extent(stackGens)).range([0, innerW]);
+            const stackY = d3.scaleLinear().domain([0, 1]).range([innerH, 0]);
+
+            const stackedTicks = getReducedTicks(stackGens);
+            stackG.append("g").attr("transform", `translate(0,${innerH})`).call(d3.axisBottom(stackX).tickValues(stackedTicks).tickFormat(d3.format("d")));
+            stackG.append("g").call(d3.axisLeft(stackY).ticks(5).tickFormat(d => (d * 100) + "%"));
+
+            const stack = d3.stack().keys(models).order(d3.stackOrderNone).offset(d3.stackOffsetNone);
+            const series = stack(stackRows);
+
+            const area = d3.area()
+                .x(d => stackX(d.data.generation))
+                .y0(d => stackY(d[0]))
+                .y1(d => stackY(d[1]))
+                .curve(d3.curveMonotoneX);
+
+            stackG.selectAll(".ens-stacked-layer")
+                .data(series)
+                .enter().append("path")
+                .attr("class", "ens-stacked-layer")
+                .attr("d", area)
+                .attr("fill", d => colorScale(d.key))
+                .attr("fill-opacity", 0.75)
+                .attr("stroke", d => colorScale(d.key))
+                .attr("stroke-width", 0.5)
+                .on("mouseover", function(event, d) {
+                    d3.select(this).attr("fill-opacity", 0.95);
+                    stackedTooltip.style.opacity = "1";
+                    // Find closest generation
+                    const rect = stackedWrap.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left - margin.left;
+                    const gen = Math.round(stackX.invert(mouseX));
+                    const row = stackRows.find(r => r.generation === gen) || {};
+                    const pct = ((row[d.key] || 0) * 100).toFixed(1);
+                    stackedTooltip.innerHTML = `<b>${escapeHtml(shortName(d.key))}</b><br>Gen ${gen}: ${pct}%`;
+                })
+                .on("mousemove", function(event) {
+                    const rect = stackedWrap.getBoundingClientRect();
+                    stackedTooltip.style.left = (event.clientX - rect.left + 10) + "px";
+                    stackedTooltip.style.top = (event.clientY - rect.top - 30) + "px";
+                })
+                .on("mouseout", function() {
+                    d3.select(this).attr("fill-opacity", 0.75);
+                    stackedTooltip.style.opacity = "0";
+                });
+
+            // ── Toggle logic ─────────────────────────────────────────────────────
+            container.selectAll(".ens-viz-btn").on("click", function() {
+                const mode = d3.select(this).attr("data-viz");
+                container.selectAll(".ens-viz-btn").classed("active", false);
+                d3.select(this).classed("active", true);
+                document.getElementById("ens-curve-wrap").style.display = mode === "lines" ? "" : "none";
+                document.getElementById("ens-stacked-wrap").style.display = mode === "stacked" ? "" : "none";
+            });
+
+            // ── Section 3: Comparison table ──────────────────────────────────────
+            const tableWrap = d3.select("#ens-table-wrap");
+
+            const columns = [
+                { key: 'model',         label: t('model') || 'Model',               sortable: false },
+                { key: 'totalPrograms', label: `# ${t('ens_programs')}`,            sortable: true  },
+                { key: 'successRate',   label: t('ens_success_rate'),               sortable: true  },
+                { key: 'avgPosterior',  label: t('ens_avg_posterior'),              sortable: true  },
+                { key: 'totalCost',     label: t('ens_total_cost'),                 sortable: true  }
+            ];
+
+            const statsWithRate = modelStats.map(s => ({
+                ...s,
+                successRate: s.totalPrograms > 0 ? s.correct / s.totalPrograms : 0
+            }));
+
+            let sortState = { key: null, asc: true };
+
+            const table = tableWrap.append("table").attr("class", "ens-table");
+            const thead = table.append("thead");
+            const tbody = table.append("tbody");
+
+            const headerRow = thead.append("tr");
+            columns.forEach(col => {
+                const th = headerRow.append("th")
+                    .attr("class", col.sortable ? "sortable" : "")
+                    .attr("data-key", col.key)
+                    .text(col.label);
+                if (col.sortable) {
+                    th.on("click", function() {
+                        const key = col.key;
+                        if (sortState.key === key) {
+                            sortState.asc = !sortState.asc;
+                        } else {
+                            sortState.key = key;
+                            sortState.asc = false;
+                        }
+                        headerRow.selectAll("th").classed("sort-active", false);
+                        d3.select(this).classed("sort-active", true);
+                        renderTableRows();
+                    });
+                }
+            });
+
+            const renderTableRows = () => {
+                tbody.selectAll("tr.data-row").remove();
+                let rows = [...statsWithRate];
+                if (sortState.key) {
+                    rows.sort((a, b) => {
+                        const va = a[sortState.key], vb = b[sortState.key];
+                        return sortState.asc ? va - vb : vb - va;
+                    });
+                }
+                rows.forEach(stat => {
+                    const tr = tbody.append("tr").attr("class", "data-row");
+                    const color = colorScale(stat.model);
+                    const tAvUrl = modelAvatar(stat.model);
+                    const tAvHtml = tAvUrl ? `<img class="ens-model-avatar-sm" src="${tAvUrl}" onerror="this.style.display='none'">` : '';
+                    tr.append("td").attr("class", "ens-model-cell")
+                        .html(`${tAvHtml}<span class="ens-color-dot" style="background:${color}"></span>${escapeHtml(shortName(stat.model))}`)
+                        .attr("title", stat.model);
+                    tr.append("td").attr("class", "ens-num").text(stat.totalPrograms);
+                    tr.append("td").attr("class", "ens-num").text((stat.successRate * 100).toFixed(1) + "%");
+                    tr.append("td").attr("class", "ens-num").text(stat.avgPosterior.toFixed(4));
+                    tr.append("td").attr("class", "ens-num").text("$" + stat.totalCost.toFixed(4));
+                });
+            };
+
+            renderTableRows();
+        }
+
+        function createCostVisualization(data) {
+            var costView = document.getElementById('cost-view');
+            if (!costView || !costView.classList.contains('active')) return;
+            var container = document.getElementById('cost-container');
+            if (!container) return;
+
+            var COST_AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            var COST_AVATAR_MAP = {
+                glm: 'chatglm', chatglm: 'chatglm', zhipu: 'chatglm',
+                deepseek: 'deepseek', ds: 'deepseek',
+                doubao: 'doubao', bytedance: 'doubao',
+                minimax: 'minimax', abab: 'minimax',
+                kimi: 'kimi', moonshot: 'moonshot',
+                qwen: 'qwen', alibaba: 'qwen',
+                claude: 'claude', anthropic: 'claude',
+                gpt: 'openai', openai: 'openai',
+                gemini: 'google', google: 'google',
+                llama: 'meta', meta: 'meta',
+                mistral: 'mistral'
+            };
+            function costShortName(m) {
+                var base = m.indexOf('@') >= 0 ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            }
+            function costModelAvatar(modelName) {
+                var lower = costShortName(modelName).toLowerCase();
+                var keys = Object.keys(COST_AVATAR_MAP);
+                for (var ki = 0; ki < keys.length; ki++) {
+                    if (lower.indexOf(keys[ki]) >= 0) return COST_AVATAR_CDN + '/' + COST_AVATAR_MAP[keys[ki]] + '.webp';
+                }
+                return null;
+            }
+            function programCost(p) {
+                var md = p.metadata || {};
+                return (parseFloat(md.api_costs) || 0) + (parseFloat(md.embed_cost) || 0) +
+                       (parseFloat(md.novelty_cost) || 0) + (parseFloat(md.meta_cost) || 0);
+            }
+            function fmtCost(v) { return v === 0 ? '$0.0000' : '$' + v.toFixed(4); }
+
+            if (!data || data.length === 0) {
+                container.innerHTML = '<p style="text-align:center;padding:40px;color:#999">' + t('cost_no_data') + '</p>';
+                return;
+            }
+
+            var totalApi = 0, totalEmbed = 0, totalNovelty = 0, totalMeta = 0;
+            data.forEach(function(p) {
+                var md = p.metadata || {};
+                totalApi     += parseFloat(md.api_costs)    || 0;
+                totalEmbed   += parseFloat(md.embed_cost)   || 0;
+                totalNovelty += parseFloat(md.novelty_cost) || 0;
+                totalMeta    += parseFloat(md.meta_cost)    || 0;
+            });
+            var totalAll = totalApi + totalEmbed + totalNovelty + totalMeta;
+            var avgPerProgram = data.length > 0 ? totalAll / data.length : 0;
+            var zeroCostMode = totalAll < 0.0001;
+
+            // Compute-time stats for zero-cost mode
+            var computeTimes = data.map(function(p) { return parseFloat((p.metadata || {}).compute_time) || 0; }).filter(function(t) { return t > 0; });
+            var totalCompute = computeTimes.reduce(function(a, b) { return a + b; }, 0);
+            var avgCompute = computeTimes.length > 0 ? totalCompute / computeTimes.length : 0;
+
+            var overviewCards;
+            if (zeroCostMode) {
+                overviewCards = [
+                    { label: 'Free Models', value: '\u2714 $0' },
+                    { label: 'Total Compute', value: totalCompute.toFixed(1) + 's' },
+                    { label: 'Avg / Program', value: avgCompute.toFixed(2) + 's' },
+                    { label: 'Programs', value: String(data.length) }
+                ];
+            } else {
+                overviewCards = [
+                    { label: t('cost_total_api'),       value: fmtCost(totalApi)      },
+                    { label: t('cost_total_embed'),     value: fmtCost(totalEmbed)    },
+                    { label: t('cost_overview'),        value: fmtCost(totalAll)      },
+                    { label: t('cost_avg_per_program'), value: fmtCost(avgPerProgram) }
+                ];
+            }
+            var overviewHtml = overviewCards.map(function(c) {
+                return '<div class="cost-stat-card">' +
+                    '<div class="cost-stat-label">' + escapeHtml(c.label) + '</div>' +
+                    '<div class="cost-stat-value">' + escapeHtml(c.value) + '</div>' +
+                    '</div>';
+            }).join('');
+
+            var chartTitle = zeroCostMode ? 'Compute Time vs Best Score' : t('cost_vs_score');
+            var effTitle = zeroCostMode ? 'Compute Efficiency by Model' : t('cost_efficiency');
+            container.innerHTML =
+                '<div class="cost-section-title">' + t('cost_overview') + '</div>' +
+                '<div class="cost-overview-grid">' + overviewHtml + '</div>' +
+                '<div class="cost-section-title">' + chartTitle + '</div>' +
+                '<div class="cost-chart-wrap" id="cost-line-wrap" style="height:260px;">' +
+                    '<div class="cost-tooltip" id="cost-line-tooltip"></div>' +
+                '</div>' +
+                '<div class="cost-section-title">' + effTitle + '</div>' +
+                '<div id="cost-bar-section"></div>';
+
+            var lineWrap = document.getElementById('cost-line-wrap');
+            if (lineWrap) {
+                var sorted = data.slice().sort(function(a, b) {
+                    var ta = a.timestamp || a.generation || 0;
+                    var tb = b.timestamp || b.generation || 0;
+                    if (ta !== tb) return ta - tb;
+                    return (a.id || 0) - (b.id || 0);
+                });
+                var lineTooltip = document.getElementById('cost-line-tooltip');
+                var wrapRect = lineWrap.getBoundingClientRect();
+                var svgW = Math.max(300, wrapRect.width || 500);
+                var svgH = 240;
+                var mg = { top: 18, right: 56, bottom: 36, left: 64 };
+                var innerW = svgW - mg.left - mg.right;
+                var innerH = svgH - mg.top - mg.bottom;
+
+                var cumCost = 0, runningBest = null;
+                var series = sorted.map(function(p, i) {
+                    if (zeroCostMode) {
+                        cumCost += parseFloat((p.metadata || {}).compute_time) || 0;
+                    } else {
+                        cumCost += programCost(p);
+                    }
+                    var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
+                    if (sc != null && (runningBest === null || sc > runningBest)) runningBest = sc;
+                    return { idx: i + 1, cost: cumCost, score: runningBest };
+                }).filter(function(d) { return d.score !== null; });
+
+                if (series.length < 2) {
+                    lineWrap.innerHTML = '<p style="text-align:center;padding:30px;color:#999">' + t('cost_no_data') + '</p>';
+                } else {
+                    var maxCost  = d3.max(series, function(d) { return d.cost;  }) || 1;
+                    var minScore = d3.min(series, function(d) { return d.score; }) || 0;
+                    var maxScore = d3.max(series, function(d) { return d.score; }) || 1;
+                    var scorePad = Math.max((maxScore - minScore) * 0.1, 0.01);
+                    var xScale = d3.scaleLinear().domain([1, series.length]).range([0, innerW]);
+                    var yCost  = d3.scaleLinear().domain([0, maxCost  * 1.05]).range([innerH, 0]);
+                    var yScore = d3.scaleLinear().domain([minScore - scorePad, maxScore + scorePad]).range([innerH, 0]);
+
+                    var svg = d3.select(lineWrap).append('svg')
+                        .attr('width', svgW).attr('height', svgH)
+                        .attr('viewBox', '0 0 ' + svgW + ' ' + svgH);
+                    var g = svg.append('g').attr('transform', 'translate(' + mg.left + ',' + mg.top + ')');
+
+                    g.append('g').selectAll('line').data(yCost.ticks(5)).enter()
+                        .append('line')
+                        .attr('x1', 0).attr('x2', innerW)
+                        .attr('y1', function(d) { return yCost(d); }).attr('y2', function(d) { return yCost(d); })
+                        .attr('stroke', 'rgba(0,0,0,0.05)').attr('stroke-width', 1);
+
+                    g.append('g').attr('transform', 'translate(0,' + innerH + ')')
+                        .call(d3.axisBottom(xScale).ticks(Math.min(series.length, 8)).tickFormat(d3.format('d')))
+                        .selectAll('text').style('font-size', '10px').style('font-family', 'Inter, sans-serif');
+                    var costAxisFmt = zeroCostMode
+                        ? function(d) { return d3.format('.1f')(d) + 's'; }
+                        : function(d) { return '$' + d3.format('.3f')(d); };
+                    g.append('g')
+                        .call(d3.axisLeft(yCost).ticks(5).tickFormat(costAxisFmt))
+                        .selectAll('text').style('font-size', '10px').style('fill', '#D97706')
+                        .style('font-family', 'Roboto Mono, monospace');
+                    g.append('g').attr('transform', 'translate(' + innerW + ',0)')
+                        .call(d3.axisRight(yScore).ticks(5).tickFormat(d3.format('.3f')))
+                        .selectAll('text').style('font-size', '10px').style('fill', '#059669')
+                        .style('font-family', 'Roboto Mono, monospace');
+
+                    g.append('text').attr('transform', 'rotate(-90)').attr('x', -(innerH / 2)).attr('y', -50)
+                        .attr('text-anchor', 'middle')
+                        .style('font-size', '10px').style('fill', '#D97706').style('font-family', 'Inter, sans-serif')
+                        .text(zeroCostMode ? 'Cumulative Compute (s)' : 'Cumulative Cost ($)');
+                    g.append('text')
+                        .attr('transform', 'rotate(90,' + (innerW + 50) + ',' + (innerH / 2) + ')')
+                        .attr('x', innerW + 50).attr('y', innerH / 2).attr('text-anchor', 'middle')
+                        .style('font-size', '10px').style('fill', '#059669').style('font-family', 'Inter, sans-serif')
+                        .text('Best Score');
+
+                    g.append('path').datum(series)
+                        .attr('fill', 'none').attr('stroke', '#D97706').attr('stroke-width', 2.2)
+                        .attr('d', d3.line()
+                            .x(function(d) { return xScale(d.idx); }).y(function(d) { return yCost(d.cost); })
+                            .curve(d3.curveMonotoneX));
+                    g.append('path').datum(series)
+                        .attr('fill', 'none').attr('stroke', '#059669').attr('stroke-width', 2)
+                        .attr('stroke-dasharray', '5 3')
+                        .attr('d', d3.line()
+                            .x(function(d) { return xScale(d.idx); }).y(function(d) { return yScore(d.score); })
+                            .curve(d3.curveMonotoneX));
+
+                    var lgG = g.append('g').attr('transform', 'translate(' + (innerW - 112) + ',2)');
+                    [[false, '#D97706', zeroCostMode ? 'Time' : 'Cost'], [true, '#059669', 'Best Score']].forEach(function(entry, li) {
+                        var row = lgG.append('g').attr('transform', 'translate(0,' + (li * 14) + ')');
+                        row.append('line').attr('x1', 0).attr('x2', 16).attr('y1', 5).attr('y2', 5)
+                            .attr('stroke', entry[1]).attr('stroke-width', 2)
+                            .attr('stroke-dasharray', entry[0] ? '5 3' : 'none');
+                        row.append('text').attr('x', 20).attr('y', 9)
+                            .style('font-size', '10px').style('fill', entry[1]).style('font-family', 'Inter, sans-serif')
+                            .text(entry[2]);
+                    });
+
+                    var bisect = d3.bisector(function(d) { return d.idx; }).left;
+                    g.append('rect').attr('width', innerW).attr('height', innerH).attr('fill', 'transparent')
+                        .on('mousemove', function(event) {
+                            var xy = d3.pointer(event);
+                            var xVal = xScale.invert(xy[0]);
+                            var idx2 = Math.min(Math.max(bisect(series, xVal, 1), 1), series.length) - 1;
+                            var d = series[idx2];
+                            if (!d || !lineTooltip) return;
+                            lineTooltip.style.opacity = '1';
+                            var costLabel = zeroCostMode ? 'Time: ' + d.cost.toFixed(1) + 's' : 'Cost: $' + d.cost.toFixed(4);
+                            lineTooltip.innerHTML = '#' + d.idx + '\u00a0 ' + costLabel + '\u00a0 Score: ' + d.score.toFixed(4);
+                            var r = lineWrap.getBoundingClientRect();
+                            lineTooltip.style.left = (event.clientX - r.left + 12) + 'px';
+                            lineTooltip.style.top  = (event.clientY - r.top  - 32) + 'px';
+                        })
+                        .on('mouseleave', function() { if (lineTooltip) lineTooltip.style.opacity = '0'; });
+                }
+            }
+
+            var barSection = document.getElementById('cost-bar-section');
+            if (barSection) {
+                var modelMap = {};
+                data.forEach(function(p) {
+                    var md = p.metadata || {};
+                    var lr = md.llm_result || {};
+                    var m = md.model_name || md.model || lr.model || p.model_name || p.model || 'unknown';
+                    if (!modelMap[m]) modelMap[m] = { cost: 0, compute: 0, scores: [], count: 0 };
+                    modelMap[m].cost += programCost(p);
+                    modelMap[m].compute += parseFloat((md).compute_time) || 0;
+                    modelMap[m].count++;
+                    var sc = p.combined_score != null ? p.combined_score : (p.score != null ? p.score : null);
+                    if (sc != null) modelMap[m].scores.push(sc);
+                });
+
+                var modelRows = Object.keys(modelMap).map(function(model) {
+                    var v = modelMap[model];
+                    var maxScore   = v.scores.length ? Math.max.apply(null, v.scores) : 0;
+                    var minScore   = v.scores.length ? Math.min.apply(null, v.scores) : 0;
+                    var scoreDelta = Math.max(maxScore - minScore, 1e-6);
+                    var resource = zeroCostMode ? v.compute : v.cost;
+                    var efficiency = resource > 0 ? resource / scoreDelta : 0;
+                    return { model: model, cost: v.cost, compute: v.compute, count: v.count, maxScore: maxScore, efficiency: efficiency };
+                }).filter(function(r) { return zeroCostMode ? r.compute > 0 : r.cost > 0; }).sort(function(a, b) { return a.efficiency - b.efficiency; });
+
+                if (modelRows.length === 0) {
+                    barSection.innerHTML = '<p style="text-align:center;padding:20px;color:#999">' + t('cost_no_data') + '</p>';
+                } else {
+                    var maxEff = d3.max(modelRows, function(r) { return r.efficiency; }) || 1;
+                    var rowsHtml = modelRows.map(function(r) {
+                        var pct = (r.efficiency / maxEff * 100).toFixed(1);
+                        var avUrl = costModelAvatar(r.model);
+                        var avHtml = avUrl
+                            ? '<img src="' + avUrl + '" style="width:16px;height:16px;border-radius:50%;object-fit:cover;flex-shrink:0;" onerror="this.style.display=\'none\'">'
+                            : '';
+                        return '<div class="cost-bar-row">' +
+                            '<div class="cost-bar-label" title="' + escapeHtml(r.model) + '">' +
+                                avHtml + '<span>' + escapeHtml(costShortName(r.model)) + '</span>' +
+                            '</div>' +
+                            '<div class="cost-bar-track"><div class="cost-bar-fill" style="width:' + pct + '%"></div></div>' +
+                            '<div class="cost-bar-val">' + (zeroCostMode ? r.efficiency.toFixed(1) + 's/\u0394score' : '$/' + '\u0394score: ' + fmtCost(r.efficiency)) + '</div>' +
+                            '</div>';
+                    }).join('');
+                    var effDesc = zeroCostMode
+                        ? 'seconds/\u0394score \u2014 lower = faster improvement'
+                        : '$/\u0394score \u2014 lower is more efficient';
+                    barSection.innerHTML =
+                        '<p style="font-size:11px;color:#999;margin:0 0 10px 0;">' + effDesc + '</p>' +
+                        rowsHtml;
+                }
+            }
+        }
+
+        // ===== Battle Tab =====
+        function createBattleVisualization(data) {
+            const battleView = document.getElementById('battle-view');
+            if (!battleView || !battleView.classList.contains('active')) return;
+
+            const container = document.getElementById('battle-container');
+            if (!container) return;
+
+            // ── helpers (locally scoped, mirrors Ensembling patterns) ────────────
+            const shortName = (m) => {
+                const base = m.includes('@') ? m.split('@')[0] : m;
+                return base.split('/').pop();
+            };
+
+            const AVATAR_CDN = 'https://cdn.jsdelivr.net/npm/@lobehub/icons-static-avatar@latest/avatars';
+            const MODEL_AVATAR_MAP = {
+                'glm': 'chatglm', 'chatglm': 'chatglm', 'zhipu': 'chatglm',
+                'deepseek': 'deepseek', 'ds': 'deepseek',
+                'doubao': 'doubao', 'bytedance': 'doubao',
+                'minimax': 'minimax', 'abab': 'minimax',
+                'kimi': 'kimi', 'moonshot': 'moonshot',
+                'qwen': 'qwen', 'alibaba': 'qwen',
+                'claude': 'claude', 'anthropic': 'claude',
+                'gpt': 'openai', 'openai': 'openai',
+                'gemini': 'google', 'google': 'google',
+                'llama': 'meta', 'meta': 'meta',
+                'mistral': 'mistral',
+            };
+            const modelAvatar = (modelName) => {
+                const lower = shortName(modelName).toLowerCase();
+                for (const [key, avatar] of Object.entries(MODEL_AVATAR_MAP)) {
+                    if (lower.includes(key)) return `${AVATAR_CDN}/${avatar}.webp`;
+                }
+                return null;
+            };
+
+            // ── data extraction ──────────────────────────────────────────────────
+            const getModel = (p) =>
+                p.metadata?.model_name || p.metadata?.llm_result?.model ||
+                p.metadata?.model || p.model_name || p.model;
+
+            const programs = (data || []).filter(p => {
+                const m = getModel(p);
+                return m && p.combined_score != null;
+            });
+
+            if (programs.length === 0) {
+                container.innerHTML = `<div class="battle-no-data">${t('battle_no_data')}</div>`;
+                return;
+            }
+
+            // Group scores by model
+            const modelMap = {};
+            programs.forEach(p => {
+                const m = getModel(p);
+                if (!modelMap[m]) modelMap[m] = [];
+                modelMap[m].push(p.combined_score);
+            });
+
+            const palette = d3.schemeTableau10 || d3.schemeCategory10;
+            const modelList = Object.keys(modelMap);
+            const colorScale = d3.scaleOrdinal(palette).domain(modelList);
+
+            // Compute box statistics per model
+            const boxStats = modelList.map(model => {
+                const scores = modelMap[model].slice().sort((a, b) => a - b);
+                const n = scores.length;
+                const median = n % 2 === 0
+                    ? (scores[n / 2 - 1] + scores[n / 2]) / 2
+                    : scores[Math.floor(n / 2)];
+                const q1 = scores[Math.floor(n * 0.25)];
+                const q3 = scores[Math.floor(n * 0.75)];
+                const iqr = q3 - q1;
+                const wLow = Math.max(scores[0], q1 - 1.5 * iqr);
+                const wHigh = Math.min(scores[n - 1], q3 + 1.5 * iqr);
+                const outliers = scores.filter(s => s < wLow || s > wHigh);
+                return { model, scores, n, median, q1, q3, wLow, wHigh, outliers };
+            }).sort((a, b) => b.median - a.median);
+
+            // Win rate matrix: row model beats column model
+            const matModels = boxStats.map(s => s.model);
+            const winMatrix = {};
+            matModels.forEach(a => {
+                winMatrix[a] = {};
+                matModels.forEach(b => {
+                    if (a === b) { winMatrix[a][b] = null; return; }
+                    const sa = modelMap[a];
+                    const sb = modelMap[b];
+                    let wins = 0, total = 0;
+                    sa.forEach(va => {
+                        sb.forEach(vb => {
+                            wins += va > vb ? 1 : 0;
+                            total++;
+                        });
+                    });
+                    winMatrix[a][b] = total > 0 ? wins / total : 0;
+                });
+            });
+
+            // ── DOM skeleton ─────────────────────────────────────────────────────
+            container.innerHTML = `
+                <div style="position:relative">
+                    <div class="battle-section-title">${t('battle_score_dist')}</div>
+                    <div id="battle-boxplot-wrap" style="position:relative;overflow-x:auto;"></div>
+
+                    <div class="battle-section-title">${t('battle_winrate')}</div>
+                    <div id="battle-matrix-wrap" style="position:relative;overflow-x:auto;"></div>
+                    <div id="battle-tooltip" class="battle-tooltip"></div>
+
+                    <div class="battle-section-title">${t('battle_ranking')}</div>
+                    <div id="battle-rank-wrap"></div>
+                </div>
+            `;
+
+            const tooltip = container.querySelector('#battle-tooltip');
+            const showTip = (html, evt) => {
+                tooltip.innerHTML = html;
+                tooltip.style.opacity = '1';
+                const rect = container.getBoundingClientRect();
+                tooltip.style.left = (evt.clientX - rect.left + 12) + 'px';
+                tooltip.style.top = (evt.clientY - rect.top - 28) + 'px';
+            };
+            const hideTip = () => { tooltip.style.opacity = '0'; };
+
+            // ── Section 1: Box Plot ──────────────────────────────────────────────
+            const bpWrap = container.querySelector('#battle-boxplot-wrap');
+            const bpMargin = { top: 20, right: 20, bottom: 60, left: 50 };
+            const bpMinWidth = Math.max(boxStats.length * 72, 400);
+            const bpWidth = Math.max(bpWrap.getBoundingClientRect().width || 600, bpMinWidth);
+            const bpHeight = 220;
+            const bpInnerW = bpWidth - bpMargin.left - bpMargin.right;
+            const bpInnerH = bpHeight - bpMargin.top - bpMargin.bottom;
+
+            const allScores = programs.map(p => p.combined_score);
+            const scoreMin = Math.min(...allScores);
+            const scoreMax = Math.max(...allScores);
+            const scorePad = (scoreMax - scoreMin) * 0.05 || 0.05;
+
+            const xBand = d3.scaleBand()
+                .domain(boxStats.map(s => s.model))
+                .range([0, bpInnerW])
+                .padding(0.4);
+
+            const yScale = d3.scaleLinear()
+                .domain([scoreMin - scorePad, scoreMax + scorePad])
+                .range([bpInnerH, 0])
+                .nice();
+
+            const bpSvg = d3.select(bpWrap).append('svg')
+                .attr('width', bpWidth).attr('height', bpHeight)
+                .attr('style', 'display:block');
+
+            const bpG = bpSvg.append('g')
+                .attr('transform', `translate(${bpMargin.left},${bpMargin.top})`);
+
+            // Horizontal grid lines
+            bpG.append('g').attr('class', 'battle-grid')
+                .call(d3.axisLeft(yScale).ticks(5).tickSize(-bpInnerW).tickFormat(''))
+                .call(g => {
+                    g.select('.domain').remove();
+                    g.selectAll('line').attr('stroke', 'rgba(0,0,0,0.05)').attr('stroke-width', 1);
+                });
+
+            // Y axis
+            bpG.append('g').attr('class', 'battle-axis')
+                .call(d3.axisLeft(yScale).ticks(5).tickFormat(d => d.toFixed(2)));
+
+            // X axis with rotated labels
+            bpG.append('g').attr('class', 'battle-axis')
+                .attr('transform', `translate(0,${bpInnerH})`)
+                .call(d3.axisBottom(xBand).tickFormat(d => shortName(d)))
+                .selectAll('text')
+                .attr('transform', 'rotate(-30)')
+                .attr('text-anchor', 'end')
+                .attr('dy', '0.35em')
+                .attr('dx', '-0.4em');
+
+            // Draw each box
+            boxStats.forEach(stat => {
+                const bw = xBand.bandwidth();
+                const xMid = xBand(stat.model) + bw / 2;
+                const color = colorScale(stat.model);
+
+                // Whisker stem
+                bpG.append('line')
+                    .attr('x1', xMid).attr('x2', xMid)
+                    .attr('y1', yScale(stat.wHigh)).attr('y2', yScale(stat.wLow))
+                    .attr('stroke', color).attr('stroke-width', 1.5);
+
+                // Whisker caps
+                [stat.wHigh, stat.wLow].forEach(v => {
+                    bpG.append('line')
+                        .attr('x1', xMid - bw * 0.2).attr('x2', xMid + bw * 0.2)
+                        .attr('y1', yScale(v)).attr('y2', yScale(v))
+                        .attr('stroke', color).attr('stroke-width', 1.5);
+                });
+
+                // IQR box
+                bpG.append('rect')
+                    .attr('x', xBand(stat.model))
+                    .attr('y', yScale(stat.q3))
+                    .attr('width', bw)
+                    .attr('height', Math.max(1, yScale(stat.q1) - yScale(stat.q3)))
+                    .attr('fill', color).attr('opacity', 0.72)
+                    .on('mouseover', (evt) => {
+                        showTip(
+                            `<b>${escapeHtml(shortName(stat.model))}</b><br>` +
+                            `${t('battle_median')}: ${stat.median.toFixed(4)}<br>` +
+                            `Q1: ${stat.q1.toFixed(4)} / Q3: ${stat.q3.toFixed(4)}<br>` +
+                            `N: ${stat.n}`,
+                            evt
+                        );
+                    })
+                    .on('mousemove', (evt) => showTip(tooltip.innerHTML, evt))
+                    .on('mouseout', hideTip);
+
+                // Median line
+                bpG.append('line')
+                    .attr('x1', xBand(stat.model)).attr('x2', xBand(stat.model) + bw)
+                    .attr('y1', yScale(stat.median)).attr('y2', yScale(stat.median))
+                    .attr('stroke', '#fff').attr('stroke-width', 2);
+
+                // Outlier dots (jittered slightly)
+                stat.outliers.forEach(v => {
+                    bpG.append('circle')
+                        .attr('cx', xMid + (Math.random() - 0.5) * bw * 0.4)
+                        .attr('cy', yScale(v))
+                        .attr('r', 3)
+                        .attr('fill', color).attr('opacity', 0.55);
+                });
+            });
+
+            // ── Section 2: Win Rate Matrix ───────────────────────────────────────
+            const matWrap = container.querySelector('#battle-matrix-wrap');
+            const N = matModels.length;
+            const cellSize = Math.max(32, Math.min(60, Math.floor((container.getBoundingClientRect().width - 140) / N)));
+            const matMargin = { top: 50, right: 20, bottom: 30, left: 110 };
+            const matW = matMargin.left + N * cellSize + matMargin.right;
+            const matH = matMargin.top + N * cellSize + matMargin.bottom;
+
+            const winColor = d3.scaleSequential()
+                .domain([0, 1])
+                .interpolator(d3.interpolateRgb('#EA4335', '#34A853'));
+
+            const matSvg = d3.select(matWrap).append('svg')
+                .attr('width', matW).attr('height', matH)
+                .attr('style', 'display:block');
+
+            const matG = matSvg.append('g')
+                .attr('transform', `translate(${matMargin.left},${matMargin.top})`);
+
+            // Column headers (rotated)
+            matModels.forEach((m, ci) => {
+                matG.append('text').attr('class', 'battle-matrix-label')
+                    .attr('x', ci * cellSize + cellSize / 2)
+                    .attr('y', -4)
+                    .attr('text-anchor', 'start')
+                    .attr('font-size', 10)
+                    .attr('transform', `rotate(-40,${ci * cellSize + cellSize / 2},-4)`)
+                    .text(shortName(m));
+            });
+
+            // Row headers
+            matModels.forEach((m, ri) => {
+                matG.append('text').attr('class', 'battle-matrix-label')
+                    .attr('x', -6)
+                    .attr('y', ri * cellSize + cellSize / 2 + 4)
+                    .attr('text-anchor', 'end')
+                    .attr('font-size', 10)
+                    .text(shortName(m));
+            });
+
+            // Matrix cells
+            matModels.forEach((rowM, ri) => {
+                matModels.forEach((colM, ci) => {
+                    const wr = winMatrix[rowM][colM];
+                    const fillColor = wr === null ? '#ccc' : winColor(wr);
+                    const cellRect = matG.append('rect').attr('class', 'battle-matrix-cell')
+                        .attr('x', ci * cellSize).attr('y', ri * cellSize)
+                        .attr('width', cellSize).attr('height', cellSize)
+                        .attr('fill', fillColor)
+                        .attr('rx', 2);
+
+                    if (wr !== null) {
+                        cellRect
+                            .on('mouseover', (evt) => {
+                                showTip(
+                                    `<b>${escapeHtml(shortName(rowM))}</b> vs <b>${escapeHtml(shortName(colM))}</b><br>` +
+                                    `Win rate: ${(wr * 100).toFixed(1)}%`,
+                                    evt
+                                );
+                            })
+                            .on('mousemove', (evt) => showTip(tooltip.innerHTML, evt))
+                            .on('mouseout', hideTip);
+
+                        if (cellSize >= 36) {
+                            matG.append('text').attr('class', 'battle-matrix-val')
+                                .attr('x', ci * cellSize + cellSize / 2)
+                                .attr('y', ri * cellSize + cellSize / 2 + 4)
+                                .attr('fill', wr > 0.55 || wr < 0.45 ? '#fff' : '#333')
+                                .attr('font-size', 10)
+                                .text((wr * 100).toFixed(0) + '%');
+                        }
+                    }
+                });
+            });
+
+            // Gradient legend bar
+            const legendG = matSvg.append('g')
+                .attr('transform', `translate(${matMargin.left},${matMargin.top + N * cellSize + 10})`);
+            const legendW = Math.min(180, N * cellSize);
+            const defs = matSvg.append('defs');
+            const lgId = 'battle-lg-' + Date.now();
+            const lg = defs.append('linearGradient').attr('id', lgId)
+                .attr('x1', '0%').attr('x2', '100%');
+            lg.append('stop').attr('offset', '0%').attr('stop-color', '#EA4335');
+            lg.append('stop').attr('offset', '100%').attr('stop-color', '#34A853');
+            legendG.append('rect').attr('width', legendW).attr('height', 8)
+                .attr('rx', 2).attr('fill', `url(#${lgId})`);
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', 0).attr('y', 20).attr('font-size', 10).text('0%');
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', legendW / 2).attr('y', 20).attr('text-anchor', 'middle')
+                .attr('font-size', 10).text('50%');
+            legendG.append('text').attr('class', 'battle-matrix-label')
+                .attr('x', legendW).attr('y', 20).attr('text-anchor', 'end')
+                .attr('font-size', 10).text('100%');
+
+            // ── Section 3: Ranking Table ─────────────────────────────────────────
+            const rankWrap = container.querySelector('#battle-rank-wrap');
+            const rankStats = boxStats.map(stat => {
+                const progs = programs.filter(p => getModel(p) === stat.model);
+                return {
+                    model: stat.model,
+                    median: stat.median,
+                    best: Math.max(...stat.scores),
+                    count: stat.n,
+                    correct: progs.filter(p => p.correct).length,
+                };
+            });
+
+            let tableHtml = `<table class="battle-rank-table">
+                <thead><tr>
+                    <th>#</th>
+                    <th>${t('model')}</th>
+                    <th class="battle-rank-num">${t('battle_median')}</th>
+                    <th class="battle-rank-num">${t('battle_best')}</th>
+                    <th class="battle-rank-num">${t('programs')}</th>
+                </tr></thead>
+                <tbody>`;
+
+            rankStats.forEach((stat, i) => {
+                const rank = i + 1;
+                const badgeClass = rank <= 3 ? ` r${rank}` : '';
+                const avatarUrl = modelAvatar(stat.model);
+                const avatarHtml = avatarUrl
+                    ? `<img src="${avatarUrl}" class="battle-model-avatar" onerror="this.style.display='none'">`
+                    : '';
+                const color = colorScale(stat.model);
+                tableHtml += `<tr>
+                    <td><span class="battle-rank-badge${badgeClass}">${rank}</span></td>
+                    <td>
+                        <div class="battle-model-cell">
+                            ${avatarHtml}
+                            <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0;"></span>
+                            <span title="${escapeHtml(stat.model)}">${escapeHtml(shortName(stat.model))}</span>
+                        </div>
+                    </td>
+                    <td class="battle-rank-num">${stat.median.toFixed(4)}</td>
+                    <td class="battle-rank-num">${stat.best.toFixed(4)}</td>
+                    <td class="battle-rank-num">${stat.count}</td>
+                </tr>`;
+            });
+
+            tableHtml += '</tbody></table>';
+            rankWrap.innerHTML = tableHtml;
+        }
+
+        function createClusterPlots(data) {
+            console.log("[DEBUG] Creating cluster plots");
+            
+            // Check if the clusters tab is visible
+            const clustersView = document.getElementById('clusters-view');
+            if (!clustersView || !clustersView.classList.contains('active')) {
+                console.log("[DEBUG] Clusters view not active, skipping visualization creation");
+                return;
+            }
+            
+            const programsWithEmbeddings = data.filter(p =>
+                p.correct &&
+                p.embedding_pca_2d && p.embedding_pca_2d.length === 2 &&
+                p.embedding_pca_3d && p.embedding_pca_3d.length === 3 &&
+                p.embedding_cluster_id !== null && p.combined_score !== null
+            );
+
+            if (programsWithEmbeddings.length === 0) {
+                document.getElementById('cluster-plot-2d').innerHTML = '<p>No programs with PCA embeddings and cluster IDs found.</p>';
+                document.getElementById('cluster-plot-3d').innerHTML = '';
+                return;
+            }
+
+            const plotContainer2d = document.getElementById('cluster-plot-2d');
+            const plotContainer3d = document.getElementById('cluster-plot-3d');
+            if (plotContainer2d && plotContainer3d) {
+                const containerWidth = plotContainer2d.getBoundingClientRect().width;
+                plotContainer2d.style.height = `${containerWidth}px`;
+                plotContainer3d.style.height = `${containerWidth}px`;
+            }
+
+            const scores = programsWithEmbeddings.map(p => p.combined_score);
+            const minScore = Math.min(...scores);
+            const maxScore = Math.max(...scores);
+            
+            const bestProgram = programsWithEmbeddings.reduce((best, current) => (current.combined_score > best.combined_score) ? current : best, programsWithEmbeddings[0]);
+
+            const sizeScale = score => {
+                if (maxScore === minScore) return 10;
+                return 5 + 15 * (score - minScore) / (maxScore - minScore);
+            };
+            const sizes = programsWithEmbeddings.map(p => sizeScale(p.combined_score));
+            const symbols = programsWithEmbeddings.map(p => p.id === bestProgram.id ? 'star' : 'circle');
+            const symbols3d = programsWithEmbeddings.map(p => p.id === bestProgram.id ? 'diamond' : 'circle');
+            const borderColors = programsWithEmbeddings.map(p => p.id === bestProgram.id ? 'gold' : 'white');
+            const borderWidths = programsWithEmbeddings.map(p => p.id === bestProgram.id ? 3 : 1);
+
+            const uniqueClusterIds = [...new Set(programsWithEmbeddings.map(p => p.embedding_cluster_id))].sort((a,b) => a - b);
+
+            // 2D Plot
+            const trace2d = {
+                x: programsWithEmbeddings.map(p => p.embedding_pca_2d[0]),
+                y: programsWithEmbeddings.map(p => p.embedding_pca_2d[1]),
+                customdata: programsWithEmbeddings.map(p => p.id),
+                mode: 'markers',
+                type: 'scatter',
+                text: programsWithEmbeddings.map(p => `<b>${p.metadata.patch_name || 'unnamed'}</b><br>Score: ${formatScore(p.combined_score)}<br>Cluster: ${p.embedding_cluster_id}`),
+                hoverinfo: 'text',
+                marker: {
+                    color: programsWithEmbeddings.map(p => p.embedding_cluster_id),
+                    colorscale: 'Portland',
+                    showscale: false,
+                    size: sizes,
+                    symbol: symbols3d,
+                    line: {
+                        color: borderColors,
+                        width: borderWidths
+                    }
+                }
+            };
+
+            const layout2d = {
+                title: '2D PCA of Program Embeddings',
+                xaxis: { title: 'PC1' },
+                yaxis: { 
+                    title: 'PC2',
+                    scaleanchor: 'x',
+                    scaleratio: 1
+                },
+                margin: { t: 40, b: 40, l: 40, r: 10 },
+                paper_bgcolor: '#f8f9fa',
+                plot_bgcolor: '#f8f9fa'
+            };
+
+            Plotly.newPlot('cluster-plot-2d', [trace2d], layout2d, {responsive: true});
+
+            document.getElementById('cluster-plot-2d').on('plotly_click', function(data) {
+                if (data.points.length > 0) {
+                    const nodeId = data.points[0].customdata;
+                    if (nodeId) {
+                        selectNodeById(nodeId, false);
+                    }
+                }
+            });
+
+            // 3D Plot
+            const trace3d = {
+                x: programsWithEmbeddings.map(p => p.embedding_pca_3d[0]),
+                y: programsWithEmbeddings.map(p => p.embedding_pca_3d[1]),
+                z: programsWithEmbeddings.map(p => p.embedding_pca_3d[2]),
+                customdata: programsWithEmbeddings.map(p => p.id),
+                mode: 'markers',
+                type: 'scatter3d',
+                text: programsWithEmbeddings.map(p => `<b>${p.metadata.patch_name || 'unnamed'}</b><br>Score: ${formatScore(p.combined_score)}<br>Cluster: ${p.embedding_cluster_id}`),
+                hoverinfo: 'text',
+                marker: {
+                    color: programsWithEmbeddings.map(p => p.embedding_cluster_id),
+                    colorscale: 'Portland',
+                    showscale: true,
+                    size: sizes,
+                    symbol: symbols3d,
+                    line: {
+                        color: borderColors,
+                        width: borderWidths
+                    },
+                    colorbar: {
+                        title: 'C-ID',
+                        tickvals: uniqueClusterIds,
+                        ticktext: uniqueClusterIds,
+                        len: 0.4,
+                        y: 0.5,
+                        yanchor: 'middle'
+                    }
+                }
+            };
+
+            const layout3d = {
+                title: '3D PCA of Program Embeddings',
+                scene: {
+                    xaxis: { title: 'PC1' },
+                    yaxis: { title: 'PC2' },
+                    zaxis: { title: 'PC3' },
+                    camera: { eye: {x: 2., y: 2., z: 2.} }
+                },
+                margin: { t: 40, b: 0, l: 10, r: 0 },
+                paper_bgcolor: '#f8f9fa'
+            };
+
+            Plotly.newPlot('cluster-plot-3d', [trace3d], layout3d, {responsive: true});
+
+            document.getElementById('cluster-plot-3d').on('plotly_click', function(data) {
+                if (data.points.length > 0) {
+                    const nodeId = data.points[0].customdata;
+                    if (nodeId) {
+                        selectNodeById(nodeId, false);
+                    }
+                }
+            });
+
+            const legendContainer = document.getElementById('size-legend-container');
+            legendContainer.innerHTML = ''; // Clear previous
+
+            if (maxScore > minScore) {
+                const legendTitle = document.createElement('h5');
+                legendTitle.style.margin = '0 0 5px 0';
+                legendTitle.style.fontSize = '11px';
+                legendTitle.textContent = 'Score (size)';
+                legendContainer.appendChild(legendTitle);
+
+                const legendItems = document.createElement('div');
+                legendItems.style.display = 'flex';
+                legendItems.style.justifyContent = 'center';
+                legendItems.style.alignItems = 'flex-end';
+                legendItems.style.gap = '15px';
+
+                const midScore = (minScore + maxScore) / 2;
+                const legendScores = [minScore, midScore, maxScore];
+                
+                legendScores.forEach(score => {
+                    const item = document.createElement('div');
+                    item.style.textAlign = 'center';
+                    item.style.display = 'flex';
+                    item.style.flexDirection = 'column';
+                    item.style.alignItems = 'center';
+
+                    const circle = document.createElement('div');
+                    const diameter = sizeScale(score);
+                    circle.style.width = `${diameter}px`;
+                    circle.style.height = `${diameter}px`;
+                    circle.style.backgroundColor = '#888';
+                    circle.style.borderRadius = '50%';
+                    
+                    const label = document.createElement('span');
+                    label.style.fontSize = '10px';
+                    label.style.marginTop = '4px';
+                    label.textContent = score.toFixed(2);
+
+                    item.appendChild(circle);
+                    item.appendChild(label);
+                    legendItems.appendChild(item);
+                });
+
+                legendContainer.appendChild(legendItems);
+            }
+        }
+
+        function setupTableSorting() {
+            const headers = document.querySelectorAll('#program-table th.sortable');
+            headers.forEach(header => {
+                header.addEventListener('click', () => {
+                    const sortKey = header.dataset.sort;
+                    if (sortState.key === sortKey) {
+                        sortState.dir = sortState.dir === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        sortState.key = sortKey;
+                        sortState.dir = (sortKey === 'rank' || sortKey === 'generation') ? 'asc' : 'desc';
+                    }
+                    if (window.treeData) {
+                        populateProgramsTable(window.treeData);
+                    }
+                });
+            });
+        }
+
+        // --- Pareto Front Visualization ---
+
+        function getNestedValue(obj, path) {
+            if (!path) return undefined;
+            const parts = path.split('.');
+            let current = obj;
+            for (const part of parts) {
+                if (current === null || typeof current === 'undefined') return undefined;
+                current = current[part];
+            }
+            return current;
+        }
+
+        function getAvailableParetoMetrics(data) {
+            if (!data || data.length === 0) return [];
+            const metricsMap = new Map();
+
+            const addMetric = (programObj, path) => {
+                const value = getNestedValue(programObj, path);
+                if (typeof value === 'number' && !metricsMap.has(path)) {
+                    let name = path.split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+                    name = name.replace(/_/g, ' ');
+                    if (path.startsWith('public_metrics')) name = `Public: ${path.split('.')[1]}`;
+                    if (path.startsWith('private_metrics')) name = `Private: ${path.split('.')[1]}`;
+                    
+                    let objective = 'max';
+                    const key = path.split('.').pop();
+                    if (key.includes('cost') || key.includes('time') || key.includes('complexity') || key.includes('latency')) {
+                        objective = 'min';
+                    }
+                    metricsMap.set(path, { name, path, objective });
+                }
+            };
+
+            const discoverInObject = (programObj, subObj, prefix) => {
+                if (!subObj) return;
+                for (const key in subObj) {
+                    if (typeof subObj[key] === 'number') {
+                        addMetric(programObj, `${prefix}.${key}`);
+                    }
+                }
+            };
+
+            data.forEach(p => {
+                addMetric(p, 'combined_score');
+                addMetric(p, 'complexity');
+                if (p.metadata) addMetric(p, 'metadata.compute_time');
+                discoverInObject(p, p.public_metrics, 'public_metrics');
+                discoverInObject(p, p.private_metrics, 'private_metrics');
+            });
+            return Array.from(metricsMap.values());
+        }
+
+        function calculateParetoFront(data, xMetric, yMetric) {
+            const allPoints = data.map(p => {
+                const x = getNestedValue(p, xMetric.path);
+                const y = getNestedValue(p, yMetric.path);
+                if (typeof x === 'number' && typeof y === 'number') {
+                    return { x, y, point: p };
+                }
+                return null;
+            }).filter(p => p !== null);
+
+            const correctPoints = allPoints.filter(p => p.point.correct);
+
+            const paretoPoints = correctPoints.filter(p1 => {
+                return !correctPoints.some(p2 => { // Only check against other correct points
+                    if (p1 === p2) return false;
+                    const x_p2_better = xMetric.objective === 'min' ? p2.x < p1.x : p2.x > p1.x;
+                    const y_p2_better = yMetric.objective === 'min' ? p2.y < p1.y : p2.y > p1.y;
+                    const x_equal = p2.x === p1.x;
+                    const y_equal = p2.y === p1.y;
+
+                    if ((x_p2_better && (y_p2_better || y_equal)) || (y_p2_better && (x_p2_better || x_equal))) {
+                        return true; // p2 dominates p1
+                    }
+                    return false;
+                });
+            });
+
+            return { allPoints, paretoPoints };
+        }
+
+        // Helper function to build hover text showing only the active X and Y axis metrics
+        function buildActiveMetricsHoverText(point, xMetric, yMetric) {
+            let hoverText = `<b>${point.metadata.patch_name || 'unnamed'}</b><br>`;
+            hoverText += `Combined Score: ${formatScore(point.combined_score)}<br>`;
+            
+            // Show X-axis metric
+            const xValue = getNestedValue(point, xMetric.path);
+            if (xValue !== undefined) {
+                hoverText += `${xMetric.name}: ${formatScore(xValue)}<br>`;
+            }
+            
+            // Show Y-axis metric
+            const yValue = getNestedValue(point, yMetric.path);
+            if (yValue !== undefined) {
+                hoverText += `${yMetric.name}: ${formatScore(yValue)}<br>`;
+            }
+            
+            return hoverText;
+        }
+
+        function createParetoPlot(plotData, xMetric, yMetric) {
+            const { allPoints, paretoPoints } = plotData;
+
+            const incorrectPoints = allPoints.filter(p => !p.point.correct);
+            const correctDominatedPoints = allPoints.filter(p => p.point.correct && !paretoPoints.includes(p));
+
+            const traceDominated = {
+                x: correctDominatedPoints.map(p => p.x),
+                y: correctDominatedPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Dominated',
+                text: correctDominatedPoints.map(p => buildActiveMetricsHoverText(p.point, xMetric, yMetric)),
+                hoverinfo: 'text',
+                marker: { color: 'rgba(150, 150, 150, 0.5)', size: 8 },
+                customdata: correctDominatedPoints.map(p => p.point.id)
+            };
+
+            const traceIncorrect = {
+                x: incorrectPoints.map(p => p.x),
+                y: incorrectPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Incorrect',
+                text: incorrectPoints.map(p => buildActiveMetricsHoverText(p.point, xMetric, yMetric)),
+                hoverinfo: 'text',
+                marker: { color: '#e74c3c', size: 8, symbol: 'x' },
+                customdata: incorrectPoints.map(p => p.point.id)
+            };
+            
+            const tracePareto = {
+                x: paretoPoints.map(p => p.x),
+                y: paretoPoints.map(p => p.y),
+                mode: 'markers',
+                type: 'scatter',
+                name: 'Pareto Optimal',
+                text: paretoPoints.map(p => buildActiveMetricsHoverText(p.point, xMetric, yMetric)),
+                hoverinfo: 'text',
+                marker: { color: '#e58e26', size: 12, symbol: 'diamond' },
+                customdata: paretoPoints.map(p => p.point.id)
+            };
+
+            const sortedPareto = [...paretoPoints].sort((a,b) => a.x - b.x);
+
+            // Calculate bounds based only on correct programs (for both fill area and axis ranges)
+            const correctPointsForBounds = [...paretoPoints, ...correctDominatedPoints];
+            const correctX = correctPointsForBounds.map(p => p.x);
+            const correctY = correctPointsForBounds.map(p => p.y);
+            const xRange = Math.max(...correctX) - Math.min(...correctX);
+            const yRange = Math.max(...correctY) - Math.min(...correctY);
+
+            const hullTrace = {
+                x: sortedPareto.map(p => p.x),
+                y: sortedPareto.map(p => p.y),
+                mode: 'lines',
+                type: 'scatter',
+                name: 'Pareto Boundary',
+                line: {
+                    color: '#e58e26',
+                    width: 2,
+                    shape: 'linear'
+                },
+                marker: {
+                    size: 0  // Ensure no markers are shown for the line
+                },
+                hoverinfo: 'none',
+                showlegend: false  // Hide from legend since we already have Pareto Optimal points
+            };
+
+            let fillTrace = null;
+            if (sortedPareto.length > 0) {
+                const boundaryX = [];
+                const boundaryY = [];
+
+                if (xMetric.objective === 'min') { // Reversed x-axis means points are sorted descending visually
+                    sortedPareto.forEach((p, i) => {
+                        if (i > 0) {
+                            const prevP = sortedPareto[i-1];
+                            boundaryX.push(prevP.x);
+                            boundaryY.push(p.y);
+                        }
+                        boundaryX.push(p.x);
+                        boundaryY.push(p.y);
+                    });
+                } else { // Normal x-axis
+                    sortedPareto.forEach((p, i) => {
+                        if (i > 0) {
+                            const prevP = sortedPareto[i-1];
+                            boundaryX.push(p.x);
+                            boundaryY.push(prevP.y);
+                        }
+                        boundaryX.push(p.x);
+                        boundaryY.push(p.y);
+                    });
+                }
+                
+                // Determine the dominated region boundary based on both axis objectives
+                // The dominated region is always "worse" than the Pareto front
+                let edgeY, edgeX;
+                
+                if (yMetric.objective === 'max') {
+                    // Y-axis: higher is better, so dominated region is below
+                    edgeY = Math.min(...correctY) - 0.05 * yRange;
+                } else {
+                    // Y-axis: lower is better, so dominated region is above
+                    edgeY = Math.max(...correctY) + 0.05 * yRange;
+                }
+                
+                if (xMetric.objective === 'max') {
+                    // X-axis: higher is better, so dominated region is to the left
+                    edgeX = Math.min(...correctX) - 0.05 * xRange;
+                } else {
+                    // X-axis: lower is better, so dominated region is to the right
+                    edgeX = Math.max(...correctX) + 0.05 * xRange;
+                }
+                
+                // Create fill area below the Pareto line (connecting Pareto points directly)
+                const x_fill = [];
+                const y_fill = [];
+                
+                // Use the sorted Pareto points directly (not the step-wise boundary)
+                const paretoX = sortedPareto.map(p => p.x);
+                const paretoY = sortedPareto.map(p => p.y);
+                
+                // Determine which direction extends into the dominated region
+                const extendRight = xMetric.objective === 'min';  // min x means worse is to the right
+                const extendUp = yMetric.objective === 'min';     // min y means worse is above
+                
+                if (extendRight && !extendUp) {
+                    // Dominated region is bottom-right (higher x, lower y)
+                    // Start from left edge at the y-level of the first Pareto point
+                    x_fill.push(Math.min(...correctX) );
+                    y_fill.push(paretoY[0]);
+                    
+                    // Follow the Pareto points (straight line connections)
+                    for (let i = 0; i < paretoX.length; i++) {
+                        x_fill.push(paretoX[i]);
+                        y_fill.push(paretoY[i]);
+                    }
+                    
+                    // Extend to the bottom-right corner
+                    x_fill.push(Math.max(...correctX));
+                    y_fill.push(paretoY[paretoY.length - 1]);
+                    
+                    // Go to bottom edge
+                    x_fill.push(Math.max(...correctX));
+                    y_fill.push(Math.min(...correctY));
+                    
+                    // Go to left edge at bottom
+                    x_fill.push(Math.min(...correctX));
+                    y_fill.push(Math.min(...correctY));
+                    
+                } else if (!extendRight && !extendUp) {
+                    // Dominated region is bottom-left (lower x, lower y)
+                    // Start from right edge at the y-level of the last Pareto point
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(paretoY[paretoY.length - 1]);
+                    
+                    // Follow the Pareto points in reverse (straight line connections)
+                    for (let i = paretoX.length - 1; i >= 0; i--) {
+                        x_fill.push(paretoX[i]);
+                        y_fill.push(paretoY[i]);
+                    }
+                    
+                    // Extend to the bottom-left corner
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(paretoY[0]);
+                    
+                    // Go to bottom edge
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(Math.min(...correctY) - 0.05 * yRange);
+                    
+                    // Go to right edge at bottom
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(Math.min(...correctY) - 0.05 * yRange);
+                    
+                } else if (extendRight && extendUp) {
+                    // Dominated region is top-right (higher x, higher y)
+                    // Start from left edge at the y-level of the first Pareto point
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(paretoY[0]);
+                    
+                    // Follow the Pareto points (straight line connections)
+                    for (let i = 0; i < paretoX.length; i++) {
+                        x_fill.push(paretoX[i]);
+                        y_fill.push(paretoY[i]);
+                    }
+                    
+                    // Extend to the top-right corner
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(paretoY[paretoY.length - 1]);
+                    
+                    // Go to top edge
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(Math.max(...correctY) + 0.05 * yRange);
+                    
+                    // Go to left edge at top
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(Math.max(...correctY) + 0.05 * yRange);
+                    
+                } else {
+                    // Dominated region is top-left (lower x, higher y)
+                    // Start from right edge at the y-level of the last Pareto point
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(paretoY[paretoY.length - 1]);
+                    
+                    // Follow the Pareto points in reverse (straight line connections)
+                    for (let i = paretoX.length - 1; i >= 0; i--) {
+                        x_fill.push(paretoX[i]);
+                        y_fill.push(paretoY[i]);
+                    }
+                    
+                    // Extend to the top-left corner
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(paretoY[0]);
+                    
+                    // Go to top edge
+                    x_fill.push(Math.min(...correctX) - 0.05 * xRange);
+                    y_fill.push(Math.max(...correctY) + 0.05 * yRange);
+                    
+                    // Go to right edge at top
+                    x_fill.push(Math.max(...correctX) + 0.05 * xRange);
+                    y_fill.push(Math.max(...correctY) + 0.05 * yRange);
+                }
+
+                fillTrace = {
+                    x: x_fill,
+                    y: y_fill,
+                    fill: 'toself',
+                    fillcolor: 'rgba(231, 76, 60, 0.15)',
+                    line: { width: 0 },
+                    mode: 'none',
+                    type: 'scatter',
+                    hoverinfo: 'none',
+                    showlegend: false,
+                    name: 'Dominated Region'
+                };
+            }
+
+            const plotTraces = [];
+            if (fillTrace) {
+                plotTraces.push(fillTrace);
+            }
+            plotTraces.push(traceDominated, traceIncorrect, tracePareto, hullTrace);
+
+            // Calculate axis ranges based on correct programs (variables already calculated above)
+            const xPadding = xRange * 0.1; // 10% padding
+            const yPadding = yRange * 0.1; // 10% padding
+            
+            const layout = {
+                title: 'Pareto Front of ShinkaEvolve Programs',
+                xaxis: { 
+                    title: `${xMetric.name} (${xMetric.objective === 'min' ? 'Lower' : 'Higher'} is better →)`,
+                    range: [Math.min(...correctX) - xPadding, Math.max(...correctX) + xPadding],
+                    autorange: false
+                },
+                yaxis: { 
+                    title: `${yMetric.name} (${yMetric.objective === 'min' ? 'Lower' : 'Higher'} is better ↑)`,
+                    range: [Math.min(...correctY) - yPadding, Math.max(...correctY) + yPadding],
+                    autorange: false
+                },
+                hovermode: 'closest',
+                showlegend: true
+            };
+            
+            // Apply axis direction after setting ranges
+            if (xMetric.objective === 'min') {
+                layout.xaxis.autorange = 'reversed';
+                delete layout.xaxis.range;
+            }
+            if (yMetric.objective === 'min') {
+                layout.yaxis.autorange = 'reversed';
+                delete layout.yaxis.range;
+            }
+
+            Plotly.newPlot('pareto-plot', plotTraces, layout, {responsive: true});
+
+            document.getElementById('pareto-plot').on('plotly_click', function(data) {
+                if (data.points.length > 0) {
+                    selectNodeById(data.points[0].customdata);
+                }
+            });
+        }
+        
+        let availableParetoMetrics = [];
+        let paretoListenersAdded = false;
+        function updateParetoView() {
+            if (!window.treeData) return;
+
+            if (!paretoListenersAdded) {
+                availableParetoMetrics = getAvailableParetoMetrics(window.treeData);
+                const ySelect = document.getElementById('pareto-y-axis');
+                const xSelect = document.getElementById('pareto-x-axis');
+                
+                availableParetoMetrics.forEach(metric => {
+                    const option = document.createElement('option');
+                    option.value = metric.path;
+                    option.textContent = metric.name;
+                    ySelect.appendChild(option.cloneNode(true));
+                    xSelect.appendChild(option.cloneNode(true));
+                });
+
+                // Set defaults
+                ySelect.value = 'combined_score';
+                const computeTimeMetric = availableParetoMetrics.find(m => m.path === 'metadata.compute_time');
+                if (computeTimeMetric) {
+                    xSelect.value = 'metadata.compute_time';
+                } else {
+                    const complexityMetric = availableParetoMetrics.find(m => m.path === 'complexity');
+                    if (complexityMetric) xSelect.value = 'complexity';
+                }
+
+                const updateObjectiveSelect = (axisSelectId) => {
+                    const objectiveSelectId = axisSelectId.replace('-axis', '-objective');
+                    const objectiveSelect = document.getElementById(objectiveSelectId);
+                    const axisSelect = document.getElementById(axisSelectId);
+                    const metric = availableParetoMetrics.find(m => m.path === axisSelect.value);
+                    if (metric) {
+                        objectiveSelect.value = metric.objective;
+                    }
+                };
+
+                updateObjectiveSelect('pareto-y-axis');
+                updateObjectiveSelect('pareto-x-axis');
+
+                document.querySelectorAll('.pareto-axis-select').forEach(sel => sel.addEventListener('change', () => {
+                    updateObjectiveSelect(sel.id);
+                    updateParetoView();
+                }));
+                document.querySelectorAll('.pareto-objective-select').forEach(sel => sel.addEventListener('change', updateParetoView));
+                paretoListenersAdded = true;
+            }
+            
+            const yPath = document.getElementById('pareto-y-axis').value;
+            const xPath = document.getElementById('pareto-x-axis').value;
+            const yObjective = document.getElementById('pareto-y-objective').value;
+            const xObjective = document.getElementById('pareto-x-objective').value;
+
+            const yMetric = { ...availableParetoMetrics.find(m => m.path === yPath), objective: yObjective };
+            const xMetric = { ...availableParetoMetrics.find(m => m.path === xPath), objective: xObjective };
+
+            if (!yMetric || !xMetric) return;
+
+            const paretoData = calculateParetoFront(window.treeData, xMetric, yMetric);
+            createParetoPlot(paretoData, xMetric, yMetric);
+        }
+        function createMetricsVisualization(data) {
+            console.log("[DEBUG] Creating metrics visualization with", data ? data.length : 0, "data points");
+            
+            const metricsContainer = document.getElementById('metrics-plots');
+            if (!metricsContainer) {
+                console.log("[DEBUG] Metrics plots container not found");
+                return;
+            }
+            
+            metricsContainer.innerHTML = ''; // Clear previous plots
+            console.log("[DEBUG] Cleared metrics container");
+
+            // Filter data to only include correct programs with scores
+            const validData = data.filter(d => d.correct && d.combined_score !== null && !isNaN(d.combined_score));
+            
+            if (validData.length === 0) {
+                metricsContainer.innerHTML = '<p>No valid programs with metrics found.</p>';
+                return;
+            }
+
+            // Group data by generation
+            const generationData = {};
+            validData.forEach(d => {
+                const gen = d.generation || 0;  // generation is a top-level field, not in metadata
+                if (!generationData[gen]) {
+                    generationData[gen] = [];
+                }
+                generationData[gen].push(d);
+            });
+
+            const generations = Object.keys(generationData).map(Number).sort((a, b) => a - b);
+
+            // Helper function to get nested value from object
+            const getNestedValue = (obj, path) => {
+                if (!path) return undefined;
+                const parts = path.split('.');
+                let current = obj;
+                for (const part of parts) {
+                    if (current === null || typeof current === 'undefined') return undefined;
+                    current = current[part];
+                }
+                return current;
+            };
+
+            // Collect all available metrics
+            const allMetrics = new Set();
+            allMetrics.add('combined_score');
+            
+            validData.forEach(d => {
+                if (d.public_metrics) {
+                    Object.keys(d.public_metrics).forEach(key => {
+                        if (typeof d.public_metrics[key] === 'number') {
+                            allMetrics.add(`public_metrics.${key}`);
+                        }
+                    });
+                }
+                if (d.private_metrics) {
+                    Object.keys(d.private_metrics).forEach(key => {
+                        if (typeof d.private_metrics[key] === 'number') {
+                            allMetrics.add(`private_metrics.${key}`);
+                        }
+                    });
+                }
+            });
+
+            // Create plots in rows of 2
+            const metricsArray = Array.from(allMetrics);
+            for (let i = 0; i < metricsArray.length; i += 2) {
+                // Create a row container
+                const rowContainer = document.createElement('div');
+                rowContainer.style.display = 'flex';
+                rowContainer.style.gap = '15px';
+                rowContainer.style.marginBottom = '20px';
+                rowContainer.style.width = '100%';
+                rowContainer.style.overflowX = 'auto';
+                metricsContainer.appendChild(rowContainer);
+
+                // Create up to 2 plots in this row
+                const rowMetrics = metricsArray.slice(i, i + 2);
+                rowMetrics.forEach((metricPath, rowIndex) => {
+                    const plotIndex = i + rowIndex;
+                        
+                        // Create wrapper container for plot + controls
+                        const wrapperContainer = document.createElement('div');
+                        wrapperContainer.style.width = '50%';
+                        wrapperContainer.style.minWidth = '400px';
+                        wrapperContainer.style.boxSizing = 'border-box';
+                        wrapperContainer.style.display = 'flex';
+                        wrapperContainer.style.flexDirection = 'column';
+                        rowContainer.appendChild(wrapperContainer);
+
+                        // Create controls container
+                        const controlsContainer = document.createElement('div');
+                        controlsContainer.style.display = 'flex';
+                        controlsContainer.style.justifyContent = 'center';
+                        controlsContainer.style.gap = '10px';
+                        controlsContainer.style.marginBottom = '10px';
+                        controlsContainer.style.padding = '5px';
+                        wrapperContainer.appendChild(controlsContainer);
+
+                        // Create toggle button
+                        const toggleButton = document.createElement('button');
+                        toggleButton.id = `toggle-btn-${plotIndex}`;
+                        toggleButton.textContent = 'Switch to Cumulative Max';
+                        toggleButton.style.padding = '5px 10px';
+                        toggleButton.style.fontSize = '12px';
+                        toggleButton.style.border = '1px solid #ddd';
+                        toggleButton.style.borderRadius = '4px';
+                        toggleButton.style.backgroundColor = '#f8f9fa';
+                        toggleButton.style.cursor = 'pointer';
+                        controlsContainer.appendChild(toggleButton);
+
+                        // Create plot container
+                    const plotContainer = document.createElement('div');
+                    plotContainer.id = `metric-plot-${plotIndex}`;
+                        plotContainer.style.height = '280px';
+                        plotContainer.style.width = '100%';
+                    plotContainer.style.boxSizing = 'border-box';
+                        wrapperContainer.appendChild(plotContainer);
+
+                    // Prepare individual data points for this metric
+                    const individualPoints = [];
+                    generations.forEach(gen => {
+                        const programs = generationData[gen];
+                        programs.forEach(p => {
+                            const value = getNestedValue(p, metricPath);
+                            if (value !== undefined && !isNaN(value)) {
+                                individualPoints.push({
+                                    x: gen,
+                                    y: value,
+                                    id: p.id,
+                                    name: p.metadata?.patch_name || 'unnamed'
+                                });
+                            }
+                        });
+                    });
+
+                    if (individualPoints.length === 0) {
+                        plotContainer.innerHTML = `<p>No data available for metric: ${metricPath}</p>`;
+                        return;
+                    }
+
+                    // Create scatter trace with individual points
+                    const scatterTrace = {
+                        x: individualPoints.map(d => d.x),
+                        y: individualPoints.map(d => d.y),
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: 'Programs',
+                        marker: { 
+                            color: '#3498db', 
+                            size: 8,
+                            opacity: 0.7,
+                            line: {
+                                color: '#2980b9',
+                                width: 1
+                            }
+                        },
+                        customdata: individualPoints.map(d => ({ id: d.id, name: d.name })),
+                        text: individualPoints.map(d => `${d.name}<br>Gen: ${d.x}<br>Value: ${d.y.toFixed(4)}`),
+                        hoverinfo: 'text'
+                    };
+
+                    // Calculate generation-wise statistics for trend line
+                    const genStats = generations.map(gen => {
+                        const genPoints = individualPoints.filter(p => p.x === gen);
+                        if (genPoints.length === 0) return null;
+                        const values = genPoints.map(p => p.y);
+                        const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+                        const max = Math.max(...values);
+                        const min = Math.min(...values);
+                        return { x: gen, mean, max, min };
+                    }).filter(d => d !== null);
+
+                    // Calculate cumulative max and min
+                    let cumulativeMax = -Infinity;
+                    let cumulativeMin = Infinity;
+                    const cumulativeStats = genStats.map(stat => {
+                        cumulativeMax = Math.max(cumulativeMax, stat.max);
+                        cumulativeMin = Math.min(cumulativeMin, stat.min);
+                        return {
+                            x: stat.x,
+                            cumulativeMax,
+                            cumulativeMin,
+                            max: stat.max,
+                            min: stat.min
+                        };
+                    });
+
+                    // Add trend line for best performance (default: raw max)
+                    const trendTrace = {
+                        x: genStats.map(d => d.x),
+                        y: genStats.map(d => d.max),
+                        mode: 'lines+markers',
+                        type: 'scatter',
+                        name: 'Best',
+                        line: { color: '#e74c3c', width: 3 },
+                        marker: { size: 6 },
+                        hoverinfo: 'skip'
+                    };
+
+                    // Add cumulative min trace (default view)
+                    const cumulativeTrace = {
+                        x: cumulativeStats.map(d => d.x),
+                        y: cumulativeStats.map(d => d.cumulativeMin),
+                        mode: 'lines+markers',
+                        type: 'scatter',
+                        name: 'Cumulative Min',
+                        line: { color: '#27ae60', width: 2, dash: 'dot' },
+                        marker: { size: 4 },
+                        hoverinfo: 'skip'
+                    };
+
+                    // Determine metric name for display
+                    let metricDisplayName = metricPath;
+                    if (metricPath === 'combined_score') {
+                        metricDisplayName = 'Combined Score';
+                    } else if (metricPath.startsWith('public_metrics.')) {
+                        metricDisplayName = metricPath.split('.')[1];
+                    } else if (metricPath.startsWith('private_metrics.')) {
+                        metricDisplayName = metricPath.split('.')[1];
+                    }
+
+                    const layout = {
+                        title: {
+                            text: metricDisplayName,
+                            font: { size: 14 }
+                        },
+                        xaxis: { 
+                            title: 'Generation',
+                            type: 'linear'
+                        },
+                        yaxis: { title: 'Value' },
+                        margin: { t: 40, b: 50, l: 70, r: 20 },
+                        showlegend: true,
+                        legend: { 
+                            x: 0.02, 
+                            y: 0.98, 
+                            bgcolor: 'rgba(255,255,255,0.8)',
+                            font: { size: 8 }
+                        },
+                        paper_bgcolor: '#f8f9fa',
+                        plot_bgcolor: '#ffffff'
+                    };
+
+                    // Initial traces (raw scores + cumulative min)
+                    let currentTraces = [scatterTrace, trendTrace, cumulativeTrace];
+                    Plotly.newPlot(plotContainer.id, currentTraces, layout, { responsive: true });
+
+                    // Store data for toggle functionality
+                    plotContainer.cumulativeStats = cumulativeStats;
+                    plotContainer.currentMode = 'min'; // 'min' or 'max'
+
+                    // Add toggle button functionality
+                    toggleButton.addEventListener('click', function() {
+                        const isMin = plotContainer.currentMode === 'min';
+                        const newMode = isMin ? 'max' : 'min';
+                        
+                        // Update cumulative trace
+                        const newCumulativeTrace = {
+                            x: cumulativeStats.map(d => d.x),
+                            y: cumulativeStats.map(d => isMin ? d.cumulativeMax : d.cumulativeMin),
+                            mode: 'lines+markers',
+                            type: 'scatter',
+                            name: isMin ? 'Cumulative Max' : 'Cumulative Min',
+                            line: { color: isMin ? '#9b59b6' : '#27ae60', width: 2, dash: 'dot' },
+                            marker: { size: 4 },
+                            hoverinfo: 'skip'
+                        };
+
+                        // Update the plot
+                        const newTraces = [scatterTrace, trendTrace, newCumulativeTrace];
+                        Plotly.react(plotContainer.id, newTraces, layout);
+                        
+                        // Update button text and mode
+                        toggleButton.textContent = isMin ? 'Switch to Cumulative Min' : 'Switch to Cumulative Max';
+                        plotContainer.currentMode = newMode;
+                    });
+
+                    // Add click event listener
+                    document.getElementById(plotContainer.id).on('plotly_click', function(data) {
+                        if (data.points.length > 0 && data.points[0].customdata) {
+                            const nodeId = data.points[0].customdata.id;
+                            if (nodeId) {
+                                // Select the node and switch to code view
+                                selectNodeById(nodeId, false);
+                                // Switch to the Node Code tab
+                                const codeTab = document.querySelector('.tab[data-tab="agent-code"]');
+                                if (codeTab) {
+                                    codeTab.click();
+                                }
+                            }
+                        }
+                    });
+                });
+            }
+        }
+
+
+
+
+        // ── Diversity tab ────────────────────────────────────────────────────────
+        function createDiversityVisualization(data) {
+            const view = document.getElementById('diversity-view');
+            if (!view || !view.classList.contains('active')) return;
+
+            const container = document.getElementById('diversity-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (!data || data.length === 0) {
+                container.innerHTML = `<p class="div-no-data">${t('div_no_data')}</p>`;
+                return;
+            }
+
+            // check for embedding data
+            const hasEmbed = data.some(d => Array.isArray(d.embedding_pca_2d) && d.embedding_pca_2d.length === 2);
+
+            // group by generation
+            const genMap = new Map();
+            data.forEach(d => {
+                const g = d.generation !== undefined ? d.generation : 0;
+                if (!genMap.has(g)) genMap.set(g, []);
+                genMap.get(g).push(d);
+            });
+            const generations = Array.from(genMap.keys()).sort((a, b) => a - b);
+
+            // compute per-generation stats
+            function avgPairwiseDist(programs) {
+                const pts = programs
+                    .filter(p => Array.isArray(p.embedding_pca_2d) && p.embedding_pca_2d.length === 2)
+                    .map(p => p.embedding_pca_2d);
+                if (pts.length < 2) return 0;
+                let sum = 0, count = 0;
+                for (let i = 0; i < pts.length; i++) {
+                    for (let j = i + 1; j < pts.length; j++) {
+                        const dx = pts[i][0] - pts[j][0];
+                        const dy = pts[i][1] - pts[j][1];
+                        sum += Math.sqrt(dx * dx + dy * dy);
+                        count++;
+                    }
+                }
+                return count > 0 ? sum / count : 0;
+            }
+
+            function stdDev(arr) {
+                if (arr.length < 2) return 0;
+                const mean = arr.reduce((s, v) => s + v, 0) / arr.length;
+                const variance = arr.reduce((s, v) => s + (v - mean) ** 2, 0) / (arr.length - 1);
+                return Math.sqrt(variance);
+            }
+
+            const genStats = generations.map(g => {
+                const progs = genMap.get(g);
+                const scores = progs
+                    .map(p => p.combined_score)
+                    .filter(s => s !== null && s !== undefined && !isNaN(s));
+                const embedDist = avgPairwiseDist(progs);
+                const scoreSd = stdDev(scores);
+                const scoreMin = scores.length ? Math.min(...scores) : 0;
+                const scoreMax = scores.length ? Math.max(...scores) : 0;
+                const clusters = new Set(progs.map(p => p.embedding_cluster_id).filter(c => c !== null && c !== undefined));
+                return {
+                    generation: g,
+                    count: progs.length,
+                    embedDist,
+                    scoreSd,
+                    scoreMin,
+                    scoreMax,
+                    scoreRange: scoreMax - scoreMin,
+                    clusterCount: clusters.size
+                };
+            });
+
+            // Section 1: diversity metrics line chart
+            const sec1 = document.createElement('div');
+            sec1.className = 'div-section';
+            sec1.innerHTML = `<h4 class="div-section-title">${t('div_metrics')}</h4><div class="div-chart-wrap"><div id="div-linechart"></div></div>`;
+            container.appendChild(sec1);
+
+            (function buildLineChart() {
+                const wrap = document.getElementById('div-linechart');
+                const W = Math.max(wrap.clientWidth || 0, 500);
+                const H = 260;
+                const margin = { top: 20, right: 65, bottom: 42, left: 62 };
+                const innerW = W - margin.left - margin.right;
+                const innerH = H - margin.top - margin.bottom;
+
+                const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H);
+                const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+                const xScale = d3.scaleLinear()
+                    .domain(d3.extent(genStats, d => d.generation))
+                    .range([0, innerW]);
+
+                const maxSd = d3.max(genStats, d => d.scoreSd) || 1;
+                const yLeft = d3.scaleLinear().domain([0, maxSd * 1.2]).range([innerH, 0]);
+
+                const maxEmbed = hasEmbed ? (d3.max(genStats, d => d.embedDist) || 1) : 1;
+                const yRight = d3.scaleLinear().domain([0, maxEmbed * 1.2]).range([innerH, 0]);
+
+                const isDark = document.body.classList.contains('dark');
+                const textColor = isDark ? '#9AA0A6' : '#6b7280';
+                const gridColor = isDark ? 'rgba(255,255,255,0.05)' : '#f3f4f6';
+
+                // Grid lines
+                g.append('g').attr('class', 'div-grid')
+                    .call(d3.axisLeft(yLeft).ticks(5).tickSize(-innerW).tickFormat(''))
+                    .selectAll('line').attr('stroke', gridColor);
+                g.select('.div-grid .domain').remove();
+
+                g.append('g').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(xScale).ticks(Math.min(generations.length, 10)).tickFormat(d3.format('d')));
+                g.append('g').call(d3.axisLeft(yLeft).ticks(5));
+                if (hasEmbed) {
+                    g.append('g').attr('transform', `translate(${innerW},0)`).call(d3.axisRight(yRight).ticks(5));
+                }
+
+                // Axis labels
+                g.append('text').attr('x', innerW / 2).attr('y', innerH + 36).attr('text-anchor', 'middle')
+                    .attr('fill', textColor).attr('font-size', '11px').text(t('div_generation'));
+                g.append('text').attr('transform', 'rotate(-90)').attr('x', -innerH / 2).attr('y', -48)
+                    .attr('text-anchor', 'middle').attr('fill', '#C2410C').attr('font-size', '11px').text(t('div_score_std'));
+                if (hasEmbed) {
+                    g.append('text').attr('transform', `translate(${innerW + 52}, ${innerH / 2}) rotate(90)`)
+                        .attr('text-anchor', 'middle').attr('fill', '#2563eb').attr('font-size', '11px').text(t('div_embed_distance'));
+                }
+
+                // Score std line
+                const lineScoreStd = d3.line().x(d => xScale(d.generation)).y(d => yLeft(d.scoreSd)).curve(d3.curveMonotoneX);
+                g.append('path').datum(genStats).attr('fill', 'none').attr('stroke', '#C2410C').attr('stroke-width', 2).attr('d', lineScoreStd);
+                g.selectAll('.div-dot-std').data(genStats).enter().append('circle')
+                    .attr('class', 'div-dot-std').attr('r', 3)
+                    .attr('cx', d => xScale(d.generation)).attr('cy', d => yLeft(d.scoreSd))
+                    .attr('fill', '#C2410C');
+
+                // Embedding distance line
+                if (hasEmbed) {
+                    const lineEmbed = d3.line().x(d => xScale(d.generation)).y(d => yRight(d.embedDist)).curve(d3.curveMonotoneX);
+                    g.append('path').datum(genStats).attr('fill', 'none').attr('stroke', '#2563eb').attr('stroke-width', 2).attr('stroke-dasharray', '5,3').attr('d', lineEmbed);
+                    g.selectAll('.div-dot-embed').data(genStats).enter().append('circle')
+                        .attr('class', 'div-dot-embed').attr('r', 3)
+                        .attr('cx', d => xScale(d.generation)).attr('cy', d => yRight(d.embedDist))
+                        .attr('fill', '#2563eb');
+                }
+
+                // Legend
+                const lgd = g.append('g').attr('transform', `translate(0, 0)`);
+                lgd.append('line').attr('x1', 0).attr('x2', 18).attr('y1', 8).attr('y2', 8).attr('stroke', '#C2410C').attr('stroke-width', 2);
+                lgd.append('text').attr('x', 22).attr('y', 12).attr('font-size', '11px').attr('fill', textColor).text(t('div_score_std'));
+                if (hasEmbed) {
+                    lgd.append('line').attr('x1', 120).attr('x2', 138).attr('y1', 8).attr('y2', 8).attr('stroke', '#2563eb').attr('stroke-width', 2).attr('stroke-dasharray', '5,3');
+                    lgd.append('text').attr('x', 142).attr('y', 12).attr('font-size', '11px').attr('fill', textColor).text(t('div_embed_distance'));
+                }
+            })();
+
+            // Section 2: per-generation scatter (only when embedding data exists)
+            if (hasEmbed) {
+                const sec2 = document.createElement('div');
+                sec2.className = 'div-section';
+                sec2.innerHTML = `
+                    <h4 class="div-section-title">${t('div_scatter')}</h4>
+                    <div class="div-scatter-controls">
+                        <span class="div-gen-label">${t('div_generation')}:</span>
+                        <input type="range" class="div-slider" id="div-gen-slider"
+                            min="0" max="${generations.length - 1}" value="0" step="1">
+                        <span class="div-gen-badge" id="div-gen-badge">${generations[0]}</span>
+                    </div>
+                    <div class="div-chart-wrap"><div id="div-scatter"></div></div>`;
+                container.appendChild(sec2);
+
+                const colorScale = d3.scaleOrdinal(d3.schemeTableau10);
+
+                function drawScatter(genIdx) {
+                    const gen = generations[genIdx];
+                    const progs = genMap.get(gen).filter(p => Array.isArray(p.embedding_pca_2d) && p.embedding_pca_2d.length === 2);
+                    const badge = document.getElementById('div-gen-badge');
+                    if (badge) badge.textContent = gen;
+
+                    const wrap = document.getElementById('div-scatter');
+                    if (!wrap) return;
+                    wrap.innerHTML = '';
+
+                    if (progs.length === 0) {
+                        wrap.innerHTML = `<p class="div-no-data">${t('div_no_data')}</p>`;
+                        return;
+                    }
+
+                    const W = Math.max(wrap.clientWidth || 0, 500);
+                    const H = 300;
+                    const margin = { top: 16, right: 20, bottom: 40, left: 50 };
+                    const innerW = W - margin.left - margin.right;
+                    const innerH = H - margin.top - margin.bottom;
+
+                    const xs = progs.map(p => p.embedding_pca_2d[0]);
+                    const ys = progs.map(p => p.embedding_pca_2d[1]);
+                    const xPad = (Math.max(...xs) - Math.min(...xs)) * 0.1 || 0.5;
+                    const yPad = (Math.max(...ys) - Math.min(...ys)) * 0.1 || 0.5;
+                    const xScale = d3.scaleLinear().domain([Math.min(...xs) - xPad, Math.max(...xs) + xPad]).range([0, innerW]);
+                    const yScale = d3.scaleLinear().domain([Math.min(...ys) - yPad, Math.max(...ys) + yPad]).range([innerH, 0]);
+
+                    const scores = progs.map(p => p.combined_score).filter(s => s !== null && s !== undefined && !isNaN(s));
+                    const scoreMin = scores.length ? Math.min(...scores) : 0;
+                    const scoreMax = scores.length ? Math.max(...scores) : 1;
+                    const rScale = d3.scaleLinear().domain([scoreMin, scoreMax]).range([4, 12]).clamp(true);
+
+                    const svg = d3.select(wrap).append('svg').attr('width', W).attr('height', H);
+                    const g = svg.append('g').attr('transform', `translate(${margin.left},${margin.top})`);
+
+                    g.append('g').attr('transform', `translate(0,${innerH})`).call(d3.axisBottom(xScale).ticks(5));
+                    g.append('g').call(d3.axisLeft(yScale).ticks(5));
+
+                    // Tooltip
+                    let tooltip = document.getElementById('div-scatter-tooltip');
+                    if (!tooltip) {
+                        tooltip = document.createElement('div');
+                        tooltip.id = 'div-scatter-tooltip';
+                        tooltip.className = 'cost-tooltip';
+                        document.body.appendChild(tooltip);
+                    }
+
+                    g.selectAll('.div-dot').data(progs).enter().append('circle')
+                        .attr('class', 'div-dot')
+                        .attr('cx', d => xScale(d.embedding_pca_2d[0]))
+                        .attr('cy', d => yScale(d.embedding_pca_2d[1]))
+                        .attr('r', d => {
+                            const s = d.combined_score;
+                            return (s !== null && s !== undefined && !isNaN(s)) ? rScale(s) : 5;
+                        })
+                        .attr('fill', d => colorScale(d.embedding_cluster_id !== null && d.embedding_cluster_id !== undefined ? d.embedding_cluster_id : '__none__'))
+                        .attr('opacity', 0.82)
+                        .attr('stroke', '#fff')
+                        .attr('stroke-width', 1)
+                        .on('mouseover', function(event, d) {
+                            const scoreStr = (d.combined_score !== null && d.combined_score !== undefined) ? formatScore(d.combined_score) : 'N/A';
+                            tooltip.innerHTML = `<strong>${escapeHtml(String(d.id || ''))}</strong><br>${t('score')}: ${scoreStr}<br>cluster: ${d.embedding_cluster_id !== null && d.embedding_cluster_id !== undefined ? d.embedding_cluster_id : '—'}`;
+                            tooltip.style.opacity = '1';
+                            tooltip.style.left = (event.pageX + 12) + 'px';
+                            tooltip.style.top = (event.pageY - 8) + 'px';
+                        })
+                        .on('mousemove', function(event) {
+                            tooltip.style.left = (event.pageX + 12) + 'px';
+                            tooltip.style.top = (event.pageY - 8) + 'px';
+                        })
+                        .on('mouseout', function() { tooltip.style.opacity = '0'; });
+                }
+
+                drawScatter(0);
+
+                document.getElementById('div-gen-slider').addEventListener('input', function() {
+                    drawScatter(parseInt(this.value, 10));
+                });
+            }
+
+            // Section 3: statistics table
+            const sec3 = document.createElement('div');
+            sec3.className = 'div-section';
+
+            const headers = [
+                t('div_generation'), 'N',
+                ...(hasEmbed ? [t('div_embed_distance')] : []),
+                t('div_score_std'), `${t('score')} range`, 'clusters'
+            ];
+            const rows = genStats.map(s => [
+                s.generation,
+                s.count,
+                ...(hasEmbed ? [s.embedDist.toFixed(4)] : []),
+                s.scoreSd.toFixed(4),
+                s.scoreRange.toFixed(4),
+                s.clusterCount
+            ]);
+
+            const thCells = headers.map(h => `<th>${escapeHtml(String(h))}</th>`).join('');
+            const bodyRows = rows.map(r => `<tr>${r.map(c => `<td>${escapeHtml(String(c))}</td>`).join('')}</tr>`).join('');
+
+            sec3.innerHTML = `
+                <h4 class="div-section-title">${t('div_stats')}</h4>
+                <div style="overflow-x:auto;">
+                    <table class="div-stats-table">
+                        <thead><tr>${thCells}</tr></thead>
+                        <tbody>${bodyRows}</tbody>
+                    </table>
+                </div>`;
+            container.appendChild(sec3);
+        }
+        // ── End Diversity tab ─────────────────────────────────────────────────────
+
+        // Function to download top performing programs as ZIP
+        function downloadTopPrograms() {
+            if (!window.treeData || window.treeData.length === 0) {
+                alert('No data available. Please load a database first.');
+                return;
+            }
+
+            // Ask user how many programs to download
+            const count = prompt('How many top performing programs would you like to download?\n\nEnter any number (1-100):', '5');
+            
+            if (count === null) return; // User cancelled
+            
+            const numPrograms = parseInt(count);
+            if (isNaN(numPrograms) || numPrograms < 1 || numPrograms > 100) {
+                alert('Please enter a valid number between 1 and 100.');
+                return;
+            }
+
+            // Get top performing programs
+            const correctPrograms = window.treeData
+                .filter(d => d.correct && d.combined_score !== null && d.code)
+                .sort((a, b) => b.combined_score - a.combined_score)
+                .slice(0, numPrograms);
+
+            if (correctPrograms.length === 0) {
+                alert('No correct programs with code found.');
+                return;
+            }
+
+            const actualCount = Math.min(numPrograms, correctPrograms.length);
+            
+            // Create ZIP file
+            const zip = new JSZip();
+            
+            // Add a summary file
+            let summary = `Top ${actualCount} Performing Programs\n`;
+            summary += `Generated on: ${new Date().toISOString()}\n`;
+            summary += `Database: ${window.currentDbPath || 'Unknown'}\n\n`;
+            summary += `Rank\tGeneration\tScore\tName\tType\tLanguage\tAPI_Cost\tComplexity\tModel\tID\tParent_ID\tDescription\tFilename\n`;
+            
+            correctPrograms.forEach((program, index) => {
+                const rank = index + 1;
+                const gen = program.generation;
+                const score = program.combined_score.toFixed(6);
+                const name = program.metadata.patch_name || 'unnamed';
+                const language = program.language || 'py';
+                const extension = {
+                    'python': 'py',
+                    'cpp': 'cpp',
+                    'javascript': 'js',
+                    'cuda': 'cu'
+                }[language] || language;
+                
+                // Determine comment style based on language
+                const commentStyle = {
+                    'python': '#',
+                    'py': '#',
+                    'cpp': '//',
+                    'c++': '//',
+                    'javascript': '//',
+                    'js': '//',
+                    'cuda': '//',
+                    'cu': '//'
+                }[language.toLowerCase()] || '//';
+                
+                const filename = `${rank}_gen${gen}_${name.replace(/[^a-zA-Z0-9_-]/g, '_')}.${extension}`;
+                
+                // Collect additional metadata
+                const patchType = program.metadata.patch_type || 'N/A';
+                const apiCost = program.metadata.api_costs ? `$${parseFloat(program.metadata.api_costs).toFixed(4)}` : 'N/A';
+                const complexity = program.complexity ? program.complexity.toFixed(3) : 'N/A';
+                const model = program.metadata.model_name || 'N/A';
+                const programId = program.id.substring(0, 12) + '...'; // Truncate for readability
+                const parentId = program.parent_id ? program.parent_id.substring(0, 12) + '...' : 'N/A';
+                const description = program.metadata.patch_description ? 
+                    program.metadata.patch_description.replace(/[\t\n\r]/g, ' ').substring(0, 100) + 
+                    (program.metadata.patch_description.length > 100 ? '...' : '') : 'N/A';
+                
+                // Add to summary with all metadata
+                summary += `${rank}\t${gen}\t${score}\t${name}\t${patchType}\t${language}\t${apiCost}\t${complexity}\t${model}\t${programId}\t${parentId}\t${description}\t${filename}\n`;
+                
+                // Create program file content with appropriate comment style
+                let content = `${commentStyle} Rank: ${rank}\n`;
+                content += `${commentStyle} Generation: ${gen}\n`;
+                content += `${commentStyle} Score: ${score}\n`;
+                content += `${commentStyle} Name: ${name}\n`;
+                content += `${commentStyle} ID: ${program.id}\n`;
+                if (program.parent_id) {
+                    content += `${commentStyle} Parent ID: ${program.parent_id}\n`;
+                }
+                content += `${commentStyle} Type: ${program.metadata.patch_type || 'N/A'}\n`;
+                if (program.metadata.patch_description) {
+                    // Split description by line breaks and comment each line properly
+                    const descriptionLines = program.metadata.patch_description.split(/\r?\n/);
+                    content += `${commentStyle} Description: ${descriptionLines[0]}\n`;
+                    // Add continuation lines with proper commenting
+                    for (let i = 1; i < descriptionLines.length; i++) {
+                        if (descriptionLines[i].trim()) { // Only add non-empty lines
+                            content += `${commentStyle}              ${descriptionLines[i]}\n`;
+                        }
+                    }
+                }
+                content += `\n${program.code}`;
+                
+                // Add file to ZIP
+                zip.file(filename, content);
+            });
+            
+            // Add summary file
+            zip.file('README.txt', summary);
+            
+            // Generate and download ZIP
+            zip.generateAsync({type: 'blob'}).then(function(content) {
+                const url = URL.createObjectURL(content);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `top_${actualCount}_programs.zip`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            }).catch(function(error) {
+                console.error('Error creating ZIP file:', error);
+                alert('Error creating ZIP file. Please try again.');
+            });
+        }
+
+        // ========== ANALYSIS TAB FUNCTIONS ==========
+        
+        // Data processing functions
+        function computeLLMStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const modelStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                // Skip nodes without a parent (they're root nodes)
+                if (!node.parent_id) return;
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (!parent) return;
+                
+                // Try multiple possible locations for model name (matching LLM Posterior logic)
+                const modelName = node.metadata?.model_name || 
+                                 node.metadata?.llm_result?.model || 
+                                 node.metadata?.model ||
+                                 node.model_name ||
+                                 node.model ||
+                                 'unknown';
+                const patchType = node.metadata?.patch_type || 'unknown';
+                
+                if (!modelStats[modelName]) {
+                    modelStats[modelName] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        improvements: 0,
+                        totalDelta: 0,
+                        totalCost: 0,
+                        patchTypes: {}
+                    };
+                }
+                
+                const stats = modelStats[modelName];
+                
+                // patch_attempt indicates which attempt succeeded (1-indexed)
+                // If patch_attempt = 2, then attempt 1 failed and attempt 2 succeeded
+                // So total attempts = patch_attempt (or 1 if not set)
+                const patchAttempt = node.metadata?.patch_attempt || 1;
+                
+                stats.totalAttempts += patchAttempt;
+                stats.successes++; // This node exists, so it's a success
+                
+                // Use the actual 'correct' field from program data
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                const parentIsCorrect = parent.correct === true || parent.correct === 'true' || parent.correct === 1;
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                    stats.totalDelta += (node.combined_score - parent.combined_score);
+                }
+                
+                const cost = (node.metadata?.api_costs || 0) + 
+                            (node.metadata?.embed_cost || 0) + 
+                            (node.metadata?.novelty_cost || 0) + 
+                            (node.metadata?.meta_cost || 0);
+                stats.totalCost += cost;
+                
+                if (!stats.patchTypes[patchType]) {
+                    stats.patchTypes[patchType] = { totalAttempts: 0, successes: 0, improvements: 0, correctPrograms: 0, improvementsFromCorrect: 0 };
+                }
+                stats.patchTypes[patchType].totalAttempts += patchAttempt;
+                stats.patchTypes[patchType].successes++;
+                
+                // Track correct programs and improvements from correct programs
+                if (isCorrect) {
+                    stats.patchTypes[patchType].correctPrograms++;
+                    if (node.combined_score > parent.combined_score) {
+                        stats.patchTypes[patchType].improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.patchTypes[patchType].improvements++;
+                }
+            });
+            
+            return { modelStats, selectedNode };
+        }
+        
+        function computeMutationStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const patchTypeStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                if (!node.parent_id) return;
+                
+                const patchType = node.metadata?.patch_type || 'unknown';
+                if (!patchTypeStats[patchType]) {
+                    patchTypeStats[patchType] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        failures: 0,
+                        improvements: 0,
+                        correctPrograms: 0,
+                        improvementsFromCorrect: 0,
+                        numApplied: [],
+                        retryAttempts: []
+                    };
+                }
+                
+                const stats = patchTypeStats[patchType];
+                
+                // patch_attempt indicates which attempt succeeded (1-indexed)
+                // If patch_attempt = 2, then attempt 1 failed and attempt 2 succeeded
+                const patchAttempt = node.metadata?.patch_attempt || 1;
+                
+                stats.totalAttempts += patchAttempt;
+                stats.successes++; // This node exists, so it's a success
+                stats.failures += (patchAttempt - 1); // Number of failed attempts before success
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (parent && node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                }
+                
+                // Track correct programs and improvements from correct programs
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                if (isCorrect) {
+                    stats.correctPrograms++;
+                    if (parent && node.combined_score > parent.combined_score) {
+                        stats.improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.metadata?.num_applied !== undefined) {
+                    stats.numApplied.push(node.metadata.num_applied);
+                }
+                
+                const resampleAttempt = node.metadata?.resample_attempt || 0;
+                stats.retryAttempts.push(patchAttempt + resampleAttempt);
+            });
+            
+            return { patchTypeStats, selectedNode };
+        }
+        
+        function computeNoveltyLLMStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const modelStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                // Skip nodes without a parent (they're root nodes)
+                if (!node.parent_id) return;
+                
+                // Only consider novelty attempts (nodes with novelty_attempt field)
+                if (!node.metadata?.novelty_attempt || node.metadata.novelty_attempt <= 0) return;
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (!parent) return;
+                
+                const modelName = node.metadata?.model_name || 
+                                 node.metadata?.llm_result?.model || 
+                                 node.metadata?.model ||
+                                 node.model_name ||
+                                 node.model ||
+                                 'unknown';
+                const patchType = node.metadata?.patch_type || 'unknown';
+                
+                if (!modelStats[modelName]) {
+                    modelStats[modelName] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        improvements: 0,
+                        totalDelta: 0,
+                        totalCost: 0,
+                        patchTypes: {}
+                    };
+                }
+                
+                const stats = modelStats[modelName];
+                // Use novelty_attempt to count total attempts
+                const noveltyAttempt = node.metadata?.novelty_attempt || 1;
+                
+                stats.totalAttempts += noveltyAttempt;
+                stats.successes++;
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                    stats.totalDelta += (node.combined_score - parent.combined_score);
+                }
+                
+                const cost = (node.metadata?.api_costs || 0) + 
+                            (node.metadata?.embed_cost || 0) + 
+                            (node.metadata?.novelty_cost || 0) + 
+                            (node.metadata?.meta_cost || 0);
+                stats.totalCost += cost;
+                
+                if (!stats.patchTypes[patchType]) {
+                    stats.patchTypes[patchType] = { totalAttempts: 0, successes: 0, improvements: 0, correctPrograms: 0, improvementsFromCorrect: 0 };
+                }
+                stats.patchTypes[patchType].totalAttempts += noveltyAttempt;
+                stats.patchTypes[patchType].successes++;
+                
+                // Track correct programs and improvements from correct programs
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                if (isCorrect) {
+                    stats.patchTypes[patchType].correctPrograms++;
+                    if (node.combined_score > parent.combined_score) {
+                        stats.patchTypes[patchType].improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.patchTypes[patchType].improvements++;
+                }
+            });
+            
+            return { modelStats, selectedNode };
+        }
+        
+        function computeNoveltyMutationStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const patchTypeStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                if (!node.parent_id) return;
+                
+                // Only consider novelty attempts (nodes with novelty_attempt field)
+                if (!node.metadata?.novelty_attempt || node.metadata.novelty_attempt <= 0) return;
+                
+                const patchType = node.metadata?.patch_type || 'unknown';
+                if (!patchTypeStats[patchType]) {
+                    patchTypeStats[patchType] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        failures: 0,
+                        improvements: 0,
+                        correctPrograms: 0,
+                        improvementsFromCorrect: 0,
+                        numApplied: [],
+                        retryAttempts: []
+                    };
+                }
+                
+                const stats = patchTypeStats[patchType];
+                // Use novelty_attempt to count total attempts
+                const noveltyAttempt = node.metadata?.novelty_attempt || 1;
+                
+                stats.totalAttempts += noveltyAttempt;
+                stats.successes++;
+                stats.failures += (noveltyAttempt - 1);
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (parent && node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                }
+                
+                // Track correct programs and improvements from correct programs
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                if (isCorrect) {
+                    stats.correctPrograms++;
+                    if (parent && node.combined_score > parent.combined_score) {
+                        stats.improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.metadata?.num_applied !== undefined) {
+                    stats.numApplied.push(node.metadata.num_applied);
+                }
+                
+                const resampleAttempt = node.metadata?.resample_attempt || 0;
+                stats.retryAttempts.push(noveltyAttempt + resampleAttempt);
+            });
+            
+            return { patchTypeStats, selectedNode };
+        }
+        
+        function computeResampleLLMStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const modelStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                // Skip nodes without a parent (they're root nodes)
+                if (!node.parent_id) return;
+                
+                // Only consider resample attempts (nodes with resample_attempt field)
+                if (!node.metadata?.resample_attempt || node.metadata.resample_attempt <= 0) return;
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (!parent) return;
+                
+                const modelName = node.metadata?.model_name || 
+                                 node.metadata?.llm_result?.model || 
+                                 node.metadata?.model ||
+                                 node.model_name ||
+                                 node.model ||
+                                 'unknown';
+                const patchType = node.metadata?.patch_type || 'unknown';
+                
+                if (!modelStats[modelName]) {
+                    modelStats[modelName] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        improvements: 0,
+                        totalDelta: 0,
+                        totalCost: 0,
+                        patchTypes: {}
+                    };
+                }
+                
+                const stats = modelStats[modelName];
+                // Use resample_attempt to count total attempts
+                const resampleAttempt = node.metadata?.resample_attempt || 1;
+                
+                stats.totalAttempts += resampleAttempt;
+                stats.successes++;
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                    stats.totalDelta += (node.combined_score - parent.combined_score);
+                }
+                
+                const cost = (node.metadata?.api_costs || 0) + 
+                            (node.metadata?.embed_cost || 0) + 
+                            (node.metadata?.novelty_cost || 0) + 
+                            (node.metadata?.meta_cost || 0);
+                stats.totalCost += cost;
+                
+                if (!stats.patchTypes[patchType]) {
+                    stats.patchTypes[patchType] = { totalAttempts: 0, successes: 0, improvements: 0, correctPrograms: 0, improvementsFromCorrect: 0 };
+                }
+                stats.patchTypes[patchType].totalAttempts += resampleAttempt;
+                stats.patchTypes[patchType].successes++;
+                
+                // Track correct programs and improvements from correct programs
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                if (isCorrect) {
+                    stats.patchTypes[patchType].correctPrograms++;
+                    if (node.combined_score > parent.combined_score) {
+                        stats.patchTypes[patchType].improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.combined_score > parent.combined_score) {
+                    stats.patchTypes[patchType].improvements++;
+                }
+            });
+            
+            return { modelStats, selectedNode };
+        }
+        
+        function computeResampleMutationStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const patchTypeStats = {};
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            data.forEach(node => {
+                if (!node.parent_id) return;
+                
+                // Only consider resample attempts (nodes with resample_attempt field)
+                if (!node.metadata?.resample_attempt || node.metadata.resample_attempt <= 0) return;
+                
+                const patchType = node.metadata?.patch_type || 'unknown';
+                if (!patchTypeStats[patchType]) {
+                    patchTypeStats[patchType] = {
+                        totalAttempts: 0,
+                        successes: 0,
+                        failures: 0,
+                        improvements: 0,
+                        correctPrograms: 0,
+                        improvementsFromCorrect: 0,
+                        numApplied: [],
+                        retryAttempts: []
+                    };
+                }
+                
+                const stats = patchTypeStats[patchType];
+                // Use resample_attempt to count total attempts
+                const resampleAttempt = node.metadata?.resample_attempt || 1;
+                
+                stats.totalAttempts += resampleAttempt;
+                stats.successes++;
+                stats.failures += (resampleAttempt - 1);
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (parent && node.combined_score > parent.combined_score) {
+                    stats.improvements++;
+                }
+                
+                // Track correct programs and improvements from correct programs
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                if (isCorrect) {
+                    stats.correctPrograms++;
+                    if (parent && node.combined_score > parent.combined_score) {
+                        stats.improvementsFromCorrect++;
+                    }
+                }
+                
+                if (node.metadata?.num_applied !== undefined) {
+                    stats.numApplied.push(node.metadata.num_applied);
+                }
+                
+                const patchAttempt = node.metadata?.patch_attempt || 0;
+                const noveltyAttempt = node.metadata?.novelty_attempt || 0;
+                stats.retryAttempts.push(patchAttempt + noveltyAttempt + resampleAttempt);
+            });
+            
+            return { patchTypeStats, selectedNode };
+        }
+        
+        function computeLineageStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            
+            // Build parent-child relationships
+            const childrenMap = new Map();
+            data.forEach(node => {
+                if (node.parent_id) {
+                    if (!childrenMap.has(node.parent_id)) {
+                        childrenMap.set(node.parent_id, []);
+                    }
+                    childrenMap.get(node.parent_id).push(node);
+                }
+            });
+            
+            // Calculate children_count and improving descendants for each node
+            const childrenCounts = [];
+            const topFertile = [];
+            
+            data.forEach(node => {
+                const children = childrenMap.get(node.id) || [];
+                const count = children.length;
+                childrenCounts.push(count);
+                
+                if (count > 0) {
+                    // Count children with score improvement
+                    const improvingChildren = children.filter(child => 
+                        child.combined_score > node.combined_score
+                    ).length;
+                    
+                    const modelName = node.metadata?.model_name || 
+                                     node.metadata?.llm_result?.model || 
+                                     node.metadata?.model ||
+                                     node.model_name ||
+                                     node.model ||
+                                     'N/A';
+                    
+                    topFertile.push({
+                        id: node.id,
+                        name: node.metadata?.patch_name || 'unnamed',
+                        generation: node.generation,
+                        children: count,
+                        improvingChildren: improvingChildren,
+                        score: node.combined_score || 0,
+                        correct: node.correct || false,
+                        patchType: node.metadata?.patch_type || 'N/A',
+                        islandIdx: node.island_idx !== null && node.island_idx !== undefined ? node.island_idx : 'N/A',
+                        modelName: modelName
+                    });
+                }
+            });
+            
+            topFertile.sort((a, b) => b.children - a.children);
+            
+            const deadEnds = data.filter(node => 
+                node.correct && (childrenMap.get(node.id)?.length || 0) === 0
+            ).length;
+            
+            return { childrenCounts, topFertile: topFertile.slice(0, 10), deadEnds, selectedNode };
+        }
+        
+        function computeCodeBloatStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const selectedNode = selectedNodeId ? data.find(d => d.id === selectedNodeId) : null;
+            const bloatData = [];
+            
+            data.forEach(node => {
+                const metrics = node.metadata?.code_analysis_metrics;
+                if (!metrics || metrics.lines_of_code === undefined) return;
+                
+                bloatData.push({
+                    id: node.id,
+                    generation: node.generation,
+                    loc: metrics.lines_of_code,
+                    lloc: metrics.logical_lines_of_code || metrics.lines_of_code,
+                    complexity: metrics.cyclomatic_complexity || 0,
+                    maintainability: metrics.maintainability_index || 0
+                });
+            });
+            
+            // Group by generation
+            const genData = {};
+            bloatData.forEach(d => {
+                if (!genData[d.generation]) {
+                    genData[d.generation] = { locs: [], llocs: [], complexities: [] };
+                }
+                genData[d.generation].locs.push(d.loc);
+                genData[d.generation].llocs.push(d.lloc);
+                genData[d.generation].complexities.push(d.complexity);
+            });
+            
+            const genStats = Object.keys(genData).sort((a, b) => +a - +b).map(gen => ({
+                generation: +gen,
+                avgLoc: genData[gen].locs.reduce((a, b) => a + b, 0) / genData[gen].locs.length,
+                avgLloc: genData[gen].llocs.reduce((a, b) => a + b, 0) / genData[gen].llocs.length,
+                avgComplexity: genData[gen].complexities.reduce((a, b) => a + b, 0) / genData[gen].complexities.length
+            }));
+            
+            return { bloatData, genStats, selectedNode };
+        }
+        
+        function computeMutationSizeStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            const selectedNode = selectedNodeId ? nodeMap.get(selectedNodeId) : null;
+            const mutationData = [];
+            
+            data.forEach(node => {
+                // Skip nodes without a parent
+                if (!node.parent_id) return;
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (!parent) return;
+                
+                // Get diff_summary from metadata
+                const diffSummary = node.metadata?.diff_summary;
+                if (!diffSummary) return;
+                
+                // Calculate mutation size (total lines changed)
+                const added = diffSummary.added || 0;
+                const deleted = diffSummary.deleted || 0;
+                const modified = diffSummary.modified || 0;
+                const mutationSize = added + deleted + modified;
+                
+                // Skip if scores are null/undefined
+                if (node.combined_score === null || node.combined_score === undefined ||
+                    parent.combined_score === null || parent.combined_score === undefined) {
+                    return;
+                }
+                
+                // Calculate performance improvement
+                const improvement = node.combined_score - parent.combined_score;
+                
+                mutationData.push({
+                    id: node.id,
+                    programName: node.metadata?.patch_name || 'unnamed',
+                    generation: node.generation,
+                    score: node.combined_score,
+                    parentScore: parent.combined_score,
+                    mutationSize: mutationSize,
+                    improvement: improvement,
+                    added: added,
+                    deleted: deleted,
+                    modified: modified,
+                    patchType: node.metadata?.patch_type || 'unknown',
+                    modelName: node.metadata?.model_name || 'unknown',
+                    isImprovement: improvement > 0,
+                    isCorrect: node.correct || false
+                });
+            });
+            
+            return { mutationData, selectedNode };
+        }
+        
+        function computeCorrectnessRateStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const selectedNode = selectedNodeId ? data.find(d => d.id === selectedNodeId) : null;
+            
+            // Sort programs by generation (and by timestamp if available for stability)
+            const sortedData = [...data].sort((a, b) => {
+                if (a.generation !== b.generation) {
+                    return a.generation - b.generation;
+                }
+                // Secondary sort by timestamp if available
+                const timeA = a.metadata?.timestamp || 0;
+                const timeB = b.metadata?.timestamp || 0;
+                return timeA - timeB;
+            });
+            
+            const patchTypes = ['diff', 'full', 'cross', 'init', 'fix'];
+            
+            // Calculate rolling correctness rates
+            let overallCorrect = 0;
+            let overallTotal = 0;
+            const generations = [];
+            const overallRates = [];
+            
+            // Track rolling rates by patch type
+            const rollingByPatchType = {};
+            patchTypes.forEach(pt => {
+                rollingByPatchType[pt] = {
+                    correct: 0,
+                    total: 0,
+                    generations: [],
+                    rates: []
+                };
+            });
+            
+            sortedData.forEach((node, idx) => {
+                const gen = node.generation;
+                const patchType = node.metadata?.patch_type || 'unknown';
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                
+                // Update overall rolling rate
+                overallTotal++;
+                if (isCorrect) overallCorrect++;
+                
+                generations.push(gen);
+                overallRates.push((overallCorrect / overallTotal) * 100);
+                
+                // Update patch type rolling rates
+                if (patchTypes.includes(patchType)) {
+                    rollingByPatchType[patchType].total++;
+                    if (isCorrect) rollingByPatchType[patchType].correct++;
+                    
+                    rollingByPatchType[patchType].generations.push(gen);
+                    const ptRate = (rollingByPatchType[patchType].correct / rollingByPatchType[patchType].total) * 100;
+                    rollingByPatchType[patchType].rates.push(ptRate);
+                }
+            });
+            
+            console.log('[DEBUG] Rolling Correctness Rate Stats:');
+            console.log('  Final overall:', overallCorrect, '/', overallTotal, '=', (overallCorrect/overallTotal*100).toFixed(1) + '%');
+            patchTypes.forEach(pt => {
+                const data = rollingByPatchType[pt];
+                if (data.total > 0) {
+                    console.log(`  Final ${pt}:`, data.correct, '/', data.total, '=', (data.correct/data.total*100).toFixed(1) + '%');
+                }
+            });
+            
+            return { 
+                generations, 
+                overallRates, 
+                ratesByPatchType: rollingByPatchType,
+                selectedNode 
+            };
+        }
+        
+        function computeImprovementRateStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const selectedNode = selectedNodeId ? data.find(d => d.id === selectedNodeId) : null;
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            
+            // Sort programs by generation (and by timestamp if available for stability)
+            const sortedData = [...data].sort((a, b) => {
+                if (a.generation !== b.generation) {
+                    return a.generation - b.generation;
+                }
+                // Secondary sort by timestamp if available
+                const timeA = a.metadata?.timestamp || 0;
+                const timeB = b.metadata?.timestamp || 0;
+                return timeA - timeB;
+            });
+            
+            const patchTypes = ['diff', 'full', 'cross', 'init', 'fix'];
+            
+            // Calculate rolling improvement rates
+            // Note: To match the bar plot, we count improvements where the result is CORRECT
+            // and divide by total attempts (including retries)
+            let overallImprovedCorrect = 0;
+            let overallTotalAttempts = 0;
+            const generations = [];
+            const overallRates = [];
+            
+            // Track rolling rates by patch type
+            const rollingByPatchType = {};
+            patchTypes.forEach(pt => {
+                rollingByPatchType[pt] = {
+                    improvedCorrect: 0,
+                    totalAttempts: 0,
+                    generations: [],
+                    rates: []
+                };
+            });
+            
+            sortedData.forEach((node, idx) => {
+                // Skip nodes without a parent
+                if (!node.parent_id) return;
+                
+                const parent = nodeMap.get(node.parent_id);
+                if (!parent) return;
+                
+                // Skip if scores are null/undefined
+                if (node.combined_score === null || node.combined_score === undefined ||
+                    parent.combined_score === null || parent.combined_score === undefined) {
+                    return;
+                }
+                
+                const gen = node.generation;
+                const patchType = node.metadata?.patch_type || 'unknown';
+                const isCorrect = node.correct === true || node.correct === 'true' || node.correct === 1;
+                const isImprovement = node.combined_score > parent.combined_score;
+                
+                // patch_attempt indicates which attempt succeeded (1-indexed)
+                const patchAttempt = node.metadata?.patch_attempt || 1;
+                
+                // Only count as improvement if the program is correct AND improved over parent
+                const isImprovedCorrect = isCorrect && isImprovement;
+                
+                // Update overall rolling rate
+                overallTotalAttempts += patchAttempt;
+                if (isImprovedCorrect) overallImprovedCorrect++;
+                
+                generations.push(gen);
+                overallRates.push((overallImprovedCorrect / overallTotalAttempts) * 100);
+                
+                // Update patch type rolling rates
+                if (patchTypes.includes(patchType)) {
+                    rollingByPatchType[patchType].totalAttempts += patchAttempt;
+                    if (isImprovedCorrect) rollingByPatchType[patchType].improvedCorrect++;
+                    
+                    rollingByPatchType[patchType].generations.push(gen);
+                    const ptRate = (rollingByPatchType[patchType].improvedCorrect / rollingByPatchType[patchType].totalAttempts) * 100;
+                    rollingByPatchType[patchType].rates.push(ptRate);
+                }
+            });
+            
+            console.log('[DEBUG] Rolling Improvement Rate Stats (correct improvements / total attempts):');
+            console.log('  Final overall:', overallImprovedCorrect, '/', overallTotalAttempts, '=', (overallImprovedCorrect/overallTotalAttempts*100).toFixed(1) + '%');
+            patchTypes.forEach(pt => {
+                const data = rollingByPatchType[pt];
+                if (data.totalAttempts > 0) {
+                    console.log(`  Final ${pt}:`, data.improvedCorrect, '/', data.totalAttempts, '=', (data.improvedCorrect/data.totalAttempts*100).toFixed(1) + '%');
+                }
+            });
+            
+            return { 
+                generations, 
+                overallRates, 
+                ratesByPatchType: rollingByPatchType,
+                selectedNode 
+            };
+        }
+        
+        // Helper function to calculate linear regression
+        function linearRegression(x, y) {
+            const n = x.length;
+            const sumX = x.reduce((a, b) => a + b, 0);
+            const sumY = y.reduce((a, b) => a + b, 0);
+            const sumXY = x.reduce((sum, xi, i) => sum + xi * y[i], 0);
+            const sumXX = x.reduce((sum, xi) => sum + xi * xi, 0);
+            
+            const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+            const intercept = (sumY - slope * sumX) / n;
+            
+            return { slope, intercept };
+        }
+        
+        function computeCostStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const selectedNode = selectedNodeId ? data.find(d => d.id === selectedNodeId) : null;
+            const costData = [];
+            const modelSet = new Set();
+            const patchTypeSet = new Set();
+            const modelPatchAgg = new Map(); // key: `${model}||${patch}`
+            const modelGenMap = new Map();   // model -> gen -> { total, count }
+            const patchGenMap = new Map();   // patch -> gen -> { total, count }
+            const modelPatchGenMap = new Map(); // model||patch -> gen -> { total, count }
+            
+            data.forEach(node => {
+                const apiCost = node.metadata?.api_costs || 0;
+                const embedCost = node.metadata?.embed_cost || 0;
+                const noveltyCost = node.metadata?.novelty_cost || 0;
+                const metaCost = node.metadata?.meta_cost || 0;
+                const totalCost = apiCost + embedCost + noveltyCost + metaCost;
+                const modelName = node.metadata?.model_name || 
+                                  node.metadata?.llm_result?.model || 
+                                  node.metadata?.model ||
+                                  node.model_name ||
+                                  node.model ||
+                                  'N/A';
+                const patchType = node.metadata?.patch_type || 'N/A';
+                
+                if (totalCost > 0) {
+                    costData.push({
+                        id: node.id,
+                        generation: node.generation,
+                        apiCost,
+                        embedCost,
+                        noveltyCost,
+                        metaCost,
+                        totalCost,
+                        score: node.combined_score || 0,
+                        modelName,
+                        patchType
+                    });
+                    
+                    modelSet.add(modelName);
+                    patchTypeSet.add(patchType);
+                    
+                    // Aggregate by model/patch combo
+                    const key = `${modelName}||${patchType}`;
+                    if (!modelPatchAgg.has(key)) {
+                        modelPatchAgg.set(key, { total: 0, count: 0 });
+                    }
+                    const entry = modelPatchAgg.get(key);
+                    entry.total += totalCost;
+                    entry.count += 1;
+                    
+                    // Aggregate by model per generation
+                    if (!modelGenMap.has(modelName)) {
+                        modelGenMap.set(modelName, new Map());
+                    }
+                    if (!modelGenMap.get(modelName).has(node.generation)) {
+                        modelGenMap.get(modelName).set(node.generation, { total: 0, count: 0 });
+                    }
+                    const mg = modelGenMap.get(modelName).get(node.generation);
+                    mg.total += totalCost;
+                    mg.count += 1;
+                    
+                    // Aggregate by patch type per generation
+                    if (!patchGenMap.has(patchType)) {
+                        patchGenMap.set(patchType, new Map());
+                    }
+                    if (!patchGenMap.get(patchType).has(node.generation)) {
+                        patchGenMap.get(patchType).set(node.generation, { total: 0, count: 0 });
+                    }
+                    const pg = patchGenMap.get(patchType).get(node.generation);
+                    pg.total += totalCost;
+                    pg.count += 1;
+                    
+                    // Aggregate by model+patch per generation
+                    if (!modelPatchGenMap.has(key)) {
+                        modelPatchGenMap.set(key, new Map());
+                    }
+                    if (!modelPatchGenMap.get(key).has(node.generation)) {
+                        modelPatchGenMap.get(key).set(node.generation, { total: 0, count: 0 });
+                    }
+                    const mpg = modelPatchGenMap.get(key).get(node.generation);
+                    mpg.total += totalCost;
+                    mpg.count += 1;
+                }
+            });
+            
+            // Group by generation
+            const genCosts = {};
+            costData.forEach(d => {
+                if (!genCosts[d.generation]) {
+                    genCosts[d.generation] = {
+                        apiCost: 0, embedCost: 0, noveltyCost: 0, metaCost: 0,
+                        totalCost: 0, maxScore: -Infinity, count: 0
+                    };
+                }
+                genCosts[d.generation].apiCost += d.apiCost;
+                genCosts[d.generation].embedCost += d.embedCost;
+                genCosts[d.generation].noveltyCost += d.noveltyCost;
+                genCosts[d.generation].metaCost += d.metaCost;
+                genCosts[d.generation].totalCost += d.totalCost;
+                genCosts[d.generation].maxScore = Math.max(genCosts[d.generation].maxScore, d.score);
+                genCosts[d.generation].count += 1;
+            });
+            
+            const genCostStats = Object.keys(genCosts).sort((a, b) => +a - +b).map(gen => ({
+                generation: +gen,
+                ...genCosts[gen],
+                avgCost: genCosts[gen].count > 0 ? genCosts[gen].totalCost / genCosts[gen].count : 0
+            }));
+            
+            // Calculate cumulative costs
+            let cumulative = 0;
+            genCostStats.forEach(d => {
+                cumulative += d.totalCost;
+                d.cumulativeCost = cumulative;
+            });
+            
+            // Build model vs patch type average cost matrix
+            const models = Array.from(modelSet).sort();
+            const patchTypes = Array.from(patchTypeSet).sort();
+            
+            const zValues = models.map(model => 
+                patchTypes.map(patch => {
+                    const key = `${model}||${patch}`;
+                    const entry = modelPatchAgg.get(key);
+                    return entry && entry.count > 0 ? entry.total / entry.count : 0;
+                })
+            );
+            
+            const countValues = models.map(model => 
+                patchTypes.map(patch => {
+                    const key = `${model}||${patch}`;
+                    const entry = modelPatchAgg.get(key);
+                    return entry ? entry.count : 0;
+                })
+            );
+            
+            const textValues = models.map(model => 
+                patchTypes.map(patch => {
+                    const key = `${model}||${patch}`;
+                    const entry = modelPatchAgg.get(key);
+                    return entry && entry.count > 0 
+                        ? `${model} / ${patch}<br>Avg cost: $${(entry.total / entry.count).toFixed(4)}<br>n=${entry.count}`
+                        : `${model} / ${patch}<br>No data`;
+                })
+            );
+            
+            const generationAvgCosts = genCostStats.map(d => ({
+                generation: d.generation,
+                avgCost: d.avgCost
+            }));
+            
+            // Overall running average across generations
+            const generationOverallRunning = (() => {
+                let cumTotal = 0;
+                let cumCount = 0;
+                const gens = [];
+                const avg = [];
+                genCostStats.forEach(d => {
+                    cumTotal += d.totalCost;
+                    cumCount += d.count;
+                    gens.push(d.generation);
+                    avg.push(cumCount > 0 ? cumTotal / cumCount : 0);
+                });
+                return { generations: gens, runningAvg: avg };
+            })();
+            
+            // Running average by model across generations
+            const generationModelRunning = Array.from(modelGenMap.entries()).map(([model, genMap]) => {
+                const gens = Array.from(genMap.keys()).map(Number).sort((a, b) => a - b);
+                let cumTotal = 0;
+                let cumCount = 0;
+                const avg = [];
+                gens.forEach(g => {
+                    const stats = genMap.get(g);
+                    cumTotal += stats.total;
+                    cumCount += stats.count;
+                    avg.push(cumCount > 0 ? cumTotal / cumCount : 0);
+                });
+                return { key: model, generations: gens, runningAvg: avg };
+            }).sort((a, b) => a.key.localeCompare(b.key));
+            
+            // Running average by patch type across generations
+            const generationPatchRunning = Array.from(patchGenMap.entries()).map(([patch, genMap]) => {
+                const gens = Array.from(genMap.keys()).map(Number).sort((a, b) => a - b);
+                let cumTotal = 0;
+                let cumCount = 0;
+                const avg = [];
+                gens.forEach(g => {
+                    const stats = genMap.get(g);
+                    cumTotal += stats.total;
+                    cumCount += stats.count;
+                    avg.push(cumCount > 0 ? cumTotal / cumCount : 0);
+                });
+                return { key: patch, generations: gens, runningAvg: avg };
+            }).sort((a, b) => a.key.localeCompare(b.key));
+            
+            // Get all unique generations for alignment
+            const allGenerations = genCostStats.map(d => d.generation);
+            
+            // Running average by model+patch combo across generations (aligned to all generations)
+            const generationModelPatchRunning = Array.from(modelPatchGenMap.entries()).map(([comboKey, genMap]) => {
+                let cumTotal = 0;
+                let cumCount = 0;
+                const avg = [];
+                allGenerations.forEach(g => {
+                    const stats = genMap.get(g);
+                    if (stats) {
+                        cumTotal += stats.total;
+                        cumCount += stats.count;
+                    }
+                    // Use current running average (or null if no data yet)
+                    avg.push(cumCount > 0 ? cumTotal / cumCount : null);
+                });
+                return { key: comboKey, generations: allGenerations, runningAvg: avg };
+            }).sort((a, b) => a.key.localeCompare(b.key));
+            
+            return { 
+                costData, 
+                genCostStats, 
+                selectedNode,
+                modelPatchStats: { models, patchTypes, zValues, textValues, countValues },
+                generationAvgCosts,
+                generationOverallRunning,
+                generationModelRunning,
+                generationPatchRunning,
+                generationModelPatchRunning
+            };
+        }
+        
+        function computeSearchDynamicsStats(data, selectedNodeId) {
+            if (!data || data.length === 0) return null;
+            
+            const selectedNode = selectedNodeId ? data.find(d => d.id === selectedNodeId) : null;
+            const nodeMap = new Map(data.map(d => [d.id, d]));
+            
+            // Track cluster transitions
+            const clusterTransitions = [];
+            const uniqueClustersPerGen = {};
+            const scoreVariancePerGen = {};
+            
+            data.forEach(node => {
+                const gen = node.generation;
+                const clusterId = node.embedding_cluster_id;
+                
+                if (clusterId !== null && clusterId !== undefined) {
+                    if (!uniqueClustersPerGen[gen]) {
+                        uniqueClustersPerGen[gen] = new Set();
+                    }
+                    uniqueClustersPerGen[gen].add(clusterId);
+                    
+                    if (node.parent_id) {
+                        const parent = nodeMap.get(node.parent_id);
+                        if (parent && parent.embedding_cluster_id !== null && 
+                            parent.embedding_cluster_id !== clusterId) {
+                            clusterTransitions.push({
+                                generation: gen,
+                                fromCluster: parent.embedding_cluster_id,
+                                toCluster: clusterId
+                            });
+                        }
+                    }
+                }
+                
+                if (!scoreVariancePerGen[gen]) {
+                    scoreVariancePerGen[gen] = [];
+                }
+                if (node.combined_score !== null && node.combined_score !== undefined) {
+                    scoreVariancePerGen[gen].push(node.combined_score);
+                }
+            });
+            
+            const clusterStats = Object.keys(uniqueClustersPerGen).sort((a, b) => +a - +b).map(gen => ({
+                generation: +gen,
+                uniqueClusters: uniqueClustersPerGen[gen].size
+            }));
+            
+            const varianceStats = Object.keys(scoreVariancePerGen).sort((a, b) => +a - +b).map(gen => {
+                const scores = scoreVariancePerGen[gen];
+                const mean = scores.reduce((a, b) => a + b, 0) / scores.length;
+                const variance = scores.reduce((sum, s) => sum + Math.pow(s - mean, 2), 0) / scores.length;
+                return {
+                    generation: +gen,
+                    variance: variance,
+                    stdDev: Math.sqrt(variance),
+                    scores: scores
+                };
+            });
+            
+            return { clusterTransitions, clusterStats, varianceStats, selectedNode };
+        }
+        
+        // Visualization rendering functions
+        function renderLLMPerformancePlot(stats, selectedNodeId) {
+            if (!stats || !stats.modelStats) {
+                document.getElementById('llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No LLM performance data available.</p>';
+                return;
+            }
+            
+            const models = Object.keys(stats.modelStats);
+            if (models.length === 0) {
+                document.getElementById('llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No model data available.</p>';
+                return;
+            }
+            
+            const patchTypes = new Set();
+            models.forEach(model => {
+                Object.keys(stats.modelStats[model].patchTypes).forEach(pt => patchTypes.add(pt));
+            });
+            const patchTypeArray = Array.from(patchTypes);
+            
+            // Map patch types to symbols
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypeArray.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Find common prefix among model names (simple approach)
+            let commonPrefix = '';
+            if (models.length > 1) {
+                const sortedModels = models.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    commonPrefix += first[i];
+                    i++;
+                }
+            }
+            
+            // Check if prefix removal would create problematic labels for ANY model
+            if (commonPrefix) {
+                const hasProblematicLabel = models.some(m => {
+                    const label = m.substring(commonPrefix.length);
+                    return label.length === 0 || label.length < 3 || /^[^a-zA-Z0-9]/.test(label);
+                });
+                // If any label would be problematic, don't use prefix at all
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            
+            const modelLabels = models.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                // Ensure label is never empty
+                const finalLabel = label.length > 0 ? label : m;
+                // If still too long, truncate with ellipsis
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            // Create heatmap data
+            const z = [];
+            const cellText = [];
+            const hoverText = [];
+            models.forEach(model => {
+                const row = [];
+                const cellTextRow = [];
+                const hoverTextRow = [];
+                patchTypeArray.forEach(pt => {
+                    const ptStats = stats.modelStats[model].patchTypes[pt] || { totalAttempts: 0, successes: 0, improvements: 0 };
+                    const successRate = ptStats.totalAttempts > 0 ? ptStats.successes / ptStats.totalAttempts : 0;
+                    const improvementRate = ptStats.successes > 0 ? ptStats.improvements / ptStats.successes : 0;
+                    row.push(successRate);
+                    cellTextRow.push(Math.round(successRate * 100) + '%');
+                    hoverTextRow.push(`<b>${model}</b><br>${ptStats.successes} / ${ptStats.totalAttempts} succeeded<br>${ptStats.improvements} / ${ptStats.successes} improved`);
+                });
+                z.push(row);
+                cellText.push(cellTextRow);
+                hoverText.push(hoverTextRow);
+            });
+            
+            const heatmap = {
+                z: z,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: hoverText,
+                type: 'heatmap',
+                colorscale: 'RdYlGn',
+                showscale: false,
+                zmin: 0,
+                zmax: 1,
+                hovertemplate: '%{customdata}<extra></extra>',
+                texttemplate: '%{text}',
+                textfont: { 
+                    size: 8,
+                    color: 'white'
+                }
+            };
+            
+            // Create annotations for text overlay
+            const annotations = [];
+            models.forEach((model, i) => {
+                patchTypeArray.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: 'white'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { tickfont: { size: 10 } },
+                height: 320,
+                margin: { l: 80, r: 10, t: 10, b: 60 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('llm-performance-plot', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderLLMImprovementPlot(stats, selectedNodeId) {
+            if (!stats || !stats.modelStats) {
+                document.getElementById('llm-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No LLM improvement data available.</p>';
+                return;
+            }
+            
+            const models = Object.keys(stats.modelStats);
+            if (models.length === 0) {
+                document.getElementById('llm-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No model data available.</p>';
+                return;
+            }
+            
+            const patchTypes = new Set();
+            models.forEach(model => {
+                Object.keys(stats.modelStats[model].patchTypes).forEach(pt => patchTypes.add(pt));
+            });
+            const patchTypeArray = Array.from(patchTypes);
+            
+            // Map patch types to symbols
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypeArray.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Find common prefix among model names (simple approach)
+            let commonPrefix = '';
+            if (models.length > 1) {
+                const sortedModels = models.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    commonPrefix += first[i];
+                    i++;
+                }
+            }
+            
+            // Check if prefix removal would create problematic labels for ANY model
+            if (commonPrefix) {
+                const hasProblematicLabel = models.some(m => {
+                    const label = m.substring(commonPrefix.length);
+                    return label.length === 0 || label.length < 3 || /^[^a-zA-Z0-9]/.test(label);
+                });
+                // If any label would be problematic, don't use prefix at all
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            
+            const modelLabels = models.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                // Ensure label is never empty
+                const finalLabel = label.length > 0 ? label : m;
+                // If still too long, truncate with ellipsis
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            // Create heatmap data for improvement rates
+            const z = [];
+            const cellText = [];
+            const hoverText = [];
+            models.forEach(model => {
+                const row = [];
+                const cellTextRow = [];
+                const hoverTextRow = [];
+                patchTypeArray.forEach(pt => {
+                    const ptStats = stats.modelStats[model].patchTypes[pt] || { totalAttempts: 0, successes: 0, improvements: 0, correctPrograms: 0, improvementsFromCorrect: 0 };
+                    // Calculate improvement rate as correct improved over total attempts
+                    const improvementRate = ptStats.totalAttempts > 0 ? ptStats.improvementsFromCorrect / ptStats.totalAttempts : 0;
+                    row.push(improvementRate);
+                    cellTextRow.push(Math.round(improvementRate * 100) + '%');
+                    hoverTextRow.push(`<b>${model}</b><br>${ptStats.improvementsFromCorrect} / ${ptStats.totalAttempts} improved<br>${ptStats.successes} / ${ptStats.totalAttempts} succeeded<br>${ptStats.correctPrograms} correct programs`);
+                });
+                z.push(row);
+                cellText.push(cellTextRow);
+                hoverText.push(hoverTextRow);
+            });
+            
+            const heatmap = {
+                z: z,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: hoverText,
+                type: 'heatmap',
+                colorscale: 'RdYlGn',
+                showscale: false,
+                zmin: 0,
+                zmax: 1,
+                hovertemplate: '%{customdata}<extra></extra>',
+                texttemplate: '%{text}',
+                textfont: { 
+                    size: 8,
+                    color: 'white'
+                }
+            };
+            
+            // Create annotations for text overlay
+            const annotations = [];
+            models.forEach((model, i) => {
+                patchTypeArray.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: 'white'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { tickfont: { size: 10 } },
+                height: 320,
+                margin: { l: 80, r: 10, t: 10, b: 60 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('llm-improvement-plot', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderMutationEffectivenessPlot(stats, selectedNodeId) {
+            if (!stats || !stats.patchTypeStats) {
+                document.getElementById('mutation-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No mutation data available.</p>';
+                return;
+            }
+            
+            const patchTypes = Object.keys(stats.patchTypeStats);
+            if (patchTypes.length === 0) {
+                document.getElementById('mutation-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No patch type data available.</p>';
+                return;
+            }
+            
+            // Map patch types to symbols
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            const successData = patchTypes.map(pt => stats.patchTypeStats[pt].successes);
+            const failureData = patchTypes.map(pt => stats.patchTypeStats[pt].failures);
+            
+            const trace1 = {
+                x: patchTypeLabels,
+                y: successData,
+                name: '✔',
+                type: 'bar',
+                marker: { color: '#2ecc71' }
+            };
+            
+            const trace2 = {
+                x: patchTypeLabels,
+                y: failureData,
+                name: '✘',
+                type: 'bar',
+                marker: { color: '#e74c3c' }
+            };
+            
+            const layout = {
+                barmode: 'stack',
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { title: 'Count' },
+                height: 320,
+                margin: { l: 50, r: 20, t: 10, b: 60 },
+                legend: { x: 0.02, y: 0.98, xanchor: 'left', yanchor: 'top', bgcolor: 'rgba(255,255,255,0.8)' }
+            };
+            
+            Plotly.newPlot('mutation-effectiveness-plot', [trace1, trace2], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderMutationImprovementPlot(stats, selectedNodeId) {
+            if (!stats || !stats.patchTypeStats) {
+                document.getElementById('mutation-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No mutation improvement data available.</p>';
+                return;
+            }
+            
+            const patchTypes = Object.keys(stats.patchTypeStats);
+            if (patchTypes.length === 0) {
+                document.getElementById('mutation-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No patch type data available.</p>';
+                return;
+            }
+            
+            // Map patch types to symbols
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            const improvementData = patchTypes.map(pt => {
+                const s = stats.patchTypeStats[pt];
+                // Calculate improvement rate as correct improved over total attempts
+                return s.totalAttempts > 0 ? (s.improvementsFromCorrect / s.totalAttempts) * 100 : 0;
+            });
+            
+            const trace = {
+                x: patchTypeLabels,
+                y: improvementData,
+                type: 'bar',
+                marker: { color: '#3498db' },
+                text: improvementData.map((v, i) => {
+                    const s = stats.patchTypeStats[patchTypes[i]];
+                    const patchTypeName = patchTypes[i];
+                    return `<b>Patch Type: ${patchTypeName}</b><br>` +
+                           `Improvement Rate: ${v.toFixed(1)}%<br>` +
+                           `Improved (correct): ${s.improvementsFromCorrect}<br>` +
+                           `Total Attempts: ${s.totalAttempts}`;
+                }),
+                hoverinfo: 'text'
+            };
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { title: 'Improvement Rate (%)', range: [0, 100] },
+                height: 320,
+                margin: { l: 50, r: 20, t: 10, b: 60 }
+            };
+            
+            Plotly.newPlot('mutation-improvement-plot', [trace], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderNoveltyLLMPerformancePlot(stats, selectedNodeId) {
+            if (!stats || !stats.modelStats) {
+                document.getElementById('novelty-llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty LLM performance data available.</p>';
+                return;
+            }
+            
+            const models = Object.keys(stats.modelStats);
+            if (models.length === 0) {
+                document.getElementById('novelty-llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty model data available.</p>';
+                return;
+            }
+            
+            const patchTypes = new Set();
+            models.forEach(model => {
+                Object.keys(stats.modelStats[model].patchTypes).forEach(pt => patchTypes.add(pt));
+            });
+            const patchTypeArray = Array.from(patchTypes);
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypeArray.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Find common prefix among model names (simple approach)
+            let commonPrefix = '';
+            if (models.length > 1) {
+                const sortedModels = models.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    commonPrefix += first[i];
+                    i++;
+                }
+            }
+            
+            // Check if prefix removal would create problematic labels for ANY model
+            if (commonPrefix) {
+                const hasProblematicLabel = models.some(m => {
+                    const label = m.substring(commonPrefix.length);
+                    return label.length === 0 || label.length < 3 || /^[^a-zA-Z0-9]/.test(label);
+                });
+                // If any label would be problematic, don't use prefix at all
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            
+            const modelLabels = models.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                // Ensure label is never empty
+                const finalLabel = label.length > 0 ? label : m;
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            const z = [];
+            const cellText = [];
+            const hoverText = [];
+            models.forEach(model => {
+                const row = [];
+                const cellTextRow = [];
+                const hoverTextRow = [];
+                patchTypeArray.forEach(pt => {
+                    const ptStats = stats.modelStats[model].patchTypes[pt] || { totalAttempts: 0, successes: 0, improvements: 0 };
+                    const successRate = ptStats.totalAttempts > 0 ? ptStats.successes / ptStats.totalAttempts : 0;
+                    row.push(successRate);
+                    cellTextRow.push(Math.round(successRate * 100) + '%');
+                    hoverTextRow.push(`<b>${model}</b><br>${ptStats.successes} / ${ptStats.totalAttempts} succeeded<br>${ptStats.improvements} / ${ptStats.successes} improved`);
+                });
+                z.push(row);
+                cellText.push(cellTextRow);
+                hoverText.push(hoverTextRow);
+            });
+            
+            const heatmap = {
+                z: z,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: hoverText,
+                type: 'heatmap',
+                colorscale: 'RdYlGn',
+                showscale: false,
+                zmin: 0,
+                zmax: 1,
+                hovertemplate: '%{customdata}<extra></extra>',
+                texttemplate: '%{text}',
+                textfont: { 
+                    size: 8,
+                    color: 'white'
+                }
+            };
+            
+            const annotations = [];
+            models.forEach((model, i) => {
+                patchTypeArray.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: 'white'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { tickfont: { size: 10 } },
+                height: 310,
+                margin: { l: 80, r: 10, t: 10, b: 60 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('novelty-llm-performance-plot', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderNoveltyLLMImprovementPlot(stats, selectedNodeId) {
+            if (!stats || !stats.modelStats) {
+                document.getElementById('novelty-llm-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty LLM improvement data available.</p>';
+                return;
+            }
+            
+            const models = Object.keys(stats.modelStats);
+            if (models.length === 0) {
+                document.getElementById('novelty-llm-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty model data available.</p>';
+                return;
+            }
+            
+            const patchTypes = new Set();
+            models.forEach(model => {
+                Object.keys(stats.modelStats[model].patchTypes).forEach(pt => patchTypes.add(pt));
+            });
+            const patchTypeArray = Array.from(patchTypes);
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypeArray.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Find common prefix among model names (simple approach)
+            let commonPrefix = '';
+            if (models.length > 1) {
+                const sortedModels = models.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    commonPrefix += first[i];
+                    i++;
+                }
+            }
+            
+            // Check if prefix removal would create problematic labels for ANY model
+            if (commonPrefix) {
+                const hasProblematicLabel = models.some(m => {
+                    const label = m.substring(commonPrefix.length);
+                    return label.length === 0 || label.length < 3 || /^[^a-zA-Z0-9]/.test(label);
+                });
+                // If any label would be problematic, don't use prefix at all
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            
+            const modelLabels = models.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                // Ensure label is never empty
+                const finalLabel = label.length > 0 ? label : m;
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            const z = [];
+            const cellText = [];
+            const hoverText = [];
+            models.forEach(model => {
+                const row = [];
+                const cellTextRow = [];
+                const hoverTextRow = [];
+                patchTypeArray.forEach(pt => {
+                    const ptStats = stats.modelStats[model].patchTypes[pt] || { totalAttempts: 0, successes: 0, improvements: 0, correctPrograms: 0, improvementsFromCorrect: 0 };
+                    // Calculate improvement rate as correct improved over total attempts
+                    const improvementRate = ptStats.totalAttempts > 0 ? ptStats.improvementsFromCorrect / ptStats.totalAttempts : 0;
+                    row.push(improvementRate);
+                    cellTextRow.push(Math.round(improvementRate * 100) + '%');
+                    hoverTextRow.push(`<b>${model}</b><br>${ptStats.improvementsFromCorrect} / ${ptStats.totalAttempts} improved<br>${ptStats.correctPrograms} correct programs`);
+                });
+                z.push(row);
+                cellText.push(cellTextRow);
+                hoverText.push(hoverTextRow);
+            });
+            
+            const heatmap = {
+                z: z,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: hoverText,
+                type: 'heatmap',
+                colorscale: 'RdYlGn',
+                showscale: false,
+                zmin: 0,
+                zmax: 1,
+                hovertemplate: '%{customdata}<extra></extra>',
+                texttemplate: '%{text}',
+                textfont: { 
+                    size: 8,
+                    color: 'white'
+                }
+            };
+            
+            const annotations = [];
+            models.forEach((model, i) => {
+                patchTypeArray.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: 'white'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { tickfont: { size: 10 } },
+                height: 320,
+                margin: { l: 80, r: 10, t: 10, b: 60 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('novelty-llm-improvement-plot', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderNoveltyEffectivenessPlot(stats, selectedNodeId) {
+            if (!stats || !stats.patchTypeStats) {
+                document.getElementById('novelty-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty effectiveness data available.</p>';
+                return;
+            }
+            
+            const patchTypes = Object.keys(stats.patchTypeStats);
+            if (patchTypes.length === 0) {
+                document.getElementById('novelty-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty patch type data available.</p>';
+                return;
+            }
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            const successCounts = patchTypes.map(pt => stats.patchTypeStats[pt].successes);
+            const failureCounts = patchTypes.map(pt => stats.patchTypeStats[pt].failures);
+            
+            const trace1 = {
+                x: patchTypeLabels,
+                y: successCounts,
+                name: '✔',
+                type: 'bar',
+                marker: { color: '#2ecc71' },
+                text: successCounts.map(String),
+                hoverinfo: 'text'
+            };
+            
+            const trace2 = {
+                x: patchTypeLabels,
+                y: failureCounts,
+                name: '✘',
+                type: 'bar',
+                marker: { color: '#e74c3c' },
+                text: failureCounts.map(String),
+                hoverinfo: 'text'
+            };
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { title: 'Count' },
+                barmode: 'stack',
+                height: 310,
+                margin: { l: 50, r: 20, t: 10, b: 60 },
+                legend: { x: 1, y: 1, xanchor: 'right', yanchor: 'top' }
+            };
+            
+            Plotly.newPlot('novelty-effectiveness-plot', [trace1, trace2], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderNoveltyImprovementPlot(stats, selectedNodeId) {
+            if (!stats || !stats.patchTypeStats) {
+                document.getElementById('novelty-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty improvement data available.</p>';
+                return;
+            }
+            
+            const patchTypes = Object.keys(stats.patchTypeStats);
+            if (patchTypes.length === 0) {
+                document.getElementById('novelty-improvement-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No novelty patch type data available.</p>';
+                return;
+            }
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            const improvementData = patchTypes.map(pt => {
+                const s = stats.patchTypeStats[pt];
+                // Calculate improvement rate as correct improved over total attempts
+                return s.totalAttempts > 0 ? (s.improvementsFromCorrect / s.totalAttempts) * 100 : 0;
+            });
+            
+            const trace = {
+                x: patchTypeLabels,
+                y: improvementData,
+                type: 'bar',
+                marker: { color: '#9b59b6' },
+                text: improvementData.map((v, i) => {
+                    const s = stats.patchTypeStats[patchTypes[i]];
+                    const patchTypeName = patchTypes[i];
+                    return `<b>Patch Type: ${patchTypeName}</b><br>` +
+                           `Improvement Rate: ${v.toFixed(1)}%<br>` +
+                           `<br>` +
+                           `Improved (correct): ${s.improvementsFromCorrect}<br>` +
+                           `Total Attempts: ${s.totalAttempts}<br>` +
+                           `<br>` +
+                           `Correct Programs: ${s.correctPrograms}<br>` +
+                           `Total Successes: ${s.successes}<br>` +
+                           `Success Rate: ${s.totalAttempts > 0 ? ((s.successes / s.totalAttempts) * 100).toFixed(1) : 0}%`;
+                }),
+                hoverinfo: 'text'
+            };
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { title: 'Improvement Rate (%)', range: [0, 100] },
+                height: 320,
+                margin: { l: 50, r: 20, t: 10, b: 60 }
+            };
+            
+            Plotly.newPlot('novelty-improvement-plot', [trace], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderResampleLLMPerformancePlot(stats, selectedNodeId) {
+            if (!stats || !stats.modelStats) {
+                document.getElementById('resample-llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No resample LLM performance data available.</p>';
+                return;
+            }
+            
+            const models = Object.keys(stats.modelStats);
+            if (models.length === 0) {
+                document.getElementById('resample-llm-performance-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No resample model data available.</p>';
+                return;
+            }
+            
+            const patchTypes = new Set();
+            models.forEach(model => {
+                Object.keys(stats.modelStats[model].patchTypes).forEach(pt => patchTypes.add(pt));
+            });
+            const patchTypeArray = Array.from(patchTypes);
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypeArray.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Find common prefix among model names
+            let commonPrefix = '';
+            if (models.length > 1) {
+                const sortedModels = models.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    commonPrefix += first[i];
+                    i++;
+                }
+            }
+            
+            // Check if prefix removal would create problematic labels for ANY model
+            if (commonPrefix) {
+                const hasProblematicLabel = models.some(m => {
+                    const label = m.substring(commonPrefix.length);
+                    return label.length === 0 || label.length < 3 || /^[^a-zA-Z0-9]/.test(label);
+                });
+                // If any label would be problematic, don't use prefix at all
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            
+            const modelLabels = models.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                // Ensure label is never empty
+                const finalLabel = label.length > 0 ? label : m;
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            const z = [];
+            const cellText = [];
+            const hoverText = [];
+            models.forEach(model => {
+                const row = [];
+                const cellTextRow = [];
+                const hoverTextRow = [];
+                patchTypeArray.forEach(pt => {
+                    const ptStats = stats.modelStats[model].patchTypes[pt] || { totalAttempts: 0, successes: 0, improvements: 0 };
+                    const successRate = ptStats.totalAttempts > 0 ? ptStats.successes / ptStats.totalAttempts : 0;
+                    row.push(successRate);
+                    cellTextRow.push(Math.round(successRate * 100) + '%');
+                    hoverTextRow.push(`<b>${model}</b><br>${ptStats.successes} / ${ptStats.totalAttempts} succeeded<br>${ptStats.improvements} / ${ptStats.successes} improved`);
+                });
+                z.push(row);
+                cellText.push(cellTextRow);
+                hoverText.push(hoverTextRow);
+            });
+            
+            const heatmap = {
+                z: z,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: hoverText,
+                type: 'heatmap',
+                colorscale: 'RdYlGn',
+                showscale: false,
+                zmin: 0,
+                zmax: 1,
+                hovertemplate: '%{customdata}<extra></extra>',
+                texttemplate: '%{text}',
+                textfont: { 
+                    size: 8,
+                    color: 'white'
+                }
+            };
+            
+            const annotations = [];
+            models.forEach((model, i) => {
+                patchTypeArray.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: 'white'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { tickfont: { size: 10 } },
+                height: 310,
+                margin: { l: 80, r: 10, t: 10, b: 60 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('resample-llm-performance-plot', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderResampleEffectivenessPlot(stats, selectedNodeId) {
+            if (!stats || !stats.patchTypeStats) {
+                document.getElementById('resample-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No resample effectiveness data available.</p>';
+                return;
+            }
+            
+            const patchTypes = Object.keys(stats.patchTypeStats);
+            if (patchTypes.length === 0) {
+                document.getElementById('resample-effectiveness-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No resample patch type data available.</p>';
+                return;
+            }
+            
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const patchTypeLabels = patchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            const successCounts = patchTypes.map(pt => stats.patchTypeStats[pt].successes);
+            const failureCounts = patchTypes.map(pt => stats.patchTypeStats[pt].failures);
+            
+            const trace1 = {
+                x: patchTypeLabels,
+                y: successCounts,
+                name: '✔',
+                type: 'bar',
+                marker: { color: '#2ecc71' },
+                text: successCounts.map(String),
+                hoverinfo: 'text'
+            };
+            
+            const trace2 = {
+                x: patchTypeLabels,
+                y: failureCounts,
+                name: '✘',
+                type: 'bar',
+                marker: { color: '#e74c3c' },
+                text: failureCounts.map(String),
+                hoverinfo: 'text'
+            };
+            
+            const layout = {
+                xaxis: { title: { text: 'Patch Type', font: { size: 12 } }, tickfont: { size: 20 } },
+                yaxis: { title: 'Count' },
+                barmode: 'stack',
+                height: 310,
+                margin: { l: 50, r: 20, t: 10, b: 60 },
+                legend: { x: 1, y: 1, xanchor: 'right', yanchor: 'top' }
+            };
+            
+            Plotly.newPlot('resample-effectiveness-plot', [trace1, trace2], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderLineageFertilityPlot(stats, selectedNodeId) {
+            if (!stats || !stats.childrenCounts) {
+                document.getElementById('lineage-fertility-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No lineage data available.</p>';
+                return;
+            }
+            
+            if (stats.topFertile.length === 0) {
+                document.getElementById('lineage-fertility-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No fertile programs found.</p>';
+                return;
+            }
+            
+            // Format x-axis labels: Gen X + first 10 chars of name
+            const xLabels = stats.topFertile.map(p => 
+                `${p.generation}: ${p.name.substring(0, 10)}${p.name.length > 10 ? '...' : ''}`
+            );
+            const totalChildren = stats.topFertile.map(p => p.children);
+            const improvingChildren = stats.topFertile.map(p => p.improvingChildren);
+            const hoverTexts = stats.topFertile.map(p => {
+                const improvementRate = p.children > 0 ? (p.improvingChildren / p.children) * 100 : 0;
+                const islandLabel = (p.islandIdx !== null && p.islandIdx !== undefined) ? p.islandIdx : 'N/A';
+                
+                return `<b>${p.name}</b> (Gen ${p.generation})<br>` +
+                       `Fitness: ${formatScore(p.score)} ${p.correct ? '✅' : '❌'}<br>` +
+                       `Patch: ${p.patchType || 'N/A'} | Island: ${islandLabel}<br>` +
+                       `Model: ${p.modelName || 'N/A'}<br>` +
+                       `Total children: ${p.children}<br>` +
+                       `Improving children: ${p.improvingChildren} (${improvementRate.toFixed(1)}%)`;
+            });
+            const hoverTextsTotal = hoverTexts.map(text => `${text}<br><b>Metric:</b> Total children`);
+            
+            const trace1 = {
+                x: xLabels,
+                y: totalChildren,
+                name: 'Total Children',
+                type: 'bar',
+                marker: { color: '#3498db' },
+                text: hoverTextsTotal,
+                hoverinfo: 'text'
+            };
+            
+            const trace2 = {
+                x: xLabels,
+                y: improvingChildren,
+                name: 'Improving Children',
+                type: 'bar',
+                marker: { color: '#2ecc71' },
+                hoverinfo: 'none'
+            };
+            
+            const layout = {
+                xaxis: { title: 'Generation & Program Name', tickangle: -45 },
+                yaxis: { title: 'Number of Descendants' },
+                barmode: 'group',
+                height: 360,
+                margin: { l: 60, r: 50, t: 10, b: 120 },
+                legend: { x: 1, y: 1, xanchor: 'right', yanchor: 'top' }
+            };
+            
+            Plotly.newPlot('lineage-fertility-plot', [trace1, trace2], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderCodeBloatPlot(stats, selectedNodeId) {
+            if (!stats || !stats.genStats || stats.genStats.length === 0) {
+                document.getElementById('code-bloat-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No code bloat data available.</p>';
+                return;
+            }
+            
+            const generations = stats.genStats.map(d => d.generation);
+            const avgLocs = stats.genStats.map(d => d.avgLoc);
+            const avgLlocs = stats.genStats.map(d => d.avgLloc);
+            
+            // Calculate alpha values based on generation (0.2 to 1.0)
+            const minGen = Math.min(...generations);
+            const maxGen = Math.max(...generations);
+            const genRange = maxGen - minGen || 1; // Avoid division by zero
+            const alphaValues = generations.map(gen => 
+                0.2 + 0.8 * ((gen - minGen) / genRange)
+            );
+            
+            // Calculate linear regression for LOC
+            const locRegression = linearRegression(generations, avgLocs);
+            const locTrend = generations.map(gen => locRegression.slope * gen + locRegression.intercept);
+            
+            // Calculate linear regression for LLOC
+            const llocRegression = linearRegression(generations, avgLlocs);
+            const llocTrend = generations.map(gen => llocRegression.slope * gen + llocRegression.intercept);
+            
+            const trace1 = {
+                x: generations,
+                y: avgLocs,
+                name: 'LOC',
+                type: 'scatter',
+                mode: 'markers',
+                marker: { 
+                    color: '#3498db', 
+                    size: 8,
+                    opacity: alphaValues
+                }
+            };
+            
+            const trace2 = {
+                x: generations,
+                y: locTrend,
+                name: 'LOC Trend',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#3498db', width: 2, dash: 'dash' },
+                showlegend: false
+            };
+            
+            const trace3 = {
+                x: generations,
+                y: avgLlocs,
+                name: 'LLOC',
+                type: 'scatter',
+                mode: 'markers',
+                marker: { 
+                    color: '#2ecc71', 
+                    size: 8,
+                    opacity: alphaValues
+                }
+            };
+            
+            const trace4 = {
+                x: generations,
+                y: llocTrend,
+                name: 'LLOC Trend',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#2ecc71', width: 2, dash: 'dash' },
+                showlegend: false
+            };
+            
+            const layout = {
+                xaxis: { title: 'Generation' },
+                yaxis: {
+                    title: 'Lines of Code'
+                },
+                height: 360,
+                margin: { l: 60, r: 50, t: 10, b: 40 },
+                legend: { x: 0.05, y: 0.95 }
+            };
+            
+            Plotly.newPlot('code-bloat-plot', [trace1, trace2, trace3, trace4], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderMutationSizePlot(stats, selectedNodeId) {
+            if (!stats || !stats.mutationData || stats.mutationData.length === 0) {
+                document.getElementById('mutation-size-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No mutation size data available.</p>';
+                return;
+            }
+            
+            // Map patch types to Plotly symbols (matching tree visualization)
+            const symbolMap = {
+                'init': 'diamond',
+                'full': 'circle',
+                'diff': 'square',
+                'cross': 'x',
+                'fix': 'triangle-up'
+            };
+            
+            const mutationSizes = stats.mutationData.map(d => d.mutationSize);
+            const improvements = stats.mutationData.map(d => d.improvement);
+            const colors = stats.mutationData.map(d => d.isCorrect ? '#2ecc71' : '#e74c3c');
+            const symbols = stats.mutationData.map(d => symbolMap[d.patchType] || 'circle');
+            const generations = stats.mutationData.map(d => d.generation);
+            
+            // Calculate alpha values based on generation (0.1 to 1.0)
+            const minGen = Math.min(...generations);
+            const maxGen = Math.max(...generations);
+            const genRange = maxGen - minGen || 1; // Avoid division by zero
+            const alphaValues = generations.map(gen => 
+                0.1 + 0.9 * ((gen - minGen) / genRange)
+            );
+            
+            const hoverText = stats.mutationData.map(d => 
+                `<b>${d.programName}</b> (Gen ${d.generation})<br>` +
+                `Model: ${d.modelName}<br>` +
+                `Correct: ${d.isCorrect ? 'Yes' : 'No'}<br>` +
+                `Score: ${d.parentScore !== null && d.parentScore !== undefined ? d.parentScore.toFixed(3) : 'N/A'} → ${d.score !== null && d.score !== undefined ? d.score.toFixed(3) : 'N/A'}<br>` +
+                `Improvement: ${d.improvement !== null && d.improvement !== undefined ? (d.improvement > 0 ? '+' : '') + d.improvement.toFixed(3) : 'N/A'}<br>` +
+                `Mutation Size: ${d.mutationSize} lines<br>` +
+                `  Added: ${d.added}, Deleted: ${d.deleted}, Modified: ${d.modified}<br>` +
+                `Patch Type: ${d.patchType}`
+            );
+            
+            // Calculate linear regression
+            const regression = linearRegression(mutationSizes, improvements);
+            const minSize = Math.min(...mutationSizes);
+            const maxSize = Math.max(...mutationSizes);
+            const trendX = [minSize, maxSize];
+            const trendY = trendX.map(x => regression.slope * x + regression.intercept);
+            
+            // Group data by patch type for separate traces (for legend)
+            const patchTypes = ['diff', 'full', 'cross', 'init', 'fix'];
+            const traces = [];
+            
+            patchTypes.forEach(patchType => {
+                const indices = stats.mutationData
+                    .map((d, i) => d.patchType === patchType ? i : -1)
+                    .filter(i => i >= 0);
+                
+                if (indices.length > 0) {
+                    traces.push({
+                        x: indices.map(i => mutationSizes[i]),
+                        y: indices.map(i => improvements[i]),
+                        mode: 'markers',
+                        type: 'scatter',
+                        name: patchType.charAt(0).toUpperCase() + patchType.slice(1),
+                        marker: {
+                            color: indices.map(i => colors[i]),
+                            symbol: symbolMap[patchType] || 'circle',
+                            size: 10,
+                            opacity: indices.map(i => alphaValues[i]),
+                            line: {
+                                color: '#333',
+                                width: 1
+                            }
+                        },
+                        text: indices.map(i => hoverText[i]),
+                        hoverinfo: 'text'
+                    });
+                }
+            });
+            
+            // Trend line
+            traces.push({
+                x: trendX,
+                y: trendY,
+                mode: 'lines',
+                type: 'scatter',
+                name: `Trend (slope: ${regression.slope.toFixed(4)})`,
+                showlegend: false,
+                line: {
+                    color: '#9b59b6',
+                    width: 2,
+                    dash: 'dash'
+                }
+            });
+            
+            const layout = {
+                xaxis: { title: 'Mutation Size (lines changed)' },
+                yaxis: { title: 'Performance Improvement (Δ score)' },
+                height: 360,
+                margin: { l: 60, r: 50, t: 10, b: 40 },
+                legend: { x: 0.95, y: 0.95, xanchor: 'right' },
+                hovermode: 'closest',
+                hoverdistance: 5,
+                shapes: [{
+                    type: 'line',
+                    x0: minSize,
+                    y0: 0,
+                    x1: maxSize,
+                    y1: 0,
+                    line: {
+                        color: '#95a5a6',
+                        width: 1,
+                        dash: 'dot'
+                    }
+                }]
+            };
+            
+            Plotly.newPlot('mutation-size-plot', traces, layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderCorrectnessRatePlot(stats, selectedNodeId) {
+            if (!stats || !stats.generations || stats.generations.length === 0) {
+                document.getElementById('correctness-rate-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No correctness rate data available.</p>';
+                return;
+            }
+            
+            const traces = [];
+            
+            // Overall correctness rate trace (rolling cumulative)
+            traces.push({
+                x: stats.generations,
+                y: stats.overallRates,
+                name: 'Overall',
+                type: 'scatter',
+                mode: 'lines',
+                line: { 
+                    color: '#34495e', 
+                    width: 3
+                }
+            });
+            
+            // Patch type traces with matching symbols from tree visualization
+            const patchTypeConfig = {
+                'diff': { color: '#3498db', name: 'Diff' },
+                'full': { color: '#e74c3c', name: 'Full' },
+                'cross': { color: '#f39c12', name: 'Cross' },
+                'init': { color: '#9b59b6', name: 'Init' },
+                'fix': { color: '#27ae60', name: 'Fix' }
+            };
+            
+            Object.keys(patchTypeConfig).forEach(patchType => {
+                const data = stats.ratesByPatchType[patchType];
+                if (data && data.generations.length > 0) {
+                    const config = patchTypeConfig[patchType];
+                    traces.push({
+                        x: data.generations,
+                        y: data.rates,
+                        name: config.name,
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { 
+                            color: config.color, 
+                            width: 2,
+                            dash: 'dot'
+                        }
+                    });
+                }
+            });
+            
+            const layout = {
+                xaxis: { title: 'Generation' },
+                yaxis: { 
+                    title: 'Rolling Correctness Rate (%)',
+                    range: [0, 100]
+                },
+                height: 360,
+                margin: { l: 60, r: 50, t: 10, b: 40 },
+                legend: { x: 0.95, y: 0.05, xanchor: 'right', yanchor: 'bottom' },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('correctness-rate-plot', traces, layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderImprovementRatePlot(stats, selectedNodeId) {
+            if (!stats || !stats.generations || stats.generations.length === 0) {
+                document.getElementById('improvement-rate-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No improvement rate data available.</p>';
+                return;
+            }
+            
+            const traces = [];
+            
+            // Overall improvement rate trace (rolling cumulative)
+            traces.push({
+                x: stats.generations,
+                y: stats.overallRates,
+                name: 'Overall',
+                type: 'scatter',
+                mode: 'lines',
+                line: { 
+                    color: '#34495e', 
+                    width: 3
+                }
+            });
+            
+            // Patch type traces with matching symbols from tree visualization
+            const patchTypeConfig = {
+                'diff': { color: '#3498db', name: 'Diff' },
+                'full': { color: '#e74c3c', name: 'Full' },
+                'cross': { color: '#f39c12', name: 'Cross' },
+                'init': { color: '#9b59b6', name: 'Init' },
+                'fix': { color: '#27ae60', name: 'Fix' }
+            };
+            
+            Object.keys(patchTypeConfig).forEach(patchType => {
+                const data = stats.ratesByPatchType[patchType];
+                if (data && data.generations.length > 0) {
+                    const config = patchTypeConfig[patchType];
+                    traces.push({
+                        x: data.generations,
+                        y: data.rates,
+                        name: config.name,
+                        type: 'scatter',
+                        mode: 'lines',
+                        line: { 
+                            color: config.color, 
+                            width: 2,
+                            dash: 'dot'
+                        }
+                    });
+                }
+            });
+            
+            const layout = {
+                xaxis: { title: 'Generation' },
+                yaxis: { 
+                    title: 'Rolling Improvement Rate (%)',
+                    range: [0, 100]
+                },
+                height: 360,
+                margin: { l: 60, r: 50, t: 10, b: 40 },
+                legend: { x: 0.95, y: 0.05, xanchor: 'right', yanchor: 'bottom' },
+                hovermode: 'closest'
+            };
+            
+            Plotly.newPlot('improvement-rate-plot', traces, layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderCostEfficiencyPlot(stats, selectedNodeId) {
+            if (!stats || !stats.genCostStats || stats.genCostStats.length === 0) {
+                document.getElementById('cost-efficiency-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No cost data available.</p>';
+                return;
+            }
+            
+            const generations = stats.genCostStats.map(d => d.generation);
+            const apiCosts = stats.genCostStats.map(d => d.apiCost);
+            const embedCosts = stats.genCostStats.map(d => d.embedCost);
+            const noveltyCosts = stats.genCostStats.map(d => d.noveltyCost);
+            const metaCosts = stats.genCostStats.map(d => d.metaCost);
+            const cumulativeCosts = stats.genCostStats.map(d => d.cumulativeCost);
+            const maxScores = stats.genCostStats.map(d => d.maxScore);
+            
+            const trace1 = {
+                x: generations,
+                y: apiCosts,
+                name: 'API Costs',
+                stackgroup: 'one',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tonexty',
+                fillcolor: 'rgba(52, 152, 219, 0.5)',
+                line: { color: '#3498db' }
+            };
+            
+            const trace2 = {
+                x: generations,
+                y: embedCosts,
+                name: 'Embed Costs',
+                stackgroup: 'one',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tonexty',
+                fillcolor: 'rgba(46, 204, 113, 0.5)',
+                line: { color: '#2ecc71' }
+            };
+            
+            const trace3 = {
+                x: generations,
+                y: noveltyCosts,
+                name: 'Novelty Costs',
+                stackgroup: 'one',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tonexty',
+                fillcolor: 'rgba(241, 196, 15, 0.5)',
+                line: { color: '#f1c40f' }
+            };
+            
+            const trace4 = {
+                x: generations,
+                y: metaCosts,
+                name: 'Meta Costs',
+                stackgroup: 'one',
+                type: 'scatter',
+                mode: 'lines',
+                fill: 'tonexty',
+                fillcolor: 'rgba(231, 76, 60, 0.5)',
+                line: { color: '#e74c3c' }
+            };
+            
+            const trace5 = {
+                x: generations,
+                y: cumulativeCosts,
+                name: 'Cumulative Cost',
+                yaxis: 'y2',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#9b59b6', width: 2, dash: 'dash' }
+            };
+            
+            const layout = {
+                title: 'Cost Breakdown and Cumulative Spending Over Generations',
+                xaxis: { title: 'Generation' },
+                yaxis: {
+                    title: 'Cost per Generation ($)',
+                    titlefont: { color: '#3498db' },
+                    tickfont: { color: '#3498db' }
+                },
+                yaxis2: {
+                    title: 'Cumulative Cost ($)',
+                    titlefont: { color: '#9b59b6' },
+                    tickfont: { color: '#9b59b6' },
+                    overlaying: 'y',
+                    side: 'right'
+                },
+                height: 350,
+                margin: { l: 60, r: 60, t: 50, b: 50 },
+                legend: { x: 0.05, y: 0.95 }
+            };
+            
+            Plotly.newPlot('cost-efficiency-plot', [trace1, trace2, trace3, trace4, trace5], layout, {responsive: true});
+        }
+        
+        function renderModelPatchCostHeatmap(stats, selectedNodeId) {
+            const container = document.getElementById('cost-model-patch-heatmap');
+            if (!container) return;
+            
+            if (!stats || !stats.modelPatchStats || 
+                !stats.modelPatchStats.models || stats.modelPatchStats.models.length === 0 ||
+                !stats.modelPatchStats.patchTypes || stats.modelPatchStats.patchTypes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No cost data available for model/patch breakdown.</p>';
+                return;
+            }
+            
+            const { models, patchTypes, zValues, textValues, countValues } = stats.modelPatchStats;
+            
+            // Filter out 'init' patch type
+            const patchTypeSymbols = {
+                'init': '◆',
+                'full': '●',
+                'diff': '■',
+                'cross': '✕',
+                'fix': '▲'
+            };
+            const filteredPatchIndices = patchTypes.map((pt, idx) => pt !== 'init' ? idx : -1).filter(i => i >= 0);
+            const filteredPatchTypes = filteredPatchIndices.map(i => patchTypes[i]);
+            const patchTypeLabels = filteredPatchTypes.map(pt => patchTypeSymbols[pt] || pt);
+            
+            // Filter out 'N/A' models
+            const filteredModelIndices = models.map((m, idx) => m !== 'N/A' ? idx : -1).filter(i => i >= 0);
+            const filteredModels = filteredModelIndices.map(i => models[i]);
+            
+            // Find common prefix among model names
+            let commonPrefix = '';
+            if (filteredModels.length > 1) {
+                const sortedModels = filteredModels.slice().sort();
+                const first = sortedModels[0];
+                const last = sortedModels[sortedModels.length - 1];
+                let i = 0;
+                while (i < first.length && first[i] === last[i]) {
+                    if (first[i] === '-' || first[i] === '_' || first[i] === '/') {
+                        commonPrefix = first.substring(0, i + 1);
+                    }
+                    i++;
+                }
+                const modelLabelsTest = filteredModels.map(m => commonPrefix ? m.substring(commonPrefix.length) : m);
+                const hasProblematicLabel = modelLabelsTest.some(label => 
+                    label.length === 0 || label.match(/^[\d.]/)
+                );
+                if (hasProblematicLabel) {
+                    commonPrefix = '';
+                }
+            }
+            const modelLabels = filteredModels.map(m => {
+                const label = commonPrefix ? m.substring(commonPrefix.length) : m;
+                const finalLabel = label.length > 0 ? label : m;
+                return finalLabel.length > 30 ? finalLabel.substring(0, 30) + '...' : finalLabel;
+            });
+            
+            // Filter z, text, and count values to exclude init column and N/A model rows
+            const filteredZ = filteredModelIndices.map(mi => filteredPatchIndices.map(pi => zValues[mi][pi]));
+            const filteredText = filteredModelIndices.map(mi => filteredPatchIndices.map(pi => textValues[mi][pi]));
+            const filteredCounts = filteredModelIndices.map(mi => filteredPatchIndices.map(pi => countValues[mi][pi]));
+            
+            // Create cell text for annotations (dollar amounts with count)
+            const cellText = filteredZ.map((row, i) => row.map((val, j) => {
+                const count = filteredCounts[i][j];
+                return val > 0 ? `$${val.toFixed(3)}<br>(${count} P)` : '-';
+            }));
+            
+            const heatmap = {
+                z: filteredZ,
+                x: patchTypeLabels,
+                y: modelLabels,
+                text: cellText,
+                customdata: filteredText,
+                type: 'heatmap',
+                colorscale: [[0, '#ffffff'], [1, '#e74c3c']],
+                showscale: true,
+                zmin: 0,
+                hovertemplate: '%{customdata}<extra></extra>',
+                colorbar: { title: 'Avg $', titleside: 'right', len: 0.8 }
+            };
+            
+            // Create annotations for text overlay
+            const annotations = [];
+            const maxZ = Math.max(...filteredZ.flat().filter(v => v > 0), 0.001);
+            filteredModels.forEach((model, i) => {
+                filteredPatchTypes.forEach((pt, j) => {
+                    annotations.push({
+                        x: patchTypeLabels[j],
+                        y: modelLabels[i],
+                        text: cellText[i][j],
+                        showarrow: false,
+                        font: {
+                            size: 8,
+                            color: filteredZ[i][j] > (maxZ * 0.5) ? 'white' : 'black'
+                        }
+                    });
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: '', tickfont: { size: 16 } },
+                yaxis: { title: '', tickfont: { size: 10 }, automargin: true },
+                height: 340,
+                margin: { l: 100, r: 60, t: 30, b: 40 },
+                annotations: annotations
+            };
+            
+            Plotly.newPlot('cost-model-patch-heatmap', [heatmap], layout, {responsive: true, displayModeBar: false});
+        }
+        
+        function renderGenerationAvgCostPlot(stats, selectedNodeId) {
+            const container = document.getElementById('cost-generation-avg-plot');
+            if (!container) return;
+            
+            if (!stats || !stats.generationAvgCosts || stats.generationAvgCosts.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No generation-level cost data available.</p>';
+                return;
+            }
+            
+            const traces = [];
+            
+            // Overall running average (cumulative)
+            if (stats.generationOverallRunning && stats.generationOverallRunning.generations.length > 0) {
+                traces.push({
+                    x: stats.generationOverallRunning.generations,
+                    y: stats.generationOverallRunning.runningAvg,
+                    name: 'Overall',
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: '#9b59b6', width: 3 },
+                    hovertemplate: 'Overall: %{y:.2f} $<extra></extra>'
+                });
+            }
+            
+            // Running average per model+patch combination (exclude init)
+            // Filter and sort by final running average (highest cost first)
+            const filteredSeries = (stats.generationModelPatchRunning || [])
+                .filter(series => {
+                    if (!series.generations || series.generations.length === 0) return false;
+                    const [, patch] = series.key.split('||');
+                    return patch !== 'init';
+                })
+                .map(series => {
+                    // Get final non-null running average for sorting
+                    const nonNullValues = series.runningAvg.filter(v => v !== null);
+                    const finalAvg = nonNullValues.length > 0 ? nonNullValues[nonNullValues.length - 1] : 0;
+                    return { ...series, finalAvg };
+                })
+                .sort((a, b) => b.finalAvg - a.finalAvg); // Sort descending by cost
+            
+            const comboColors = ['#3498db', '#e67e22', '#16a085', '#f1c40f', '#e74c3c', '#2ecc71', '#34495e', '#8e44ad', '#d35400', '#1abc9c', '#c0392b', '#7f8c8d', '#2980b9', '#27ae60'];
+            filteredSeries.forEach((series, idx) => {
+                const [model, patch] = series.key.split('||');
+                const color = comboColors[idx % comboColors.length];
+                const traceName = `${model} / ${patch}`;
+                // Create custom hover text that handles null values
+                const hoverText = series.runningAvg.map(v => 
+                    v !== null ? `${traceName}: ${v.toFixed(3)} $` : `${traceName}: N/A`
+                );
+                traces.push({
+                    x: series.generations,
+                    y: series.runningAvg,
+                    name: traceName,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color, width: 2 },
+                    connectgaps: false,
+                    text: hoverText,
+                    hovertemplate: '%{text}<extra></extra>'
+                });
+            });
+            
+            const layout = {
+                xaxis: { title: 'Generation' },
+                yaxis: { title: 'Avg Cost ($)' },
+                height: 340,
+                margin: { l: 60, r: 20, t: 10, b: 40 },
+                hovermode: 'x unified',
+                legend: { 
+                    orientation: 'v',
+                    x: 0.99,
+                    y: 0.99,
+                    xanchor: 'right',
+                    yanchor: 'top',
+                    bgcolor: 'rgba(255,255,255,0.85)',
+                    bordercolor: '#ccc',
+                    borderwidth: 1,
+                    font: { size: 8 },
+                    itemwidth: 30
+                }
+            };
+            
+            Plotly.newPlot('cost-generation-avg-plot', traces, layout, {responsive: true, displayModeBar: false});
+        }
+
+        function formatRuntimeSeconds(seconds) {
+            if (!Number.isFinite(seconds)) return 'N/A';
+            if (seconds < 60) return `${seconds.toFixed(1)}s`;
+            if (seconds < 3600) return `${(seconds / 60).toFixed(1)}m`;
+            return `${(seconds / 3600).toFixed(1)}h`;
+        }
+
+        function formatRuntimeTimestamp(epochSeconds) {
+            if (!Number.isFinite(epochSeconds)) return 'N/A';
+            return new Date(epochSeconds * 1000).toLocaleString();
+        }
+
+        function getMinVisibleRuntimeBarMs(rangeMs) {
+            if (!Number.isFinite(rangeMs) || rangeMs <= 0) return 250;
+            return Math.max(250, rangeMs * 0.003);
+        }
+
+        function getDisplayRuntimeBarMs(durationSeconds, minVisibleBarMs) {
+            const durationMs = Math.max(0, (durationSeconds || 0) * 1000);
+            if (durationMs <= 0) return minVisibleBarMs;
+            return Math.max(durationMs, minVisibleBarMs);
+        }
+
+        function parseRuntimeNumber(value) {
+            if (value === null || value === undefined || value === '') return null;
+            const parsed = typeof value === 'number' ? value : parseFloat(value);
+            return Number.isFinite(parsed) ? parsed : null;
+        }
+
+        function getRuntimeTimelineRowPriority(row) {
+            let priority = 0;
+            if (!row.isIslandCopy) priority += 10;
+            if (row.correct) priority += 2;
+            if (Number.isFinite(row.combinedScore)) priority += 1;
+            return priority;
+        }
+
+        function getBaseRuntimeTimelineRows(data) {
+            if (!Array.isArray(data) || data.length === 0) return [];
+
+            const rows = data.map(program => {
+                const meta = program.metadata || {};
+                const pipelineStartedAt = parseRuntimeNumber(meta.pipeline_started_at);
+                const samplingStartedAt = parseRuntimeNumber(meta.sampling_started_at);
+                const samplingFinishedAt = parseRuntimeNumber(meta.sampling_finished_at);
+                const evaluationStartedAt = parseRuntimeNumber(meta.evaluation_started_at);
+                const evaluationFinishedAt = parseRuntimeNumber(meta.evaluation_finished_at);
+                const postprocessStartedAt = parseRuntimeNumber(meta.postprocess_started_at);
+                const postprocessFinishedAt = parseRuntimeNumber(meta.postprocess_finished_at);
+
+                if (
+                    pipelineStartedAt === null ||
+                    samplingStartedAt === null ||
+                    samplingFinishedAt === null ||
+                    evaluationStartedAt === null ||
+                    evaluationFinishedAt === null ||
+                    postprocessStartedAt === null ||
+                    postprocessFinishedAt === null
+                ) {
+                    return null;
+                }
+
+                return {
+                    id: program.id,
+                    sourceJobId: meta.source_job_id || null,
+                    isIslandCopy: Boolean(meta._spawned_island || meta._is_island_copy),
+                    generation: program.generation ?? 0,
+                    timestamp: typeof program.timestamp === 'number' ? program.timestamp : 0,
+                    correct: Boolean(program.correct),
+                    combinedScore: typeof program.combined_score === 'number' ? program.combined_score : null,
+                    patchName: meta.patch_name || 'unnamed',
+                    modelName: meta.model_name || meta.llm_result?.model || meta.model || 'N/A',
+                    noveltyAttempt: parseRuntimeNumber(meta.novelty_attempt),
+                    resampleAttempt: parseRuntimeNumber(meta.resample_attempt),
+                    patchAttempt: parseRuntimeNumber(meta.patch_attempt),
+                    timelineLaneMode: meta.timeline_lane_mode || null,
+                    samplingWorkerId: parseRuntimeNumber(meta.sampling_worker_id),
+                    evaluationWorkerId: parseRuntimeNumber(meta.evaluation_worker_id),
+                    postprocessWorkerId: parseRuntimeNumber(meta.postprocess_worker_id),
+                    samplingWorkerCapacity: parseRuntimeNumber(meta.sampling_worker_capacity),
+                    evaluationWorkerCapacity: parseRuntimeNumber(meta.evaluation_worker_capacity),
+                    postprocessWorkerCapacity: parseRuntimeNumber(meta.postprocess_worker_capacity),
+                    pipelineStartedAt,
+                    samplingStartedAt,
+                    samplingFinishedAt,
+                    evaluationStartedAt,
+                    evaluationFinishedAt,
+                    postprocessStartedAt,
+                    postprocessFinishedAt,
+                    samplingSeconds: Math.max(0, samplingFinishedAt - samplingStartedAt),
+                    evaluationSeconds: Math.max(0, evaluationFinishedAt - evaluationStartedAt),
+                    postprocessSeconds: Math.max(0, postprocessFinishedAt - postprocessStartedAt)
+                };
+            }).filter(row => row !== null);
+
+            const dedupedRows = new Map();
+            rows.forEach(row => {
+                const dedupeKey = row.sourceJobId || row.id;
+                const existing = dedupedRows.get(dedupeKey);
+                if (!existing) {
+                    dedupedRows.set(dedupeKey, row);
+                    return;
+                }
+
+                const existingPriority = getRuntimeTimelineRowPriority(existing);
+                const rowPriority = getRuntimeTimelineRowPriority(row);
+                if (rowPriority > existingPriority) {
+                    dedupedRows.set(dedupeKey, row);
+                    return;
+                }
+
+                if (rowPriority === existingPriority && row.timestamp < existing.timestamp) {
+                    dedupedRows.set(dedupeKey, row);
+                }
+            });
+
+            return Array.from(dedupedRows.values());
+        }
+
+        function computePeakConcurrency(rows, startKey, endKey) {
+            const events = [];
+            rows.forEach(row => {
+                const start = row[startKey];
+                const end = row[endKey];
+                if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) return;
+                events.push([start, 1]);
+                events.push([end, -1]);
+            });
+
+            events.sort((a, b) => {
+                if (a[0] !== b[0]) return a[0] - b[0];
+                return a[1] - b[1];
+            });
+
+            let current = 0;
+            let peak = 0;
+            events.forEach(([, delta]) => {
+                current += delta;
+                peak = Math.max(peak, current);
+            });
+            return peak;
+        }
+
+        function reconcileStageWorkerOverlaps(rows, { workerIdKey, startKey, endKey }) {
+            const reconciledRows = rows.map(row => ({ ...row }));
+            const validRows = reconciledRows
+                .filter(
+                    row => Number.isFinite(row[workerIdKey]) &&
+                        Number.isFinite(row[startKey]) &&
+                        Number.isFinite(row[endKey])
+                )
+                .sort((a, b) => {
+                    if (a[workerIdKey] !== b[workerIdKey]) {
+                        return a[workerIdKey] - b[workerIdKey];
+                    }
+                    if (a[startKey] !== b[startKey]) {
+                        return a[startKey] - b[startKey];
+                    }
+                    if (a[endKey] !== b[endKey]) {
+                        return a[endKey] - b[endKey];
+                    }
+                    if (a.generation !== b.generation) {
+                        return a.generation - b.generation;
+                    }
+                    return a.pipelineStartedAt - b.pipelineStartedAt;
+                });
+
+            const previousEndByWorker = new Map();
+            validRows.forEach(row => {
+                const workerId = row[workerIdKey];
+                const previousEnd = previousEndByWorker.get(workerId);
+                const normalizedStart = previousEnd === undefined
+                    ? row[startKey]
+                    : Math.max(row[startKey], previousEnd);
+                const normalizedEnd = Math.max(normalizedStart, row[endKey]);
+                row[startKey] = normalizedStart;
+                row[endKey] = normalizedEnd;
+                previousEndByWorker.set(workerId, normalizedEnd);
+            });
+
+            return reconciledRows;
+        }
+
+        function getLegacyRuntimeTimelineRows(data) {
+            const rows = getBaseRuntimeTimelineRows(data);
+            if (rows.length === 0) return { rows: [], laneCount: 0 };
+
+            rows.sort((a, b) => {
+                if (a.evaluationStartedAt !== b.evaluationStartedAt) {
+                    return a.evaluationStartedAt - b.evaluationStartedAt;
+                }
+                if (a.generation !== b.generation) return a.generation - b.generation;
+                return a.pipelineStartedAt - b.pipelineStartedAt;
+            });
+
+            const laneEndTimes = [];
+            const laneEpsilon = 1e-6;
+            rows.forEach(row => {
+                let laneIndex = laneEndTimes.findIndex(
+                    laneEndTime => row.evaluationStartedAt >= laneEndTime - laneEpsilon
+                );
+                if (laneIndex === -1) {
+                    laneIndex = laneEndTimes.length;
+                    laneEndTimes.push(row.evaluationFinishedAt);
+                } else {
+                    laneEndTimes[laneIndex] = row.evaluationFinishedAt;
+                }
+                row.workerLabel = `Worker ${laneIndex + 1}`;
+            });
+
+            return { rows, laneCount: laneEndTimes.length };
+        }
+
+        function getPoolRuntimeTimelineData(data) {
+            let rows = getBaseRuntimeTimelineRows(data).filter(
+                row => row.timelineLaneMode === 'pool_slots'
+            );
+            if (rows.length === 0) return null;
+
+            [
+                {
+                    workerIdKey: 'samplingWorkerId',
+                    startKey: 'samplingStartedAt',
+                    endKey: 'samplingFinishedAt'
+                },
+                {
+                    workerIdKey: 'evaluationWorkerId',
+                    startKey: 'evaluationStartedAt',
+                    endKey: 'evaluationFinishedAt'
+                },
+                {
+                    workerIdKey: 'postprocessWorkerId',
+                    startKey: 'postprocessStartedAt',
+                    endKey: 'postprocessFinishedAt'
+                }
+            ].forEach(stage => {
+                rows = reconcileStageWorkerOverlaps(rows, stage);
+            });
+
+            const capacities = {
+                sampling: Math.max(0, ...rows.map(row => row.samplingWorkerCapacity || row.samplingWorkerId || 0)),
+                evaluation: Math.max(0, ...rows.map(row => row.evaluationWorkerCapacity || row.evaluationWorkerId || 0)),
+                postprocess: Math.max(0, ...rows.map(row => row.postprocessWorkerCapacity || row.postprocessWorkerId || 0))
+            };
+
+            if (capacities.sampling === 0 && capacities.evaluation === 0 && capacities.postprocess === 0) {
+                return null;
+            }
+
+            const laneLabels = [];
+            const maxLaneCount = Math.max(
+                capacities.sampling,
+                capacities.evaluation,
+                capacities.postprocess
+            );
+
+            for (let idx = 1; idx <= maxLaneCount; idx += 1) {
+                if (idx <= capacities.sampling) laneLabels.push(`Sampling W${idx}`);
+                if (idx <= capacities.evaluation) laneLabels.push(`Evaluation W${idx}`);
+                if (idx <= capacities.postprocess) laneLabels.push(`Postprocess W${idx}`);
+            }
+
+            return {
+                rows,
+                capacities,
+                laneLabels,
+                peaks: {
+                    sampling: computePeakConcurrency(rows, 'samplingStartedAt', 'samplingFinishedAt'),
+                    evaluation: computePeakConcurrency(rows, 'evaluationStartedAt', 'evaluationFinishedAt'),
+                    postprocess: computePeakConcurrency(rows, 'postprocessStartedAt', 'postprocessFinishedAt')
+                }
+            };
+        }
+
+        function getRuntimeTimelineLayout({
+            minStartMs,
+            maxEndMs,
+            runtimePlotHeight,
+            yAxisTitle,
+            laneLabels = null,
+            laneCount = null
+        }) {
+            const layout = {
+                barmode: 'overlay',
+                height: runtimePlotHeight,
+                margin: { l: 150, r: 10, t: 60, b: 105 },
+                xaxis: {
+                    title: {
+                        text: 'Wall Clock Time',
+                        standoff: 14
+                    },
+                    type: 'date',
+                    range: [minStartMs, maxEndMs],
+                    tickformat: '%Y-%m-%d<br>%H:%M:%S',
+                    tickangle: 0,
+                    automargin: true,
+                    tickfont: {
+                        size: 11
+                    }
+                },
+                yaxis: {
+                    automargin: true,
+                    autorange: 'reversed',
+                    title: yAxisTitle,
+                    ticklabelposition: 'outside'
+                },
+                hovermode: 'closest',
+                legend: {
+                    orientation: 'h',
+                    x: 0.01,
+                    xanchor: 'left',
+                    y: 1.01,
+                    yanchor: 'bottom',
+                    bgcolor: 'rgba(255,255,255,0.9)'
+                }
+            };
+
+            if (laneLabels) {
+                layout.yaxis.categoryorder = 'array';
+                layout.yaxis.categoryarray = laneLabels;
+            }
+
+            if (Number.isFinite(laneCount) && laneCount > 0) {
+                layout.yaxis.range = [laneCount - 0.5, -0.5];
+            }
+
+            return layout;
+        }
+
+        function renderRuntimeTimelinePlot(
+            data,
+            selectedNodeId,
+            summaryId = 'runtime-timeline-summary',
+            plotId = 'runtime-timeline-plot'
+        ) {
+            const container = document.getElementById(plotId);
+            if (!container) return;
+            const summary = document.getElementById(summaryId);
+
+            const poolData = getPoolRuntimeTimelineData(data);
+            if (poolData && poolData.rows.length) {
+                const { rows, capacities, laneLabels, peaks } = poolData;
+                const runtimePlotHeight = 420;
+                const poolBarWidth = Math.max(0.12, Math.min(0.75, 3.6 / Math.max(laneLabels.length, 1)));
+                if (summary) {
+                    summary.innerHTML = `
+                        <span><strong>Sampling:</strong> peak ${peaks.sampling}/${capacities.sampling || 0}</span>
+                        <span><strong>Evaluation:</strong> peak ${peaks.evaluation}/${capacities.evaluation || 0}</span>
+                        <span><strong>Postprocess:</strong> peak ${peaks.postprocess}/${capacities.postprocess || 0}</span>
+                    `;
+                }
+
+                const stageConfigs = [
+                    {
+                        key: 'sampling',
+                        label: 'Sampling',
+                        color: '#3b82f6',
+                        startKey: 'samplingStartedAt',
+                        endKey: 'samplingFinishedAt',
+                        durationKey: 'samplingSeconds',
+                        laneLabel: row => row.samplingWorkerId ? `Sampling W${row.samplingWorkerId}` : null
+                    },
+                    {
+                        key: 'evaluation',
+                        label: 'Evaluation',
+                        color: '#f59e0b',
+                        startKey: 'evaluationStartedAt',
+                        endKey: 'evaluationFinishedAt',
+                        durationKey: 'evaluationSeconds',
+                        laneLabel: row => row.evaluationWorkerId ? `Evaluation W${row.evaluationWorkerId}` : null
+                    },
+                    {
+                        key: 'postprocess',
+                        label: 'Postprocess',
+                        color: '#10b981',
+                        startKey: 'postprocessStartedAt',
+                        endKey: 'postprocessFinishedAt',
+                        durationKey: 'postprocessSeconds',
+                        laneLabel: row => row.postprocessWorkerId ? `Postprocess W${row.postprocessWorkerId}` : null
+                    }
+                ];
+
+                const traces = stageConfigs.map(stage => {
+                    const stageRows = rows.filter(row => stage.laneLabel(row));
+                    const minStartMs = Math.min(...rows.map(row => row.pipelineStartedAt * 1000));
+                    const maxEndMs = Math.max(...rows.map(row => row.postprocessFinishedAt * 1000));
+                    const minVisibleBarMs = getMinVisibleRuntimeBarMs(maxEndMs - minStartMs);
+                    return {
+                        type: 'bar',
+                        orientation: 'h',
+                        name: stage.label,
+                        y: stageRows.map(row => stage.laneLabel(row)),
+                        x: stageRows.map(row => getDisplayRuntimeBarMs(row[stage.durationKey], minVisibleBarMs)),
+                        base: stageRows.map(row => row[stage.startKey] * 1000),
+                        width: stageRows.map(() => poolBarWidth),
+                        marker: {
+                            color: stageRows.map(row => row.id === selectedNodeId ? stage.color : stage.color),
+                            line: {
+                                color: stageRows.map(row => row.id === selectedNodeId ? '#111827' : '#ffffff'),
+                                width: stageRows.map(row => row.id === selectedNodeId ? 1.5 : 0.5)
+                            }
+                        },
+                        opacity: 0.92,
+                        customdata: stageRows.map(row => ([
+                            stage.laneLabel(row),
+                            row.generation,
+                            row.patchName,
+                            row.modelName,
+                            formatRuntimeSeconds(row[stage.durationKey]),
+                            formatRuntimeTimestamp(row[stage.startKey]),
+                            formatRuntimeTimestamp(row[stage.endKey]),
+                            row.noveltyAttempt ?? 'N/A',
+                            row.resampleAttempt ?? 'N/A',
+                            row.patchAttempt ?? 'N/A',
+                        ])),
+                        hovertemplate:
+                            '<b>%{customdata[0]}</b><br>' +
+                            'Gen %{customdata[1]}<br>' +
+                            '%{fullData.name}: %{customdata[4]}<br>' +
+                            'Patch: %{customdata[2]}<br>' +
+                            'Model: %{customdata[3]}<br>' +
+                            'Start: %{customdata[5]}<br>' +
+                            'End: %{customdata[6]}<br>' +
+                            'Novelty Attempt: %{customdata[7]}<br>' +
+                            'Resample Attempt: %{customdata[8]}<br>' +
+                            'Patch Attempt: %{customdata[9]}<extra></extra>',
+                    };
+                });
+
+                const minStartMs = Math.min(...rows.map(row => row.pipelineStartedAt * 1000));
+                const maxEndMs = Math.max(...rows.map(row => row.postprocessFinishedAt * 1000));
+                const layout = getRuntimeTimelineLayout({
+                    minStartMs,
+                    maxEndMs,
+                    runtimePlotHeight,
+                    yAxisTitle: 'Resource Pool',
+                    laneLabels,
+                    laneCount: laneLabels.length
+                });
+
+                Plotly.newPlot(plotId, traces, layout, {
+                    responsive: true,
+                    displayModeBar: false
+                });
+                return;
+            }
+
+            const { rows, laneCount } = getLegacyRuntimeTimelineRows(data);
+            if (!rows.length) {
+                if (summary) summary.textContent = '';
+                container.innerHTML = '<p style="text-align: center; color: #999;">No runtime timeline data available.</p>';
+                return;
+            }
+            if (summary) {
+                summary.textContent = 'Legacy mode: inferred worker lanes from timestamps only.';
+            }
+
+            const runtimePlotHeight = 420;
+            const legacyBarWidth = Math.max(0.12, Math.min(0.75, 3.6 / Math.max(laneCount, 1)));
+            const stageConfigs = [
+                {
+                    key: 'sampling',
+                    label: 'Sampling',
+                    color: '#3b82f6',
+                    startKey: 'samplingStartedAt',
+                    endKey: 'samplingFinishedAt',
+                    durationKey: 'samplingSeconds'
+                },
+                {
+                    key: 'evaluation',
+                    label: 'Evaluation',
+                    color: '#f59e0b',
+                    startKey: 'evaluationStartedAt',
+                    endKey: 'evaluationFinishedAt',
+                    durationKey: 'evaluationSeconds'
+                },
+                {
+                    key: 'postprocess',
+                    label: 'Postprocess',
+                    color: '#10b981',
+                    startKey: 'postprocessStartedAt',
+                    endKey: 'postprocessFinishedAt',
+                    durationKey: 'postprocessSeconds'
+                }
+            ];
+
+            const minStartMs = Math.min(...rows.map(row => row.pipelineStartedAt * 1000));
+            const maxEndMs = Math.max(...rows.map(row => row.postprocessFinishedAt * 1000));
+            const minVisibleBarMs = getMinVisibleRuntimeBarMs(maxEndMs - minStartMs);
+            const yLabels = rows.map(row => row.workerLabel);
+            const traces = stageConfigs.map(stage => ({
+                type: 'bar',
+                orientation: 'h',
+                name: stage.label,
+                y: yLabels,
+                x: rows.map(row => getDisplayRuntimeBarMs(row[stage.durationKey], minVisibleBarMs)),
+                base: rows.map(row => row[stage.startKey] * 1000),
+                width: rows.map(() => legacyBarWidth),
+                marker: {
+                    color: rows.map(row => row.id === selectedNodeId ? stage.color : stage.color),
+                    line: {
+                        color: rows.map(row => row.id === selectedNodeId ? '#111827' : '#ffffff'),
+                        width: rows.map(row => row.id === selectedNodeId ? 1.5 : 0.5)
+                    }
+                },
+                opacity: 0.92,
+                customdata: rows.map(row => ([
+                    row.workerLabel,
+                    row.generation,
+                    row.patchName,
+                    row.modelName,
+                    formatRuntimeSeconds(row[stage.durationKey]),
+                    formatRuntimeTimestamp(row[stage.startKey]),
+                    formatRuntimeTimestamp(row[stage.endKey]),
+                    row.noveltyAttempt ?? 'N/A',
+                    row.resampleAttempt ?? 'N/A',
+                    row.patchAttempt ?? 'N/A',
+                ])),
+                hovertemplate:
+                    '<b>%{customdata[0]}</b><br>' +
+                    'Gen %{customdata[1]}<br>' +
+                    '%{fullData.name}: %{customdata[4]}<br>' +
+                    'Patch: %{customdata[2]}<br>' +
+                    'Model: %{customdata[3]}<br>' +
+                    'Start: %{customdata[5]}<br>' +
+                    'End: %{customdata[6]}<br>' +
+                    'Novelty Attempt: %{customdata[7]}<br>' +
+                    'Resample Attempt: %{customdata[8]}<br>' +
+                    'Patch Attempt: %{customdata[9]}<extra></extra>',
+            }));
+
+            const layout = getRuntimeTimelineLayout({
+                minStartMs,
+                maxEndMs,
+                runtimePlotHeight,
+                yAxisTitle: 'Worker Lane',
+                laneCount
+            });
+
+            Plotly.newPlot(plotId, traces, layout, {
+                responsive: true,
+                displayModeBar: false
+            });
+        }
+
+        function computeOccupancySeries(rows, startKey, endKey, capacity) {
+            if (!rows.length || !Number.isFinite(capacity) || capacity <= 0) {
+                return null;
+            }
+
+            const intervals = rows
+                .map(row => [row[startKey], row[endKey]])
+                .filter(([start, end]) => Number.isFinite(start) && Number.isFinite(end) && end > start);
+            if (!intervals.length) return null;
+
+            const minStart = Math.min(...intervals.map(([start]) => start));
+            const maxEnd = Math.max(...intervals.map(([, end]) => end));
+            const events = [];
+            intervals.forEach(([start, end]) => {
+                events.push([start, 1]);
+                events.push([end, -1]);
+            });
+            events.sort((a, b) => {
+                if (a[0] !== b[0]) return a[0] - b[0];
+                return a[1] - b[1];
+            });
+
+            const x = [minStart * 1000];
+            const y = [0];
+            const durationByCount = new Map();
+            let current = 0;
+            let previous = minStart;
+
+            events.forEach(([time, delta]) => {
+                if (time > previous) {
+                    durationByCount.set(
+                        current,
+                        (durationByCount.get(current) || 0) + (time - previous)
+                    );
+                }
+                x.push(time * 1000);
+                y.push(current);
+                current += delta;
+                x.push(time * 1000);
+                y.push(current);
+                previous = time;
+            });
+
+            if (maxEnd > previous) {
+                durationByCount.set(
+                    current,
+                    (durationByCount.get(current) || 0) + (maxEnd - previous)
+                );
+            }
+
+            const totalDuration = maxEnd - minStart;
+            const occupiedTime = Array.from(durationByCount.entries()).reduce(
+                (sum, [count, duration]) => sum + count * duration,
+                0
+            );
+
+            return {
+                x,
+                y,
+                minStart,
+                maxEnd,
+                capacity,
+                totalDuration,
+                durationByCount,
+                avgOccupied: totalDuration > 0 ? occupiedTime / totalDuration : 0,
+                utilizationPct: totalDuration > 0 ? (occupiedTime / (capacity * totalDuration)) * 100 : 0,
+                fullOccupancyPct: totalDuration > 0 ? ((durationByCount.get(capacity) || 0) / totalDuration) * 100 : 0,
+                idlePct: totalDuration > 0 ? ((durationByCount.get(0) || 0) / totalDuration) * 100 : 0,
+            };
+        }
+
+        function percentile(values, pct) {
+            if (!values.length) return null;
+            const sorted = [...values].sort((a, b) => a - b);
+            const index = Math.min(
+                sorted.length - 1,
+                Math.max(0, Math.ceil((pct / 100) * sorted.length) - 1)
+            );
+            return sorted[index];
+        }
+
+        function formatThroughputPercent(value) {
+            return Number.isFinite(value) ? `${value.toFixed(1)}%` : 'N/A';
+        }
+
+        function formatThroughputValue(value) {
+            return Number.isFinite(value) ? value.toFixed(2) : 'N/A';
+        }
+
+        function renderThroughputSummary(rows, capacities) {
+            const container = document.getElementById('throughput-summary');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No throughput data available.</p>';
+                return;
+            }
+
+            const evalSeries = computeOccupancySeries(rows, 'evaluationStartedAt', 'evaluationFinishedAt', capacities.evaluation);
+            const minStart = Math.min(...rows.map(row => row.pipelineStartedAt));
+            const maxEnd = Math.max(...rows.map(row => row.postprocessFinishedAt));
+            const wallClockMinutes = (maxEnd - minStart) / 60;
+            const throughputPerMinute = wallClockMinutes > 0 ? rows.length / wallClockMinutes : 0;
+
+            container.innerHTML = `
+                <div style="display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px;">
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Wall-Clock Span</div>
+                        <div style="font-size: 20px; font-weight: 600;">${formatRuntimeSeconds(maxEnd - minStart)}</div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Completed Jobs</div>
+                        <div style="font-size: 20px; font-weight: 600;">${rows.length}</div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Eval Full Occupancy</div>
+                        <div style="font-size: 20px; font-weight: 600;">${evalSeries ? formatThroughputPercent(evalSeries.fullOccupancyPct) : 'N/A'}</div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Eval Utilization</div>
+                        <div style="font-size: 20px; font-weight: 600;">${evalSeries ? formatThroughputPercent(evalSeries.utilizationPct) : 'N/A'}</div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Eval Idle</div>
+                        <div style="font-size: 20px; font-weight: 600;">${evalSeries ? formatThroughputPercent(evalSeries.idlePct) : 'N/A'}</div>
+                    </div>
+                    <div style="background: #fff; border: 1px solid #ddd; border-radius: 8px; padding: 12px;">
+                        <div style="font-size: 12px; color: #666;">Completions / Min</div>
+                        <div style="font-size: 20px; font-weight: 600;">${formatThroughputValue(throughputPerMinute)}</div>
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderThroughputOccupancyPlot(rows, capacities) {
+            const container = document.getElementById('throughput-occupancy-plot');
+            if (!container) return;
+
+            const stages = [
+                {
+                    key: 'sampling',
+                    label: 'Sampling',
+                    color: '#3b82f6',
+                    startKey: 'samplingStartedAt',
+                    endKey: 'samplingFinishedAt',
+                    capacity: capacities.sampling,
+                },
+                {
+                    key: 'evaluation',
+                    label: 'Evaluation',
+                    color: '#f59e0b',
+                    startKey: 'evaluationStartedAt',
+                    endKey: 'evaluationFinishedAt',
+                    capacity: capacities.evaluation,
+                },
+                {
+                    key: 'postprocess',
+                    label: 'Postprocess',
+                    color: '#10b981',
+                    startKey: 'postprocessStartedAt',
+                    endKey: 'postprocessFinishedAt',
+                    capacity: capacities.postprocess,
+                }
+            ];
+
+            const activeTraces = [];
+            const capacityTraces = [];
+            let minStart = Infinity;
+            let maxEnd = -Infinity;
+
+            stages.forEach(stage => {
+                const series = computeOccupancySeries(rows, stage.startKey, stage.endKey, stage.capacity);
+                if (!series) return;
+                minStart = Math.min(minStart, series.minStart);
+                maxEnd = Math.max(maxEnd, series.maxEnd);
+                activeTraces.push({
+                    x: series.x,
+                    y: series.y,
+                    name: `${stage.label} Active`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: stage.color, width: 2 },
+                });
+                capacityTraces.push({
+                    x: [series.minStart * 1000, series.maxEnd * 1000],
+                    y: [stage.capacity, stage.capacity],
+                    name: `${stage.label} Capacity`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: stage.color, width: 1, dash: 'dash' },
+                    opacity: 0.45,
+                });
+            });
+
+            const traces = [...activeTraces, ...capacityTraces];
+
+            if (!traces.length) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No occupancy data available.</p>';
+                return;
+            }
+
+            Plotly.newPlot('throughput-occupancy-plot', traces, {
+                xaxis: { title: 'Wall Clock Time', type: 'date' },
+                yaxis: { title: 'Active Workers', rangemode: 'tozero' },
+                height: 360,
+                margin: { l: 60, r: 20, t: 50, b: 50 },
+                legend: { orientation: 'h', x: 0.01, y: 1.18 },
+                hovermode: 'x unified',
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        function renderThroughputOccupancyPercentPlot(rows, capacities) {
+            const container = document.getElementById('throughput-occupancy-percent-plot');
+            if (!container) return;
+
+            const stages = [
+                {
+                    label: 'Sampling',
+                    color: '#3b82f6',
+                    startKey: 'samplingStartedAt',
+                    endKey: 'samplingFinishedAt',
+                    capacity: capacities.sampling,
+                },
+                {
+                    label: 'Evaluation',
+                    color: '#f59e0b',
+                    startKey: 'evaluationStartedAt',
+                    endKey: 'evaluationFinishedAt',
+                    capacity: capacities.evaluation,
+                },
+                {
+                    label: 'Postprocess',
+                    color: '#10b981',
+                    startKey: 'postprocessStartedAt',
+                    endKey: 'postprocessFinishedAt',
+                    capacity: capacities.postprocess,
+                }
+            ];
+
+            const traces = [];
+            let minStart = Infinity;
+            let maxEnd = -Infinity;
+
+            stages.forEach(stage => {
+                const series = computeOccupancySeries(rows, stage.startKey, stage.endKey, stage.capacity);
+                if (!series || !Number.isFinite(stage.capacity) || stage.capacity <= 0) return;
+                minStart = Math.min(minStart, series.minStart);
+                maxEnd = Math.max(maxEnd, series.maxEnd);
+                traces.push({
+                    x: series.x,
+                    y: series.y.map(value => (value / stage.capacity) * 100),
+                    name: `${stage.label} Utilization`,
+                    type: 'scatter',
+                    mode: 'lines',
+                    line: { color: stage.color, width: 2 },
+                });
+            });
+
+            if (!traces.length) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No normalized occupancy data available.</p>';
+                return;
+            }
+
+            traces.push({
+                x: [minStart * 1000, maxEnd * 1000],
+                y: [100, 100],
+                name: '100% Capacity',
+                type: 'scatter',
+                mode: 'lines',
+                line: { color: '#6b7280', width: 1, dash: 'dot' },
+                opacity: 0.6,
+            });
+
+            Plotly.newPlot('throughput-occupancy-percent-plot', traces, {
+                xaxis: { title: 'Wall Clock Time', type: 'date' },
+                yaxis: {
+                    title: 'Occupancy (%)',
+                    range: [0, 105],
+                    ticksuffix: '%',
+                },
+                height: 320,
+                margin: { l: 60, r: 20, t: 50, b: 50 },
+                legend: { orientation: 'h', x: 0.01, y: 1.12 },
+                hovermode: 'x unified',
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        function renderThroughputEvalDistributionPlot(rows, capacities) {
+            const container = document.getElementById('throughput-eval-distribution-plot');
+            if (!container) return;
+
+            const series = computeOccupancySeries(rows, 'evaluationStartedAt', 'evaluationFinishedAt', capacities.evaluation);
+            if (!series) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No evaluation occupancy data available.</p>';
+                return;
+            }
+
+            const x = Array.from({ length: capacities.evaluation + 1 }, (_, idx) => idx);
+            const y = x.map(count => {
+                const duration = series.durationByCount.get(count) || 0;
+                return series.totalDuration > 0 ? (duration / series.totalDuration) * 100 : 0;
+            });
+
+            Plotly.newPlot('throughput-eval-distribution-plot', [{
+                x,
+                y,
+                type: 'bar',
+                marker: {
+                    color: x.map(count => count === capacities.evaluation ? '#f59e0b' : '#60a5fa'),
+                },
+            }], {
+                xaxis: { title: 'Occupied Evaluation Workers' },
+                yaxis: { title: 'Wall-Clock Share (%)', rangemode: 'tozero' },
+                height: 320,
+                margin: { l: 60, r: 20, t: 50, b: 50 },
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        function renderThroughputCompletionRatePlot(rows) {
+            const container = document.getElementById('throughput-completion-rate-plot');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No completion data available.</p>';
+                return;
+            }
+
+            const bucketSeconds = 60;
+            const minStart = Math.min(...rows.map(row => row.evaluationFinishedAt));
+            const buckets = new Map();
+            rows.forEach(row => {
+                const bucketStart = Math.floor((row.evaluationFinishedAt - minStart) / bucketSeconds) * bucketSeconds + minStart;
+                buckets.set(bucketStart, (buckets.get(bucketStart) || 0) + 1);
+            });
+
+            const sorted = Array.from(buckets.entries()).sort((a, b) => a[0] - b[0]);
+            Plotly.newPlot('throughput-completion-rate-plot', [{
+                x: sorted.map(([bucketStart]) => bucketStart * 1000),
+                y: sorted.map(([, count]) => count),
+                type: 'bar',
+                marker: { color: '#34d399' },
+                name: 'Evaluations / Minute',
+            }], {
+                xaxis: { title: 'Wall Clock Time', type: 'date' },
+                yaxis: { title: 'Completed Evaluations', rangemode: 'tozero' },
+                height: 320,
+                margin: { l: 60, r: 20, t: 50, b: 50 },
+            }, { responsive: true, displayModeBar: false });
+        }
+
+        function renderThroughputDurationTable(rows) {
+            const container = document.getElementById('throughput-duration-table');
+            if (!container) return;
+            if (!rows.length) {
+                container.innerHTML = '<p style="text-align: center; color: #999;">No duration data available.</p>';
+                return;
+            }
+
+            const stages = [
+                ['Sampling', rows.map(row => row.samplingSeconds)],
+                ['Evaluation', rows.map(row => row.evaluationSeconds)],
+                ['Postprocess', rows.map(row => row.postprocessSeconds)],
+            ];
+
+            const rowsHtml = stages.map(([label, values]) => `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${label}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatRuntimeSeconds(percentile(values, 50))}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatRuntimeSeconds(percentile(values, 95))}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${formatRuntimeSeconds(Math.max(...values))}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 8px; text-align: left;">Stage</th>
+                            <th style="padding: 8px; text-align: right;">p50</th>
+                            <th style="padding: 8px; text-align: right;">p95</th>
+                            <th style="padding: 8px; text-align: right;">max</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            `;
+        }
+
+        function renderThroughputUtilizationTable(rows, capacities) {
+            const container = document.getElementById('throughput-utilization-table');
+            if (!container) return;
+
+            const stageConfigs = [
+                ['Sampling', computeOccupancySeries(rows, 'samplingStartedAt', 'samplingFinishedAt', capacities.sampling), capacities.sampling],
+                ['Evaluation', computeOccupancySeries(rows, 'evaluationStartedAt', 'evaluationFinishedAt', capacities.evaluation), capacities.evaluation],
+                ['Postprocess', computeOccupancySeries(rows, 'postprocessStartedAt', 'postprocessFinishedAt', capacities.postprocess), capacities.postprocess],
+            ];
+
+            const rowsHtml = stageConfigs.map(([label, series, capacity]) => `
+                <tr>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee;">${label}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${capacity}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${series ? formatThroughputValue(series.avgOccupied) : 'N/A'}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${series ? formatThroughputPercent(series.utilizationPct) : 'N/A'}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${series ? formatThroughputPercent(series.fullOccupancyPct) : 'N/A'}</td>
+                    <td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">${series ? formatThroughputPercent(series.idlePct) : 'N/A'}</td>
+                </tr>
+            `).join('');
+
+            container.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #ddd; border-radius: 8px; overflow: hidden;">
+                    <thead>
+                        <tr style="background: #f8f9fa;">
+                            <th style="padding: 8px; text-align: left;">Pool</th>
+                            <th style="padding: 8px; text-align: right;">Cap.</th>
+                            <th style="padding: 8px; text-align: right;">Avg Occupied</th>
+                            <th style="padding: 8px; text-align: right;">Util.</th>
+                            <th style="padding: 8px; text-align: right;">Full</th>
+                            <th style="padding: 8px; text-align: right;">Idle</th>
+                        </tr>
+                    </thead>
+                    <tbody>${rowsHtml}</tbody>
+                </table>
+            `;
+        }
+
+        function updateThroughputTab(selectedNodeId = null) {
+            const throughputTab = document.getElementById('throughput');
+            if (!throughputTab || !throughputTab.classList.contains('active')) {
+                return;
+            }
+
+            if (!window.treeData || window.treeData.length === 0) {
+                const summary = document.getElementById('throughput-summary');
+                if (summary) {
+                    summary.innerHTML = '<p style="text-align: center; color: #999;">No throughput data available. Please load a database.</p>';
+                }
+                return;
+            }
+
+            const poolData = getPoolRuntimeTimelineData(window.treeData);
+            if (!poolData || !poolData.rows.length) {
+                const summary = document.getElementById('throughput-summary');
+                if (summary) {
+                    summary.innerHTML = '<p style="text-align: center; color: #999;">No pool-based runtime data available.</p>';
+                }
+                ['throughput-runtime-plot', 'throughput-occupancy-plot', 'throughput-occupancy-percent-plot', 'throughput-eval-distribution-plot', 'throughput-completion-rate-plot', 'throughput-duration-table', 'throughput-utilization-table'].forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.innerHTML = '<p style="text-align: center; color: #999;">No throughput data available.</p>';
+                });
+                return;
+            }
+
+            renderThroughputSummary(poolData.rows, poolData.capacities);
+            renderRuntimeTimelinePlot(window.treeData, selectedNodeId, 'throughput-runtime-summary', 'throughput-runtime-plot');
+            renderThroughputOccupancyPlot(poolData.rows, poolData.capacities);
+            renderThroughputOccupancyPercentPlot(poolData.rows, poolData.capacities);
+            renderThroughputEvalDistributionPlot(poolData.rows, poolData.capacities);
+            renderThroughputCompletionRatePlot(poolData.rows);
+            renderThroughputDurationTable(poolData.rows);
+            renderThroughputUtilizationTable(poolData.rows, poolData.capacities);
+        }
+        
+        function renderSearchDynamicsPlot(stats, selectedNodeId) {
+            if (!stats || !stats.clusterStats || stats.clusterStats.length === 0) {
+                document.getElementById('search-dynamics-plot').innerHTML = 
+                    '<p style="text-align: center; color: #999;">No search dynamics data available.</p>';
+                return;
+            }
+            
+            const generations = stats.clusterStats.map(d => d.generation);
+            const uniqueClusters = stats.clusterStats.map(d => d.uniqueClusters);
+            
+            const trace1 = {
+                x: generations,
+                y: uniqueClusters,
+                name: 'Unique Clusters',
+                type: 'scatter',
+                mode: 'lines+markers',
+                marker: { color: '#3498db' },
+                line: { color: '#3498db' }
+            };
+            
+            // Add variance overlay if available
+            let traces = [trace1];
+            if (stats.varianceStats && stats.varianceStats.length > 0) {
+                const varianceGenerations = stats.varianceStats.map(d => d.generation);
+                const variances = stats.varianceStats.map(d => d.variance);
+                
+                const trace2 = {
+                    x: varianceGenerations,
+                    y: variances,
+                    name: 'Score Variance',
+                    yaxis: 'y2',
+                    type: 'scatter',
+                    mode: 'lines+markers',
+                    marker: { color: '#e74c3c' },
+                    line: { color: '#e74c3c' }
+                };
+                
+                traces.push(trace2);
+            }
+            
+            const layout = {
+                title: 'Search Dynamics: Cluster Diversity and Score Variance',
+                xaxis: { title: 'Generation' },
+                yaxis: {
+                    title: 'Number of Unique Clusters',
+                    titlefont: { color: '#3498db' },
+                    tickfont: { color: '#3498db' }
+                },
+                yaxis2: stats.varianceStats && stats.varianceStats.length > 0 ? {
+                    title: 'Score Variance',
+                    titlefont: { color: '#e74c3c' },
+                    tickfont: { color: '#e74c3c' },
+                    overlaying: 'y',
+                    side: 'right'
+                } : undefined,
+                height: 350,
+                margin: { l: 60, r: 60, t: 50, b: 50 },
+                legend: { x: 0.05, y: 0.95 }
+            };
+            
+            Plotly.newPlot('search-dynamics-plot', traces, layout, {responsive: true});
+        }
+        
+        // Main update function
+        function updateAnalysisTab(selectedNodeId = null) {
+            const analysisTab = document.getElementById('analysis');
+            if (!analysisTab || !analysisTab.classList.contains('active')) {
+                return; // Tab not visible, skip computation
+            }
+            
+            if (!window.treeData || window.treeData.length === 0) {
+                // Don't destroy the HTML structure - just show message in first plot
+                const codeBloatPlot = document.getElementById('code-bloat-plot');
+                if (codeBloatPlot) {
+                    codeBloatPlot.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">No data available. Please load a database.</p>';
+                }
+                return;
+            }
+            
+            try {
+                // Compute all statistics
+                const llmStats = computeLLMStats(window.treeData, selectedNodeId);
+                const mutationStats = computeMutationStats(window.treeData, selectedNodeId);
+                const noveltyLLMStats = computeNoveltyLLMStats(window.treeData, selectedNodeId);
+                const noveltyMutationStats = computeNoveltyMutationStats(window.treeData, selectedNodeId);
+                const resampleLLMStats = computeResampleLLMStats(window.treeData, selectedNodeId);
+                const resampleMutationStats = computeResampleMutationStats(window.treeData, selectedNodeId);
+                const lineageStats = computeLineageStats(window.treeData, selectedNodeId);
+                const bloatStats = computeCodeBloatStats(window.treeData, selectedNodeId);
+                const mutationSizeStats = computeMutationSizeStats(window.treeData, selectedNodeId);
+                const correctnessRateStats = computeCorrectnessRateStats(window.treeData, selectedNodeId);
+                const improvementRateStats = computeImprovementRateStats(window.treeData, selectedNodeId);
+                const costStats = computeCostStats(window.treeData, selectedNodeId);
+                
+                // Render all visualizations with individual error handling
+                try { renderCodeBloatPlot(bloatStats, selectedNodeId); } catch (e) { console.error('Error rendering code bloat plot:', e); }
+                try { renderMutationSizePlot(mutationSizeStats, selectedNodeId); } catch (e) { console.error('Error rendering mutation size plot:', e); }
+                try { renderCorrectnessRatePlot(correctnessRateStats, selectedNodeId); } catch (e) { console.error('Error rendering correctness rate plot:', e); }
+                try { renderImprovementRatePlot(improvementRateStats, selectedNodeId); } catch (e) { console.error('Error rendering improvement rate plot:', e); }
+                try { renderNoveltyLLMPerformancePlot(noveltyLLMStats, selectedNodeId); } catch (e) { console.error('Error rendering novelty LLM plot:', e); }
+                try { renderNoveltyEffectivenessPlot(noveltyMutationStats, selectedNodeId); } catch (e) { console.error('Error rendering novelty effectiveness plot:', e); }
+                try { renderResampleLLMPerformancePlot(resampleLLMStats, selectedNodeId); } catch (e) { console.error('Error rendering resample LLM plot:', e); }
+                try { renderResampleEffectivenessPlot(resampleMutationStats, selectedNodeId); } catch (e) { console.error('Error rendering resample effectiveness plot:', e); }
+                try { renderLLMPerformancePlot(llmStats, selectedNodeId); } catch (e) { console.error('Error rendering LLM performance plot:', e); }
+                try { renderLLMImprovementPlot(llmStats, selectedNodeId); } catch (e) { console.error('Error rendering LLM improvement plot:', e); }
+                try { renderMutationEffectivenessPlot(mutationStats, selectedNodeId); } catch (e) { console.error('Error rendering mutation effectiveness plot:', e); }
+                try { renderMutationImprovementPlot(mutationStats, selectedNodeId); } catch (e) { console.error('Error rendering mutation improvement plot:', e); }
+                try { renderModelPatchCostHeatmap(costStats, selectedNodeId); } catch (e) { console.error('Error rendering model/patch cost heatmap:', e); }
+                try { renderGenerationAvgCostPlot(costStats, selectedNodeId); } catch (e) { console.error('Error rendering generation avg cost plot:', e); }
+                try { renderLineageFertilityPlot(lineageStats, selectedNodeId); } catch (e) { console.error('Error rendering lineage fertility plot:', e); }
+            } catch (error) {
+                console.error('Error updating analysis tab:', error);
+                // Show error but preserve the DOM structure
+                const analysisContent = document.getElementById('analysis-content');
+                if (analysisContent && analysisContent.children.length > 0) {
+                    const errorDiv = document.createElement('div');
+                    errorDiv.style.cssText = 'text-align: center; color: #e74c3c; margin: 20px; padding: 10px; background: #ffe6e6; border-radius: 5px;';
+                    errorDiv.innerHTML = `<strong>Error computing analysis statistics:</strong> ${error.message}`;
+                    analysisContent.insertBefore(errorDiv, analysisContent.firstChild);
+                }
+            }
+        }
+
+
+
+                        // Add event listener for download button
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const downloadProgramsBtn = document.getElementById('download-programs-btn');
+            if (downloadProgramsBtn) {
+                downloadProgramsBtn.addEventListener('click', downloadTopPrograms);
+            }
+            
+
+        });
+
+        // ============== META-PROMPT VISUALIZATION ==============
+        
+        // Store meta-prompt data globally
+        window.metaPromptData = null;
+        window.selectedPromptId = null;
+
+        async function loadAndRenderMetaPrompts() {
+            console.log("[DEBUG] Loading meta-prompt data...");
+            const container = document.getElementById('meta-prompt-tree');
+            const statusEl = document.getElementById('meta-prompt-status');
+            
+            if (!window.currentDbPath) {
+                statusEl.textContent = "No database selected";
+                container.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">Please select a database first.</p>';
+                return;
+            }
+            
+            statusEl.textContent = "Loading prompts...";
+            
+            try {
+                const response = await fetch(`/get_system_prompts?db_path=${encodeURIComponent(window.currentDbPath)}`);
+                if (!response.ok) {
+                    throw new Error(`Failed to load prompts (HTTP ${response.status})`);
+                }
+                
+                const prompts = await response.json();
+                window.metaPromptData = prompts;
+                
+                // Debug: log first prompt to see all available fields
+                if (prompts && prompts.length > 0) {
+                    console.log("[DEBUG] First prompt keys:", Object.keys(prompts[0]));
+                    console.log("[DEBUG] First prompt program_generation:", prompts[0].program_generation);
+                    console.log("[DEBUG] All program_generations:", prompts.map(p => p.program_generation));
+                }
+                
+                if (!prompts || prompts.length === 0) {
+                    statusEl.textContent = "No meta-prompt database found";
+                    container.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">No meta-prompt evolution data available.<br><br><span style="font-size: 12px;">Meta-prompt evolution requires <code>evolve_prompts: true</code> in the config.</span></p>';
+                    const legend = document.getElementById('meta-prompt-legend');
+                    if (legend) legend.style.display = 'none';
+                    return;
+                }
+                
+                // Find best prompt (highest fitness with minimum program count)
+                const minPrograms = 1;  // Any prompt with at least 1 program can be best
+                const eligiblePrompts = prompts.filter(p => p.program_count >= minPrograms);
+                const bestPrompt = [...eligiblePrompts].sort((a, b) => b.fitness - a.fitness)[0];
+                
+                // Track best prompt ID for auto-refresh comparison
+                window.metaPromptBestId = bestPrompt ? bestPrompt.id : null;
+                
+                console.log("[DEBUG] Best prompt detection:", {
+                    totalPrompts: prompts.length,
+                    eligibleCount: eligiblePrompts.length,
+                    minPrograms,
+                    bestPrompt: bestPrompt ? { id: bestPrompt.id, fitness: bestPrompt.fitness, program_count: bestPrompt.program_count } : null
+                });
+                
+                statusEl.textContent = `Loaded ${prompts.length} prompts` + 
+                    (bestPrompt ? ` | Best fitness: ${bestPrompt.fitness.toFixed(4)}` : '');
+                
+                renderMetaPromptTree(prompts, bestPrompt);
+                
+            } catch (error) {
+                console.error("[DEBUG] Error loading meta-prompts:", error);
+                statusEl.textContent = "Could not load prompts";
+                // Show a less alarming message for temporary errors
+                const isTemporary = error.message.includes('500') || error.message.includes('503');
+                const msg = isTemporary 
+                    ? 'Prompts temporarily unavailable (database may be busy). Try refreshing later.'
+                    : `Error: ${error.message}`;
+                container.innerHTML = `<p style="text-align: center; color: #999; margin-top: 50px;">${msg}</p>`;
+                const legend = document.getElementById('meta-prompt-legend');
+                if (legend) legend.style.display = 'none';
+            }
+        }
+
+        function renderMetaPromptTree(prompts, bestPrompt) {
+            const container = document.getElementById('meta-prompt-tree');
+            container.innerHTML = '';
+            
+            // Build tree hierarchy first to calculate dimensions
+            const promptMap = new Map(prompts.map(p => [p.id, { ...p, children: [] }]));
+            
+            // Find roots (prompts without parent or with missing parent)
+            const roots = [];
+            prompts.forEach(p => {
+                const node = promptMap.get(p.id);
+                if (p.parent_id && promptMap.has(p.parent_id)) {
+                    promptMap.get(p.parent_id).children.push(node);
+                } else {
+                    roots.push(node);
+                }
+            });
+            
+            // If no roots found, show message
+            if (roots.length === 0) {
+                container.innerHTML = '<p style="text-align: center; color: #999; margin-top: 50px;">No valid prompt tree structure found.</p>';
+                const legend = document.getElementById('meta-prompt-legend');
+                if (legend) legend.style.display = 'none';
+                return;
+            }
+            
+            // Create a virtual root if multiple roots
+            let rootNode;
+            if (roots.length === 1) {
+                rootNode = roots[0];
+            } else {
+                rootNode = { id: 'virtual_root', prompt_text: '', children: roots, generation: -1, fitness: 0 };
+            }
+            
+            // Create D3 hierarchy
+            const hierarchyRoot = d3.hierarchy(rootNode);
+            
+            // Use nodeSize for fixed spacing like the program tree
+            const nodeWidth = 60;  // Horizontal spacing between sibling nodes
+            const nodeHeight = 80; // Vertical spacing between generations
+            
+            // Create tree layout with nodeSize (top-to-bottom)
+            const treeLayout = d3.tree()
+                .nodeSize([nodeWidth, nodeHeight])
+                .separation((a, b) => a.parent === b.parent ? 1.5 : 2);
+            treeLayout(hierarchyRoot);
+            
+            // Calculate actual tree bounds (account for node labels ~60px wide)
+            const labelPadding = 80;
+            let minX = Infinity, maxX = -Infinity;
+            let minY = Infinity, maxY = -Infinity;
+            hierarchyRoot.each(d => {
+                if (d.x < minX) minX = d.x;
+                if (d.x > maxX) maxX = d.x;
+                if (d.y < minY) minY = d.y;
+                if (d.y > maxY) maxY = d.y;
+            });
+            
+            // Calculate tree dimensions based on actual bounds
+            const treeWidth = maxX - minX + labelPadding * 2;  // Extra for labels
+            const treeHeight = maxY - minY + 60;  // Extra for bottom labels
+            
+            // Add padding around the tree for centering
+            const margin = { top: 40, right: 40, bottom: 60, left: 40 };
+            const contentWidth = treeWidth + margin.left + margin.right;
+            const contentHeight = treeHeight + margin.top + margin.bottom;
+            
+            // Get container dimensions - use 100% of available space
+            const containerRect = container.getBoundingClientRect();
+            const panelWidth = containerRect.width || 400;
+            const panelHeight = containerRect.height || 400;
+            
+            // Create SVG that fills container and centers content
+            const svg = d3.select(container)
+                .append("svg")
+                .attr("width", "100%")
+                .attr("height", "100%")
+                .style("display", "block");
+            
+            // Calculate centering offsets with slight adjustment (higher and to the left)
+            const centerX = (minX + maxX) / 2;
+            
+            // Set viewBox - center the tree horizontally and vertically
+            const viewBoxX = centerX - contentWidth / 2 + 40;  // Shift right to move tree left
+            const viewBoxY = minY - margin.top;  // Center vertically (no extra offset)
+            
+            svg.attr("viewBox", `${viewBoxX} ${viewBoxY} ${contentWidth} ${contentHeight}`)
+               .attr("preserveAspectRatio", "xMidYMid meet");  // Center both horizontally and vertically
+            
+            // Add zoom support
+            const g = svg.append("g");
+            svg.call(d3.zoom()
+                .scaleExtent([0.3, 4])
+                .on("zoom", (event) => g.attr("transform", event.transform)));
+            
+            // Calculate best path to best prompt
+            const bestPath = new Set();
+            if (bestPrompt) {
+                let current = promptMap.get(bestPrompt.id);
+                while (current) {
+                    bestPath.add(current.id);
+                    current = current.parent_id ? promptMap.get(current.parent_id) : null;
+                }
+            }
+            
+            // Draw links with curved paths
+            g.selectAll(".prompt-link")
+                .data(hierarchyRoot.links())
+                .enter()
+                .append("path")
+                .attr("class", d => {
+                    const targetId = d.target.data.id;
+                    const sourceId = d.source.data.id;
+                    const isBestPath = bestPath.has(targetId) && bestPath.has(sourceId);
+                    return "prompt-link" + (isBestPath ? " best-path" : "");
+                })
+                .attr("d", d3.linkVertical()
+                    .x(d => d.x)
+                    .y(d => d.y));
+            
+            // Draw nodes
+            const nodes = g.selectAll(".prompt-node")
+                .data(hierarchyRoot.descendants().filter(d => d.data.id !== 'virtual_root'))
+                .enter()
+                .append("g")
+                .attr("class", d => {
+                    let cls = "prompt-node";
+                    if (bestPrompt && d.data.id === bestPrompt.id) cls += " best-prompt";
+                    if (window.selectedPromptId === d.data.id) cls += " selected";
+                    return cls;
+                })
+                .attr("transform", d => `translate(${d.x},${d.y})`)
+                .style("cursor", "pointer")
+                .on("click", function(event, d) {
+                    selectPromptNode(d.data);
+                    d3.selectAll(".prompt-node").classed("selected", false);
+                    d3.select(this).classed("selected", true);
+                });
+            
+            // Shape map - same as program tree
+            const shapeMap = {
+                'init': d3.symbolDiamond,
+                'full': d3.symbolCircle,
+                'diff': d3.symbolSquare,
+                'cross': d3.symbolCross,
+                'fix': d3.symbolTriangle
+            };
+            const getShape = (patchType) => shapeMap[patchType] || d3.symbolCircle;
+            const symbol = d3.symbol();
+            
+            // Create viridis color scale based on fitness range
+            const fitnessValues = prompts.map(p => p.fitness || 0);
+            const minFitness = Math.min(...fitnessValues);
+            const maxFitness = Math.max(...fitnessValues);
+            const fitnessColorScale = d3.scaleSequential(d3.interpolateViridis)
+                .domain([minFitness, maxFitness]);
+            
+            // Node size based on program count (converted to symbol area)
+            const nodeSize = d => {
+                const baseSizeMin = 8;
+                const baseSizeMax = 16;
+                const pc = d.data.program_count || 0;
+                const radius = baseSizeMin + Math.min(pc, 20) * 
+                    (baseSizeMax - baseSizeMin) / 20;
+                // Convert radius to area for d3.symbol
+                return Math.PI * radius * radius;
+            };
+            
+            // Compute effective radius for text positioning
+            const nodeRadius = d => {
+                const baseSizeMin = 8;
+                const baseSizeMax = 16;
+                const pc = d.data.program_count || 0;
+                return baseSizeMin + Math.min(pc, 20) * 
+                    (baseSizeMax - baseSizeMin) / 20;
+            };
+            
+            // Debug: log bestPrompt info for node coloring
+            if (bestPrompt) {
+                console.log("[DEBUG] Best prompt for coloring:", bestPrompt.id);
+            }
+            
+            nodes.append("path")
+                .attr("d", d => {
+                    symbol.type(getShape(d.data.patch_type));
+                    symbol.size(nodeSize(d));
+                    return symbol();
+                })
+                .attr("fill", d => {
+                    const isBest = bestPrompt && d.data.id === bestPrompt.id;
+                    if (isBest) {
+                        console.log("[DEBUG] Found best node:", d.data.id);
+                        return "#f1c40f";  // Golden fill
+                    }
+                    const fitness = d.data.fitness || 0;
+                    return fitnessColorScale(fitness);
+                })
+                .attr("stroke", d => {
+                    if (bestPrompt && d.data.id === bestPrompt.id) return "#f39c12";
+                    return "#333";
+                })
+                .attr("stroke-width", d => bestPrompt && d.data.id === bestPrompt.id ? 3 : 2);
+            
+            // Program generation number centered inside the node (like program tree)
+            nodes.append("text")
+                .attr("dy", "0.35em")
+                .attr("x", 0)
+                .attr("text-anchor", "middle")
+                .text(d => d.data.program_generation || 0)
+                .style("font-size", "11px")
+                .style("font-weight", "bold")
+                .style("fill", "white")
+                .style("pointer-events", "none")
+                .style("text-shadow", "1px 1px 1px rgba(0,0,0,0.5)");
+            
+            // Node labels - below the node showing prompt gen and patch type
+            nodes.append("text")
+                .attr("dy", d => nodeRadius(d) + 12)
+                .attr("x", 0)
+                .attr("text-anchor", "middle")
+                .text(d => {
+                    const patchType = d.data.patch_type || 'init';
+                    const gen = d.data.generation;
+                    return `G${gen} ${patchType}`;
+                })
+                .style("font-size", "10px")
+                .style("fill", "#555");
+            
+            // Fitness label on second line
+            nodes.append("text")
+                .attr("dy", d => nodeRadius(d) + 23)
+                .attr("x", 0)
+                .attr("text-anchor", "middle")
+                .text(d => {
+                    const fitness = d.data.fitness || 0;
+                    const pc = d.data.program_count || 0;
+                    return `${fitness >= 0 ? '+' : ''}${fitness.toFixed(3)} (${pc})`;
+                })
+                .style("font-size", "9px")
+                .style("fill", "#666");
+            
+            // Add zoom and pan behavior
+            const zoom = d3.zoom()
+                .scaleExtent([0.3, 3])
+                .on("zoom", (event) => {
+                    g.attr("transform", event.transform);
+                });
+            
+            svg.call(zoom);
+            
+            // Set initial transform to center content with margin
+            svg.call(zoom.transform, d3.zoomIdentity.translate(margin.left, margin.top));
+            
+            // Update HTML legend
+            updateMetaPromptLegend(prompts, shapeMap);
+        }
+        
+        function updateMetaPromptLegend(prompts, shapeMap) {
+            // Show the legend
+            const legend = document.getElementById('meta-prompt-legend');
+            if (legend) {
+                legend.style.display = 'block';
+            }
+            
+            // Update shape legend with used patch types
+            const shapeLegend = d3.select("#meta-prompt-shape-legend");
+            shapeLegend.selectAll(".shape-legend-item").remove();
+            
+            const usedPatchTypes = [...new Set(
+                prompts.map(p => p.patch_type).filter(Boolean)
+            )];
+            
+            const legendSymbol = d3.symbol().size(64);
+            
+            for (const type in shapeMap) {
+                if (usedPatchTypes.includes(type)) {
+                    const legendItem = shapeLegend.append("div")
+                        .attr("class", "shape-legend-item")
+                        .style("display", "flex")
+                        .style("align-items", "center");
+                    
+                    const svg = legendItem.append("svg")
+                        .attr("width", 16)
+                        .attr("height", 16)
+                        .style("margin-right", "5px");
+                    
+                    legendSymbol.type(shapeMap[type]);
+                    
+                    svg.append("path")
+                        .attr("d", legendSymbol)
+                        .attr("transform", "translate(8, 8)")
+                        .attr("fill", "#fff")
+                        .attr("stroke", "#333")
+                        .attr("stroke-width", 1.5);
+                    
+                    legendItem.append("span").text(type);
+                }
+            }
+            
+            // Update fitness heatbar with viridis colormap
+            const heatbar = document.getElementById('meta-prompt-heatbar');
+            if (heatbar) {
+                // Viridis colormap gradient
+                heatbar.style.background = 
+                    'linear-gradient(to right, #440154, #482878, #3e4a89, ' +
+                    '#31688e, #26838f, #1f9d8a, #6cce5a, #b6de2b, #fee825)';
+            }
+            
+            // Update min/max fitness labels
+            const fitnessValues = prompts.map(p => p.fitness || 0);
+            const minFitness = Math.min(...fitnessValues);
+            const maxFitness = Math.max(...fitnessValues);
+            
+            const minLabel = document.getElementById('meta-prompt-min-fitness');
+            const maxLabel = document.getElementById('meta-prompt-max-fitness');
+            if (minLabel) minLabel.textContent = minFitness.toFixed(3);
+            if (maxLabel) maxLabel.textContent = maxFitness.toFixed(3);
+        }
+
+        function selectPromptNode(promptData) {
+            window.selectedPromptId = promptData.id;
+            
+            const detailsPanel = document.getElementById('meta-prompt-details');
+            if (!detailsPanel) return;
+            
+            // Format timestamp
+            const timestamp = promptData.timestamp ? new Date(promptData.timestamp * 1000).toLocaleString() : 'N/A';
+            
+            // Stored fitness (may be stale - calculated at time of program creation)
+            const storedFitness = promptData.fitness || 0;
+            
+            // Patch type badge color
+            const patchTypeColors = {
+                'init': '#3498db',
+                'diff': '#9b59b6',
+                'full': '#e67e22',
+                'cross': '#1abc9c'
+            };
+            const patchColor = patchTypeColors[promptData.patch_type] || '#666';
+            
+            // Extract LLM metadata if available (parse if string)
+            let metadata = promptData.metadata || {};
+            if (typeof metadata === 'string') {
+                try {
+                    metadata = JSON.parse(metadata);
+                } catch (e) {
+                    metadata = {};
+                }
+            }
+            // LLM data may be nested under "llm" key
+            const llmData = metadata.llm || {};
+            const llmCost = llmData.cost || metadata.api_cost || metadata.cost || null;
+            const llmModel = llmData.model_name || metadata.model_name || metadata.model || null;
+            
+            // Get programs generated with this prompt
+            const programIds = promptData.program_ids || [];
+            let programsTableHtml = '';
+            let calculatedCorrectCount = 0;
+            let calculatedImprovedCount = 0;
+            // Live fitness calculated from current population (not stale)
+            let liveFitness = null;
+            
+            if (programIds.length > 0 && window.rawDbData) {
+                // Find matching programs from the loaded data
+                const matchingPrograms = window.rawDbData.filter(p => programIds.includes(p.id));
+                
+                if (matchingPrograms.length > 0) {
+                    // Build a map of program IDs to scores for parent lookup
+                    const programScoreMap = new Map();
+                    window.rawDbData.forEach(p => {
+                        if (p.combined_score != null) {
+                            programScoreMap.set(p.id, p.combined_score);
+                        }
+                    });
+                    
+                    // Get all scores for "beat" calculation (only correct programs)
+                    const allCorrectScores = window.rawDbData
+                        .filter(p => p.correct && p.combined_score != null)
+                        .map(p => p.combined_score)
+                        .sort((a, b) => a - b);  // Sort ascending for efficient counting
+                    const totalCorrectPrograms = allCorrectScores.length;
+                    
+                    // Function to calculate what percentage of OTHER programs a score beats
+                    // Divide by (n-1) to exclude self - best program should beat 100%
+                    const calculateBeatPercent = (score) => {
+                        if (score == null || totalCorrectPrograms === 0) return null;
+                        // Count how many programs have lower scores
+                        let beatCount = 0;
+                        for (const s of allCorrectScores) {
+                            if (s < score) beatCount++;
+                            else break;  // Since sorted, no need to continue
+                        }
+                        // Divide by (n-1) to exclude self from comparison
+                        const numOtherPrograms = totalCorrectPrograms - 1;
+                        if (numOtherPrograms <= 0) return 100;  // Only program = 100%
+                        return (beatCount / numOtherPrograms) * 100;
+                    };
+                    
+                    // Pre-calculate improvements and enrich program data
+                    const enrichedPrograms = matchingPrograms.map(p => {
+                        let delta = null;
+                        if (p.parent_id && p.combined_score != null) {
+                            const parentScore = programScoreMap.get(p.parent_id);
+                            if (parentScore != null) {
+                                delta = p.combined_score - parentScore;
+                            }
+                        }
+                        // Calculate beat percentage for correct programs
+                        const beatPercent = p.correct ? calculateBeatPercent(p.combined_score) : null;
+                        return { ...p, delta, beatPercent };
+                    });
+                    
+                    // Calculate counts from actual program data
+                    calculatedCorrectCount = enrichedPrograms.filter(p => p.correct).length;
+                    calculatedImprovedCount = enrichedPrograms.filter(p => p.correct && p.delta !== null && p.delta > 0).length;
+                    
+                    // Calculate average improvement (only for correct programs)
+                    const deltas = enrichedPrograms
+                        .filter(p => p.delta !== null && p.correct)
+                        .map(p => p.delta);
+                    const avgImprovement = deltas.length > 0 
+                        ? deltas.reduce((a, b) => a + b, 0) / deltas.length 
+                        : null;
+                    const avgColor = avgImprovement !== null 
+                        ? (avgImprovement > 0 ? '#27ae60' : (avgImprovement < 0 ? '#e74c3c' : '#888'))
+                        : '#888';
+                    
+                    // Calculate average beat percentage (only for correct programs)
+                    // This is the LIVE fitness calculated against current population
+                    const beatPercents = enrichedPrograms
+                        .filter(p => p.beatPercent !== null)
+                        .map(p => p.beatPercent);
+                    const avgBeatPercent = beatPercents.length > 0
+                        ? beatPercents.reduce((a, b) => a + b, 0) / beatPercents.length
+                        : null;
+                    
+                    // Store live fitness (as 0-1 scale like stored fitness)
+                    liveFitness = avgBeatPercent !== null ? avgBeatPercent / 100 : null;
+                    
+                    // Store for sorting
+                    window.promptGeneratedPrograms = enrichedPrograms;
+                    window.promptProgramsSortCol = 'score';
+                    window.promptProgramsSortAsc = false;
+                    
+                    // Sort by combined_score descending initially
+                    enrichedPrograms.sort((a, b) => (b.combined_score || 0) - (a.combined_score || 0));
+                    
+                    programsTableHtml = `
+                        <div style="margin-top: 12px; margin-bottom: 16px; flex-shrink: 0; max-height: 220px; overflow: hidden; display: flex; flex-direction: column;">
+                            <div style="font-size: 11px; font-weight: 600; color: #555; margin-bottom: 6px; flex-shrink: 0;">
+                                Generated Programs (${matchingPrograms.length})
+                            </div>
+                            <div style="flex: 1; min-height: 0; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px;">
+                                <table id="prompt-programs-table" style="width: 100%; font-size: 10px; border-collapse: collapse;">
+                                    <thead style="background: #f5f5f5; position: sticky; top: 0;">
+                                        <tr>
+                                            <th style="padding: 4px 6px; text-align: left; border-bottom: 1px solid #ddd;">Name</th>
+                                            <th style="padding: 4px 6px; text-align: center; border-bottom: 1px solid #ddd; cursor: pointer; user-select: none;" onclick="sortPromptProgramsTable('gen')" title="Click to sort">Gen ⇅</th>
+                                            <th style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #ddd; cursor: pointer; user-select: none;" onclick="sortPromptProgramsTable('score')" title="Click to sort">Score ⇅</th>
+                                            <th style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #ddd; cursor: pointer; user-select: none;" onclick="sortPromptProgramsTable('delta')" title="Click to sort">Δ ⇅</th>
+                                            <th style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #ddd; cursor: pointer; user-select: none;" onclick="sortPromptProgramsTable('beat')" title="% of programs outperformed">Beat% ⇅</th>
+                                            <th style="padding: 4px 6px; text-align: center; border-bottom: 1px solid #ddd;">✓</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="prompt-programs-tbody">
+                                        ${renderPromptProgramRows(enrichedPrograms)}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div style="font-size: 10px; color: #666; margin-top: 4px; text-align: right; flex-shrink: 0;">
+                                Avg. Δ: <span style="font-weight: 600; color: ${avgColor};">${avgImprovement !== null ? ((avgImprovement >= 0 ? '+' : '') + avgImprovement.toFixed(4)) : 'N/A'}</span>
+                                &nbsp;|&nbsp; Avg. Beat: <span style="font-weight: 600; color: #8e44ad;">${avgBeatPercent !== null ? avgBeatPercent.toFixed(1) + '%' : 'N/A'}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            } else if (programIds.length > 0) {
+                programsTableHtml = `
+                    <div style="margin-top: 12px; margin-bottom: 16px; flex-shrink: 0;">
+                        <div style="font-size: 11px; font-weight: 600; color: #555; margin-bottom: 6px;">
+                            Generated Programs (${programIds.length})
+                        </div>
+                        <div style="font-size: 10px; color: #888; padding: 8px; background: #f8f8f8; border-radius: 4px;">
+                            ${programIds.slice(0, 10).map(id => id.substring(0, 12) + '...').join(', ')}
+                            ${programIds.length > 10 ? ` and ${programIds.length - 10} more...` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // LLM metadata section - show all metadata fields
+            let llmMetadataHtml = '';
+            // Flatten metadata: combine top-level fields with nested llm fields
+            const flatMetadata = { ...metadata };
+            if (metadata.llm && typeof metadata.llm === 'object') {
+                Object.assign(flatMetadata, metadata.llm);
+                delete flatMetadata.llm; // Remove the nested object
+            }
+            
+            if (Object.keys(flatMetadata).length > 0) {
+                // Fields to skip (complex objects or not useful)
+                const skipFields = ['llm_kwargs', 'model_posteriors', 'source'];
+                
+                // Format metadata fields for display
+                const formatValue = (key, val) => {
+                    if (val === null || val === undefined) return null;
+                    if (typeof val === 'number') {
+                        if (key.includes('cost') || key.includes('price')) {
+                            return '$' + val.toFixed(6);
+                        }
+                        if (key.includes('time') || key.includes('duration')) {
+                            return val.toFixed(2) + 's';
+                        }
+                        if (key.includes('tokens')) {
+                            return val.toLocaleString();
+                        }
+                        return Number.isInteger(val) ? val.toLocaleString() : val.toFixed(4);
+                    }
+                    if (typeof val === 'object') {
+                        // Skip empty objects
+                        if (Object.keys(val).length === 0) return null;
+                        return null; // Skip complex objects
+                    }
+                    if (val === '') return null;
+                    return String(val);
+                };
+                
+                const formatLabel = (key) => {
+                    // Special label mappings
+                    const labelMap = {
+                        'model_name': 'Model',
+                        'input_tokens': 'Input Tokens',
+                        'output_tokens': 'Output Tokens',
+                        'thinking_tokens': 'Thinking Tokens',
+                        'cost': 'Total Cost',
+                        'input_cost': 'Input Cost',
+                        'output_cost': 'Output Cost',
+                        'num_tool_calls': 'Tool Calls',
+                        'num_total_queries': 'Total Queries',
+                        'parent_fitness': 'Parent Fitness',
+                        'parent_program_count': 'Parent Programs'
+                    };
+                    if (labelMap[key]) return labelMap[key];
+                    return key.replace(/_/g, ' ')
+                        .replace(/([A-Z])/g, ' $1')
+                        .replace(/^./, s => s.toUpperCase())
+                        .trim();
+                };
+                
+                const metadataItems = Object.entries(flatMetadata)
+                    .filter(([k, v]) => !skipFields.includes(k))
+                    .map(([k, v]) => {
+                        const formatted = formatValue(k, v);
+                        if (formatted === null) return null;
+                        return `<div><span style="color: #888;">${formatLabel(k)}:</span> <strong>${formatted}</strong></div>`;
+                    })
+                    .filter(item => item !== null)
+                    .join('');
+                
+                if (metadataItems) {
+                    llmMetadataHtml = `
+                        <div style="background: #fff8e6; border-radius: 6px; padding: 10px; margin-bottom: 12px; border: 1px solid #ffe0a6; flex-shrink: 0;">
+                            <div style="font-size: 10px; font-weight: 600; color: #b8860b; margin-bottom: 6px;">LLM Metadata</div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 11px;">
+                                ${metadataItems}
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+            
+            detailsPanel.innerHTML = `
+                <div style="display: flex; flex-direction: column; height: 100%; min-height: 0; padding-bottom: 16px;">
+                    <div style="margin-bottom: 12px; flex-shrink: 0;">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px; flex-wrap: wrap;">
+                            <span style="background-color: ${patchColor}; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; font-weight: 600;">
+                                ${promptData.patch_type.toUpperCase()}
+                            </span>
+                            <span style="color: #888; font-size: 11px;">Prompt Gen ${promptData.generation}</span>
+                            <span style="background-color: #8e44ad; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px; font-weight: 600;">P${promptData.program_generation || 0}</span>
+                            ${promptData.in_archive ? '<span style="background-color: #27ae60; color: white; padding: 2px 6px; border-radius: 3px; font-size: 10px;">ARCHIVE</span>' : ''}
+                        </div>
+                        <div style="font-size: 10px; color: #888; font-family: monospace;">
+                            ID: ${promptData.id.substring(0, 24)}...
+                        </div>
+                        ${promptData.name ? `<div style="font-size: 13px; font-weight: 600; color: #333; margin-top: 8px;">${promptData.name}</div>` : ''}
+                        ${promptData.description ? `
+                            <div id="prompt-description-box" style="margin-top: 8px; background: #f8f9fa; border: 1px solid #e0e0e0; border-radius: 4px; overflow: hidden;">
+                                <div id="prompt-description-content" style="font-size: 11px; color: #666; line-height: 1.4; padding: 8px; max-height: 80px; overflow: hidden; transition: max-height 0.3s ease;">
+                                    ${promptData.description}
+                                </div>
+                                <div id="prompt-description-toggle" onclick="togglePromptDescription()" style="display: none; font-size: 10px; color: #8e44ad; padding: 4px 8px; cursor: pointer; text-align: center; border-top: 1px solid #e0e0e0; background: #f0f0f0; user-select: none;">
+                                    ▼ Show more
+                                </div>
+                            </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div style="background: white; border-radius: 6px; padding: 10px; margin-bottom: 12px; border: 1px solid #e0e0e0; flex-shrink: 0;">
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div>
+                                <div style="font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 2px;" title="Live percentile rank calculated against all current programs">Fitness (Live)</div>
+                                <div style="font-size: 16px; font-weight: 600; color: ${liveFitness !== null ? (liveFitness >= 0.5 ? '#27ae60' : (liveFitness >= 0.25 ? '#e67e22' : '#e74c3c')) : '#666'};">${liveFitness !== null ? liveFitness.toFixed(4) : 'N/A'}</div>
+                                ${(liveFitness !== null && Math.abs(liveFitness - storedFitness) > 0.05) ? `<div style="font-size: 9px; color: #999; margin-top: 2px;" title="Historical fitness from program creation time (may be stale)">stored: ${storedFitness.toFixed(4)}</div>` : ''}
+                            </div>
+                            <div>
+                                <div style="font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 2px;">Programs</div>
+                                <div style="font-size: 16px; font-weight: 600; color: #333;">${promptData.program_count} <span style="font-size: 12px; color: #27ae60;">(${calculatedCorrectCount} ✓)</span></div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee;">
+                            <div>
+                                <div style="font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 2px;">Total Improvement</div>
+                                <div style="font-size: 13px; color: #555;">${(promptData.total_improvement || 0).toFixed(4)}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 9px; color: #888; text-transform: uppercase; margin-bottom: 2px;">Improved</div>
+                                <div style="font-size: 13px; color: ${calculatedImprovedCount > 0 ? '#27ae60' : '#555'};">${calculatedImprovedCount} / ${calculatedCorrectCount}</div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    ${llmMetadataHtml}
+                    
+                    <div style="margin-bottom: 12px; font-size: 11px; color: #666; flex-shrink: 0;">
+                        <div style="margin-bottom: 3px;"><strong>Created:</strong> ${timestamp}</div>
+                        <div><strong>Parent:</strong> ${promptData.parent_id ? promptData.parent_id.substring(0, 20) + '...' : 'None (root)'}</div>
+                    </div>
+                    
+                    <div style="flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; overflow: hidden;">
+                        <div style="font-size: 11px; font-weight: 600; color: #555; margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+                            <span>System Prompt Text</span>
+                            <button onclick="showFullPrompt()" style="padding: 3px 8px; font-size: 10px; cursor: pointer; border: 1px solid #ddd; border-radius: 3px; background: white;">
+                                Expand
+                            </button>
+                        </div>
+                        <div class="prompt-text-preview" style="flex: 1 1 auto; min-height: 80px; max-height: 180px; overflow-y: auto;">${escapeHtml(promptData.prompt_text)}</div>
+                    </div>
+                    
+                    ${programsTableHtml}
+                </div>
+            `;
+            
+            // After rendering, check if description toggle should be shown
+            // Use setTimeout to ensure layout has fully settled
+            setTimeout(() => {
+                const descContent = document.getElementById('prompt-description-content');
+                const descToggle = document.getElementById('prompt-description-toggle');
+                if (descContent && descToggle) {
+                    // Show toggle only if content actually overflows
+                    // scrollHeight is the full content height, clientHeight is the visible area
+                    const isOverflowing = descContent.scrollHeight > descContent.clientHeight + 1;
+                    descToggle.style.display = isOverflowing ? 'block' : 'none';
+                }
+            }, 50);
+        }
+        
+        // Toggle prompt description expand/collapse
+        function togglePromptDescription() {
+            const content = document.getElementById('prompt-description-content');
+            const toggle = document.getElementById('prompt-description-toggle');
+            if (!content || !toggle) return;
+            
+            const collapsedHeight = '80px';
+            const isExpanded = content.style.maxHeight !== collapsedHeight && content.style.maxHeight !== '';
+            if (isExpanded) {
+                content.style.maxHeight = collapsedHeight;
+                toggle.innerHTML = '▼ Show more';
+            } else {
+                content.style.maxHeight = content.scrollHeight + 'px';
+                toggle.innerHTML = '▲ Show less';
+            }
+        }
+        
+        // Helper function to select a program from the prompt view
+        function selectProgramFromPromptView(programId) {
+            // Switch to the Tree tab and select the program
+            const treeTab = document.querySelector('.left-tab[data-tab="tree-view"]');
+            if (treeTab) {
+                treeTab.click();
+                setTimeout(() => {
+                    selectNodeById(programId, true, true);
+                }, 200);
+            }
+        }
+        
+        // Render program rows for the prompt details table
+        function renderPromptProgramRows(programs) {
+            return programs.map(p => {
+                const name = (p.metadata?.patch_name || p.id.substring(0, 8));
+                const score = p.combined_score != null ? p.combined_score.toFixed(4) : 'N/A';
+                const correct = p.correct ? '✓' : '✗';
+                const correctColor = p.correct ? '#27ae60' : '#e74c3c';
+                
+                let improvement = '';
+                let improvementColor = '#888';
+                if (p.delta !== null) {
+                    improvement = (p.delta >= 0 ? '+' : '') + p.delta.toFixed(4);
+                    improvementColor = p.delta > 0 ? '#27ae60' : (p.delta < 0 ? '#e74c3c' : '#888');
+                }
+                
+                // Beat percentage display
+                let beatDisplay = '';
+                let beatColor = '#888';
+                if (p.beatPercent !== null) {
+                    beatDisplay = p.beatPercent.toFixed(1) + '%';
+                    // Color gradient: low = red, high = green
+                    if (p.beatPercent >= 75) beatColor = '#27ae60';
+                    else if (p.beatPercent >= 50) beatColor = '#8e44ad';
+                    else if (p.beatPercent >= 25) beatColor = '#e67e22';
+                    else beatColor = '#e74c3c';
+                }
+                
+                return `<tr style="cursor: pointer;" onclick="selectProgramFromPromptView('${p.id}')" onmouseover="this.style.backgroundColor='#f0f0f0'" onmouseout="this.style.backgroundColor=''">
+                    <td style="padding: 4px 6px; border-bottom: 1px solid #eee; max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${name}">${name}</td>
+                    <td style="padding: 4px 6px; text-align: center; border-bottom: 1px solid #eee;">${p.generation}</td>
+                    <td style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #eee;">${score}</td>
+                    <td style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #eee; color: ${improvementColor};">${improvement}</td>
+                    <td style="padding: 4px 6px; text-align: right; border-bottom: 1px solid #eee; color: ${beatColor};">${beatDisplay}</td>
+                    <td style="padding: 4px 6px; text-align: center; border-bottom: 1px solid #eee; color: ${correctColor};">${correct}</td>
+                </tr>`;
+            }).join('');
+        }
+        
+        // Sort the prompt programs table
+        function sortPromptProgramsTable(column) {
+            if (!window.promptGeneratedPrograms) return;
+            
+            // Toggle direction if same column
+            if (window.promptProgramsSortCol === column) {
+                window.promptProgramsSortAsc = !window.promptProgramsSortAsc;
+            } else {
+                window.promptProgramsSortCol = column;
+                window.promptProgramsSortAsc = column === 'gen'; // Default asc for gen, desc for others
+            }
+            
+            const asc = window.promptProgramsSortAsc;
+            const programs = window.promptGeneratedPrograms;
+            
+            programs.sort((a, b) => {
+                let valA, valB;
+                switch (column) {
+                    case 'gen':
+                        valA = a.generation || 0;
+                        valB = b.generation || 0;
+                        break;
+                    case 'score':
+                        valA = a.combined_score ?? -Infinity;
+                        valB = b.combined_score ?? -Infinity;
+                        break;
+                    case 'delta':
+                        valA = a.delta ?? -Infinity;
+                        valB = b.delta ?? -Infinity;
+                        break;
+                    case 'beat':
+                        valA = a.beatPercent ?? -Infinity;
+                        valB = b.beatPercent ?? -Infinity;
+                        break;
+                    default:
+                        return 0;
+                }
+                return asc ? (valA - valB) : (valB - valA);
+            });
+            
+            // Re-render tbody
+            const tbody = document.getElementById('prompt-programs-tbody');
+            if (tbody) {
+                tbody.innerHTML = renderPromptProgramRows(programs);
+            }
+        }
+
+        function showFullPrompt() {
+            if (!window.selectedPromptId || !window.metaPromptData) return;
+            
+            const prompt = window.metaPromptData.find(p => p.id === window.selectedPromptId);
+            if (!prompt) return;
+            
+            // Find parent prompt if exists
+            const parentPrompt = prompt.parent_id ? 
+                window.metaPromptData.find(p => p.id === prompt.parent_id) : null;
+            
+            // Create modal to show full prompt with two panels
+            const modal = document.createElement('div');
+            modal.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                background: rgba(0,0,0,0.5); z-index: 1000; display: flex;
+                justify-content: center; align-items: center;
+            `;
+            modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+            
+            const content = document.createElement('div');
+            content.style.cssText = `
+                background: white; padding: 20px; border-radius: 8px; width: 95%;
+                height: 85%; display: flex; flex-direction: column; position: relative;
+            `;
+            
+            // Generate diff HTML
+            const diffHtml = parentPrompt ? 
+                generatePromptDiff(parentPrompt.prompt_text, prompt.prompt_text) :
+                '<div style="color: #888; text-align: center; padding: 40px;">No parent prompt (this is a root prompt)</div>';
+            
+            content.innerHTML = `
+                <button onclick="this.parentElement.parentElement.remove()" 
+                    style="position: absolute; top: 10px; right: 15px; border: none; 
+                    background: none; font-size: 24px; cursor: pointer; z-index: 10;">×</button>
+                <div style="display: flex; gap: 16px; flex: 1; min-height: 0; margin-top: 10px;">
+                    <!-- Left Panel: Raw Prompt -->
+                    <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+                        <h3 style="margin: 0 0 10px 0; color: #8e44ad; font-size: 14px; flex-shrink: 0;">
+                            System Prompt Text
+                            ${prompt.name ? `<span style="font-weight: normal; color: #666;"> — ${prompt.name}</span>` : ''}
+                        </h3>
+                        <pre style="white-space: pre-wrap; word-wrap: break-word; background: #1e1e1e; color: #d4d4d4;
+                            padding: 15px; border-radius: 5px; font-size: 12px; flex: 1; overflow: auto; margin: 0;
+                            font-family: 'Monaco', 'Menlo', 'Consolas', monospace; line-height: 1.5;">${escapeHtml(prompt.prompt_text)}</pre>
+                    </div>
+                    <!-- Right Panel: Diff with Parent -->
+                    <div style="flex: 1; display: flex; flex-direction: column; min-width: 0;">
+                        <h3 style="margin: 0 0 10px 0; color: #e67e22; font-size: 14px; flex-shrink: 0;">
+                            Diff with Parent
+                            ${parentPrompt ? `<span style="font-weight: normal; color: #666;"> — ${parentPrompt.name || parentPrompt.id.substring(0, 12) + '...'}</span>` : ''}
+                        </h3>
+                        <div style="background: #1e1e1e; border-radius: 5px; flex: 1; overflow: auto; font-family: 'Monaco', 'Menlo', 'Consolas', monospace; font-size: 12px; line-height: 1.5;">
+                            ${diffHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            modal.appendChild(content);
+            document.body.appendChild(modal);
+        }
+        
+        // Generate a visual diff between two prompt texts
+        function generatePromptDiff(oldText, newText) {
+            const oldLines = oldText.split('\n');
+            const newLines = newText.split('\n');
+            
+            // Simple LCS-based diff
+            const diff = computeLineDiff(oldLines, newLines);
+            
+            let html = '<div style="padding: 10px;">';
+            
+            diff.forEach(item => {
+                const escapedLine = escapeHtml(item.line || '');
+                const lineContent = escapedLine || '&nbsp;';
+                
+                if (item.type === 'unchanged') {
+                    html += `<div style="color: #888; padding: 1px 8px; border-left: 3px solid transparent;">
+                        <span style="color: #666; user-select: none; display: inline-block; width: 50px; text-align: right; margin-right: 12px;">${item.oldNum || ''} ${item.newNum || ''}</span>${lineContent}</div>`;
+                } else if (item.type === 'removed') {
+                    html += `<div style="background: rgba(248, 81, 73, 0.15); color: #f85149; padding: 1px 8px; border-left: 3px solid #f85149;">
+                        <span style="color: #f85149; user-select: none; display: inline-block; width: 50px; text-align: right; margin-right: 12px;">-${item.oldNum || ''}</span>${lineContent}</div>`;
+                } else if (item.type === 'added') {
+                    html += `<div style="background: rgba(63, 185, 80, 0.15); color: #3fb950; padding: 1px 8px; border-left: 3px solid #3fb950;">
+                        <span style="color: #3fb950; user-select: none; display: inline-block; width: 50px; text-align: right; margin-right: 12px;">+${item.newNum || ''}</span>${lineContent}</div>`;
+                }
+            });
+            
+            html += '</div>';
+            return html;
+        }
+        
+        // Compute line-by-line diff using a simple algorithm
+        function computeLineDiff(oldLines, newLines) {
+            const result = [];
+            
+            // Build a map of line content to indices for new lines
+            const newLineMap = new Map();
+            newLines.forEach((line, idx) => {
+                if (!newLineMap.has(line)) newLineMap.set(line, []);
+                newLineMap.get(line).push(idx);
+            });
+            
+            // Use longest common subsequence approach
+            const lcs = computeLCS(oldLines, newLines);
+            
+            let oldIdx = 0, newIdx = 0, lcsIdx = 0;
+            let oldLineNum = 1, newLineNum = 1;
+            
+            while (oldIdx < oldLines.length || newIdx < newLines.length) {
+                if (lcsIdx < lcs.length && oldIdx === lcs[lcsIdx].oldIdx && newIdx === lcs[lcsIdx].newIdx) {
+                    // Line is in both - unchanged
+                    result.push({ type: 'unchanged', line: oldLines[oldIdx], oldNum: oldLineNum, newNum: newLineNum });
+                    oldIdx++; newIdx++; lcsIdx++;
+                    oldLineNum++; newLineNum++;
+                } else if (oldIdx < oldLines.length && (lcsIdx >= lcs.length || oldIdx < lcs[lcsIdx].oldIdx)) {
+                    // Line was removed
+                    result.push({ type: 'removed', line: oldLines[oldIdx], oldNum: oldLineNum });
+                    oldIdx++; oldLineNum++;
+                } else if (newIdx < newLines.length && (lcsIdx >= lcs.length || newIdx < lcs[lcsIdx].newIdx)) {
+                    // Line was added
+                    result.push({ type: 'added', line: newLines[newIdx], newNum: newLineNum });
+                    newIdx++; newLineNum++;
+                }
+            }
+            
+            return result;
+        }
+        
+        // Compute longest common subsequence indices
+        function computeLCS(oldLines, newLines) {
+            const m = oldLines.length;
+            const n = newLines.length;
+            
+            // DP table
+            const dp = Array(m + 1).fill(null).map(() => Array(n + 1).fill(0));
+            
+            for (let i = 1; i <= m; i++) {
+                for (let j = 1; j <= n; j++) {
+                    if (oldLines[i - 1] === newLines[j - 1]) {
+                        dp[i][j] = dp[i - 1][j - 1] + 1;
+                    } else {
+                        dp[i][j] = Math.max(dp[i - 1][j], dp[i][j - 1]);
+                    }
+                }
+            }
+            
+            // Backtrack to find LCS
+            const lcs = [];
+            let i = m, j = n;
+            while (i > 0 && j > 0) {
+                if (oldLines[i - 1] === newLines[j - 1]) {
+                    lcs.unshift({ oldIdx: i - 1, newIdx: j - 1, line: oldLines[i - 1] });
+                    i--; j--;
+                } else if (dp[i - 1][j] > dp[i][j - 1]) {
+                    i--;
+                } else {
+                    j--;
+                }
+            }
+            
+            return lcs;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+    
+
+
+    function toggleTheme() {
+        const body = document.body;
+        const btn = document.getElementById('theme-toggle');
+        body.classList.toggle('dark');
+        const isDark = body.classList.contains('dark');
+        btn.textContent = isDark ? '☀️' : '🌙';
+        localStorage.setItem('shinka-theme', isDark ? 'dark' : 'light');
+        if (isDark) {
+            fixSvgForDark();
+            if (!window._darkInterval) window._darkInterval = setInterval(fixSvgForDark, 1000);
+        } else {
+            clearInterval(window._darkInterval);
+            window._darkInterval = null;
+            // Restore original dark fills
+            document.querySelectorAll('svg text, svg tspan').forEach(el => {
+                if (el.style.fill === '#E8EAED' || el.style.fill === 'rgb(232, 234, 237)') {
+                    el.style.fill = '';
+                }
+            });
+            document.querySelectorAll('svg').forEach(s => { s.style.backgroundColor = ''; });
+        }
+    }
+    // Load saved theme — default to dark to match index.html
+    if (localStorage.getItem('shinka-theme') !== 'light') {
+        document.body.classList.add('dark');
+        document.getElementById('theme-toggle').textContent = '☀️';
+    }
+
+    // ===== i18n System =====
+    var _i18n = { en: null, zh: null };
+    var _currentLang = localStorage.getItem('shinka-lang') || 'en';
+
+    async function loadI18n() {
+        try {
+            var [enResp, zhResp] = await Promise.all([
+                fetch('i18n_en.json'), fetch('i18n_zh.json')
+            ]);
+            _i18n.en = await enResp.json();
+            _i18n.zh = await zhResp.json();
+            if (_currentLang === 'zh') applyLang('zh');
+        } catch(e) { console.warn('i18n load failed:', e); }
+    }
+
+    function t(key) {
+        var dict = _i18n[_currentLang] || _i18n.en;
+        return (dict && dict[key]) || (_i18n.en && _i18n.en[key]) || key;
+    }
+
+    function applyLang(lang) {
+        _currentLang = lang;
+        var dict = _i18n[lang];
+        if (!dict) return;
+        // Replace data-i18n elements
+        document.querySelectorAll('[data-i18n]').forEach(function(el) {
+            var key = el.getAttribute('data-i18n');
+            if (dict[key]) {
+                if (el.tagName === 'INPUT') el.placeholder = dict[key];
+                else el.textContent = dict[key];
+            }
+        });
+        // Update lang toggle button
+        var btn = document.getElementById('lang-toggle');
+        if (btn) btn.textContent = lang === 'en' ? 'EN/中' : '中/EN';
+    }
+
+    function toggleLang() {
+        var newLang = _currentLang === 'en' ? 'zh' : 'en';
+        localStorage.setItem('shinka-lang', newLang);
+        applyLang(newLang);
+    }
+
+    loadI18n();
+    // Watch for D3 re-renders and fix SVG colors in dark mode
+    function fixSvgForDark() {
+        if (!document.body.classList.contains('dark')) return;
+        document.querySelectorAll('svg text, svg tspan').forEach(el => {
+            const fill = (el.style.fill || el.getAttribute('fill') || '').toLowerCase();
+            // Dark fills on dark bg → make light
+            if (['#333','#666','#444','#555','black','#000','#2c3e50','#343a40'].includes(fill)
+                || fill === 'rgb(68, 68, 68)' || fill === 'rgb(51, 51, 51)' || fill === 'rgb(85, 85, 85)') {
+                el.style.fill = '#E8EAED';
+            }
+            // White fills on transparent bg → keep visible with light color
+            if (fill === 'white' || fill === '#fff' || fill === '#ffffff' || fill === 'rgb(255, 255, 255)') {
+                el.style.fill = '#E8EAED';
+            }
+        });
+        // Fix SVG backgrounds that are still white
+        document.querySelectorAll('svg').forEach(s => {
+            const bg = getComputedStyle(s).backgroundColor;
+            if (bg === 'rgb(255, 255, 255)') s.style.backgroundColor = '#1A1A1A';
+        });
+    }
+    if (localStorage.getItem('shinka-theme') === 'dark') {
+        setInterval(fixSvgForDark, 1000);
+        fixSvgForDark();
+    }
+    
