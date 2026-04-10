@@ -46,6 +46,16 @@ def _positive_int(value: str) -> int:
     return parsed
 
 
+def _resolve_runner_bool(
+    cli_value: Optional[bool], runner_config: Dict[str, Any], key: str, default: bool
+) -> bool:
+    if cli_value is not None:
+        return cli_value
+    if key in runner_config:
+        return bool(runner_config[key])
+    return default
+
+
 def _build_parser() -> argparse.ArgumentParser:
     description = (
         "Run async Shinka evolution from a task directory.\n\n"
@@ -62,7 +72,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "Common evo settings via --set:\n"
         "  budget: --set evo.max_api_costs=0.5\n"
         "  models: --set "
-        "evo.llm_models='[\"gpt-5-mini\",\"gemini-3-flash-preview\"]'\n"
+        'evo.llm_models=\'["gpt-5-mini","gemini-3-flash-preview"]\'\n'
         '  patching: --set evo.patch_types=\'["diff","full"]\' '
         "--set evo.patch_type_probs='[0.7,0.3]'\n"
         '  llm kwargs: --set evo.llm_kwargs=\'{"temperatures":[0.0,0.5,1.0],'
@@ -70,7 +80,9 @@ def _build_parser() -> argparse.ArgumentParser:
         "  quality controls: --set evo.max_patch_resamples=3 "
         "--set evo.max_patch_attempts=1 --set evo.max_novelty_attempts=3\n"
         "  embeddings: --set evo.embedding_model=text-embedding-3-small "
-        "--set evo.code_embed_sim_threshold=0.99\n\n"
+        "--set evo.code_embed_sim_threshold=0.99\n"
+        "              --set "
+        "evo.embedding_model=local/text-embeddings-inference@http://localhost:8080/v1\n\n"
         "Common db settings via --set:\n"
         "  islands: --set db.num_islands=2\n"
         "  parent selection: --set db.parent_selection_strategy=weighted\n"
@@ -87,7 +99,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--set job.time=00:10:00 "
         "--set job.activate_script=.venv/bin/activate "
         "--set "
-        "evo.llm_models='[\"gpt-5-mini\",\"gemini-3-flash-preview\"]'\n\n"
+        'evo.llm_models=\'["gpt-5-mini","gemini-3-flash-preview"]\'\n\n'
         "Failure behavior:\n"
         "  - unknown namespace/field: non-zero exit\n"
         "  - invalid value type: non-zero exit\n"
@@ -174,8 +186,9 @@ def _build_parser() -> argparse.ArgumentParser:
     output_group = parser.add_argument_group("output/verbosity")
     output_group.add_argument(
         "--verbose",
-        action="store_true",
-        help="Enable verbose runner logging.",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="Enable verbose runner logging (default: enabled; use --no-verbose to disable).",
     )
     output_group.add_argument(
         "--debug",
@@ -395,6 +408,7 @@ def _build_runner(
         "evo_config": evo_config,
         "job_config": job_config,
         "db_config": db_config,
+        "banner_style": "minimal",
         "verbose": args.verbose,
         "debug": args.debug,
         "init_program_str": init_program_str,
@@ -452,7 +466,9 @@ def main(argv: Optional[list[str]] = None) -> int:
             args.max_proposal_jobs = runner_config.get("max_proposal_jobs")
         if args.max_db_workers is None:
             args.max_db_workers = runner_config.get("max_db_workers")
-        args.verbose = args.verbose or bool(runner_config.get("verbose", False))
+        args.verbose = _resolve_runner_bool(
+            args.verbose, runner_config, "verbose", True
+        )
         args.debug = args.debug or bool(runner_config.get("debug", False))
 
         evo_config = EvolutionConfig(**evo_values)

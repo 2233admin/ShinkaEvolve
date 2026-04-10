@@ -5,10 +5,11 @@
 
 <p align="center">
   <img src="https://img.shields.io/badge/python-%3E%3D3.10-blue" />
+  <a href="https://pypi.org/project/shinka-evolve/"><img src="https://img.shields.io/pypi/v/shinka-evolve.svg" /></a>
   <a href="https://github.com/SakanaAI/ShinkaEvolve/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-Apache2.0-blue.svg" /></a>
   <a href="https://github.com/astral-sh/ruff"><img src="https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json" /></a>
   <a href="https://arxiv.org/abs/2509.19349"><img src="http://img.shields.io/badge/paper-arxiv.2509.19349-B31B1B.svg" /></a>
-  <a href="https://sakana.ai/shinka-evolve/"><img src="https://img.shields.io/badge/Blog%20%7C%20SakanaAI-0A66C2.svg" /></a>
+  <a href="https://sakana.ai/shinka-evolve/"><img src="https://img.shields.io/badge/Blog%20%7C%20Sakana-0A66C2.svg" /></a>
   <a href="https://colab.research.google.com/github/SakanaAI/ShinkaEvolve/blob/main/examples/shinka_tutorial.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" /></a>
 </p>
 
@@ -17,15 +18,17 @@
 
 ---
 
+**Apr 2026 Update**: Added the new [documentation website](https://sakanaai.github.io/ShinkaEvolve/) with guides for getting started, configuration, async evolution, local models, WebUI usage, and agentic workflows.
+
 **Mar 2026 Update**: Refactored API and unified runner `ShinkaEvolveRunner` (replacing `EvolutionRunner` and `AsyncEvolutionRunner`). You can now install `shinka` via PyPI and `uv`: `pip install shinka-evolve`.
 
-**Feb 2026 Update**: Added [agent skills](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/agentic_usage.md) for using `shinka` within coding agents (Claude Code, Codex, etc.) for new task generation ([`shinka-setup`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-setup/SKILL.md)), converting your repo ([`shinka-convert`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-convert/SKILL.md)),  evolution ([`shinka-run`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-run/SKILL.md)), and result inspection ([`shinka-inspect`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-inspect/SKILL.md)). Install them via `npx`:
+**Feb 2026 Update**: Added [agent skills](https://sakanaai.github.io/ShinkaEvolve/agentic_usage/) for using `shinka` within coding agents (Claude Code, Codex, etc.) for new task generation ([`shinka-setup`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-setup/SKILL.md)), converting your repo ([`shinka-convert`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-convert/SKILL.md)),  evolution ([`shinka-run`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-run/SKILL.md)), and result inspection ([`shinka-inspect`](https://github.com/SakanaAI/ShinkaEvolve/blob/main/skills/shinka-inspect/SKILL.md)). Install them via `npx`:
 
 ```
 npx skills add SakanaAI/ShinkaEvolve --skill '*' -a claude-code -a codex -y
 ```
 
-**Jan 2026 Update**: ShinkaEvolve was accepted at ICLR 2026 and we have [released v1.1](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/release_notes.md) with many new features.
+**Jan 2026 Update**: ShinkaEvolve was accepted at ICLR 2026 and we [released an update](https://github.com/SakanaAI/ShinkaEvolve/blob/main/CHANGELOG.md) with new features.
 
 **Nov 2025 Update**: Rob gave several public talks about our ShinkaEvolve effort ([Official](https://x.com/SakanaAILabs/status/1989352976792846356?s=20), [AutoML Seminar](https://www.youtube.com/watch?v=dAOIer_1INo)).
 
@@ -41,14 +44,13 @@ The framework supports **parallel evaluation of candidates** locally or on a Slu
 
 | Guide | Description | What You'll Learn |
 |-------|-------------|-------------------|
-| 🚀 **[First steps](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/getting_started.md)** | Installation, basic usage, and examples | Setup, first evolution run, core concepts |
-| 📓 **[Tutorial](https://github.com/SakanaAI/ShinkaEvolve/blob/main/examples/shinka_tutorial.ipynb)** | Interactive walkthrough of Shinka features | Hands-on examples, configuration, best practices |
-| ⚙️ **[Configuration](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/configuration.md)** | Comprehensive configuration reference | All config options, optimization settings, advanced features |
-| 🎨 **[WebUI](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/webui.md)** | Interactive visualization and monitoring | Real-time tracking, result analysis, debugging tools | 
-| ⚡ **[Async Evo](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/async_evolution.md)** | High-performance async pipeline (5-10x speedup) | Concurrent processing, proposal/eval concurrency tuning | 
-| 🧠 **[Local LLM](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/support_local_llm.md)** | How to connect and use local LLMs with Shinka | Running open-source models, integration tips, performance notes |
-| 🤖 **[Agentic Use](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/agentic_usage.md)** | Run Shinka with Claude/Codex skills | CLI install, skill placement, setup/run workflows |
-
+| 🚀 **[First steps](https://sakanaai.github.io/ShinkaEvolve/getting_started/)** | Installation, basic usage, and examples | Setup, first evolution run, core concepts |
+| 📓 **[Tutorial](https://github.com/SakanaAI/ShinkaEvolve/blob/main/examples/shinka_tutorial.ipynb)** | Interactive walkthrough of Shinka | Hands-on examples, config, best practices |
+| ⚙️  **[Config](https://sakanaai.github.io/ShinkaEvolve/configuration/)** | Comprehensive config reference | All config options & advanced features |
+| 🎨 **[WebUI](https://sakanaai.github.io/ShinkaEvolve/webui/)** | Interactive visualization and monitoring | Real-time tracking, result analysis, debugging | 
+| ⚡ **[Async Evo](https://sakanaai.github.io/ShinkaEvolve/async_evolution/)** | High-perf. throughput (5-10x speedup) | Concurrent processing, proposal/eval tuning | 
+| 🧠 **[Local Models](https://sakanaai.github.io/ShinkaEvolve/support_local_models/)** | How to use local LLMs and embeddings with Shinka | Running open-source models & integration tips |
+| 🤖 **[Agentic Use](https://sakanaai.github.io/ShinkaEvolve/agentic_usage/)** | Run Shinka with Claude/Codex skills | CLI install, skill placement, setup/run workflows |
 
 ## Installation & Quick Start 🚀
 
@@ -90,7 +92,7 @@ source .venv/bin/activate  # On Windows: .venv\Scripts\activate
 uv pip install -e .
 ```
 
-For detailed installation instructions and usage examples, see the [Getting Started Guide](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/getting_started.md).
+For detailed installation instructions and usage examples, see the [Getting Started Guide](https://sakanaai.github.io/ShinkaEvolve/getting_started/).
 
 ## Examples 📖
 
@@ -109,7 +111,7 @@ For the simplest setup with default settings, you only need to specify the evalu
 ```python
 from shinka.core import ShinkaEvolveRunner, EvolutionConfig
 from shinka.database import DatabaseConfig
-from shinka.launch import LocalJobConfig
+from shinka.launch import LocalJobConfig, SlurmCondaJobConfig, SlurmDockerJobConfig
 
 # Minimal - only specify what's required
 job_conf = LocalJobConfig(eval_program_path="evaluate.py")
@@ -117,6 +119,26 @@ job_conf = LocalJobConfig(eval_program_path="evaluate.py")
 # job_conf = LocalJobConfig(
 #     eval_program_path="evaluate.py",
 #     activate_script=".venv/bin/activate",
+# )
+# Or run evaluations on SLURM:
+# job_conf = SlurmCondaJobConfig(
+#     eval_program_path="evaluate.py",
+#     partition="gpu",
+#     time="01:00:00",
+#     cpus=1,
+#     gpus=1,
+#     mem="8G",
+#     conda_env="shinka",
+# )
+# Or run evaluations in a Docker container on SLURM:
+# job_conf = SlurmDockerJobConfig(
+#     eval_program_path="evaluate.py",
+#     image="ubuntu:latest",
+#     partition="gpu",
+#     time="01:00:00",
+#     cpus=1,
+#     gpus=1,
+#     mem="8G",
 # )
 db_conf = DatabaseConfig()
 evo_conf = EvolutionConfig(init_program_path="initial.py")
@@ -126,7 +148,8 @@ runner = ShinkaEvolveRunner(
     job_config=job_conf,
     db_config=db_conf,
     max_evaluation_jobs=2,
-    max_proposal_jobs=1,  # sync-like proposal behavior
+    max_proposal_jobs=3,  # modest oversubscription when proposal generation is slower than eval
+    max_db_workers=4,
 )
 runner.run()
 ```
@@ -134,7 +157,7 @@ runner.run()
 <details>
 <summary><strong>EvolutionConfig Parameters</strong> (click to expand)</summary>
 
-Class defaults below come from `shinka/core/config.py` (`EvolutionConfig`). Hydra presets and CLI overrides can replace these values.
+Class defaults below come from `shinka/core/config.py` (`EvolutionConfig`). Hydra presets and CLI overrides can replace these values. Concurrency lives on `ShinkaEvolveRunner` via `max_evaluation_jobs`, `max_proposal_jobs`, and `max_db_workers`.
 
 | Key | Default Value | Type | Explanation |
 |-----|---------------|------|-------------|
@@ -142,8 +165,6 @@ Class defaults below come from `shinka/core/config.py` (`EvolutionConfig`). Hydr
 | `patch_types` | `["diff", "full", "cross"]` | `List[str]` | Types of patches to generate: "diff", "full", "cross" |
 | `patch_type_probs` | `[0.6, 0.3, 0.1]` | `List[float]` | Probabilities for each patch type |
 | `num_generations` | `50` | `int` | Number of evolution generations to run |
-| `max_proposal_jobs` | `1` | `int` | Maximum number of concurrent proposal generation jobs |
-| `max_db_workers` | `4` | `int` | Maximum number of async DB worker threads |
 | `max_patch_resamples` | `3` | `int` | Max times to resample a patch if it fails |
 | `max_patch_attempts` | `1` | `int` | Max attempts to generate a valid patch |
 | `job_type` | `"local"` | `str` | Job execution type: "local", "slurm_docker", "slurm_conda" |
@@ -157,7 +178,7 @@ Class defaults below come from `shinka/core/config.py` (`EvolutionConfig`). Hydr
 | `meta_llm_kwargs` | `{}` | `dict` | Kwargs for meta-recommendation LLMs |
 | `meta_max_recommendations` | `5` | `int` | Max number of meta-recommendations |
 | `sample_single_meta_rec` | `True` | `bool` | Sample a single recommendation from meta output when enabled |
-| `embedding_model` | `"text-embedding-3-small"` | `Optional[str]` | Model for code embeddings |
+| `embedding_model` | `"text-embedding-3-small"` | `Optional[str]` | Model for code embeddings. Also accepts `local/<model>@http(s)://host[:port]/v1` for local OpenAI-compatible embedding servers, with optional `?api_key_env=ENV_VAR` for per-model credentials. |
 | `init_program_path` | `"initial.py"` | `Optional[str]` | Path to initial program to evolve |
 | `results_dir` | `None` | `Optional[str]` | Directory to save results (auto-generated if None) |
 | `max_novelty_attempts` | `3` | `int` | Max attempts for novelty generation |
@@ -166,6 +187,13 @@ Class defaults below come from `shinka/core/config.py` (`EvolutionConfig`). Hydr
 | `novelty_llm_kwargs` | `{}` | `dict` | Kwargs for novelty LLMs |
 | `use_text_feedback` | `False` | `bool` | Whether to use text feedback in evolution |
 | `max_api_costs` | `None` | `Optional[float]` | Total API budget cap (USD); async runner stops new proposals at cap |
+| `enable_controlled_oversubscription` | `False` | `bool` | Enable bounded proposal oversubscription when proposal generation is slower than evaluation. |
+| `proposal_target_mode` | `'adaptive'` | `str` | Proposal target controller mode (`adaptive` or `fixed`). |
+| `proposal_target_min_samples` | `5` | `int` | Minimum completed timing samples before adaptive targeting activates. |
+| `proposal_target_ratio_cap` | `2.0` | `float` | Maximum sampling/evaluation ratio used by the adaptive controller. |
+| `proposal_buffer_max` | `2` | `int` | Maximum extra proposal jobs beyond evaluation concurrency. |
+| `proposal_target_hard_cap` | `None` | `Optional[int]` | Absolute cap for the adaptive proposal target. |
+| `proposal_target_ewma_alpha` | `0.3` | `float` | EWMA smoothing factor for proposal/evaluation timing estimates. |
 | `inspiration_sort_order` | `"ascending"` | `str` | Inspiration ordering (`"ascending"`, `"chronological"`, `"none"`) |
 | `evolve_prompts` | `False` | `bool` | Enable meta-prompt evolution loop |
 | `prompt_patch_types` | `["diff", "full"]` | `List[str]` | Patch formats used for prompt evolution |
@@ -356,7 +384,7 @@ shinka_launch \
     evo_config.num_generations=20
 ```
 
-For comprehensive configuration options and advanced usage, see the [Configuration Guide](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/configuration.md).
+For comprehensive configuration options and advanced usage, see the [Configuration Guide](https://sakanaai.github.io/ShinkaEvolve/configuration/).
 
 ## `shinka_run` Agent CLI 🤖
 
@@ -414,7 +442,26 @@ shinka_launch
 shinka_visualize --port 8888 --open
 ```
 
-For detailed WebUI documentation, see the [WebUI Guide](https://github.com/SakanaAI/ShinkaEvolve/blob/main/docs/webui.md).
+For detailed WebUI documentation, see the [WebUI Guide](https://sakanaai.github.io/ShinkaEvolve/webui/).
+
+## Local Docs Development
+
+To preview the documentation site locally on `localhost`:
+
+```bash
+uv sync --group docs
+uv run --group docs mkdocs serve --dev-addr 127.0.0.1:8000
+```
+
+Then open `http://127.0.0.1:8000/`.
+
+## Contributing 👥
+
+Contributions are welcome across code, docs, representative benchmarks, and bug reports.
+
+Please read the [contribution guide](https://github.com/SakanaAI/ShinkaEvolve/blob/main/CONTRIBUTING.md) before opening an issue or pull request. It documents the expected issue and PR structure, local checks, and the extra evidence required for changes to the core program evolution pipeline.
+
+If you propose a change to the core evolution pipeline, please include results on a representative runnable task that highlights the new capability and compare them against a baseline. Please do not add random benchmark tasks just to justify a PR.
 
 ## Related Open-Source Projects 🧑‍🔧
 

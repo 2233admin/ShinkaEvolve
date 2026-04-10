@@ -26,12 +26,11 @@ def test_launch_hydra_uses_async_runner(monkeypatch):
         {
             "verbose": False,
             "max_evaluation_jobs": 7,
+            "max_proposal_jobs": 3,
+            "max_db_workers": 5,
             "job_config": {"eval_program_path": "evaluate.py"},
             "db_config": {"num_islands": 2},
-            "evo_config": {
-                "max_proposal_jobs": 3,
-                "max_db_workers": 5,
-            },
+            "evo_config": {},
         }
     )
 
@@ -42,6 +41,7 @@ def test_launch_hydra_uses_async_runner(monkeypatch):
     assert _DummyRunner.last_kwargs["max_evaluation_jobs"] == 7
     assert _DummyRunner.last_kwargs["max_proposal_jobs"] == 3
     assert _DummyRunner.last_kwargs["max_db_workers"] == 5
+    assert _DummyRunner.last_kwargs.get("banner_style", "full") == "full"
 
 
 def test_default_launch_config_uses_neutral_shared_defaults():
@@ -52,6 +52,8 @@ def test_default_launch_config_uses_neutral_shared_defaults():
     assert cfg.variant_suffix == "_default"
     assert cfg.exp_name == "shinka_circle_packing"
     assert cfg.max_evaluation_jobs == 2
+    assert cfg.max_proposal_jobs == 1
+    assert cfg.max_db_workers == 4
     assert cfg.evo_config.num_generations == 50
     assert cfg.evo_config.max_patch_attempts == 1
     assert cfg.evo_config.llm_models == [
@@ -64,6 +66,7 @@ def test_default_launch_config_uses_neutral_shared_defaults():
     assert cfg.evo_config.llm_dynamic_selection_kwargs.cost_aware_coef == 0.5
     assert cfg.evo_config.meta_rec_interval == 10
     assert cfg.evo_config.code_embed_sim_threshold == 0.99
+    assert cfg.evo_config.enable_controlled_oversubscription is False
     assert cfg.db_config.num_islands == 2
     assert cfg.db_config.archive_size == 40
     assert cfg.db_config.num_archive_inspirations == 1

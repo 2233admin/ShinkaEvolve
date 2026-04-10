@@ -5,6 +5,7 @@ Provides non-blocking database access for high-throughput proposal generation.
 
 import asyncio
 import logging
+import sqlite3
 import time
 import threading
 import traceback
@@ -96,7 +97,10 @@ class AsyncProgramDatabase:
         if max_workers < 1:
             max_workers = 1
         self.executor = ThreadPoolExecutor(max_workers=max_workers)
+        self.write_executor = ThreadPoolExecutor(max_workers=max_workers)
         self._lock = asyncio.Lock()
+        self._source_job_id_lock = threading.Lock()
+        self._in_flight_source_job_ids: set[str] = set()
         # Semaphore to limit concurrent database operations and prevent deadlocks
         # With WAL mode enabled, we can handle more concurrent operations safely
         concurrent_ops = min(
@@ -122,6 +126,35 @@ class AsyncProgramDatabase:
             logger.info("🔧 Async database deadlock monitoring started")
         else:
             logger.debug("Deadlock monitoring disabled")
+
+    def _merge_runtime_metadata_from_db(self, source_db: ProgramDatabase) -> None:
+        """Merge key in-memory metadata from a worker DB back to the shared sync DB."""
+        if hasattr(source_db, "last_iteration") and hasattr(self.sync_db, "last_iteration"):
+            self.sync_db.last_iteration = max(
+                getattr(self.sync_db, "last_iteration", 0),
+                getattr(source_db, "last_iteration", 0),
+            )
+
+        source_best = getattr(source_db, "best_score_ever", None)
+        current_best = getattr(self.sync_db, "best_score_ever", None)
+        if source_best is not None and (
+            current_best is None or source_best >= current_best
+        ):
+            if hasattr(self.sync_db, "best_score_ever"):
+                self.sync_db.best_score_ever = source_best
+            if hasattr(self.sync_db, "best_score_generation") and hasattr(
+                source_db, "best_score_generation"
+            ):
+                self.sync_db.best_score_generation = source_db.best_score_generation
+            if hasattr(self.sync_db, "best_program_id") and hasattr(
+                source_db, "best_program_id"
+            ):
+                self.sync_db.best_program_id = source_db.best_program_id
+
+        if getattr(source_db, "beam_search_parent_id", None) is not None and hasattr(
+            self.sync_db, "beam_search_parent_id"
+        ):
+            self.sync_db.beam_search_parent_id = source_db.beam_search_parent_id
 
     def _debug_track_start(self, operation: str, **kwargs):
         """Helper to conditionally track debug operations."""
@@ -342,6 +375,8 @@ class AsyncProgramDatabase:
         meta_patch_data: Optional[Dict[str, Any]] = None,
         code_embedding: Optional[List[float]] = None,
         embed_cost: float = 0.0,
+        verbose: bool = False,
+        defer_maintenance: bool = False,
     ) -> None:
         """Async version of adding a program to the database.
 
@@ -354,6 +389,10 @@ class AsyncProgramDatabase:
             meta_patch_data: Metadata about patch generation
             code_embedding: Code embedding vector
             embed_cost: Cost of embedding generation
+            verbose: Whether to print the per-program rich summary
+            defer_maintenance: When true, skip archive / best / migration
+                follow-up work so it can be replayed later off the insert
+                hot path.
         """
         # Debug tracking
         op_id = self._debug_track_start(
@@ -366,6 +405,7 @@ class AsyncProgramDatabase:
         try:
             # Prepare program data outside the lock to reduce lock time
             await asyncio.sleep(0)  # Yield control to event loop
+            should_recompute = False
 
             # Asynchronously calculate complexity if not provided
             if program.complexity == 0.0:
@@ -405,11 +445,18 @@ class AsyncProgramDatabase:
                 setattr(program, "code_embedding", code_embedding)
             setattr(program, "embed_cost", embed_cost)
 
-            # Use semaphore to prevent concurrent database operations that can deadlock
+            # Serialize writes so duplicate source_job_id checks and inserts
+            # happen in a single critical section.
             async with self._db_semaphore:
-                await self._add_program_fast_async(program)
+                added = await self._add_program_fast_async(
+                    program,
+                    verbose=verbose,
+                    defer_maintenance=defer_maintenance,
+                )
 
-                # Track programs and schedule embedding recomputation (inside semaphore)
+            # Track programs and schedule embedding recomputation only
+            # when a new row is actually inserted.
+            if added:
                 async with self._lock:
                     self.programs_added_since_embedding_recompute += 1
                     should_recompute = (
@@ -532,13 +579,15 @@ class AsyncProgramDatabase:
             # Restore original methods
             self.sync_db._recompute_embeddings_and_clusters = original_embedding_method
 
-    async def _add_program_fast_async(self, program: Program):
+    async def _add_program_fast_async(
+        self,
+        program: Program,
+        verbose: bool = False,
+        defer_maintenance: bool = False,
+    ) -> bool:
         """Async fast program addition that defers expensive operations."""
 
         def add_program_sync():
-            # Create a new database instance for this thread with full functionality
-            from .dbase import ProgramDatabase
-
             thread_db = None
             try:
                 thread_db = ProgramDatabase(
@@ -550,14 +599,40 @@ class AsyncProgramDatabase:
                         getattr(self.sync_db, "display_console", None)
                     )
 
+                source_job_id = None
+                source_job_id_registered = False
+                if isinstance(program.metadata, dict):
+                    source_job_id = program.metadata.get("source_job_id")
+                if isinstance(source_job_id, str) and source_job_id:
+                    with self._source_job_id_lock:
+                        if (
+                            source_job_id in self._in_flight_source_job_ids
+                            or thread_db.has_program_with_source_job_id(source_job_id)
+                        ):
+                            logger.info(
+                                "Skipping duplicate persisted job for source_job_id=%s",
+                                source_job_id,
+                            )
+                            return False
+                        self._in_flight_source_job_ids.add(source_job_id)
+                        source_job_id_registered = True
+
                 # Temporarily disable expensive operations
                 original_embedding_method = thread_db._recompute_embeddings_and_clusters
                 thread_db._recompute_embeddings_and_clusters = lambda: None
 
                 try:
-                    # Use the full database add method which includes island assignment
-                    thread_db.add(program, verbose=True)
+                    thread_db.add(
+                        program,
+                        verbose=verbose,
+                        defer_maintenance=defer_maintenance,
+                    )
+                    self._merge_runtime_metadata_from_db(thread_db)
+                    return True
                 finally:
+                    if source_job_id_registered:
+                        with self._source_job_id_lock:
+                            self._in_flight_source_job_ids.discard(source_job_id)
                     # Restore original methods
                     thread_db._recompute_embeddings_and_clusters = (
                         original_embedding_method
@@ -567,7 +642,7 @@ class AsyncProgramDatabase:
                 logger.error(f"Error in add_program_sync: {e}")
                 raise
             finally:
-                if thread_db:
+                if thread_db is not None:
                     try:
                         thread_db.close()
                     except Exception as e:
@@ -577,7 +652,39 @@ class AsyncProgramDatabase:
 
         # Run the thread-safe database operation in an executor
         loop = asyncio.get_event_loop()
-        await loop.run_in_executor(self.executor, add_program_sync)
+        return await loop.run_in_executor(self.write_executor, add_program_sync)
+
+    async def run_program_maintenance_async(
+        self,
+        program: Program,
+        verbose: bool = False,
+        recompute_embeddings: bool = False,
+    ) -> None:
+        """Replay deferred post-insert maintenance on the writer lane."""
+
+        def run_maintenance_sync():
+            thread_db = None
+            try:
+                thread_db = ProgramDatabase(
+                    self.sync_db.config,
+                    embedding_model=self.sync_db.embedding_model,
+                )
+                if hasattr(thread_db, "set_display_console"):
+                    thread_db.set_display_console(
+                        getattr(self.sync_db, "display_console", None)
+                    )
+                thread_db.run_post_add_maintenance(
+                    program,
+                    verbose=verbose,
+                    recompute_embeddings=recompute_embeddings,
+                )
+                self._merge_runtime_metadata_from_db(thread_db)
+            finally:
+                if thread_db is not None:
+                    thread_db.close()
+
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(self.write_executor, run_maintenance_sync)
 
     def _schedule_embedding_recomputation(self):
         """Schedule embedding recomputation as a background task."""
@@ -636,7 +743,7 @@ class AsyncProgramDatabase:
                         return result
                     finally:
                         thread_db.close()
-                except Exception as e:
+                except Exception:
                     self._debug_track_end(thread_op_id, success=False)
                     raise
 
@@ -669,7 +776,7 @@ class AsyncProgramDatabase:
                         return result
                     finally:
                         thread_db.close()
-                except Exception as e:
+                except Exception:
                     self._debug_track_end(thread_op_id, success=False)
                     raise
 
@@ -680,6 +787,123 @@ class AsyncProgramDatabase:
         except Exception as e:
             self._debug_track_end(op_id, success=False)
             logger.error(f"Error in async get_best_program: {e}")
+            raise
+
+    async def has_program_with_source_job_id_async(self, source_job_id: str) -> bool:
+        """Check whether a completed job has already been persisted."""
+        op_id = self._debug_track_start(
+            "has_program_with_source_job_id_async", source_job_id=source_job_id
+        )
+
+        try:
+            await asyncio.sleep(0)
+
+            def exists_thread_safe():
+                thread_db = None
+                try:
+                    with self._source_job_id_lock:
+                        if source_job_id in self._in_flight_source_job_ids:
+                            return True
+
+                    from .dbase import ProgramDatabase
+
+                    thread_db = ProgramDatabase(self.sync_db.config, read_only=True)
+                    return thread_db.has_program_with_source_job_id(source_job_id)
+                finally:
+                    if thread_db:
+                        thread_db.close()
+
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(self.executor, exists_thread_safe)
+            self._debug_track_end(op_id, success=True)
+            return result
+        except Exception as e:
+            self._debug_track_end(op_id, success=False)
+            logger.error(f"Error in async source_job_id existence check: {e}")
+            raise
+
+    async def get_program_by_source_job_id_async(
+        self, source_job_id: str
+    ) -> Optional[Program]:
+        """Fetch a persisted program row by completed scheduler job id."""
+        op_id = self._debug_track_start(
+            "get_program_by_source_job_id_async", source_job_id=source_job_id
+        )
+
+        try:
+            await asyncio.sleep(0)
+
+            def fetch_thread_safe():
+                thread_db = None
+                try:
+                    from .dbase import ProgramDatabase
+
+                    thread_db = ProgramDatabase(self.sync_db.config, read_only=True)
+                    return thread_db.get_program_by_source_job_id(source_job_id)
+                finally:
+                    if thread_db:
+                        thread_db.close()
+
+            loop = asyncio.get_event_loop()
+            result = await loop.run_in_executor(self.executor, fetch_thread_safe)
+            self._debug_track_end(op_id, success=True)
+            return result
+        except Exception as e:
+            self._debug_track_end(op_id, success=False)
+            logger.error(f"Error in async source_job_id lookup: {e}")
+            raise
+
+    async def record_generation_event_async(
+        self,
+        generation: int,
+        status: str,
+        source_job_id: Optional[str] = None,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        """Append one generation lifecycle event to the durable SQLite log."""
+        op_id = self._debug_track_start(
+            "record_generation_event_async",
+            generation=generation,
+            status=status,
+        )
+
+        try:
+            await asyncio.sleep(0)
+
+            def record_thread_safe():
+                conn = None
+                try:
+                    conn = sqlite3.connect(
+                        self.sync_db.config.db_path,
+                        check_same_thread=False,
+                        timeout=60.0,
+                    )
+                    conn.execute("PRAGMA journal_mode = WAL;")
+                    conn.execute("PRAGMA busy_timeout = 60000;")
+                    payload = None
+                    if details is not None:
+                        import json
+
+                        payload = json.dumps(details, sort_keys=True)
+                    conn.execute(
+                        """
+                        INSERT INTO generation_event_log (
+                            generation, status, source_job_id, details, created_at
+                        ) VALUES (?, ?, ?, ?, ?)
+                        """,
+                        (generation, status, source_job_id, payload, time.time()),
+                    )
+                    conn.commit()
+                finally:
+                    if conn is not None:
+                        conn.close()
+
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(self.executor, record_thread_safe)
+            self._debug_track_end(op_id, success=True)
+        except Exception as e:
+            self._debug_track_end(op_id, success=False)
+            logger.error(f"Error in async generation event logging: {e}")
             raise
 
     async def batch_sample_async(
@@ -753,6 +977,7 @@ class AsyncProgramDatabase:
                     logger.warning(f"  {op_id}: {op['operation']} ({duration:.1f}s)")
 
         # Shutdown the thread pool executor
+        self.write_executor.shutdown(wait=True)
         self.executor.shutdown(wait=True)
         logger.info("Async database closed")
 
@@ -838,6 +1063,38 @@ class AsyncProgramDatabase:
             self._debug_track_end(op_id, success=False)
             logger.error(f"Error in get_total_program_count_async: {e}")
             return 0  # Return 0 on error
+
+    async def get_persisted_generation_ids_async(self) -> List[int]:
+        """Return distinct persisted generations from the programs table."""
+        op_id = self._debug_track_start("get_persisted_generation_ids_async")
+
+        try:
+            loop = asyncio.get_event_loop()
+
+            def load_generation_ids_thread_safe():
+                thread_db = None
+                try:
+                    thread_db = ProgramDatabase(self.sync_db.config, read_only=True)
+                    thread_db.cursor.execute(
+                        "SELECT DISTINCT generation FROM programs ORDER BY generation"
+                    )
+                    return [int(row[0]) for row in thread_db.cursor.fetchall()]
+                finally:
+                    if thread_db:
+                        try:
+                            thread_db.close()
+                        except Exception as close_e:
+                            logger.warning(f"Error closing thread database: {close_e}")
+
+            result = await loop.run_in_executor(
+                self.executor, load_generation_ids_thread_safe
+            )
+            self._debug_track_end(op_id, success=True)
+            return result
+        except Exception as e:
+            self._debug_track_end(op_id, success=False)
+            logger.error(f"Error in get_persisted_generation_ids_async: {e}")
+            return []
 
     async def get_top_programs_async(
         self, n: int = 10, correct_only: bool = True

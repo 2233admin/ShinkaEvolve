@@ -5,6 +5,7 @@ import openai
 import instructor
 from google import genai
 from shinka.env import load_shinka_dotenv
+from shinka.local_openai_config import resolve_local_openai_api_key
 from .providers.model_resolver import resolve_model_backend
 
 load_shinka_dotenv()
@@ -112,7 +113,7 @@ def get_client_llm(
             client = instructor.from_openai(client, mode=instructor.Mode.MD_JSON)
     elif provider == "local_openai":
         client = openai.OpenAI(
-            api_key=_resolve_local_api_key(resolved.base_url),
+            api_key=resolve_local_openai_api_key(resolved.api_key_env_name),
             base_url=resolved.base_url,
             timeout=TIMEOUT,
         )
@@ -158,7 +159,7 @@ def get_async_client_llm(
                 client, mode=instructor.mode.Mode.ANTHROPIC_JSON
             )
     elif provider == "openai":
-        client = openai.AsyncOpenAI()
+        client = openai.AsyncOpenAI(timeout=TIMEOUT)
         if structured_output:
             client = instructor.from_openai(client, mode=instructor.Mode.TOOLS_STRICT)
     elif provider == "azure_openai":
@@ -192,7 +193,7 @@ def get_async_client_llm(
             client = instructor.from_openai(client, mode=instructor.Mode.MD_JSON)
     elif provider == "local_openai":
         client = openai.AsyncOpenAI(
-            api_key=_resolve_local_api_key(resolved.base_url),
+            api_key=resolve_local_openai_api_key(resolved.api_key_env_name),
             base_url=resolved.base_url,
             timeout=TIMEOUT,
         )
