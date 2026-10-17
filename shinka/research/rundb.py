@@ -54,3 +54,20 @@ def correct_scores(results_dir: Path) -> List[float]:
         f"SELECT combined_score FROM programs WHERE correct = 1 AND {_NOT_COPY}",
     )
     return [float(s) for (s,) in rows if s is not None]
+
+
+def top_correct_programs(results_dir: Path, limit: int) -> List[Tuple[str, str]]:
+    """(id, code) of the best correct programs, distinct code, by score."""
+    rows = _query(
+        results_dir,
+        "SELECT id, code FROM programs "
+        f"WHERE correct = 1 AND {_NOT_COPY} ORDER BY combined_score DESC",
+    )
+    seen, out = set(), []
+    for pid, code in rows:
+        if code not in seen:
+            seen.add(code)
+            out.append((str(pid), str(code)))
+        if len(out) == limit:
+            break
+    return out

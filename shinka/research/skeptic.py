@@ -15,6 +15,8 @@ Checks (all on out-of-sample returns the mutation LLM never saw):
 from __future__ import annotations
 
 import math
+import tempfile
+from itertools import combinations
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -27,8 +29,12 @@ from shinka.research import rundb
 from shinka.research.notebook import Experiment, Notebook, Status, experiment_dir
 from shinka.research.quant import (
     QuantConfig,
+    annual_return,
+    file_sha256,
     load_bars,
+    max_drawdown,
     positions_for,
+    run_view,
     sharpe,
     split_index,
     strategy_returns,
@@ -42,6 +48,9 @@ class Thresholds(BaseModel):
     dsr_supported: float = 0.95
     min_positive_fraction: float = 2.0 / 3.0
     n_subperiods: int = 3
+    max_pbo: float = 0.5
+    pbo_blocks: int = 16
+    pbo_max_programs: int = 64
 
 
 def expected_max_sharpe(n_trials: int, var_trials: float) -> float:
@@ -78,6 +87,46 @@ def positive_fraction(returns: pd.Series, n: int, periods_per_year: float) -> fl
     return sum(sharpe(pd.Series(p), periods_per_year) > 0 for p in parts) / len(parts)
 
 
+def pbo(returns: np.ndarray, n_blocks: int = 16) -> float:
+    """Probability of Backtest Overfitting via CSCV (Bailey, Borwein,
+    López de Prado & Zhu, 2014).
+
+    ``returns`` is a (T, N) matrix of per-bar returns of N trials. Rows are cut
+    into ``n_blocks`` contiguous blocks; for every way of choosing half the
+    blocks as in-sample, the in-sample best trial is ranked out-of-sample.
+    PBO is the share of splits where it lands at or below the median.
+    """
+    t, n = returns.shape
+    if n < 2 or n_blocks < 2 or n_blocks % 2 or t < 2 * n_blocks:
+        return float("nan")
+    blocks = np.array_split(np.arange(t), n_blocks)
+    cnt = np.array([len(b) for b in blocks], dtype=float)
+    s1 = np.stack([returns[b].sum(axis=0) for b in blocks])
+    s2 = np.stack([(returns[b] ** 2).sum(axis=0) for b in blocks])
+    tot1, tot2, totc = s1.sum(axis=0), s2.sum(axis=0), cnt.sum()
+
+    def _sr(a1: np.ndarray, a2: np.ndarray, c: float) -> np.ndarray:
+        mean = a1 / c
+        var = np.maximum(a2 / c - mean**2, 0.0)
+        with np.errstate(divide="ignore", invalid="ignore"):
+            return np.where(var > 0, mean / np.sqrt(var), 0.0)
+
+    below = total = 0
+    for combo in combinations(range(n_blocks), n_blocks // 2):
+        idx = list(combo)
+        c_in = cnt[idx].sum()
+        in_sr = _sr(s1[idx].sum(axis=0), s2[idx].sum(axis=0), c_in)
+        out_sr = _sr(
+            tot1 - s1[idx].sum(axis=0), tot2 - s2[idx].sum(axis=0), totc - c_in
+        )
+        best = int(np.argmax(in_sr))
+        rank = 1 + int(np.sum(out_sr < out_sr[best]))  # 1 = worst
+        omega = rank / (n + 1)
+        below += omega <= 0.5
+        total += 1
+    return below / total
+
+
 def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
     """Rule-based verdict. Failing to show an edge is inconclusive, not a
     refutation; only a non-positive OOS Sharpe refutes."""
@@ -89,9 +138,11 @@ def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
             f"OOS Sharpe {report['oos_sharpe']:.2f} does not beat buy-and-hold "
             f"({hold:.2f})"
         )
+    pbo_ok = not (report.get("pbo", float("nan")) > th.max_pbo)  # NaN passes
     if (
         report["dsr"] >= th.dsr_supported
         and report["oos_positive_fraction"] >= th.min_positive_fraction
+        and pbo_ok
     ):
         return Status.supported, (
             f"DSR {report['dsr']:.3f} >= {th.dsr_supported} over "
@@ -100,9 +151,10 @@ def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
         )
     return Status.inconclusive, (
         f"OOS Sharpe {report['oos_sharpe']:.2f} > 0 but DSR {report['dsr']:.3f} "
-        f"(needs {th.dsr_supported}) or sub-period stability "
+        f"(needs {th.dsr_supported}), sub-period stability "
         f"{report['oos_positive_fraction']:.0%} (needs "
-        f"{th.min_positive_fraction:.0%}) falls short"
+        f"{th.min_positive_fraction:.0%}) or PBO {report.get('pbo', float('nan')):.2f} "
+        f"(max {th.max_pbo}) falls short"
     )
 
 
@@ -116,11 +168,45 @@ def _oos_returns(
     return rets.iloc[:cut], rets.iloc[cut:]
 
 
+def direction_trials(root: Path, nb: Notebook, ppy: float) -> tuple[int, float]:
+    """(number of trials, variance of per-period trial Sharpe) for the whole
+    direction: every evaluated program plus every probe."""
+    scores: List[float] = []
+    n_trials = 0
+    for h in nb.hypotheses:
+        for e in h.experiments:
+            n_trials += e.n_probed
+            rd = experiment_dir(root, h.id, e.id) / "results"
+            if (rd / rundb.DB_FILENAME).exists():
+                scores.extend(rundb.correct_scores(rd))
+                n_trials += rundb.count_evaluated(rd)
+    per_period = np.asarray(scores) / math.sqrt(ppy)
+    var_trials = float(per_period.var(ddof=1)) if len(per_period) > 1 else 0.0
+    return max(n_trials, 1), var_trials
+
+
+def _experiment_pbo(
+    results_dir: Path, bars: pd.DataFrame, cfg: QuantConfig, th: Thresholds
+) -> float:
+    """PBO over the experiment's best distinct programs on development data."""
+    programs = rundb.top_correct_programs(results_dir, th.pbo_max_programs)
+    if len(programs) < 2:
+        return float("nan")
+    cols = []
+    with tempfile.TemporaryDirectory() as tmp:
+        for pid, code in programs:
+            path = Path(tmp) / f"p_{len(cols)}.py"
+            path.write_text(code)
+            pos = positions_for(path, cfg, bars)
+            cols.append(strategy_returns(pos, bars["close"], cfg.cost_bps).to_numpy())
+    return pbo(np.column_stack(cols), th.pbo_blocks)
+
+
 def challenge(
     root: Path, nb: Notebook, hid: str, exp: Experiment, th: Thresholds
 ) -> Dict[str, Any]:
     """Run all checks for one experiment and return the evidence report."""
-    verify_experiment(root, hid, exp)
+    verify_experiment(root, nb, hid, exp)
     exp_dir = experiment_dir(root, hid, exp.id)
     task_dir, results_dir = exp_dir / "task", exp_dir / "results"
     cfg = load_config(task_dir)
@@ -135,18 +221,8 @@ def challenge(
     hold = bars["close"].pct_change().fillna(0.0)
     hold_oos = hold.iloc[split_index(len(bars), cfg.oos_fraction) :]
 
-    scores: List[float] = []
-    n_trials = 0
-    for h in nb.hypotheses:
-        for e in h.experiments:
-            n_trials += e.n_probed
-            rd = experiment_dir(root, h.id, e.id) / "results"
-            if (rd / rundb.DB_FILENAME).exists():
-                scores.extend(rundb.correct_scores(rd))
-                n_trials += rundb.count_evaluated(rd)
-    n_trials = max(n_trials, 1)
-    per_period = np.asarray(scores) / math.sqrt(ppy)
-    var_trials = float(per_period.var(ddof=1)) if len(per_period) > 1 else 0.0
+    n_trials, var_trials = direction_trials(root, nb, ppy)
+    pbo_value = _experiment_pbo(results_dir, bars, cfg, th)
 
     oos_sharpe = sharpe(oos, ppy)
     is_sharpe = sharpe(is_rets, ppy)
@@ -163,6 +239,7 @@ def challenge(
         * math.sqrt(ppy),
         "dsr": deflated_sharpe(oos, n_trials, var_trials),
         "oos_positive_fraction": positive_fraction(oos, th.n_subperiods, ppy),
+        "pbo": pbo_value,
         "baseline_seed_oos_sharpe": sharpe(seed_oos, ppy),
         "baseline_buy_hold_oos_sharpe": sharpe(hold_oos, ppy),
         "best_program": str(best_path),
@@ -179,3 +256,61 @@ def render_report(hid: str, eid: str, report: Dict[str, Any], label: Status) -> 
         f"Rule-based verdict: **{label.value}**\n\n"
         f"| check | value |\n|---|---|\n{rows}\n"
     )
+
+
+def confirm(root: Path, nb: Notebook, hid: str, th: Thresholds) -> Dict[str, Any]:
+    """Score one supported hypothesis's best program on the lockbox.
+
+    The caller opens the lockbox once for the whole direction; this reads the
+    full source file, checks causality inside the lockbox too, and returns the
+    evidence (it does not modify the notebook)."""
+    split = nb.data
+    if split is None:
+        raise ValueError("direction has no data yet")
+    hyp = nb.get(hid)
+    exp = next((e for e in reversed(hyp.experiments) if e.skeptic is not None), None)
+    if exp is None:
+        raise ValueError(f"{hid} has no challenged experiment")
+    exp_dir = experiment_dir(root, hid, exp.id)
+    best = exp_dir / "best_program.py"
+    dev_cfg = load_config(exp_dir / "task")
+    cfg = dev_cfg.model_copy(update={"data_path": split.source_path})
+    if file_sha256(Path(split.source_path)) != split.source_hash:
+        raise RuntimeError(f"{split.source_path} changed since it was split")
+    bars = load_bars(Path(split.source_path), split.timestamp_col)
+    ppy = cfg.periods_per_year
+
+    full = positions_for(best, cfg, bars).to_numpy()
+    n_lock = len(bars) - split.n_dev
+    for n in (split.n_dev + n_lock // 3, split.n_dev + 2 * n_lock // 3):
+        part = run_view(
+            str(best), cfg.data_path, cfg.timestamp_col, n, cfg.view_timeout_s
+        )
+        if np.any(np.abs(full[:n] - part) > 1e-9):
+            raise ValueError(f"{hid}: look-ahead detected inside the lockbox")
+
+    rets = strategy_returns(
+        pd.Series(full, index=bars.index), bars["close"], cfg.cost_bps
+    )
+    lock = rets.iloc[split.n_dev :]
+    hold = bars["close"].pct_change().fillna(0.0).iloc[split.n_dev :]
+    n_trials, var_trials = direction_trials(root, nb, ppy)
+    report = {
+        "experiment": exp.id,
+        "lockbox_start": split.lockbox_start,
+        "lockbox_bars": len(lock),
+        "lockbox_sharpe": sharpe(lock, ppy),
+        "lockbox_annual_return": annual_return(lock, ppy),
+        "lockbox_max_drawdown": max_drawdown(lock),
+        "lockbox_buy_hold_sharpe": sharpe(hold, ppy),
+        "n_trials": n_trials,
+        "dsr": deflated_sharpe(lock, n_trials, var_trials),
+        "lockbox_positive_fraction": positive_fraction(lock, th.n_subperiods, ppy),
+    }
+    passed = (
+        report["lockbox_sharpe"] > max(0.0, report["lockbox_buy_hold_sharpe"])
+        and report["dsr"] >= th.dsr_supported
+        and report["lockbox_positive_fraction"] >= th.min_positive_fraction
+    )
+    report["passed"] = bool(passed)
+    return report

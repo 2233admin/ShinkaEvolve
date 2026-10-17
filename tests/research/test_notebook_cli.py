@@ -51,10 +51,10 @@ def test_scaffold_freezes_evaluator(
     assert "TS momentum survives costs" in (task / "shinka.yaml").read_text()
     assert nb.get("h001").status is Status.selected
 
-    verify_experiment(root, "h001", exp)
+    verify_experiment(root, Notebook.load(root), "h001", exp)
     (task / "evaluate.py").write_text("# tampered\n")
     with pytest.raises(RuntimeError, match="modified"):
-        verify_experiment(root, "h001", exp)
+        verify_experiment(root, Notebook.load(root), "h001", exp)
 
 
 def test_verify_detects_data_change(
@@ -72,7 +72,7 @@ def test_verify_detects_data_change(
     with bars_csv.open("a") as f:
         f.write("2099-01-01,1.0\n")
     with pytest.raises(RuntimeError, match="data changed"):
-        verify_experiment(root, "h001", exp)
+        verify_experiment(root, Notebook.load(root), "h001", exp)
 
 
 def test_generated_evaluator_runs(
