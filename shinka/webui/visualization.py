@@ -37,7 +37,8 @@ db_cache: Dict[str, Tuple[float, Any]] = {}
 
 
 class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
-    def __init__(self, *args, search_root=None, **kwargs):
+    def __init__(self, *args, search_root=None, show_private=False, **kwargs):
+        self.show_private = show_private
         self.search_root = search_root or os.getcwd()
         super().__init__(*args, **kwargs)
 
@@ -1675,6 +1676,8 @@ class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
         """Helper to send a JSON response."""
         # Clean NaN/Inf values before serializing (Python's json outputs invalid JSON for these)
         clean_data = self._clean_nan_values(data)
+        if not self.show_private:
+            clean_data = _hide_private_metrics(clean_data)
         payload = json.dumps(clean_data, default=self._json_encoder).encode("utf-8")
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
@@ -1708,16 +1711,39 @@ class DatabaseRequestHandler(http.server.SimpleHTTPRequestHandler):
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
 
-def create_handler_factory(search_root):
+def _hide_private_metrics(obj):
+    """Blank every ``private_metrics`` mapping. Private metrics hold held-out
+    results that should not inform design decisions unless asked for."""
+    if isinstance(obj, dict):
+        out = {
+            k: ({} if k == "private_metrics" else _hide_private_metrics(v))
+            for k, v in obj.items()
+        }
+        if obj.get("private_metrics"):
+            out["private_metrics_hidden"] = True  # lets the UI say "hidden"
+        return out
+    if isinstance(obj, list):
+        return [_hide_private_metrics(item) for item in obj]
+    return obj
+
+
+def create_handler_factory(search_root, show_private=False):
     """Create a handler factory that passes the search root to handler."""
 
     def handler_factory(*args, **kwargs):
-        return DatabaseRequestHandler(*args, search_root=search_root, **kwargs)
+        return DatabaseRequestHandler(
+            *args, search_root=search_root, show_private=show_private, **kwargs
+        )
 
     return handler_factory
 
 
-def start_server(port: int, search_root: str, db_path: Optional[str] = None):
+def start_server(
+    port: int,
+    search_root: str,
+    db_path: Optional[str] = None,
+    show_private: bool = False,
+):
     """Start the HTTP server."""
     # Change to the webui directory inside the shinka package to serve static files
     webui_dir = os.path.dirname(__file__)
@@ -1731,7 +1757,7 @@ def start_server(port: int, search_root: str, db_path: Optional[str] = None):
     print(f"[DEBUG] Search root directory: {search_root}")
 
     # Create handler factory with search root
-    handler_factory = create_handler_factory(search_root)
+    handler_factory = create_handler_factory(search_root, show_private)
 
     # Reuse the socket so you can restart quickly
     class ReusableTCPServer(socketserver.TCPServer):
@@ -1775,6 +1801,11 @@ def main():
         default=None,
         help="Path to a specific database file to serve.",
     )
+    parser.add_argument(
+        "--show-private",
+        action="store_true",
+        help="Also show private (held-out) metrics; hidden by default.",
+    )
     args = parser.parse_args()
 
     # Resolve the root directory to an absolute path
@@ -1789,7 +1820,7 @@ def main():
     # Kick off the HTTP server in a daemon thread.
     server_thread = threading.Thread(
         target=start_server,
-        args=(args.port, search_root, args.db),
+        args=(args.port, search_root, args.db, args.show_private),
         daemon=True,
     )
     server_thread.start()
