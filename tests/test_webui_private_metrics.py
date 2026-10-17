@@ -1,8 +1,10 @@
+from typing import Any
+
 from shinka.webui.visualization import _hide_private_metrics
 
 
 def test_private_metrics_are_blanked_recursively() -> None:
-    data = {
+    data: dict[str, Any] = {
         "programs": [
             {"id": "a", "public_metrics": {"x": 1}, "private_metrics": {"oos": 2}},
             {"id": "b", "private_metrics": {"oos": 3}},
