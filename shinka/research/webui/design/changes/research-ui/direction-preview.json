@@ -91,8 +91,9 @@
     }
   ],
   "decision": {
-    "status": "pending",
-    "selectedDirectionId": null,
-    "rationale": null
+    "status": "selected",
+    "selectedDirectionId": "notebook",
+    "by": "owner",
+    "rationale": "Owner chose A (2026-10-17: “我觉得第一个 跟原先的功能结合下”): a readable research record suits sharing with people outside the project; it must be combined with the existing Shinka WebUI evolution features. Known weaknesses to fix in DESIGN.md: low density with many hypotheses, chart below the fold, serif fallback on Windows."
   }
 }

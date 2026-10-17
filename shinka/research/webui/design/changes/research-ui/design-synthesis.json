@@ -1,10 +1,10 @@
 {
   "schema": "design-pipeline.design-synthesis.v1",
   "changeId": "research-ui",
-  "status": "ready-for-synthesis",
-  "stage": "design-synthesis",
+  "status": "needs-review",
+  "stage": "design-validation",
   "initializedAt": "2026-10-17T14:13:45.200Z",
-  "updatedAt": "2026-10-17T14:15:04.339Z",
+  "updatedAt": "2026-10-17T14:22:30.271Z",
   "artifactRoot": "design/changes/research-ui",
   "projectRoot": "../../..",
   "problem": "Read-only research console for Shinka Research: researchers and people they share it with scan a quant research direction (hypotheses, status with statistical evidence, trial count vs multiple-testing bar, budget, one-time lockbox) and its knowledge-base wiki, then drill into upstream evolution views",
@@ -32,8 +32,8 @@
   },
   "interaction": {
     "mode": "human-in-loop",
-    "nextCommand": "Synthesize 2-3 product-specific directions, select one, and write DESIGN.md.",
-    "message": "The declared scope fits the selected budget; proceed to evidence-backed synthesis."
+    "nextCommand": "Validate or synthesize project MOTION.md, then continue into implementation from both project foundations and the change artifacts.",
+    "message": "DESIGN.md passed structure and provenance validation. Project MOTION.md must also be ready before implementation."
   },
   "scope": {
     "budget": "session",
@@ -56,15 +56,20 @@
   },
   "output": {
     "path": "DESIGN.md",
-    "status": "missing",
-    "sha256": null,
-    "validatedAt": null
+    "status": "validated",
+    "sha256": "927b15550a056a1193deab339b95daac24812ffaf13b100227d945dec5035b0b",
+    "validatedAt": "2026-10-17T14:22:30.271Z"
   },
   "evidence": [
     {
       "type": "grill",
       "path": "design/changes/research-ui/decisions/grill.md",
       "recordedAt": "2026-10-17T14:15:04.296Z"
+    },
+    {
+      "type": "design-validation",
+      "path": "DESIGN.md",
+      "recordedAt": "2026-10-17T14:22:30.271Z"
     }
   ]
 }
