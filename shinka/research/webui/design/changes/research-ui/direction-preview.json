@@ -1,0 +1,98 @@
+{
+  "schema": "design-pipeline.direction-preview.v1",
+  "changeId": "research-ui",
+  "applicability": {
+    "status": "required",
+    "reason": "open-surface"
+  },
+  "comparison": {
+    "brief": {
+      "path": "brief.md",
+      "sha256": "7bc10f595158ec354d9675353f8b7ab7f5e32df3ce254f93157029e97b9918c9"
+    },
+    "index": {
+      "path": "direction-previews/index.html",
+      "sha256": "8f660d74434886faaa8b71f4783f4f5c421491a644ce24f14c210f14803fd6ba"
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 960
+    },
+    "contentFixtureSha256": "8cfaa14267a72f3dcf1e14b99804c15e7ddfed27ef160c1de74e9fdcc223d0de",
+    "stateCoverage": [
+      "supported",
+      "refuted",
+      "inconclusive",
+      "running",
+      "proposed",
+      "dropped",
+      "lockbox-sealed",
+      "budget-partial",
+      "validation-hidden-before-verdict"
+    ]
+  },
+  "directions": [
+    {
+      "id": "notebook",
+      "name": "研究记录本",
+      "thesis": "研究是一本逐条记账的实验记录：每个假设一条记录，结论和证据写成句子。",
+      "signature": "页边编号的假设条目 + 印章式状态 + 逐条 ✓/✗ 判据记账",
+      "axes": {
+        "luminance": "light",
+        "typeFamily": "cjk-serif",
+        "color": "warm-paper-ink",
+        "layout": "single-column-with-margin",
+        "density": "low",
+        "era": "classic-journal",
+        "material": "paper"
+      },
+      "screenshot": {
+        "path": "direction-previews/notebook.png",
+        "sha256": "9076cce5680871e98de9646f1dfef8674192e8b04172c26beb1d6c00aae36806"
+      }
+    },
+    {
+      "id": "desk",
+      "name": "交易台终端",
+      "thesis": "研究方向是一块要随时盯的盘面：所有数字一屏扫完。",
+      "signature": "顶部状态条（N 与门槛、预算条、lockbox 封条）+ 五格判据灯",
+      "axes": {
+        "luminance": "dark",
+        "typeFamily": "mono-numerals-sans",
+        "color": "phosphor-signal",
+        "layout": "multi-pane-grid",
+        "density": "high",
+        "era": "contemporary-terminal",
+        "material": "screen"
+      },
+      "screenshot": {
+        "path": "direction-previews/desk.png",
+        "sha256": "39a4771991d984511f34331bf8c492f5d68409d217cccf3d368827e3ab7ac7fc"
+      }
+    },
+    {
+      "id": "audit",
+      "name": "审计档案",
+      "thesis": "每个假设是一份待审的案卷：结论必须能追溯到具体哪条规则。",
+      "signature": "判定阶梯：五条规则逐行列值，高亮决定结论的那一行",
+      "axes": {
+        "luminance": "light",
+        "typeFamily": "cjk-sans",
+        "color": "cool-neutral-blue",
+        "layout": "sidebar-card-grid",
+        "density": "medium",
+        "era": "modern-swiss",
+        "material": "flat-print"
+      },
+      "screenshot": {
+        "path": "direction-previews/audit.png",
+        "sha256": "a5f299b87f7a19f027be7a351365e4cfd1d65f170363611f40ce507917fe24a9"
+      }
+    }
+  ],
+  "decision": {
+    "status": "pending",
+    "selectedDirectionId": null,
+    "rationale": null
+  }
+}

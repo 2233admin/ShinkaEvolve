@@ -1,0 +1,3 @@
+# Brief
+
+Product: Shinka Research read-only research UI (workspace / direction / library pages); the viewer must understand a research direction's state at a glance: hypotheses with status and evidence, trials N vs multiple-testing bar, budget, lockbox sealed/opened. Audience: owner on a desktop browser, and shared with other people (needs explanatory text and onboarding for newcomers); phone must be readable. Style: independent from upstream Shinka WebUI, but not jarring when linking into it. Assets: none beyond our own; no logos needed. Not a film: no duration. Delegation: agent produces direction previews and implementation; owner wants to see every step including the DESIGN.md draft, selects the direction and gives final acceptance.

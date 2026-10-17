@@ -1,0 +1,3201 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向预览 · Shinka Research 研究界面</title>
+<style>
+  /* ---------- neutral comparison shell ---------- */
+  html, body { margin: 0; background: #e9e9e9; color: #222;
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+  .shell-head { padding: 20px 24px 8px; max-width: 1440px; margin: 0 auto; }
+  .shell-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  .shell-head p { margin: 0; font-size: 13px; color: #555; line-height: 1.6; }
+  .stage { margin: 16px auto 32px; max-width: 1440px; }
+  .stage-label { font-size: 13px; color: #444; padding: 0 24px 6px; }
+  .stage-label b { color: #111; }
+  .frame { width: 1440px; height: 960px; overflow: hidden; margin: 0 auto; box-shadow: 0 0 0 1px #c8c8c8; }
+  body.solo { background: none; }
+  body.solo .shell-head, body.solo .stage-label { display: none; }
+  body.solo .stage { margin: 0; }
+  body.solo .frame { box-shadow: none; }
+  @media (max-width: 1439px) { .frame { width: 100%; height: auto; min-height: 960px; } }
+  abbr { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* =========================================================
+     A · 研究记录本 — light, warm paper, serif, single column with margin
+     ========================================================= */
+  .A { background: #f5f0e6; color: #1f1c17; height: 100%;
+       font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", serif; }
+  .A .page { width: 1040px; margin: 0 auto; padding: 44px 0 0; display: grid;
+             grid-template-columns: 150px 1fr; column-gap: 40px; }
+  .A .margin { font-size: 12px; color: #7a7062; line-height: 1.6; text-align: right; }
+  .A .kicker { grid-column: 2; font-size: 12px; letter-spacing: .12em; color: #7a7062; }
+  .A h1 { grid-column: 2; font-size: 30px; line-height: 1.35; margin: 6px 0 10px; font-weight: 600; }
+  .A .lede { grid-column: 2; font-size: 15px; line-height: 1.75; color: #4a443a; margin: 0 0 18px; max-width: 40em; }
+  .A .facts { grid-column: 2; display: flex; gap: 28px; border-top: 1.5px solid #1f1c17;
+              border-bottom: 1px solid #b9ad99; padding: 10px 0; font-size: 14px; }
+  .A .facts div span { display: block; font-size: 11px; color: #7a7062; letter-spacing: .08em; }
+  .A .facts b { font-weight: 600; font-size: 18px; }
+  .A .seal { display: inline-flex; align-items: center; gap: 8px; }
+  .A .seal i { width: 26px; height: 26px; border: 1.5px solid #8a2b1f; border-radius: 50%;
+               display: inline-grid; place-items: center; font-style: normal; color: #8a2b1f; font-size: 13px; }
+  .A h2 { grid-column: 2; font-size: 13px; letter-spacing: .14em; color: #7a7062; font-weight: 600;
+          margin: 26px 0 6px; }
+  .A .entry { display: contents; }
+  .A .entry .margin { padding-top: 13px; }
+  .A .entry .margin b { display: block; font-size: 15px; color: #1f1c17; }
+  .A .body { border-top: 1px solid #d3c8b5; padding: 12px 0 12px; }
+  .A .body h3 { margin: 0; font-size: 18px; font-weight: 600; display: flex; gap: 12px; align-items: baseline; }
+  .A .stamp { font-size: 12px; border: 1.5px solid currentColor; padding: 0 6px; letter-spacing: .1em;
+              font-weight: 600; }
+  .A .s-supported { color: #2c5a37; } .A .s-refuted { color: #8a2b1f; }
+  .A .s-inconclusive { color: #6b5a2a; } .A .s-running { color: #1f4a7a; }
+  .A .s-proposed, .A .s-dropped { color: #7a7062; }
+  .A .prose { font-size: 14.5px; line-height: 1.75; margin: 4px 0 0; color: #3a352d; }
+  .A .ledger { font-size: 13px; color: #4a443a; margin-top: 4px; }
+  .A .ledger span { margin-right: 14px; } .A .ok { color: #2c5a37; } .A .no { color: #8a2b1f; }
+  .A .chart { grid-column: 2; }
+  .A .chart svg text { font-family: inherit; }
+
+  /* =========================================================
+     B · 交易台终端 — dark, mono numerals, dense multi-pane
+     ========================================================= */
+  .B { background: #0c0f0e; color: #d5ddd8; height: 100%; font-size: 13px;
+       font-family: system-ui, "Noto Sans CJK SC", "PingFang SC", sans-serif; }
+  .B .mono, .B .num { font-family: ui-monospace, "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+  .B .bar { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); border-bottom: 1px solid #263029; }
+  .B .bar > div { padding: 12px 16px; border-right: 1px solid #263029; }
+  .B .bar .q { font-size: 15px; font-weight: 600; color: #f2f5f3; line-height: 1.45; }
+  .B .bar .q small { display: block; font-weight: 400; color: #7f8c84; font-size: 12px; margin-top: 2px; }
+  .B .k { font-size: 11px; color: #7f8c84; letter-spacing: .06em; }
+  .B .v { font-size: 20px; color: #f2f5f3; margin-top: 2px; }
+  .B .v small { font-size: 12px; color: #7f8c84; }
+  .B .meter { height: 4px; background: #263029; margin-top: 8px; }
+  .B .meter i { display: block; height: 100%; background: #f0b429; }
+  .B .lock { color: #f0b429; }
+  .B .grid { display: grid; grid-template-columns: 1.25fr 1fr; height: calc(100% - 74px); }
+  .B .pane { border-right: 1px solid #263029; padding: 12px 16px; overflow: hidden; }
+  .B .pane h2 { font-size: 11px; letter-spacing: .1em; color: #7f8c84; font-weight: 600; margin: 0 0 8px;
+                display: flex; justify-content: space-between; }
+  .B table { width: 100%; border-collapse: collapse; }
+  .B th { font-size: 11px; color: #7f8c84; font-weight: 500; text-align: right; padding: 6px 6px;
+          border-bottom: 1px solid #263029; }
+  .B th:nth-child(-n+3) { text-align: left; }
+  .B td { padding: 8px 6px; border-bottom: 1px solid #18201b; text-align: right; white-space: nowrap; }
+  .B td:nth-child(-n+3) { text-align: left; }
+  .B td.t { white-space: normal; color: #eef2ef; }
+  .B .st { font-size: 12px; padding: 1px 6px; border: 1px solid; }
+  .B .s-supported { color: #5fd38d; } .B .s-refuted { color: #ff7a6b; } .B .s-inconclusive { color: #c9c08a; }
+  .B .s-running { color: #f0b429; } .B .s-proposed, .B .s-dropped { color: #7f8c84; }
+  .B .pips i { display: inline-block; width: 9px; height: 9px; margin-left: 3px; }
+  .B .pips .ok { background: #5fd38d; } .B .pips .no { background: transparent; box-shadow: inset 0 0 0 1.5px #ff7a6b; }
+  .B .muted { color: #6b776f; }
+  .B .tape div { display: grid; grid-template-columns: 92px 44px 64px 1fr; gap: 8px; padding: 6px 0;
+                 border-bottom: 1px solid #18201b; }
+  .B .help { color: #7f8c84; font-size: 12px; margin: 6px 0 10px; }
+
+  /* =========================================================
+     C · 审计档案 — light cool, sans, sidebar + case cards with test ladder
+     ========================================================= */
+  .C { background: #f3f4f6; color: #15171c; height: 100%; display: grid; grid-template-columns: 208px 1fr;
+       font-family: system-ui, "Noto Sans CJK SC", "PingFang SC", sans-serif; font-size: 14px; }
+  .C nav { background: #fff; border-right: 1px solid #dfe2e7; padding: 20px 16px; }
+  .C nav .brand { font-weight: 700; font-size: 15px; margin-bottom: 18px; }
+  .C nav a { display: block; padding: 7px 10px; color: #3b414c; text-decoration: none; border-radius: 4px; }
+  .C nav a.on { background: #eef1fb; color: #2347d6; font-weight: 600; }
+  .C nav .sub { font-size: 12px; color: #6a7180; margin: 16px 10px 6px; }
+  .C main { padding: 22px 28px; overflow: hidden; }
+  .C .crumbs { font-size: 12px; color: #6a7180; }
+  .C h1 { font-size: 22px; margin: 4px 0 4px; font-weight: 700; line-height: 1.4; }
+  .C .lede { color: #4a505c; margin: 0 0 14px; line-height: 1.6; }
+  .C .strip { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; border: 1px solid #dfe2e7; }
+  .C .strip > div { padding: 10px 14px; border-right: 1px solid #dfe2e7; }
+  .C .strip .k { font-size: 12px; color: #6a7180; } .C .strip .v { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .C .strip .v small { font-size: 12px; color: #6a7180; font-weight: 400; }
+  .C .meter { height: 6px; background: #e6e8ec; margin-top: 6px; } .C .meter i { display: block; height: 100%; background: #2347d6; }
+  .C .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .C .card { background: #fff; border: 1px solid #dfe2e7; padding: 12px 14px; }
+  .C .card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .C .card h3 { font-size: 15px; margin: 4px 0 8px; line-height: 1.45; }
+  .C .id { font-size: 12px; color: #6a7180; }
+  .C .chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+  .C .s-supported { background: #e5f4ea; color: #1d6b3a; } .C .s-refuted { background: #fbe9e7; color: #a32a1c; }
+  .C .s-inconclusive { background: #f4f0dc; color: #6b5a12; } .C .s-running { background: #e7ecfb; color: #2347d6; }
+  .C .s-proposed, .C .s-dropped { background: #eceef1; color: #4a505c; }
+  .C .ladder { border-top: 1px solid #eceef1; }
+  .C .ladder div { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; padding: 5px 0;
+                   border-bottom: 1px solid #f1f2f4; font-size: 13px; }
+  .C .ladder .decider { background: #fff6e0; margin: 0 -14px; padding: 5px 14px; }
+  .C .ok { color: #1d6b3a; } .C .no { color: #a32a1c; }
+  .C .pending { font-size: 13px; color: #4a505c; line-height: 1.6; }
+  .C .row2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 12px; }
+  .C .panel { background: #fff; border: 1px solid #dfe2e7; padding: 12px 14px; }
+  .C .panel h2 { font-size: 13px; margin: 0 0 6px; }
+  .C .ev { font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid #f1f2f4; display: grid;
+           grid-template-columns: 82px 40px 1fr; gap: 6px; }
+</style>
+</head>
+<body>
+<header class="shell-head" data-direction-preview>
+  <h1>方向预览（不是最终产品）· Shinka Research 研究界面</h1>
+  <p>三个候选用同一份内容（fixture.json）、同一视口 1440×960、同样的状态覆盖：支持 / 证伪 / 不确定 / 运行中 / 待选 / 已放弃、lockbox 未启封、预算进行中。选一个方向即可，细节之后在 DESIGN.md 里定。</p>
+</header>
+
+<section class="stage" data-direction-id="notebook">
+  <div class="stage-label"><b>A · 研究记录本</b> — 浅色暖纸、宋体、单栏加页边，像一本实验记录；结论像记账一样写出来。</div>
+  <div class="frame"><div class="A" id="A"></div></div>
+</section>
+
+<section class="stage" data-direction-id="desk">
+  <div class="stage-label"><b>B · 交易台终端</b> — 深色、等宽数字、多窗格高密度；一眼扫完所有数字。</div>
+  <div class="frame"><div class="B" id="B"></div></div>
+</section>
+
+<section class="stage" data-direction-id="audit">
+  <div class="stage-label"><b>C · 审计档案</b> — 浅冷灰、无衬线、侧栏 + 假设卡片；每张卡用"判定阶梯"标出是哪条规则定的结论。</div>
+  <div class="frame"><div class="C" id="C"></div></div>
+</section>
+
+<script id="fx" type="application/json">{
+ "direction": "BTC 永续日线：时间序列动量在扣除成本后是否仍有超额？",
+ "workspace": "btc-research",
+ "data": {
+  "bars": "2019-01-01 → 2025-02-28",
+  "n_dev": 2251,
+  "n_total": 2814,
+  "lockbox_start": "2025-03-01",
+  "lockbox_fraction": 0.2,
+  "opened": false,
+  "cost_bps": 5
+ },
+ "budget": {
+  "limit": 40.0,
+  "spent": 23.6
+ },
+ "trials": 412,
+ "hypotheses": [
+  {
+   "id": "h001",
+   "title": "20 日动量方向持仓",
+   "status": "refuted",
+   "n": 96,
+   "evidence": {
+    "val_sharpe": -0.12,
+    "dsr": 0.03,
+    "pbo": 0.61,
+    "pos_frac": "1/3",
+    "bh": 0.78,
+    "seed": 0.35
+   },
+   "checks": {
+    "val>0": false,
+    "beats_bh": false,
+    "dsr>=0.95": false,
+    "subperiod": false,
+    "pbo<=0.5": false
+   }
+  },
+  {
+   "id": "h002",
+   "title": "波动率目标仓位的动量",
+   "status": "supported",
+   "n": 142,
+   "evidence": {
+    "val_sharpe": 1.21,
+    "dsr": 0.97,
+    "pbo": 0.22,
+    "pos_frac": "3/3",
+    "bh": 0.78,
+    "seed": 0.35
+   },
+   "checks": {
+    "val>0": true,
+    "beats_bh": true,
+    "dsr>=0.95": true,
+    "subperiod": true,
+    "pbo<=0.5": true
+   }
+  },
+  {
+   "id": "h003",
+   "title": "资金费率极值后的反转",
+   "status": "inconclusive",
+   "n": 56,
+   "evidence": {
+    "val_sharpe": 0.41,
+    "dsr": 0.41,
+    "pbo": 0.38,
+    "pos_frac": "2/3",
+    "bh": 0.78,
+    "seed": 0.12
+   },
+   "checks": {
+    "val>0": true,
+    "beats_bh": false,
+    "dsr>=0.95": false,
+    "subperiod": true,
+    "pbo<=0.5": true
+   }
+  },
+  {
+   "id": "h004",
+   "title": "周末流动性缺口后的延续",
+   "status": "running",
+   "n": 118,
+   "in_sample": {
+    "best_is_sharpe": 0.93,
+    "generation": "23 / 40"
+   }
+  },
+  {
+   "id": "h005",
+   "title": "链上活跃地址领先价格",
+   "status": "proposed"
+  },
+  {
+   "id": "h006",
+   "title": "成交量突破确认",
+   "status": "dropped"
+  }
+ ],
+ "events": [
+  [
+   "10-17 09:12",
+   "h004",
+   "e01",
+   "run",
+   "第 23 代，最优样本内 Sharpe 0.93"
+  ],
+  [
+   "10-16 22:40",
+   "h002",
+   "e01",
+   "verdict",
+   "supported（规则判定）"
+  ],
+  [
+   "10-16 22:31",
+   "h002",
+   "e01",
+   "skeptic",
+   "DSR 0.97，PBO 0.22"
+  ],
+  [
+   "10-16 18:05",
+   "h003",
+   "e01",
+   "verdict",
+   "inconclusive：未跑赢买入持有"
+  ],
+  [
+   "10-15 11:20",
+   "h001",
+   "e01",
+   "verdict",
+   "refuted：验证段 Sharpe ≤ 0"
+  ]
+ ],
+ "library": {
+  "pages": 14,
+  "pending": 2
+ },
+ "points": [
+  {
+   "n": 1,
+   "h": "h001",
+   "score": 0.06,
+   "kept": true
+  },
+  {
+   "n": 2,
+   "h": "h001",
+   "score": 0.333,
+   "kept": true
+  },
+  {
+   "n": 3,
+   "h": "h001",
+   "score": 0.079,
+   "kept": false
+  },
+  {
+   "n": 4,
+   "h": "h001",
+   "score": 0.052,
+   "kept": false
+  },
+  {
+   "n": 5,
+   "h": "h001",
+   "score": -0.16,
+   "kept": false
+  },
+  {
+   "n": 6,
+   "h": "h001",
+   "score": 0.095,
+   "kept": false
+  },
+  {
+   "n": 7,
+   "h": "h001",
+   "score": 0.563,
+   "kept": true
+  },
+  {
+   "n": 8,
+   "h": "h001",
+   "score": 0.326,
+   "kept": false
+  },
+  {
+   "n": 9,
+   "h": "h001",
+   "score": 0.545,
+   "kept": false
+  },
+  {
+   "n": 10,
+   "h": "h001",
+   "score": 0.273,
+   "kept": false
+  },
+  {
+   "n": 11,
+   "h": "h001",
+   "score": 0.328,
+   "kept": false
+  },
+  {
+   "n": 12,
+   "h": "h001",
+   "score": 0.259,
+   "kept": false
+  },
+  {
+   "n": 13,
+   "h": "h001",
+   "score": -0.385,
+   "kept": false
+  },
+  {
+   "n": 14,
+   "h": "h001",
+   "score": 0.501,
+   "kept": false
+  },
+  {
+   "n": 15,
+   "h": "h001",
+   "score": 0.383,
+   "kept": false
+  },
+  {
+   "n": 16,
+   "h": "h001",
+   "score": 0.385,
+   "kept": false
+  },
+  {
+   "n": 17,
+   "h": "h001",
+   "score": -0.378,
+   "kept": false
+  },
+  {
+   "n": 18,
+   "h": "h001",
+   "score": -0.392,
+   "kept": false
+  },
+  {
+   "n": 19,
+   "h": "h001",
+   "score": -0.089,
+   "kept": false
+  },
+  {
+   "n": 20,
+   "h": "h001",
+   "score": 0.062,
+   "kept": false
+  },
+  {
+   "n": 21,
+   "h": "h001",
+   "score": 0.337,
+   "kept": false
+  },
+  {
+   "n": 22,
+   "h": "h001",
+   "score": 0.218,
+   "kept": false
+  },
+  {
+   "n": 23,
+   "h": "h001",
+   "score": 0.42,
+   "kept": false
+  },
+  {
+   "n": 24,
+   "h": "h001",
+   "score": 0.017,
+   "kept": false
+  },
+  {
+   "n": 25,
+   "h": "h001",
+   "score": 0.354,
+   "kept": false
+  },
+  {
+   "n": 26,
+   "h": "h001",
+   "score": 0.388,
+   "kept": false
+  },
+  {
+   "n": 27,
+   "h": "h001",
+   "score": 0.023,
+   "kept": false
+  },
+  {
+   "n": 28,
+   "h": "h001",
+   "score": 0.859,
+   "kept": true
+  },
+  {
+   "n": 29,
+   "h": "h001",
+   "score": 0.457,
+   "kept": false
+  },
+  {
+   "n": 30,
+   "h": "h001",
+   "score": 0.685,
+   "kept": false
+  },
+  {
+   "n": 31,
+   "h": "h001",
+   "score": 0.053,
+   "kept": false
+  },
+  {
+   "n": 32,
+   "h": "h001",
+   "score": 0.015,
+   "kept": false
+  },
+  {
+   "n": 33,
+   "h": "h001",
+   "score": 0.158,
+   "kept": false
+  },
+  {
+   "n": 34,
+   "h": "h001",
+   "score": 0.245,
+   "kept": false
+  },
+  {
+   "n": 35,
+   "h": "h001",
+   "score": 0.507,
+   "kept": false
+  },
+  {
+   "n": 36,
+   "h": "h001",
+   "score": 0.377,
+   "kept": false
+  },
+  {
+   "n": 37,
+   "h": "h001",
+   "score": 0.137,
+   "kept": false
+  },
+  {
+   "n": 38,
+   "h": "h001",
+   "score": -0.037,
+   "kept": false
+  },
+  {
+   "n": 39,
+   "h": "h001",
+   "score": 0.12,
+   "kept": false
+  },
+  {
+   "n": 40,
+   "h": "h001",
+   "score": 0.733,
+   "kept": false
+  },
+  {
+   "n": 41,
+   "h": "h001",
+   "score": 0.027,
+   "kept": false
+  },
+  {
+   "n": 42,
+   "h": "h001",
+   "score": 0.4,
+   "kept": false
+  },
+  {
+   "n": 43,
+   "h": "h001",
+   "score": 0.467,
+   "kept": false
+  },
+  {
+   "n": 44,
+   "h": "h001",
+   "score": -0.199,
+   "kept": false
+  },
+  {
+   "n": 45,
+   "h": "h001",
+   "score": 0.343,
+   "kept": false
+  },
+  {
+   "n": 46,
+   "h": "h001",
+   "score": 0.787,
+   "kept": false
+  },
+  {
+   "n": 47,
+   "h": "h001",
+   "score": -0.371,
+   "kept": false
+  },
+  {
+   "n": 48,
+   "h": "h001",
+   "score": 0.225,
+   "kept": false
+  },
+  {
+   "n": 49,
+   "h": "h001",
+   "score": 0.305,
+   "kept": false
+  },
+  {
+   "n": 50,
+   "h": "h001",
+   "score": 0.06,
+   "kept": false
+  },
+  {
+   "n": 51,
+   "h": "h001",
+   "score": 0.524,
+   "kept": false
+  },
+  {
+   "n": 52,
+   "h": "h001",
+   "score": 0.332,
+   "kept": false
+  },
+  {
+   "n": 53,
+   "h": "h001",
+   "score": -0.155,
+   "kept": false
+  },
+  {
+   "n": 54,
+   "h": "h001",
+   "score": 0.652,
+   "kept": false
+  },
+  {
+   "n": 55,
+   "h": "h001",
+   "score": 0.6,
+   "kept": false
+  },
+  {
+   "n": 56,
+   "h": "h001",
+   "score": 0.701,
+   "kept": false
+  },
+  {
+   "n": 57,
+   "h": "h001",
+   "score": 0.878,
+   "kept": true
+  },
+  {
+   "n": 58,
+   "h": "h001",
+   "score": 0.505,
+   "kept": false
+  },
+  {
+   "n": 59,
+   "h": "h001",
+   "score": 0.424,
+   "kept": false
+  },
+  {
+   "n": 60,
+   "h": "h001",
+   "score": -0.069,
+   "kept": false
+  },
+  {
+   "n": 61,
+   "h": "h001",
+   "score": 0.605,
+   "kept": false
+  },
+  {
+   "n": 62,
+   "h": "h001",
+   "score": 0.18,
+   "kept": false
+  },
+  {
+   "n": 63,
+   "h": "h001",
+   "score": 0.24,
+   "kept": false
+  },
+  {
+   "n": 64,
+   "h": "h001",
+   "score": -0.041,
+   "kept": false
+  },
+  {
+   "n": 65,
+   "h": "h001",
+   "score": 0.067,
+   "kept": false
+  },
+  {
+   "n": 66,
+   "h": "h001",
+   "score": 0.224,
+   "kept": false
+  },
+  {
+   "n": 67,
+   "h": "h001",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 68,
+   "h": "h001",
+   "score": -0.293,
+   "kept": false
+  },
+  {
+   "n": 69,
+   "h": "h001",
+   "score": -0.088,
+   "kept": false
+  },
+  {
+   "n": 70,
+   "h": "h001",
+   "score": 0.51,
+   "kept": false
+  },
+  {
+   "n": 71,
+   "h": "h001",
+   "score": 0.935,
+   "kept": true
+  },
+  {
+   "n": 72,
+   "h": "h001",
+   "score": 0.636,
+   "kept": false
+  },
+  {
+   "n": 73,
+   "h": "h001",
+   "score": -0.227,
+   "kept": false
+  },
+  {
+   "n": 74,
+   "h": "h001",
+   "score": -0.439,
+   "kept": false
+  },
+  {
+   "n": 75,
+   "h": "h001",
+   "score": 0.571,
+   "kept": false
+  },
+  {
+   "n": 76,
+   "h": "h001",
+   "score": 0.192,
+   "kept": false
+  },
+  {
+   "n": 77,
+   "h": "h001",
+   "score": 0.062,
+   "kept": false
+  },
+  {
+   "n": 78,
+   "h": "h001",
+   "score": 0.8,
+   "kept": false
+  },
+  {
+   "n": 79,
+   "h": "h001",
+   "score": 0.848,
+   "kept": false
+  },
+  {
+   "n": 80,
+   "h": "h001",
+   "score": 0.521,
+   "kept": false
+  },
+  {
+   "n": 81,
+   "h": "h001",
+   "score": 0.556,
+   "kept": false
+  },
+  {
+   "n": 82,
+   "h": "h001",
+   "score": 0.626,
+   "kept": false
+  },
+  {
+   "n": 83,
+   "h": "h001",
+   "score": 1.036,
+   "kept": true
+  },
+  {
+   "n": 84,
+   "h": "h001",
+   "score": 0.699,
+   "kept": false
+  },
+  {
+   "n": 85,
+   "h": "h001",
+   "score": 0.668,
+   "kept": false
+  },
+  {
+   "n": 86,
+   "h": "h001",
+   "score": 0.682,
+   "kept": false
+  },
+  {
+   "n": 87,
+   "h": "h001",
+   "score": -0.055,
+   "kept": false
+  },
+  {
+   "n": 88,
+   "h": "h001",
+   "score": 0.947,
+   "kept": false
+  },
+  {
+   "n": 89,
+   "h": "h001",
+   "score": 0.836,
+   "kept": false
+  },
+  {
+   "n": 90,
+   "h": "h001",
+   "score": 0.691,
+   "kept": false
+  },
+  {
+   "n": 91,
+   "h": "h001",
+   "score": -0.181,
+   "kept": false
+  },
+  {
+   "n": 92,
+   "h": "h001",
+   "score": 0.292,
+   "kept": false
+  },
+  {
+   "n": 93,
+   "h": "h001",
+   "score": 0.813,
+   "kept": false
+  },
+  {
+   "n": 94,
+   "h": "h001",
+   "score": -0.112,
+   "kept": false
+  },
+  {
+   "n": 95,
+   "h": "h001",
+   "score": 0.462,
+   "kept": false
+  },
+  {
+   "n": 96,
+   "h": "h001",
+   "score": 0.887,
+   "kept": false
+  },
+  {
+   "n": 97,
+   "h": "h002",
+   "score": -0.074,
+   "kept": true
+  },
+  {
+   "n": 98,
+   "h": "h002",
+   "score": 1.098,
+   "kept": true
+  },
+  {
+   "n": 99,
+   "h": "h002",
+   "score": 0.679,
+   "kept": false
+  },
+  {
+   "n": 100,
+   "h": "h002",
+   "score": 0.402,
+   "kept": false
+  },
+  {
+   "n": 101,
+   "h": "h002",
+   "score": 0.596,
+   "kept": false
+  },
+  {
+   "n": 102,
+   "h": "h002",
+   "score": 0.73,
+   "kept": false
+  },
+  {
+   "n": 103,
+   "h": "h002",
+   "score": 0.522,
+   "kept": false
+  },
+  {
+   "n": 104,
+   "h": "h002",
+   "score": 0.936,
+   "kept": false
+  },
+  {
+   "n": 105,
+   "h": "h002",
+   "score": 0.217,
+   "kept": false
+  },
+  {
+   "n": 106,
+   "h": "h002",
+   "score": 0.32,
+   "kept": false
+  },
+  {
+   "n": 107,
+   "h": "h002",
+   "score": 0.907,
+   "kept": false
+  },
+  {
+   "n": 108,
+   "h": "h002",
+   "score": 0.505,
+   "kept": false
+  },
+  {
+   "n": 109,
+   "h": "h002",
+   "score": 0.146,
+   "kept": false
+  },
+  {
+   "n": 110,
+   "h": "h002",
+   "score": 0.881,
+   "kept": false
+  },
+  {
+   "n": 111,
+   "h": "h002",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 112,
+   "h": "h002",
+   "score": 0.332,
+   "kept": false
+  },
+  {
+   "n": 113,
+   "h": "h002",
+   "score": -0.038,
+   "kept": false
+  },
+  {
+   "n": 114,
+   "h": "h002",
+   "score": 0.464,
+   "kept": false
+  },
+  {
+   "n": 115,
+   "h": "h002",
+   "score": 0.462,
+   "kept": false
+  },
+  {
+   "n": 116,
+   "h": "h002",
+   "score": 0.407,
+   "kept": false
+  },
+  {
+   "n": 117,
+   "h": "h002",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 118,
+   "h": "h002",
+   "score": 0.123,
+   "kept": false
+  },
+  {
+   "n": 119,
+   "h": "h002",
+   "score": 1.042,
+   "kept": false
+  },
+  {
+   "n": 120,
+   "h": "h002",
+   "score": 0.035,
+   "kept": false
+  },
+  {
+   "n": 121,
+   "h": "h002",
+   "score": 0.231,
+   "kept": false
+  },
+  {
+   "n": 122,
+   "h": "h002",
+   "score": 0.803,
+   "kept": false
+  },
+  {
+   "n": 123,
+   "h": "h002",
+   "score": 1.005,
+   "kept": false
+  },
+  {
+   "n": 124,
+   "h": "h002",
+   "score": 0.902,
+   "kept": false
+  },
+  {
+   "n": 125,
+   "h": "h002",
+   "score": 0.7,
+   "kept": false
+  },
+  {
+   "n": 126,
+   "h": "h002",
+   "score": 0.623,
+   "kept": false
+  },
+  {
+   "n": 127,
+   "h": "h002",
+   "score": 0.631,
+   "kept": false
+  },
+  {
+   "n": 128,
+   "h": "h002",
+   "score": 0.804,
+   "kept": false
+  },
+  {
+   "n": 129,
+   "h": "h002",
+   "score": 0.508,
+   "kept": false
+  },
+  {
+   "n": 130,
+   "h": "h002",
+   "score": 0.693,
+   "kept": false
+  },
+  {
+   "n": 131,
+   "h": "h002",
+   "score": 0.815,
+   "kept": false
+  },
+  {
+   "n": 132,
+   "h": "h002",
+   "score": 0.59,
+   "kept": false
+  },
+  {
+   "n": 133,
+   "h": "h002",
+   "score": 0.9,
+   "kept": false
+  },
+  {
+   "n": 134,
+   "h": "h002",
+   "score": 0.824,
+   "kept": false
+  },
+  {
+   "n": 135,
+   "h": "h002",
+   "score": 1.406,
+   "kept": true
+  },
+  {
+   "n": 136,
+   "h": "h002",
+   "score": 0.736,
+   "kept": false
+  },
+  {
+   "n": 137,
+   "h": "h002",
+   "score": 0.439,
+   "kept": false
+  },
+  {
+   "n": 138,
+   "h": "h002",
+   "score": 0.465,
+   "kept": false
+  },
+  {
+   "n": 139,
+   "h": "h002",
+   "score": 0.613,
+   "kept": false
+  },
+  {
+   "n": 140,
+   "h": "h002",
+   "score": 0.992,
+   "kept": false
+  },
+  {
+   "n": 141,
+   "h": "h002",
+   "score": 0.491,
+   "kept": false
+  },
+  {
+   "n": 142,
+   "h": "h002",
+   "score": 0.784,
+   "kept": false
+  },
+  {
+   "n": 143,
+   "h": "h002",
+   "score": 1.369,
+   "kept": false
+  },
+  {
+   "n": 144,
+   "h": "h002",
+   "score": -0.388,
+   "kept": false
+  },
+  {
+   "n": 145,
+   "h": "h002",
+   "score": 0.192,
+   "kept": false
+  },
+  {
+   "n": 146,
+   "h": "h002",
+   "score": 0.744,
+   "kept": false
+  },
+  {
+   "n": 147,
+   "h": "h002",
+   "score": 0.809,
+   "kept": false
+  },
+  {
+   "n": 148,
+   "h": "h002",
+   "score": 0.749,
+   "kept": false
+  },
+  {
+   "n": 149,
+   "h": "h002",
+   "score": 0.486,
+   "kept": false
+  },
+  {
+   "n": 150,
+   "h": "h002",
+   "score": 0.924,
+   "kept": false
+  },
+  {
+   "n": 151,
+   "h": "h002",
+   "score": 0.779,
+   "kept": false
+  },
+  {
+   "n": 152,
+   "h": "h002",
+   "score": 0.461,
+   "kept": false
+  },
+  {
+   "n": 153,
+   "h": "h002",
+   "score": 1.646,
+   "kept": true
+  },
+  {
+   "n": 154,
+   "h": "h002",
+   "score": 0.82,
+   "kept": false
+  },
+  {
+   "n": 155,
+   "h": "h002",
+   "score": 0.46,
+   "kept": false
+  },
+  {
+   "n": 156,
+   "h": "h002",
+   "score": 0.646,
+   "kept": false
+  },
+  {
+   "n": 157,
+   "h": "h002",
+   "score": 0.6,
+   "kept": false
+  },
+  {
+   "n": 158,
+   "h": "h002",
+   "score": 0.669,
+   "kept": false
+  },
+  {
+   "n": 159,
+   "h": "h002",
+   "score": -0.393,
+   "kept": false
+  },
+  {
+   "n": 160,
+   "h": "h002",
+   "score": 0.507,
+   "kept": false
+  },
+  {
+   "n": 161,
+   "h": "h002",
+   "score": 1.109,
+   "kept": false
+  },
+  {
+   "n": 162,
+   "h": "h002",
+   "score": 0.243,
+   "kept": false
+  },
+  {
+   "n": 163,
+   "h": "h002",
+   "score": 0.687,
+   "kept": false
+  },
+  {
+   "n": 164,
+   "h": "h002",
+   "score": 1.099,
+   "kept": false
+  },
+  {
+   "n": 165,
+   "h": "h002",
+   "score": 1.064,
+   "kept": false
+  },
+  {
+   "n": 166,
+   "h": "h002",
+   "score": 1.322,
+   "kept": false
+  },
+  {
+   "n": 167,
+   "h": "h002",
+   "score": 0.049,
+   "kept": false
+  },
+  {
+   "n": 168,
+   "h": "h002",
+   "score": 0.593,
+   "kept": false
+  },
+  {
+   "n": 169,
+   "h": "h002",
+   "score": 0.602,
+   "kept": false
+  },
+  {
+   "n": 170,
+   "h": "h002",
+   "score": 0.991,
+   "kept": false
+  },
+  {
+   "n": 171,
+   "h": "h002",
+   "score": 1.183,
+   "kept": false
+  },
+  {
+   "n": 172,
+   "h": "h002",
+   "score": -0.323,
+   "kept": false
+  },
+  {
+   "n": 173,
+   "h": "h002",
+   "score": 1.189,
+   "kept": false
+  },
+  {
+   "n": 174,
+   "h": "h002",
+   "score": 0.179,
+   "kept": false
+  },
+  {
+   "n": 175,
+   "h": "h002",
+   "score": 1.035,
+   "kept": false
+  },
+  {
+   "n": 176,
+   "h": "h002",
+   "score": 0.169,
+   "kept": false
+  },
+  {
+   "n": 177,
+   "h": "h002",
+   "score": 0.84,
+   "kept": false
+  },
+  {
+   "n": 178,
+   "h": "h002",
+   "score": 1.252,
+   "kept": false
+  },
+  {
+   "n": 179,
+   "h": "h002",
+   "score": 0.718,
+   "kept": false
+  },
+  {
+   "n": 180,
+   "h": "h002",
+   "score": 0.858,
+   "kept": false
+  },
+  {
+   "n": 181,
+   "h": "h002",
+   "score": 1.105,
+   "kept": false
+  },
+  {
+   "n": 182,
+   "h": "h002",
+   "score": 0.847,
+   "kept": false
+  },
+  {
+   "n": 183,
+   "h": "h002",
+   "score": 0.759,
+   "kept": false
+  },
+  {
+   "n": 184,
+   "h": "h002",
+   "score": 1.411,
+   "kept": false
+  },
+  {
+   "n": 185,
+   "h": "h002",
+   "score": 1.221,
+   "kept": false
+  },
+  {
+   "n": 186,
+   "h": "h002",
+   "score": 0.688,
+   "kept": false
+  },
+  {
+   "n": 187,
+   "h": "h002",
+   "score": 1.908,
+   "kept": true
+  },
+  {
+   "n": 188,
+   "h": "h002",
+   "score": 0.355,
+   "kept": false
+  },
+  {
+   "n": 189,
+   "h": "h002",
+   "score": 1.184,
+   "kept": false
+  },
+  {
+   "n": 190,
+   "h": "h002",
+   "score": 0.716,
+   "kept": false
+  },
+  {
+   "n": 191,
+   "h": "h002",
+   "score": 0.879,
+   "kept": false
+  },
+  {
+   "n": 192,
+   "h": "h002",
+   "score": 1.112,
+   "kept": false
+  },
+  {
+   "n": 193,
+   "h": "h002",
+   "score": 0.923,
+   "kept": false
+  },
+  {
+   "n": 194,
+   "h": "h002",
+   "score": 1.093,
+   "kept": false
+  },
+  {
+   "n": 195,
+   "h": "h002",
+   "score": 0.231,
+   "kept": false
+  },
+  {
+   "n": 196,
+   "h": "h002",
+   "score": 0.242,
+   "kept": false
+  },
+  {
+   "n": 197,
+   "h": "h002",
+   "score": 1.096,
+   "kept": false
+  },
+  {
+   "n": 198,
+   "h": "h002",
+   "score": 0.469,
+   "kept": false
+  },
+  {
+   "n": 199,
+   "h": "h002",
+   "score": 0.447,
+   "kept": false
+  },
+  {
+   "n": 200,
+   "h": "h002",
+   "score": 0.274,
+   "kept": false
+  },
+  {
+   "n": 201,
+   "h": "h002",
+   "score": 1.373,
+   "kept": false
+  },
+  {
+   "n": 202,
+   "h": "h002",
+   "score": 1.169,
+   "kept": false
+  },
+  {
+   "n": 203,
+   "h": "h002",
+   "score": 1.463,
+   "kept": false
+  },
+  {
+   "n": 204,
+   "h": "h002",
+   "score": 0.503,
+   "kept": false
+  },
+  {
+   "n": 205,
+   "h": "h002",
+   "score": 0.882,
+   "kept": false
+  },
+  {
+   "n": 206,
+   "h": "h002",
+   "score": 0.43,
+   "kept": false
+  },
+  {
+   "n": 207,
+   "h": "h002",
+   "score": 1.196,
+   "kept": false
+  },
+  {
+   "n": 208,
+   "h": "h002",
+   "score": 1.53,
+   "kept": false
+  },
+  {
+   "n": 209,
+   "h": "h002",
+   "score": 0.542,
+   "kept": false
+  },
+  {
+   "n": 210,
+   "h": "h002",
+   "score": 1.526,
+   "kept": false
+  },
+  {
+   "n": 211,
+   "h": "h002",
+   "score": 1.301,
+   "kept": false
+  },
+  {
+   "n": 212,
+   "h": "h002",
+   "score": 0.839,
+   "kept": false
+  },
+  {
+   "n": 213,
+   "h": "h002",
+   "score": 0.125,
+   "kept": false
+  },
+  {
+   "n": 214,
+   "h": "h002",
+   "score": 1.481,
+   "kept": false
+  },
+  {
+   "n": 215,
+   "h": "h002",
+   "score": 0.883,
+   "kept": false
+  },
+  {
+   "n": 216,
+   "h": "h002",
+   "score": 0.685,
+   "kept": false
+  },
+  {
+   "n": 217,
+   "h": "h002",
+   "score": 1.09,
+   "kept": false
+  },
+  {
+   "n": 218,
+   "h": "h002",
+   "score": 1.098,
+   "kept": false
+  },
+  {
+   "n": 219,
+   "h": "h002",
+   "score": 1.537,
+   "kept": false
+  },
+  {
+   "n": 220,
+   "h": "h002",
+   "score": 0.534,
+   "kept": false
+  },
+  {
+   "n": 221,
+   "h": "h002",
+   "score": 1.4,
+   "kept": false
+  },
+  {
+   "n": 222,
+   "h": "h002",
+   "score": 1.545,
+   "kept": false
+  },
+  {
+   "n": 223,
+   "h": "h002",
+   "score": 1.535,
+   "kept": false
+  },
+  {
+   "n": 224,
+   "h": "h002",
+   "score": 0.886,
+   "kept": false
+  },
+  {
+   "n": 225,
+   "h": "h002",
+   "score": 0.664,
+   "kept": false
+  },
+  {
+   "n": 226,
+   "h": "h002",
+   "score": 1.373,
+   "kept": false
+  },
+  {
+   "n": 227,
+   "h": "h002",
+   "score": 1.016,
+   "kept": false
+  },
+  {
+   "n": 228,
+   "h": "h002",
+   "score": 1.024,
+   "kept": false
+  },
+  {
+   "n": 229,
+   "h": "h002",
+   "score": 1.548,
+   "kept": false
+  },
+  {
+   "n": 230,
+   "h": "h002",
+   "score": 0.877,
+   "kept": false
+  },
+  {
+   "n": 231,
+   "h": "h002",
+   "score": 0.067,
+   "kept": false
+  },
+  {
+   "n": 232,
+   "h": "h002",
+   "score": 0.835,
+   "kept": false
+  },
+  {
+   "n": 233,
+   "h": "h002",
+   "score": 0.252,
+   "kept": false
+  },
+  {
+   "n": 234,
+   "h": "h002",
+   "score": 1.326,
+   "kept": false
+  },
+  {
+   "n": 235,
+   "h": "h002",
+   "score": 1.129,
+   "kept": false
+  },
+  {
+   "n": 236,
+   "h": "h002",
+   "score": 0.762,
+   "kept": false
+  },
+  {
+   "n": 237,
+   "h": "h002",
+   "score": 1.006,
+   "kept": false
+  },
+  {
+   "n": 238,
+   "h": "h002",
+   "score": 1.347,
+   "kept": false
+  },
+  {
+   "n": 239,
+   "h": "h003",
+   "score": 0.124,
+   "kept": true
+  },
+  {
+   "n": 240,
+   "h": "h003",
+   "score": 0.502,
+   "kept": true
+  },
+  {
+   "n": 241,
+   "h": "h003",
+   "score": 0.09,
+   "kept": false
+  },
+  {
+   "n": 242,
+   "h": "h003",
+   "score": 0.424,
+   "kept": false
+  },
+  {
+   "n": 243,
+   "h": "h003",
+   "score": 0.563,
+   "kept": true
+  },
+  {
+   "n": 244,
+   "h": "h003",
+   "score": 0.603,
+   "kept": true
+  },
+  {
+   "n": 245,
+   "h": "h003",
+   "score": -0.078,
+   "kept": false
+  },
+  {
+   "n": 246,
+   "h": "h003",
+   "score": 0.392,
+   "kept": false
+  },
+  {
+   "n": 247,
+   "h": "h003",
+   "score": -0.431,
+   "kept": false
+  },
+  {
+   "n": 248,
+   "h": "h003",
+   "score": -0.189,
+   "kept": false
+  },
+  {
+   "n": 249,
+   "h": "h003",
+   "score": -0.449,
+   "kept": false
+  },
+  {
+   "n": 250,
+   "h": "h003",
+   "score": 0.465,
+   "kept": false
+  },
+  {
+   "n": 251,
+   "h": "h003",
+   "score": -0.222,
+   "kept": false
+  },
+  {
+   "n": 252,
+   "h": "h003",
+   "score": 0.148,
+   "kept": false
+  },
+  {
+   "n": 253,
+   "h": "h003",
+   "score": 0.098,
+   "kept": false
+  },
+  {
+   "n": 254,
+   "h": "h003",
+   "score": 0.151,
+   "kept": false
+  },
+  {
+   "n": 255,
+   "h": "h003",
+   "score": -0.013,
+   "kept": false
+  },
+  {
+   "n": 256,
+   "h": "h003",
+   "score": 0.238,
+   "kept": false
+  },
+  {
+   "n": 257,
+   "h": "h003",
+   "score": 0.709,
+   "kept": true
+  },
+  {
+   "n": 258,
+   "h": "h003",
+   "score": 0.189,
+   "kept": false
+  },
+  {
+   "n": 259,
+   "h": "h003",
+   "score": 0.339,
+   "kept": false
+  },
+  {
+   "n": 260,
+   "h": "h003",
+   "score": 0.484,
+   "kept": false
+  },
+  {
+   "n": 261,
+   "h": "h003",
+   "score": 0.129,
+   "kept": false
+  },
+  {
+   "n": 262,
+   "h": "h003",
+   "score": -0.186,
+   "kept": false
+  },
+  {
+   "n": 263,
+   "h": "h003",
+   "score": 0.029,
+   "kept": false
+  },
+  {
+   "n": 264,
+   "h": "h003",
+   "score": 0.522,
+   "kept": false
+  },
+  {
+   "n": 265,
+   "h": "h003",
+   "score": -0.29,
+   "kept": false
+  },
+  {
+   "n": 266,
+   "h": "h003",
+   "score": 0.029,
+   "kept": false
+  },
+  {
+   "n": 267,
+   "h": "h003",
+   "score": 0.514,
+   "kept": false
+  },
+  {
+   "n": 268,
+   "h": "h003",
+   "score": 0.454,
+   "kept": false
+  },
+  {
+   "n": 269,
+   "h": "h003",
+   "score": 0.222,
+   "kept": false
+  },
+  {
+   "n": 270,
+   "h": "h003",
+   "score": 0.466,
+   "kept": false
+  },
+  {
+   "n": 271,
+   "h": "h003",
+   "score": 0.278,
+   "kept": false
+  },
+  {
+   "n": 272,
+   "h": "h003",
+   "score": -0.122,
+   "kept": false
+  },
+  {
+   "n": 273,
+   "h": "h003",
+   "score": -0.233,
+   "kept": false
+  },
+  {
+   "n": 274,
+   "h": "h003",
+   "score": 0.048,
+   "kept": false
+  },
+  {
+   "n": 275,
+   "h": "h003",
+   "score": 0.521,
+   "kept": false
+  },
+  {
+   "n": 276,
+   "h": "h003",
+   "score": 0.078,
+   "kept": false
+  },
+  {
+   "n": 277,
+   "h": "h003",
+   "score": -0.019,
+   "kept": false
+  },
+  {
+   "n": 278,
+   "h": "h003",
+   "score": 0.025,
+   "kept": false
+  },
+  {
+   "n": 279,
+   "h": "h003",
+   "score": -0.2,
+   "kept": false
+  },
+  {
+   "n": 280,
+   "h": "h003",
+   "score": 0.229,
+   "kept": false
+  },
+  {
+   "n": 281,
+   "h": "h003",
+   "score": -0.086,
+   "kept": false
+  },
+  {
+   "n": 282,
+   "h": "h003",
+   "score": 0.381,
+   "kept": false
+  },
+  {
+   "n": 283,
+   "h": "h003",
+   "score": -0.432,
+   "kept": false
+  },
+  {
+   "n": 284,
+   "h": "h003",
+   "score": 0.378,
+   "kept": false
+  },
+  {
+   "n": 285,
+   "h": "h003",
+   "score": 0.092,
+   "kept": false
+  },
+  {
+   "n": 286,
+   "h": "h003",
+   "score": -0.295,
+   "kept": false
+  },
+  {
+   "n": 287,
+   "h": "h003",
+   "score": 0.509,
+   "kept": false
+  },
+  {
+   "n": 288,
+   "h": "h003",
+   "score": 0.213,
+   "kept": false
+  },
+  {
+   "n": 289,
+   "h": "h003",
+   "score": -0.369,
+   "kept": false
+  },
+  {
+   "n": 290,
+   "h": "h003",
+   "score": 0.041,
+   "kept": false
+  },
+  {
+   "n": 291,
+   "h": "h003",
+   "score": 0.395,
+   "kept": false
+  },
+  {
+   "n": 292,
+   "h": "h003",
+   "score": 0.174,
+   "kept": false
+  },
+  {
+   "n": 293,
+   "h": "h003",
+   "score": 0.55,
+   "kept": false
+  },
+  {
+   "n": 294,
+   "h": "h003",
+   "score": 0.544,
+   "kept": false
+  },
+  {
+   "n": 295,
+   "h": "h004",
+   "score": 0.553,
+   "kept": true
+  },
+  {
+   "n": 296,
+   "h": "h004",
+   "score": 0.428,
+   "kept": false
+  },
+  {
+   "n": 297,
+   "h": "h004",
+   "score": 0.815,
+   "kept": true
+  },
+  {
+   "n": 298,
+   "h": "h004",
+   "score": 0.563,
+   "kept": false
+  },
+  {
+   "n": 299,
+   "h": "h004",
+   "score": 0.487,
+   "kept": false
+  },
+  {
+   "n": 300,
+   "h": "h004",
+   "score": -0.472,
+   "kept": false
+  },
+  {
+   "n": 301,
+   "h": "h004",
+   "score": 0.665,
+   "kept": false
+  },
+  {
+   "n": 302,
+   "h": "h004",
+   "score": 0.826,
+   "kept": true
+  },
+  {
+   "n": 303,
+   "h": "h004",
+   "score": 0.219,
+   "kept": false
+  },
+  {
+   "n": 304,
+   "h": "h004",
+   "score": 0.158,
+   "kept": false
+  },
+  {
+   "n": 305,
+   "h": "h004",
+   "score": 1.077,
+   "kept": true
+  },
+  {
+   "n": 306,
+   "h": "h004",
+   "score": -0.324,
+   "kept": false
+  },
+  {
+   "n": 307,
+   "h": "h004",
+   "score": 0.526,
+   "kept": false
+  },
+  {
+   "n": 308,
+   "h": "h004",
+   "score": 1.273,
+   "kept": true
+  },
+  {
+   "n": 309,
+   "h": "h004",
+   "score": 0.004,
+   "kept": false
+  },
+  {
+   "n": 310,
+   "h": "h004",
+   "score": 0.622,
+   "kept": false
+  },
+  {
+   "n": 311,
+   "h": "h004",
+   "score": 1.081,
+   "kept": false
+  },
+  {
+   "n": 312,
+   "h": "h004",
+   "score": 0.322,
+   "kept": false
+  },
+  {
+   "n": 313,
+   "h": "h004",
+   "score": 0.585,
+   "kept": false
+  },
+  {
+   "n": 314,
+   "h": "h004",
+   "score": 0.719,
+   "kept": false
+  },
+  {
+   "n": 315,
+   "h": "h004",
+   "score": 0.036,
+   "kept": false
+  },
+  {
+   "n": 316,
+   "h": "h004",
+   "score": 0.35,
+   "kept": false
+  },
+  {
+   "n": 317,
+   "h": "h004",
+   "score": 0.499,
+   "kept": false
+  },
+  {
+   "n": 318,
+   "h": "h004",
+   "score": 0.706,
+   "kept": false
+  },
+  {
+   "n": 319,
+   "h": "h004",
+   "score": 0.383,
+   "kept": false
+  },
+  {
+   "n": 320,
+   "h": "h004",
+   "score": 0.326,
+   "kept": false
+  },
+  {
+   "n": 321,
+   "h": "h004",
+   "score": 0.018,
+   "kept": false
+  },
+  {
+   "n": 322,
+   "h": "h004",
+   "score": 0.272,
+   "kept": false
+  },
+  {
+   "n": 323,
+   "h": "h004",
+   "score": 0.751,
+   "kept": false
+  },
+  {
+   "n": 324,
+   "h": "h004",
+   "score": 0.455,
+   "kept": false
+  },
+  {
+   "n": 325,
+   "h": "h004",
+   "score": 0.096,
+   "kept": false
+  },
+  {
+   "n": 326,
+   "h": "h004",
+   "score": 0.104,
+   "kept": false
+  },
+  {
+   "n": 327,
+   "h": "h004",
+   "score": 1.441,
+   "kept": true
+  },
+  {
+   "n": 328,
+   "h": "h004",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 329,
+   "h": "h004",
+   "score": 0.678,
+   "kept": false
+  },
+  {
+   "n": 330,
+   "h": "h004",
+   "score": -0.545,
+   "kept": false
+  },
+  {
+   "n": 331,
+   "h": "h004",
+   "score": 0.68,
+   "kept": false
+  },
+  {
+   "n": 332,
+   "h": "h004",
+   "score": 0.631,
+   "kept": false
+  },
+  {
+   "n": 333,
+   "h": "h004",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 334,
+   "h": "h004",
+   "score": 0.619,
+   "kept": false
+  },
+  {
+   "n": 335,
+   "h": "h004",
+   "score": 0.434,
+   "kept": false
+  },
+  {
+   "n": 336,
+   "h": "h004",
+   "score": 0.663,
+   "kept": false
+  },
+  {
+   "n": 337,
+   "h": "h004",
+   "score": -0.271,
+   "kept": false
+  },
+  {
+   "n": 338,
+   "h": "h004",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 339,
+   "h": "h004",
+   "score": 0.599,
+   "kept": false
+  },
+  {
+   "n": 340,
+   "h": "h004",
+   "score": 0.213,
+   "kept": false
+  },
+  {
+   "n": 341,
+   "h": "h004",
+   "score": 0.988,
+   "kept": false
+  },
+  {
+   "n": 342,
+   "h": "h004",
+   "score": 1.176,
+   "kept": false
+  },
+  {
+   "n": 343,
+   "h": "h004",
+   "score": -0.041,
+   "kept": false
+  },
+  {
+   "n": 344,
+   "h": "h004",
+   "score": 0.243,
+   "kept": false
+  },
+  {
+   "n": 345,
+   "h": "h004",
+   "score": 0.611,
+   "kept": false
+  },
+  {
+   "n": 346,
+   "h": "h004",
+   "score": 0.574,
+   "kept": false
+  },
+  {
+   "n": 347,
+   "h": "h004",
+   "score": 0.357,
+   "kept": false
+  },
+  {
+   "n": 348,
+   "h": "h004",
+   "score": 0.142,
+   "kept": false
+  },
+  {
+   "n": 349,
+   "h": "h004",
+   "score": 1.322,
+   "kept": false
+  },
+  {
+   "n": 350,
+   "h": "h004",
+   "score": 0.914,
+   "kept": false
+  },
+  {
+   "n": 351,
+   "h": "h004",
+   "score": 0.07,
+   "kept": false
+  },
+  {
+   "n": 352,
+   "h": "h004",
+   "score": 0.017,
+   "kept": false
+  },
+  {
+   "n": 353,
+   "h": "h004",
+   "score": 1.179,
+   "kept": false
+  },
+  {
+   "n": 354,
+   "h": "h004",
+   "score": 0.912,
+   "kept": false
+  },
+  {
+   "n": 355,
+   "h": "h004",
+   "score": 1.232,
+   "kept": false
+  },
+  {
+   "n": 356,
+   "h": "h004",
+   "score": 0.852,
+   "kept": false
+  },
+  {
+   "n": 357,
+   "h": "h004",
+   "score": 0.217,
+   "kept": false
+  },
+  {
+   "n": 358,
+   "h": "h004",
+   "score": 0.651,
+   "kept": false
+  },
+  {
+   "n": 359,
+   "h": "h004",
+   "score": -0.265,
+   "kept": false
+  },
+  {
+   "n": 360,
+   "h": "h004",
+   "score": 0.276,
+   "kept": false
+  },
+  {
+   "n": 361,
+   "h": "h004",
+   "score": 0.542,
+   "kept": false
+  },
+  {
+   "n": 362,
+   "h": "h004",
+   "score": 0.767,
+   "kept": false
+  },
+  {
+   "n": 363,
+   "h": "h004",
+   "score": 0.296,
+   "kept": false
+  },
+  {
+   "n": 364,
+   "h": "h004",
+   "score": 0.529,
+   "kept": false
+  },
+  {
+   "n": 365,
+   "h": "h004",
+   "score": 0.754,
+   "kept": false
+  },
+  {
+   "n": 366,
+   "h": "h004",
+   "score": 0.727,
+   "kept": false
+  },
+  {
+   "n": 367,
+   "h": "h004",
+   "score": 0.83,
+   "kept": false
+  },
+  {
+   "n": 368,
+   "h": "h004",
+   "score": 0.671,
+   "kept": false
+  },
+  {
+   "n": 369,
+   "h": "h004",
+   "score": 0.473,
+   "kept": false
+  },
+  {
+   "n": 370,
+   "h": "h004",
+   "score": 0.9,
+   "kept": false
+  },
+  {
+   "n": 371,
+   "h": "h004",
+   "score": 0.623,
+   "kept": false
+  },
+  {
+   "n": 372,
+   "h": "h004",
+   "score": 0.294,
+   "kept": false
+  },
+  {
+   "n": 373,
+   "h": "h004",
+   "score": 0.374,
+   "kept": false
+  },
+  {
+   "n": 374,
+   "h": "h004",
+   "score": 0.616,
+   "kept": false
+  },
+  {
+   "n": 375,
+   "h": "h004",
+   "score": 0.578,
+   "kept": false
+  },
+  {
+   "n": 376,
+   "h": "h004",
+   "score": 0.684,
+   "kept": false
+  },
+  {
+   "n": 377,
+   "h": "h004",
+   "score": 0.628,
+   "kept": false
+  },
+  {
+   "n": 378,
+   "h": "h004",
+   "score": 0.699,
+   "kept": false
+  },
+  {
+   "n": 379,
+   "h": "h004",
+   "score": 0.585,
+   "kept": false
+  },
+  {
+   "n": 380,
+   "h": "h004",
+   "score": 0.162,
+   "kept": false
+  },
+  {
+   "n": 381,
+   "h": "h004",
+   "score": 0.804,
+   "kept": false
+  },
+  {
+   "n": 382,
+   "h": "h004",
+   "score": 1.048,
+   "kept": false
+  },
+  {
+   "n": 383,
+   "h": "h004",
+   "score": 0.817,
+   "kept": false
+  },
+  {
+   "n": 384,
+   "h": "h004",
+   "score": 0.584,
+   "kept": false
+  },
+  {
+   "n": 385,
+   "h": "h004",
+   "score": 0.83,
+   "kept": false
+  },
+  {
+   "n": 386,
+   "h": "h004",
+   "score": 0.297,
+   "kept": false
+  },
+  {
+   "n": 387,
+   "h": "h004",
+   "score": -0.053,
+   "kept": false
+  },
+  {
+   "n": 388,
+   "h": "h004",
+   "score": 0.695,
+   "kept": false
+  },
+  {
+   "n": 389,
+   "h": "h004",
+   "score": 0.322,
+   "kept": false
+  },
+  {
+   "n": 390,
+   "h": "h004",
+   "score": 0.961,
+   "kept": false
+  },
+  {
+   "n": 391,
+   "h": "h004",
+   "score": 0.272,
+   "kept": false
+  },
+  {
+   "n": 392,
+   "h": "h004",
+   "score": -0.311,
+   "kept": false
+  },
+  {
+   "n": 393,
+   "h": "h004",
+   "score": 0.297,
+   "kept": false
+  },
+  {
+   "n": 394,
+   "h": "h004",
+   "score": 1.296,
+   "kept": false
+  },
+  {
+   "n": 395,
+   "h": "h004",
+   "score": 0.555,
+   "kept": false
+  },
+  {
+   "n": 396,
+   "h": "h004",
+   "score": 0.184,
+   "kept": false
+  },
+  {
+   "n": 397,
+   "h": "h004",
+   "score": 0.418,
+   "kept": false
+  },
+  {
+   "n": 398,
+   "h": "h004",
+   "score": 0.91,
+   "kept": false
+  },
+  {
+   "n": 399,
+   "h": "h004",
+   "score": 0.905,
+   "kept": false
+  },
+  {
+   "n": 400,
+   "h": "h004",
+   "score": 0.787,
+   "kept": false
+  },
+  {
+   "n": 401,
+   "h": "h004",
+   "score": 1.288,
+   "kept": false
+  },
+  {
+   "n": 402,
+   "h": "h004",
+   "score": 0.996,
+   "kept": false
+  },
+  {
+   "n": 403,
+   "h": "h004",
+   "score": 0.724,
+   "kept": false
+  },
+  {
+   "n": 404,
+   "h": "h004",
+   "score": 0.963,
+   "kept": false
+  },
+  {
+   "n": 405,
+   "h": "h004",
+   "score": 1.369,
+   "kept": false
+  },
+  {
+   "n": 406,
+   "h": "h004",
+   "score": 1.113,
+   "kept": false
+  },
+  {
+   "n": 407,
+   "h": "h004",
+   "score": 1.137,
+   "kept": false
+  },
+  {
+   "n": 408,
+   "h": "h004",
+   "score": 0.341,
+   "kept": false
+  },
+  {
+   "n": 409,
+   "h": "h004",
+   "score": 0.7,
+   "kept": false
+  },
+  {
+   "n": 410,
+   "h": "h004",
+   "score": 1.037,
+   "kept": false
+  },
+  {
+   "n": 411,
+   "h": "h004",
+   "score": 0.651,
+   "kept": false
+  },
+  {
+   "n": 412,
+   "h": "h004",
+   "score": 1.174,
+   "kept": false
+  }
+ ],
+ "bar": [
+  {
+   "n": 2,
+   "bar": 0.236
+  },
+  {
+   "n": 8,
+   "bar": 0.664
+  },
+  {
+   "n": 14,
+   "bar": 0.791
+  },
+  {
+   "n": 20,
+   "bar": 0.864
+  },
+  {
+   "n": 26,
+   "bar": 0.916
+  },
+  {
+   "n": 32,
+   "bar": 0.955
+  },
+  {
+   "n": 38,
+   "bar": 0.986
+  },
+  {
+   "n": 44,
+   "bar": 1.013
+  },
+  {
+   "n": 50,
+   "bar": 1.035
+  },
+  {
+   "n": 56,
+   "bar": 1.055
+  },
+  {
+   "n": 62,
+   "bar": 1.072
+  },
+  {
+   "n": 68,
+   "bar": 1.088
+  },
+  {
+   "n": 74,
+   "bar": 1.102
+  },
+  {
+   "n": 80,
+   "bar": 1.115
+  },
+  {
+   "n": 86,
+   "bar": 1.127
+  },
+  {
+   "n": 92,
+   "bar": 1.137
+  },
+  {
+   "n": 98,
+   "bar": 1.148
+  },
+  {
+   "n": 104,
+   "bar": 1.157
+  },
+  {
+   "n": 110,
+   "bar": 1.166
+  },
+  {
+   "n": 116,
+   "bar": 1.174
+  },
+  {
+   "n": 122,
+   "bar": 1.182
+  },
+  {
+   "n": 128,
+   "bar": 1.19
+  },
+  {
+   "n": 134,
+   "bar": 1.197
+  },
+  {
+   "n": 140,
+   "bar": 1.204
+  },
+  {
+   "n": 146,
+   "bar": 1.21
+  },
+  {
+   "n": 152,
+   "bar": 1.216
+  },
+  {
+   "n": 158,
+   "bar": 1.222
+  },
+  {
+   "n": 164,
+   "bar": 1.228
+  },
+  {
+   "n": 170,
+   "bar": 1.233
+  },
+  {
+   "n": 176,
+   "bar": 1.239
+  },
+  {
+   "n": 182,
+   "bar": 1.244
+  },
+  {
+   "n": 188,
+   "bar": 1.248
+  },
+  {
+   "n": 194,
+   "bar": 1.253
+  },
+  {
+   "n": 200,
+   "bar": 1.258
+  },
+  {
+   "n": 206,
+   "bar": 1.262
+  },
+  {
+   "n": 212,
+   "bar": 1.266
+  },
+  {
+   "n": 218,
+   "bar": 1.27
+  },
+  {
+   "n": 224,
+   "bar": 1.274
+  },
+  {
+   "n": 230,
+   "bar": 1.278
+  },
+  {
+   "n": 236,
+   "bar": 1.282
+  },
+  {
+   "n": 242,
+   "bar": 1.286
+  },
+  {
+   "n": 248,
+   "bar": 1.289
+  },
+  {
+   "n": 254,
+   "bar": 1.293
+  },
+  {
+   "n": 260,
+   "bar": 1.296
+  },
+  {
+   "n": 266,
+   "bar": 1.3
+  },
+  {
+   "n": 272,
+   "bar": 1.303
+  },
+  {
+   "n": 278,
+   "bar": 1.306
+  },
+  {
+   "n": 284,
+   "bar": 1.309
+  },
+  {
+   "n": 290,
+   "bar": 1.312
+  },
+  {
+   "n": 296,
+   "bar": 1.315
+  },
+  {
+   "n": 302,
+   "bar": 1.318
+  },
+  {
+   "n": 308,
+   "bar": 1.321
+  },
+  {
+   "n": 314,
+   "bar": 1.323
+  },
+  {
+   "n": 320,
+   "bar": 1.326
+  },
+  {
+   "n": 326,
+   "bar": 1.329
+  },
+  {
+   "n": 332,
+   "bar": 1.331
+  },
+  {
+   "n": 338,
+   "bar": 1.334
+  },
+  {
+   "n": 344,
+   "bar": 1.336
+  },
+  {
+   "n": 350,
+   "bar": 1.339
+  },
+  {
+   "n": 356,
+   "bar": 1.341
+  },
+  {
+   "n": 362,
+   "bar": 1.343
+  },
+  {
+   "n": 368,
+   "bar": 1.346
+  },
+  {
+   "n": 374,
+   "bar": 1.348
+  },
+  {
+   "n": 380,
+   "bar": 1.35
+  },
+  {
+   "n": 386,
+   "bar": 1.352
+  },
+  {
+   "n": 392,
+   "bar": 1.355
+  },
+  {
+   "n": 398,
+   "bar": 1.357
+  },
+  {
+   "n": 404,
+   "bar": 1.359
+  },
+  {
+   "n": 410,
+   "bar": 1.361
+  }
+ ],
+ "score_sd": 0.455
+}</script>
+<script>
+const FX = JSON.parse(document.getElementById("fx").textContent);
+const solo = location.hash.slice(1);
+if (solo) {
+  document.body.classList.add("solo");
+  document.querySelectorAll(".stage").forEach(s => { if (s.dataset.directionId !== solo) s.remove(); });
+}
+const ST = { supported: "支持", refuted: "证伪", inconclusive: "不确定", running: "运行中",
+             proposed: "待选", dropped: "已放弃" };
+const GLYPH = { supported: "✓", refuted: "✗", inconclusive: "?", running: "▸", proposed: "○", dropped: "–" };
+const CHECKS = [
+  ["val>0", "验证段 Sharpe > 0"], ["beats_bh", "跑赢买入持有"], ["dsr>=0.95", "DSR ≥ 0.95"],
+  ["subperiod", "子区间为正 ≥ 2/3"], ["pbo<=0.5", "PBO ≤ 0.5"]];
+const TERM = {
+  DSR: "Deflated Sharpe Ratio：考虑试验次数 N 后，真实 Sharpe 超过噪声门槛的概率。",
+  PBO: "回测过拟合概率：样本内最优的策略，在样本外排到中位数以下的比例。",
+  N: "试验数：这个方向里评估过的所有变体（含 probe）。试得越多，门槛越高。",
+  lockbox: "数据尾段，研究期间谁都看不到；收尾时 confirm 一次性打开，只开一次。",
+};
+const term = (k, label) => `<abbr title="${TERM[k]}">${label || k}</abbr>`;
+const f2 = x => (x >= 0 ? "" : "−") + Math.abs(x).toFixed(2);
+const d = FX.data, b = FX.budget, H = FX.hypotheses;
+const barNow = FX.bar[FX.bar.length - 1].bar;
+const decider = h => h.checks ? CHECKS.find(([k]) => !h.checks[k]) : null;
+
+function chart(o) {
+  const W = o.w, Hh = o.h, L = 40, R = 12, T = 18, Bm = 28;
+  const n = FX.trials, ys = FX.points.map(p => p.score);
+  const ymin = Math.floor(Math.min(...ys) * 2) / 2, ymax = Math.ceil(Math.max(...ys, barNow) * 2) / 2;
+  const x = v => L + (v - 1) / (n - 1) * (W - L - R), y = v => T + (ymax - v) / (ymax - ymin) * (Hh - T - Bm);
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="试验分数与噪声门槛">`;
+  const groups = {};
+  FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  Object.entries(groups).forEach(([hid, ps], i) => {
+    const x0 = x(ps[0].n), x1 = x(ps[ps.length - 1].n);
+    if (i % 2) s += `<rect x="${x0}" y="${T}" width="${x1 - x0}" height="${Hh - T - Bm}" fill="${o.band}"/>`;
+    s += `<text x="${(x0 + x1) / 2}" y="${Hh - 8}" text-anchor="middle" font-size="11" fill="${o.axis}">${hid}</text>`;
+  });
+  for (let v = ymin; v <= ymax + 1e-9; v += 0.5)
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${o.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${o.axis}">${v.toFixed(1)}</text>`;
+  FX.points.forEach(p => { if (!p.kept) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="1.8" fill="${o.dot}"/>`; });
+  Object.values(groups).forEach(ps => {
+    let best = -9, path = "";
+    ps.forEach(p => { if (p.score > best) { path += path ? `H${x(p.n)}V${y(p.score)}` : `M${x(p.n)} ${y(p.score)}`; best = p.score; } });
+    path += `H${x(ps[ps.length - 1].n)}`;
+    s += `<path d="${path}" fill="none" stroke="${o.front}" stroke-width="1.6"/>`;
+    ps.forEach(p => { if (p.kept) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="2.8" fill="${o.front}"/>`; });
+  });
+  s += `<path d="${FX.bar.map((q, i) => (i ? "L" : "M") + x(q.n) + " " + y(q.bar)).join("")}" fill="none" stroke="${o.bar}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  s += `<text x="${W - R - 4}" y="${y(barNow) - 6}" text-anchor="end" font-size="11.5" fill="${o.bar}">${o.barLabel} ${barNow.toFixed(2)}</text>`;
+  return s + `</svg>`;
+}
+
+/* ---------- A ---------- */
+(function () {
+  const el = document.getElementById("A"); if (!el) return;
+  let h = `<div class="page">
+    <div class="margin">工作区<br>${FX.workspace}</div>
+    <div class="kicker">研究方向 · 记录本</div>
+    <div></div><h1>${FX.direction}</h1>
+    <div></div><p class="lede">每个假设都由同一个冻结的评估器检验；验证段的证据只在出结论后写进来。这一页试了 ${term("N", "N = " + FX.trials)} 个变体，所以“支持”的门槛也随之抬高。</p>
+    <div></div><div class="facts num">
+      <div><span>开发数据</span>${d.bars}</div>
+      <div><span>预算</span><b>$${b.spent.toFixed(1)}</b> / $${b.limit}</div>
+      <div><span>试验数</span><b>${FX.trials}</b></div>
+      <div><span>LOCKBOX</span><span class="seal"><i>封</i>${term("lockbox", "未启封")} · 自 ${d.lockbox_start}</span></div>
+    </div>
+    <div></div><h2>假设与结论</h2>`;
+  H.forEach(x => {
+    const e = x.evidence;
+    let body = "";
+    if (e) {
+      body = `<p class="prose num">验证段 Sharpe ${f2(e.val_sharpe)}，${term("DSR")} ${e.dsr.toFixed(2)}（N = ${FX.trials}），${term("PBO")} ${e.pbo.toFixed(2)}，子区间为正 ${e.pos_frac}；买入持有 ${f2(e.bh)}。</p>
+        <div class="ledger">${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"}">${x.checks[k] ? "✓" : "✗"} ${l}</span>`).join("")}</div>`;
+    } else if (x.in_sample) {
+      body = `<p class="prose num">进化中，第 ${x.in_sample.generation} 代，样本内最优 Sharpe ${f2(x.in_sample.best_is_sharpe)}，${x.n} 次试验。验证段证据出结论后才写入。</p>`;
+    } else body = `<p class="prose">${x.status === "proposed" ? "等待人选择。" : "已放弃，未进入实验。"}</p>`;
+    h += `<div class="entry"><div class="margin"><b>${x.id}</b>${x.n ? x.n + " 次试验" : ""}</div>
+      <div class="body"><h3>${x.title}<span class="stamp s-${x.status}">${ST[x.status]}</span></h3>${body}</div></div>`;
+  });
+  h += `<div class="margin" style="padding-top:34px">虚线：N 个纯噪声试验的期望最高分。实线：每个假设的最优前沿。</div>
+    <div class="chart"><h2 style="margin-left:0">试验与门槛</h2>${chart({ w: 850, h: 230, band: "#efe7d8", grid: "#e2d8c6", axis: "#7a7062", dot: "#b9ad99", front: "#1f1c17", bar: "#8a2b1f", barLabel: "噪声门槛" })}</div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- B ---------- */
+(function () {
+  const el = document.getElementById("B"); if (!el) return;
+  let h = `<div class="bar">
+    <div class="q">${FX.direction}<small>${FX.workspace} · ${d.bars} · 成本 ${d.cost_bps}bp</small></div>
+    <div><div class="k">${term("N", "试验数 N")}</div><div class="v num">${FX.trials} <small>门槛 ${barNow.toFixed(2)}</small></div></div>
+    <div><div class="k">预算</div><div class="v num">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div><div class="meter"><i style="width:${b.spent / b.limit * 100}%"></i></div></div>
+    <div><div class="k">${term("lockbox", "LOCKBOX")}</div><div class="v lock">■ 未启封 <small>${d.lockbox_start} 起 ${d.lockbox_fraction * 100}%</small></div></div>
+    <div><div class="k">资料库</div><div class="v num">${FX.library.pages} 页 <small>${FX.library.pending} 待编译</small></div></div>
+  </div>
+  <div class="grid"><div class="pane"><h2><span>假设</span><span>验证段证据只在出结论后显示</span></h2>
+  <table><thead><tr><th>ID</th><th>假设</th><th>状态</th><th>验证 Sharpe</th><th>${term("DSR")}</th><th>${term("PBO")}</th><th>买入持有</th><th>判据</th><th>N</th></tr></thead><tbody>`;
+  H.forEach(x => {
+    const e = x.evidence;
+    const cells = e ? `<td class="num">${f2(e.val_sharpe)}</td><td class="num">${e.dsr.toFixed(2)}</td><td class="num">${e.pbo.toFixed(2)}</td><td class="num">${f2(e.bh)}</td><td class="pips" title="${CHECKS.map(([k, l]) => (x.checks[k] ? "✓ " : "✗ ") + l).join("\n")}">${CHECKS.map(([k]) => `<i class="${x.checks[k] ? "ok" : "no"}"></i>`).join("")}</td>`
+      : x.in_sample ? `<td class="muted num" colspan="4">样本内最优 ${f2(x.in_sample.best_is_sharpe)} · 第 ${x.in_sample.generation} 代</td><td class="muted">—</td>`
+      : `<td class="muted" colspan="5">—</td>`;
+    h += `<tr><td class="mono muted">${x.id}</td><td class="t">${x.title}</td><td><span class="st s-${x.status}">${GLYPH[x.status]} ${ST[x.status]}</span></td>${cells}<td class="num muted">${x.n || ""}</td></tr>`;
+  });
+  h += `</tbody></table></div><div class="pane"><h2><span>试验 · 前沿 · 噪声门槛</span><span>${FX.trials} 个点</span></h2>
+    <p class="help">灰点是丢弃的试验，绿线是每个假设的最优前沿，琥珀虚线是 N 个纯噪声试验的期望最高分。</p>
+    ${chart({ w: 600, h: 300, band: "#111814", grid: "#1b241f", axis: "#6b776f", dot: "#3a4740", front: "#5fd38d", bar: "#f0b429", barLabel: "门槛" })}
+    <h2 style="margin-top:14px"><span>流水 results.tsv</span></h2><div class="tape num">
+    ${FX.events.map(([t, hid, eid, ev, note]) => `<div><span class="muted">${t}</span><span class="mono">${hid}</span><span class="mono">${ev}</span><span>${note}</span></div>`).join("")}</div></div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- C ---------- */
+(function () {
+  const el = document.getElementById("C"); if (!el) return;
+  let h = `<nav><div class="brand">Shinka Research</div>
+    <a href="#">工作区</a><a class="on" href="#">方向</a><a href="#">资料库</a>
+    <div class="sub">${FX.workspace}</div><a href="#">btc-momentum</a><a href="#">eth-basis</a></nav><main>
+    <div class="crumbs">工作区 / ${FX.workspace} / 方向</div>
+    <h1>${FX.direction}</h1>
+    <p class="lede">每个假设经过同一组判定规则；卡片里高亮的那一行就是决定结论的规则。验证段证据在出结论后显示。</p>
+    <div class="strip num">
+      <div><div class="k">${term("N", "试验数 N")}</div><div class="v">${FX.trials} <small>噪声门槛 ${barNow.toFixed(2)}</small></div></div>
+      <div><div class="k">预算</div><div class="v">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div><div class="meter"><i style="width:${b.spent / b.limit * 100}%"></i></div></div>
+      <div><div class="k">${term("lockbox", "Lockbox")}</div><div class="v">未启封 <small>${d.lockbox_start} 起</small></div></div>
+      <div><div class="k">开发数据</div><div class="v" style="font-size:14px">${d.bars}</div></div>
+    </div><div class="cards">`;
+  H.forEach(x => {
+    const e = x.evidence, dec = decider(x);
+    let body;
+    if (e) {
+      const val = { "val>0": f2(e.val_sharpe), beats_bh: `${f2(e.val_sharpe)} vs ${f2(e.bh)}`, "dsr>=0.95": e.dsr.toFixed(2), subperiod: e.pos_frac, "pbo<=0.5": e.pbo.toFixed(2) };
+      body = `<div class="ladder num">${CHECKS.map(([k, l]) => `<div class="${dec && dec[0] === k ? "decider" : ""}"><span class="${x.checks[k] ? "ok" : "no"}">${x.checks[k] ? "✓" : "✗"}</span><span>${l.replace("DSR", term("DSR")).replace("PBO", term("PBO"))}</span><span>${val[k]}</span></div>`).join("")}</div>`;
+    } else if (x.in_sample) body = `<p class="pending num">进化中 · 第 ${x.in_sample.generation} 代<br>样本内最优 Sharpe ${f2(x.in_sample.best_is_sharpe)} · ${x.n} 次试验</p>`;
+    else body = `<p class="pending">${x.status === "proposed" ? "等待人选择" : "已放弃，未进入实验"}</p>`;
+    h += `<article class="card"><header><span class="id">${x.id}${x.n ? " · " + x.n + " 次试验" : ""}</span><span class="chip s-${x.status}">${GLYPH[x.status]} ${ST[x.status]}</span></header><h3>${x.title}</h3>${body}</article>`;
+  });
+  h += `</div><div class="row2"><div class="panel"><h2>试验与噪声门槛</h2>${chart({ w: 720, h: 200, band: "#f5f6f8", grid: "#eceef1", axis: "#6a7180", dot: "#c3c8d0", front: "#2347d6", bar: "#b4540a", barLabel: "噪声门槛" })}</div>
+    <div class="panel"><h2>最近事件</h2>${FX.events.map(([t, hid, eid, ev, note]) => `<div class="ev num"><span style="color:#6a7180">${t}</span><b>${hid}</b><span>${note}</span></div>`).join("")}</div></div></main>`;
+  el.innerHTML = h;
+})();
+</script>
+</body>
+</html>

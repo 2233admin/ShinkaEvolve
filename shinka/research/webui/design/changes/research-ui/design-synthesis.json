@@ -1,0 +1,70 @@
+{
+  "schema": "design-pipeline.design-synthesis.v1",
+  "changeId": "research-ui",
+  "status": "ready-for-synthesis",
+  "stage": "design-synthesis",
+  "initializedAt": "2026-10-17T14:13:45.200Z",
+  "updatedAt": "2026-10-17T14:15:04.339Z",
+  "artifactRoot": "design/changes/research-ui",
+  "projectRoot": "../../..",
+  "problem": "Read-only research console for Shinka Research: researchers and people they share it with scan a quant research direction (hypotheses, status with statistical evidence, trial count vs multiple-testing bar, budget, one-time lockbox) and its knowledge-base wiki, then drill into upstream evolution views",
+  "inputs": {
+    "mode": "reference-site",
+    "framework": "none",
+    "references": [
+      {
+        "id": "github-com-karpathy-autoresearch",
+        "url": "https://github.com/karpathy/autoresearch",
+        "role": "reference-site"
+      },
+      {
+        "id": "optuna-dashboard-readthedocs-io-en-latest-tutorials-hitl-html",
+        "url": "https://optuna-dashboard.readthedocs.io/en/latest/tutorials/hitl.html",
+        "role": "reference-site"
+      },
+      {
+        "id": "quantconnect-com-docs-v2-cloud-platform-backtesting-results",
+        "url": "https://quantconnect.com/docs/v2/cloud-platform/backtesting/results",
+        "role": "reference-site"
+      }
+    ],
+    "templates": []
+  },
+  "interaction": {
+    "mode": "human-in-loop",
+    "nextCommand": "Synthesize 2-3 product-specific directions, select one, and write DESIGN.md.",
+    "message": "The declared scope fits the selected budget; proceed to evidence-backed synthesis."
+  },
+  "scope": {
+    "budget": "session",
+    "threshold": 24,
+    "status": "fit",
+    "score": 24,
+    "surprise": false,
+    "counts": {
+      "surfaces": 3,
+      "workflows": 2,
+      "integrations": 1,
+      "unknowns": 2,
+      "decisions": 7
+    }
+  },
+  "wayfinder": {
+    "required": false,
+    "status": "not-required",
+    "mapUrl": null
+  },
+  "output": {
+    "path": "DESIGN.md",
+    "status": "missing",
+    "sha256": null,
+    "validatedAt": null
+  },
+  "evidence": [
+    {
+      "type": "grill",
+      "path": "design/changes/research-ui/decisions/grill.md",
+      "recordedAt": "2026-10-17T14:15:04.296Z"
+    }
+  ]
+}

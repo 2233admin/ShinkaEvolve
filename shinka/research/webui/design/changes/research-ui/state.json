@@ -1,0 +1,58 @@
+{
+  "schema": "design-pipeline.state.v1",
+  "changeId": "research-ui",
+  "status": "in-progress",
+  "phase": "stage-2-directions",
+  "updatedAt": "2026-10-17T14:15:04.339Z",
+  "artifactRoot": "design/changes/research-ui",
+  "projectRoot": ".",
+  "surfaces": [
+    "DESIGN.md"
+  ],
+  "capabilities": {
+    "missing": [],
+    "fallbacks": []
+  },
+  "openSpec": {
+    "detected": false,
+    "changeId": "research-ui",
+    "paths": [
+      "design/changes/research-ui"
+    ]
+  },
+  "gbrain": {
+    "detected": false,
+    "syncPlanned": false,
+    "paths": []
+  },
+  "motion": {
+    "required": false,
+    "motionSpec": "design/changes/research-ui/motion.md",
+    "implementationLibrary": "unknown",
+    "reducedMotion": "pending"
+  },
+  "qa": {
+    "status": "not-run",
+    "evidenceRoot": "design/changes/research-ui/qa.md",
+    "scores": {}
+  },
+  "decisions": [
+    "Treat reference sites and DESIGN.md templates as attributed evidence, not product authority"
+  ],
+  "blockers": [],
+  "nextActions": [
+    "Assess the declared surfaces, workflows, integrations, unknowns, and decisions.",
+    "Synthesize 2-3 product-specific directions, select one, and write DESIGN.md."
+  ],
+  "designFoundation": {
+    "path": "DESIGN.md",
+    "status": "synthesis-required",
+    "sha256": null
+  },
+  "designSynthesis": {
+    "manifest": "design/changes/research-ui/design-synthesis.json",
+    "status": "ready-for-synthesis",
+    "stage": "design-synthesis",
+    "output": "DESIGN.md"
+  }
+}
