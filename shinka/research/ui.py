@@ -9,21 +9,35 @@ never receives data it must not show.
 from __future__ import annotations
 
 import json
+import threading
+import urllib.parse
 import webbrowser
+from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
+
+import numpy as np
+
+from shinka.webui import visualization
 
 from . import library, rundb
 from .notebook import RESULTS_LOG, Hypothesis, Notebook, experiment_dir
+from .skeptic import expected_max_sharpe
 
 DIST = Path(__file__).parent / "webui" / "dist"
 HIDDEN = "（验证段结果，出结论后显示）"
 
 
+def _iso(ts: float) -> str:
+    return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
+
+
 def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
     rd = experiment_dir(root, h.id, e.id) / "results"
+    times = [t for t, _, _ in rundb.trials(rd)]
+    db = rd / rundb.DB_FILENAME
     out: Dict[str, Any] = {
         "id": e.id,
         "created": e.created,
@@ -31,6 +45,12 @@ def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
         "n_probed": e.n_probed,
         "best_is_score": rundb.best_score(rd),
         "spend_usd": rundb.total_cost(rd),
+        "first_trial": _iso(times[0]) if times else None,
+        "last_trial": _iso(times[-1]) if times else None,
+        # Path for the upstream evolution tree, relative to <direction>/experiments.
+        "tree_db": db.relative_to(root / "experiments").as_posix()
+        if db.exists()
+        else None,
     }
     if h.verdict is not None:
         out["skeptic"] = e.skeptic
@@ -66,17 +86,63 @@ def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, str]]:
     return rows[::-1]
 
 
-def _library(root: Path) -> Dict[str, Any]:
+def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
+    """Every evaluated program of the direction in time order, with the noise
+    bar: the expected best in-sample score of n null strategies, using the
+    variance of the direction's in-sample scores (the skeptic's approximation,
+    kept in the scores' own annualised units). Probes leave no program row, so
+    they are not plotted; the bar counts them all from the start, which keeps
+    it at least as high as the skeptic's (it counts every probe too)."""
+    probes = sum(e.n_probed for h in nb.hypotheses for e in h.experiments)
+    rows = []
+    for h in nb.hypotheses:
+        for e in h.experiments:
+            rd = experiment_dir(root, h.id, e.id) / "results"
+            rows += [(t, g, s, h.id, e.id) for t, g, s in rundb.trials(rd)]
+    rows.sort(key=lambda r: r[0])
+    scores = np.array([r[2] for r in rows if r[2] is not None])
+    var = float(scores.var(ddof=1)) if len(scores) > 1 else 0.0
+    out, best = [], float("-inf")
+    for n, (t, g, s, hid, eid) in enumerate(rows, start=1):
+        record = s is not None and s > best
+        best = s if record else best
+        out.append(
+            {
+                "n": n,
+                "time": _iso(t),
+                "hypothesis": hid,
+                "experiment": eid,
+                "generation": g,
+                "score": s,
+                "record": record,
+                "bar": expected_max_sharpe(n + probes, var),
+            }
+        )
+    return out
+
+
+def _read(path: Path) -> str:
+    return path.read_text() if path.exists() else ""
+
+
+def _library(root: Path) -> Optional[Dict[str, Any]]:
     lib = library.library_root(root)
     if not (lib / library.MANIFEST).exists():
-        return {"wiki_pages": 0, "pending": 0}
+        return None
     return {
-        "wiki_pages": len(library.wiki_pages(lib)),
-        "pending": len(library.pending(lib)),
+        "index": _read(lib / "index.md"),
+        "log": _read(lib / "log.md"),
+        "pending": library.pending(lib),
+        "pages": [
+            {"name": name, "text": _read(lib / "wiki" / f"{name}.md")}
+            for name in library.wiki_pages(lib)
+        ],
     }
 
 
-def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
+def snapshot(
+    root: Path, events: int = 50, tree_url: Optional[str] = None
+) -> Dict[str, Any]:
     root = Path(root)
     nb = Notebook.load(root)
     hyps = []
@@ -110,20 +176,53 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
             "n_dev": data.n_dev,
         },
         "hypotheses": hyps,
+        "trial_points": _trials(root, nb),
+        "probes": sum(e.n_probed for h in nb.hypotheses for e in h.experiments),
         "events": _events(root, nb, events),
         "library": _library(root),
+        "tree_url": tree_url,
     }
 
 
+def _inside(root: str, rel: str) -> bool:
+    try:
+        (Path(root) / rel).resolve().relative_to(Path(root).resolve())
+    except ValueError:
+        return False
+    return True
+
+
+class _TreeHandler(visualization.DatabaseRequestHandler):
+    """Upstream's evolution-tree handler, confined to <direction>/experiments:
+    every requested database or plot file must resolve inside it, and no
+    cross-origin access (upstream answers ``Access-Control-Allow-Origin: *``,
+    which would let any web page read the programs)."""
+
+    def do_GET(self) -> None:
+        url = urllib.parse.urlparse(self.path)
+        paths = urllib.parse.parse_qs(url.query).get("db_path", [])
+        if url.path.startswith("/plot_file/"):
+            paths.append(urllib.parse.unquote(url.path[len("/plot_file/") :]))
+        if not all(_inside(self.search_root, p) for p in paths):
+            self.send_error(403, "Outside this direction's experiments")
+            return
+        super().do_GET()
+
+    def send_header(self, keyword: str, value: str) -> None:
+        if keyword.lower() != "access-control-allow-origin":
+            super().send_header(keyword, value)
+
+
 class _Handler(SimpleHTTPRequestHandler):
-    def __init__(self, *args, root: Path, **kwargs):
+    def __init__(self, *args, root: Path, tree_url: Optional[str] = None, **kwargs):
         self.research_root = root
+        self.tree_url = tree_url
         super().__init__(*args, directory=str(DIST), **kwargs)
 
     def do_GET(self) -> None:
         if self.path.split("?")[0] == "/api/snapshot":
             body = json.dumps(
-                snapshot(self.research_root),
+                snapshot(self.research_root, tree_url=self.tree_url),
                 ensure_ascii=False,
                 allow_nan=False,
             ).encode()
@@ -142,9 +241,22 @@ def serve(root: Path, port: int, open_browser: bool) -> None:
         raise SystemExit(
             f"UI not built: run `pnpm install && pnpm build` in {DIST.parent / 'app'}"
         )
+    root = Path(root)
     Notebook.load(root)  # fail early on a wrong directory
+    # Upstream's evolution tree on a free port, private (held-out) metrics hidden.
+    tree = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        partial(
+            _TreeHandler,
+            search_root=str(root / "experiments"),
+            show_private=False,
+            directory=str(Path(visualization.__file__).parent),
+        ),
+    )
+    threading.Thread(target=tree.serve_forever, daemon=True).start()
+    tree_url = f"http://127.0.0.1:{tree.server_address[1]}/viz_tree.html"
     server = ThreadingHTTPServer(
-        ("127.0.0.1", port), partial(_Handler, root=Path(root))
+        ("127.0.0.1", port), partial(_Handler, root=root, tree_url=tree_url)
     )
     url = f"http://127.0.0.1:{server.server_address[1]}/"
     print(f"Research UI for {root} at {url} (Ctrl+C to stop)", flush=True)
@@ -156,3 +268,5 @@ def serve(root: Path, port: int, open_browser: bool) -> None:
         pass
     finally:
         server.server_close()
+        tree.shutdown()
+        tree.server_close()

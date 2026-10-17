@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sqlite3
 from pathlib import Path
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 
 DB_FILENAME = "programs.sqlite"
 
@@ -54,6 +54,22 @@ def correct_scores(results_dir: Path) -> List[float]:
         f"SELECT combined_score FROM programs WHERE correct = 1 AND {_NOT_COPY}",
     )
     return [float(s) for (s,) in rows if s is not None]
+
+
+def trials(results_dir: Path) -> List[Tuple[float, int, Optional[float]]]:
+    """(timestamp, generation, in-sample score or None if incorrect) of every
+    evaluated program, oldest first."""
+    if not (Path(results_dir) / DB_FILENAME).exists():
+        return []
+    rows = _query(
+        results_dir,
+        "SELECT timestamp, generation, correct, combined_score FROM programs "
+        f"WHERE {_NOT_COPY} ORDER BY timestamp",
+    )
+    return [
+        (float(t), int(g), float(s) if ok and s is not None else None)
+        for t, g, ok, s in rows
+    ]
 
 
 def top_correct_programs(results_dir: Path, limit: int) -> List[Tuple[str, str]]:

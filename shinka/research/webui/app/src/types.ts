@@ -26,6 +26,9 @@ export interface Experiment {
   n_probed: number
   best_is_score: number | null
   spend_usd: number
+  first_trial: string | null
+  last_trial: string | null
+  tree_db: string | null
   skeptic?: Evidence | null
 }
 
@@ -55,6 +58,30 @@ export interface SnapshotEvent {
   note: string
 }
 
+// 整个方向按时间排的每一次试验；score 为空 = 程序失败，record = 到这一次为止的新最好，bar = 此刻的噪声线。
+export interface TrialPoint {
+  n: number
+  time: string
+  hypothesis: string
+  experiment: string
+  generation: number
+  score: number | null
+  record: boolean
+  bar: number
+}
+
+export interface LibraryPage {
+  name: string
+  text: string
+}
+
+export interface Library {
+  index: string
+  log: string
+  pending: string[]
+  pages: LibraryPage[]
+}
+
 export interface Snapshot {
   direction: string
   created: string
@@ -63,6 +90,10 @@ export interface Snapshot {
   trials: number
   lockbox: { opened: boolean; start: string; n_total: number; n_dev: number } | null
   hypotheses: Hypothesis[]
+  trial_points: TrialPoint[]
+  // 试探（probe）不留程序记录，不画点，但计入噪声线的试验数。
+  probes: number
   events: SnapshotEvent[]
-  library: { wiki_pages: number; pending: number }
+  tree_url: string | null
+  library: Library | null
 }
