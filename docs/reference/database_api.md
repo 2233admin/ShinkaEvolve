@@ -31,6 +31,11 @@ Persisted candidate program with lineage, metrics, embeddings, and metadata.
 
 Main synchronous database interface.
 
+For `ProgramDatabase` and `SystemPromptDatabase`, `read_only=True` opens an
+existing SQLite file without permitting writes. `config.db_path` remains a
+filesystem path, not a URI: characters such as `#`, `%`, spaces, and Unicode in
+file or directory names are preserved literally when the read-only URI is built.
+
 ::: shinka.database.dbase.ProgramDatabase
     handler: python
     options:
