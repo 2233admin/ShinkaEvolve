@@ -1,13 +1,14 @@
-/* 一份 token，同时喂给 Astro（--color-*、--font-*）和 Carbon（--cds-*）。值取自 Operations Dark / Technical Paper。 */
+/* 一份 token，同时喂给 Astro（--color-*、--font-*）和 Carbon（--cds-*）。
+   暗色是中性墨黑（所有者 2026-10-18 定：不要 Operations Dark 的绿灰底）；强调橙、状态色、浅色 Technical Paper 照旧。 */
 :root {
   --ink: #EFEEE8;
-  --muted: #B3B9AB;
-  --base: #151815;
-  --raised: #20251F;
-  --hover: #2a3028;
-  --selected: #2f362c;
-  --line: #3C4438;
-  --line-strong: #818A79;
+  --muted: #A9A8A0;
+  --base: #0B0B0A;
+  --raised: #141413;
+  --hover: #1C1C1A;
+  --selected: #232320;
+  --line: #2C2C29;
+  --line-strong: #6E6E68;
   --accent: #F45D22;
   --accent-hover: #FF7A3E;
   --accent-text: #F45D22;
@@ -35,7 +36,7 @@
 }
 
 :root, body.light-theme, rux-global-status-bar, rux-monitoring-icon, rux-classification-marking, rux-tag, rux-status, rux-notification, rux-card, rux-log, rux-timeline, rux-track, rux-time-region, rux-tabs, rux-tab, rux-table, rux-accordion, rux-accordion-item, rux-switch, rux-tooltip, rux-clock {
-  --gsb-color-background: var(--raised);
+  --gsb-color-background: var(--base);
   --classification-banner-color-background-unclassified: var(--accent);
   --status-symbol-color-fill-normal-on-dark: var(--ok); --status-symbol-color-fill-normal: var(--ok);
   --status-symbol-color-fill-critical-on-dark: var(--err); --status-symbol-color-fill-critical: var(--err);
@@ -43,7 +44,7 @@
   --tag-shadow-inner-pass: none; --tag-shadow-inner-fail: none; --tag-shadow-inner-unknown: none;
   --notification-banner-color-border: var(--warn);
   --color-status-off: var(--muted); --color-status-standby: var(--muted);
-  --color-text-white: #151815; --color-text-black: #151815;
+  --color-text-white: #0B0B0A; --color-text-black: #0B0B0A;
   --color-background-base-default: var(--base);
   --color-background-base-header: var(--raised);
   --color-background-base-hover: var(--hover);
@@ -64,7 +65,7 @@
   --color-text-interactive-default: var(--accent-text);
   --color-text-interactive-hover: var(--accent-hover);
   --color-text-placeholder: var(--muted);
-  --color-text-inverse: #151815;
+  --color-text-inverse: #0B0B0A;
   --color-status-normal: var(--ok);
   --color-status-caution: var(--warn);
   --color-status-serious: var(--warn);
@@ -94,11 +95,11 @@
 .cds--g100, .cds--white {
   --cds-background: var(--base);
   --cds-background-hover: var(--hover);
-  --cds-layer-01: var(--raised);
-  --cds-layer-02: var(--hover);
+  --cds-layer-01: var(--base);
+  --cds-layer-02: var(--raised);
   --cds-layer-hover-01: var(--hover);
   --cds-layer-selected-01: var(--selected);
-  --cds-layer-accent-01: var(--selected);
+  --cds-layer-accent-01: var(--base);
   --cds-field-01: var(--raised);
   --cds-field-hover-01: var(--hover);
   --cds-border-subtle-00: var(--line);

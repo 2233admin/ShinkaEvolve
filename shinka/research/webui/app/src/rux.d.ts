@@ -1,6 +1,6 @@
 import type { DetailedHTMLProps, HTMLAttributes } from 'react'
 
-type RuxStatusValue = 'normal' | 'caution' | 'critical' | 'standby' | 'off'
+type RuxStatusValue = 'normal' | 'caution' | 'serious' | 'critical' | 'standby' | 'off'
 type El<P = object> = DetailedHTMLProps<HTMLAttributes<HTMLElement>, HTMLElement> & P
 
 export interface RuxLogEntry {

@@ -36,7 +36,7 @@ export function TopBar({ snap, light, onTheme }: Props) {
       ? { sub: '未设', icon: 'lock-open', status: 'off' as const }
       : lockbox.opened
         ? { sub: '已开封', icon: 'lock-open', status: 'standby' as const }
-        : { sub: '封存', icon: 'lock', status: 'normal' as const }
+        : { sub: '封存', icon: 'lock', status: 'serious' as const }
 
   const icons =
     snap && budget && lock ? (
@@ -57,6 +57,7 @@ export function TopBar({ snap, light, onTheme }: Props) {
         </div>
       </rux-global-status-bar>
       {narrow && icons && <div className="status-strip">{icons}</div>}
+      <div className="stripes" aria-hidden="true" />
     </>
   )
 }

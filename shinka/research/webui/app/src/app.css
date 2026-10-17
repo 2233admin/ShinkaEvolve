@@ -29,13 +29,16 @@
 .page-head-row .cds--btn { padding-inline-end: 16px; min-inline-size: 0; }
 
 .hrow { cursor: pointer; }
-.hrow.is-selected td { background: var(--selected); }
+.hrow.is-selected td { background: var(--raised); }
+.hrow.is-selected td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
+.cds--data-table thead th { box-shadow: inset 0 -1px 0 var(--line-strong); }
+.cds--data-table thead th .cds--table-sort { box-shadow: inset 0 -1px 0 var(--line-strong); }
 .hrow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .title-cell { min-width: 160px; }
 .status-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status-cell rux-status { flex: none; }
 
-.spec-card { padding: 20px; }
+.spec-card { padding: 20px; border: 1px solid var(--line); }
 .spec-title { font: 600 18px/1.4 var(--sans); margin: 0 0 16px; overflow-wrap: anywhere; }
 .spec-card h3 { font: 500 11px/1 var(--mono); letter-spacing: .08em; color: var(--muted); margin: 24px 0 8px; }
 .spec-card .cds--inline-notification { max-width: none; margin-top: 20px; }
@@ -70,7 +73,7 @@ rux-global-status-bar, rux-monitoring-icon {
   --gsb-color-text: var(--ink);
 }
 rux-global-status-bar { border-bottom: 1px solid var(--line); }
-.status-strip { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; padding: 8px 16px; background: var(--raised); border-bottom: 1px solid var(--line); }
+.status-strip { display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; padding: 8px 16px; background: var(--base); border-bottom: 1px solid var(--line); }
 rux-log { --font-body-1-font-size: 0.8125rem; --font-body-2-font-size: 0.8125rem; --font-body-3-font-size: 0.75rem; }
 
 .cds--g100, .cds--white { --cds-notification-background-info: var(--hover); }
@@ -80,3 +83,13 @@ rux-monitoring-icon, rux-status, rux-log {
   --status-symbol-color-fill-standby-on-dark: var(--muted); --status-symbol-color-fill-standby: var(--muted);
 }
 .spec dt .cds--definition-term { font: inherit; letter-spacing: inherit; text-transform: inherit; }
+
+/* 顶栏图标：正常用正文色，只有要注意的状态上色；封存中用强调橙（方向 B：封存是一条界线）。 */
+rux-monitoring-icon {
+  --status-symbol-color-fill-normal-on-dark: var(--ink); --status-symbol-color-fill-normal: var(--ink);
+  --color-status-normal: var(--ink); --normal-fill: var(--ink);
+  --status-symbol-color-fill-serious-on-dark: var(--accent); --status-symbol-color-fill-serious: var(--accent);
+  --color-status-serious: var(--accent); --serious-fill: var(--accent);
+}
+/* 方向 B 的索引条纹：顶栏下一道橙色竖纹。 */
+.stripes { height: 8px; background: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 6px); }
