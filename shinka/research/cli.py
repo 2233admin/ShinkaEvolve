@@ -8,9 +8,10 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from shinka.research.notebook import Notebook, Status, experiment_dir
+from shinka.research.notebook import Notebook, Status, Verdict, experiment_dir
 from shinka.research.quant import QuantConfig
 from shinka.research.rundb import count_evaluated
+from shinka.research.skeptic import Thresholds, challenge, decide, render_report
 from shinka.research.scaffold import (
     SHINKA_CONFIG_FILENAME,
     scaffold_experiment,
@@ -85,14 +86,7 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
-    hyp = nb.get(args.hid)
-    if not hyp.experiments:
-        sys.exit(f"{args.hid} has no experiment; run `scaffold` first")
-    exp = (
-        hyp.experiments[-1]
-        if args.eid is None
-        else next(e for e in hyp.experiments if e.id == args.eid)
-    )
+    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     verify_experiment(root, hyp.id, exp)
     exp_dir = experiment_dir(root, hyp.id, exp.id)
     results_dir = exp_dir / "results"
@@ -119,6 +113,54 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     nb.save(root)
     if code:
         sys.exit(code)
+
+
+def _pick_experiment(nb: Notebook, hid: str, eid: Optional[str]):
+    hyp = nb.get(hid)
+    if not hyp.experiments:
+        sys.exit(f"{hid} has no experiment; run `scaffold` first")
+    if eid is None:
+        return hyp, hyp.experiments[-1]
+    return hyp, next(e for e in hyp.experiments if e.id == eid)
+
+
+def cmd_skeptic(args: argparse.Namespace) -> None:
+    root = Path(args.dir)
+    nb = Notebook.load(root)
+    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+    th = Thresholds(
+        dsr_supported=args.dsr,
+        min_positive_fraction=args.min_positive_fraction,
+        n_subperiods=args.subperiods,
+    )
+    report = challenge(root, nb, hyp.id, exp, th)
+    label, reason = decide(report, th)
+    exp.skeptic = {**report, "rule_label": label.value, "rule_reason": reason}
+    hyp.status = Status.challenged
+    nb.save(root)
+    out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
+    out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
+    print(out.read_text())
+
+
+def cmd_verdict(args: argparse.Namespace) -> None:
+    root = Path(args.dir)
+    nb = Notebook.load(root)
+    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+    if exp.skeptic is None:
+        sys.exit(f"{hyp.id}/{exp.id} has not been challenged; run `skeptic` first")
+    label = Status(args.label or exp.skeptic["rule_label"])
+    if args.label and label.value != exp.skeptic["rule_label"] and not args.reason:
+        sys.exit("--reason is required when overriding the rule-based verdict")
+    reason = args.reason or exp.skeptic["rule_reason"]
+    nb.set_verdict(
+        hyp.id,
+        Verdict(
+            label=label, reason=reason, evidence={"experiment": exp.id, **exp.skeptic}
+        ),
+    )
+    nb.save(root)
+    print(f"{hyp.id}: {label.value} — {reason}")
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -179,6 +221,23 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--eid")
     s.add_argument("--num-generations", type=int, default=20)
     s.set_defaults(func=cmd_run, takes_extra=True)
+
+    s = sub.add_parser("skeptic", help="Challenge an experiment on the holdout")
+    s.add_argument("dir")
+    s.add_argument("hid")
+    s.add_argument("--eid")
+    s.add_argument("--dsr", type=float, default=0.95)
+    s.add_argument("--min-positive-fraction", type=float, default=2.0 / 3.0)
+    s.add_argument("--subperiods", type=int, default=3)
+    s.set_defaults(func=cmd_skeptic)
+
+    s = sub.add_parser("verdict", help="Record the verdict (rule-based by default)")
+    s.add_argument("dir")
+    s.add_argument("hid")
+    s.add_argument("--eid")
+    s.add_argument("--label", choices=["supported", "refuted", "inconclusive"])
+    s.add_argument("--reason")
+    s.set_defaults(func=cmd_verdict)
 
     s = sub.add_parser("status", help="Show the notebook")
     s.add_argument("dir")
