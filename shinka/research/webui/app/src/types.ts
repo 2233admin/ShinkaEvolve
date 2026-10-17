@@ -91,6 +91,8 @@ export interface Snapshot {
   lockbox: { opened: boolean; start: string; n_total: number; n_dev: number } | null
   hypotheses: Hypothesis[]
   trial_points: TrialPoint[]
+  // 试探（probe）不留程序记录，不画点，但计入噪声线的试验数。
+  probes: number
   events: SnapshotEvent[]
   tree_url: string | null
   library: Library | null

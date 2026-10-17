@@ -1,6 +1,8 @@
 import json
 import sqlite3
 import threading
+import urllib.error
+import urllib.parse
 import urllib.request
 from functools import partial
 from http.server import ThreadingHTTPServer
@@ -116,8 +118,12 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
         experiment_dir(root, "h002", "e01") / "results",
         [(200.0, 0, 1, 1.5, secret), (400.0, 1, 1, 1.0, secret)],
     )
+    nb = Notebook.load(root)
+    nb.get("h001").experiments[0].n_probed = 2  # probes leave no program row
+    nb.save(root)
     snap = ui.snapshot(root, tree_url="http://127.0.0.1:1/viz_tree.html")
     pts = snap["trial_points"]
+    assert snap["probes"] == 2
     assert [(p["hypothesis"], p["score"], p["record"]) for p in pts] == [
         ("h001", 0.5, True),
         ("h002", 1.5, True),
@@ -125,8 +131,8 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
         ("h002", 1.0, False),
     ]
     var = float(np.var([0.5, 1.5, 1.0], ddof=1))
-    assert pts[3]["bar"] == expected_max_sharpe(4, var)
-    assert pts[0]["bar"] == 0.0
+    assert pts[3]["bar"] == expected_max_sharpe(4 + 2, var)
+    assert pts[0]["bar"] == expected_max_sharpe(1 + 2, var)
     assert "-7.77" not in json.dumps(snap)
     exp = snap["hypotheses"][0]["experiments"][0]
     assert exp["tree_db"] == "h001/e01/results/programs.sqlite"
@@ -144,3 +150,30 @@ def test_library_contents(tmp_path: Path) -> None:
     assert snap["pages"] == [{"name": "momentum", "text": "# Momentum\n"}]
     assert snap["pending"] == ["raw/paper.md"]
     assert snap["index"].startswith("# Library index")
+
+
+def test_tree_server_stays_inside_experiments(tmp_path: Path) -> None:
+    root = _direction(tmp_path / "d")
+    _programs(experiment_dir(root, "h001", "e01") / "results", [(1.0, 0, 1, 0.5, {})])
+    outside = tmp_path / "other" / "programs.sqlite"
+    _programs(outside.parent, [(1.0, 0, 1, 0.5, {})])
+    server = ThreadingHTTPServer(
+        ("127.0.0.1", 0),
+        partial(ui._TreeHandler, search_root=str(root / "experiments")),
+    )
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    base = f"http://127.0.0.1:{server.server_address[1]}"
+    try:
+        listing = urllib.request.urlopen(f"{base}/list_databases")
+        assert listing.status == 200
+        assert listing.headers.get("Access-Control-Allow-Origin") is None
+        for bad in ("../../other/programs.sqlite", str(outside)):
+            q = urllib.parse.quote(bad)
+            try:
+                urllib.request.urlopen(f"{base}/get_program_count?db_path={q}")
+                raise AssertionError(f"{bad} was served")
+            except urllib.error.HTTPError as err:
+                assert err.code == 403
+    finally:
+        server.shutdown()
+        server.server_close()

@@ -13,9 +13,9 @@ const G = {
   noise: '噪声线',
 } as const
 
-type Props = { points: TrialPoint[]; selected: string; light: boolean }
+type Props = { points: TrialPoint[]; probes: number; selected: string; light: boolean }
 
-export function TrialChart({ points, selected, light }: Props) {
+export function TrialChart({ points, probes, selected, light }: Props) {
   const tk = useTokens(light)
   const box = useRef<HTMLDivElement>(null)
   const failed = points.filter((p) => p.score === null).length
@@ -92,7 +92,7 @@ export function TrialChart({ points, selected, light }: Props) {
   return (
     <div className="trial-chart" ref={box}>
       <p className="chart-note">
-        {points.length} 次试验，其中 {failed} 次程序失败（未画出）。横轴是整个方向的试验顺序，纵轴是
+        {points.length} 次试验，其中 {failed} 次程序失败（未画出）。{probes > 0 && `另有 ${probes} 次试探没有分数记录，不画点，但已计入噪声线。`}横轴是整个方向的试验顺序，纵轴是
         <Term k="insample">样本内</Term>分数；虚线是<Term k="noise">噪声线</Term>，线下的分数和碰运气分不开。
       </p>
       {options && <ComboChart data={data as never} options={options as never} />}

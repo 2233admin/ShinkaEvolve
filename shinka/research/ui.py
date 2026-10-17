@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import json
 import threading
+import urllib.parse
 import webbrowser
 from datetime import datetime, timezone
 from functools import partial
@@ -89,7 +90,10 @@ def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
     """Every evaluated program of the direction in time order, with the noise
     bar: the expected best in-sample score of n null strategies, using the
     variance of the direction's in-sample scores (the skeptic's approximation,
-    kept in the scores' own annualised units)."""
+    kept in the scores' own annualised units). Probes leave no program row, so
+    they are not plotted; the bar counts them all from the start, which keeps
+    it at least as high as the skeptic's (it counts every probe too)."""
+    probes = sum(e.n_probed for h in nb.hypotheses for e in h.experiments)
     rows = []
     for h in nb.hypotheses:
         for e in h.experiments:
@@ -111,7 +115,7 @@ def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
                 "generation": g,
                 "score": s,
                 "record": record,
-                "bar": expected_max_sharpe(n, var),
+                "bar": expected_max_sharpe(n + probes, var),
             }
         )
     return out
@@ -173,10 +177,40 @@ def snapshot(
         },
         "hypotheses": hyps,
         "trial_points": _trials(root, nb),
+        "probes": sum(e.n_probed for h in nb.hypotheses for e in h.experiments),
         "events": _events(root, nb, events),
         "library": _library(root),
         "tree_url": tree_url,
     }
+
+
+def _inside(root: str, rel: str) -> bool:
+    try:
+        (Path(root) / rel).resolve().relative_to(Path(root).resolve())
+    except ValueError:
+        return False
+    return True
+
+
+class _TreeHandler(visualization.DatabaseRequestHandler):
+    """Upstream's evolution-tree handler, confined to <direction>/experiments:
+    every requested database or plot file must resolve inside it, and no
+    cross-origin access (upstream answers ``Access-Control-Allow-Origin: *``,
+    which would let any web page read the programs)."""
+
+    def do_GET(self) -> None:
+        url = urllib.parse.urlparse(self.path)
+        paths = urllib.parse.parse_qs(url.query).get("db_path", [])
+        if url.path.startswith("/plot_file/"):
+            paths.append(urllib.parse.unquote(url.path[len("/plot_file/") :]))
+        if not all(_inside(self.search_root, p) for p in paths):
+            self.send_error(403, "Outside this direction's experiments")
+            return
+        super().do_GET()
+
+    def send_header(self, keyword: str, value: str) -> None:
+        if keyword.lower() != "access-control-allow-origin":
+            super().send_header(keyword, value)
 
 
 class _Handler(SimpleHTTPRequestHandler):
@@ -209,11 +243,11 @@ def serve(root: Path, port: int, open_browser: bool) -> None:
         )
     root = Path(root)
     Notebook.load(root)  # fail early on a wrong directory
-    # Upstream's evolution tree, next port, private (held-out) metrics hidden.
+    # Upstream's evolution tree on a free port, private (held-out) metrics hidden.
     tree = ThreadingHTTPServer(
-        ("127.0.0.1", port + 1),
+        ("127.0.0.1", 0),
         partial(
-            visualization.DatabaseRequestHandler,
+            _TreeHandler,
             search_root=str(root / "experiments"),
             show_private=False,
             directory=str(Path(visualization.__file__).parent),

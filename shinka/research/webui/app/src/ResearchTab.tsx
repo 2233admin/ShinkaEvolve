@@ -19,9 +19,12 @@ export function ResearchTab({ snap, current, light, onSelect }: Props) {
       <section className="area-chart">
         <h2 className="section-title">试验</h2>
         {snap.trial_points.length === 0 ? (
-          <p className="muted">还没有试验——用 <code className="mono">shinka_research run</code> 跑实验。</p>
+          <p className="muted">
+            {snap.probes > 0 ? `还没有进化出的程序（只有 ${snap.probes} 次试探，试探不画点）` : '还没有试验'}——用{' '}
+            <code className="mono">shinka_research run</code> 跑实验。
+          </p>
         ) : (
-          <TrialChart points={snap.trial_points} selected={current.id} light={light} />
+          <TrialChart points={snap.trial_points} probes={snap.probes} selected={current.id} light={light} />
         )}
       </section>
       <section className="area-timeline">
