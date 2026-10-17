@@ -72,6 +72,7 @@ def scaffold_experiment(
         raise FileNotFoundError(data_path)
     cfg = cfg.model_copy(update={"data_path": str(data_path)})
 
+    body = (root / "hypotheses" / f"{hid}.md").read_text()
     eid = f"e{len(hyp.experiments) + 1:02d}"
     task_dir = experiment_dir(root, hid, eid) / "task"
     if task_dir.exists():
@@ -83,7 +84,6 @@ def scaffold_experiment(
         EVALUATE_TEMPLATE.format(config_json=cfg.model_dump_json(indent=4))
     )
 
-    body = (root / "hypotheses" / f"{hid}.md").read_text()
     sys_msg = SYS_MSG_TEMPLATE.format(hid=hid, title=hyp.title, body=body.strip())
     (task_dir / SHINKA_CONFIG_FILENAME).write_text(
         yaml.safe_dump({"evo": {"task_sys_msg": sys_msg}}, allow_unicode=True)
@@ -96,6 +96,13 @@ def scaffold_experiment(
         data_hash=file_sha256(data_path),
     )
     return exp, task_dir
+
+
+def load_config(task_dir: Path) -> QuantConfig:
+    """Read the config embedded in a frozen evaluate.py."""
+    from shinka.core.wrap_eval import load_program
+
+    return load_program(str(Path(task_dir) / "evaluate.py")).CONFIG
 
 
 def verify_experiment(root: Path, hid: str, exp: Experiment) -> None:

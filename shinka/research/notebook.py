@@ -54,6 +54,7 @@ class Experiment(BaseModel):
     data_path: str
     data_hash: str
     n_evaluated: int = 0
+    n_probed: int = 0
     skeptic: Optional[Dict[str, Any]] = None
 
 
@@ -98,7 +99,9 @@ class Notebook(BaseModel):
     @property
     def total_trials(self) -> int:
         """Variants evaluated across the whole direction (for DSR)."""
-        return sum(e.n_evaluated for h in self.hypotheses for e in h.experiments)
+        return sum(
+            e.n_evaluated + e.n_probed for h in self.hypotheses for e in h.experiments
+        )
 
     # ---- mutations -------------------------------------------------------
 
@@ -112,9 +115,15 @@ class Notebook(BaseModel):
         return hyp
 
     def set_status(self, hid: str, status: Status) -> None:
-        if status in VERDICTS:
-            raise ValueError("Use set_verdict to record supported/refuted/inconclusive")
-        self.get(hid).status = status
+        """Human triage only: proposed <-> selected <-> dropped."""
+        triage = {Status.proposed, Status.selected, Status.dropped}
+        hyp = self.get(hid)
+        if status not in triage or hyp.status not in triage:
+            raise ValueError(
+                f"{hid} is {hyp.status.value}; only proposed/selected/dropped can be "
+                "set by hand (verdicts come from `verdict`)"
+            )
+        hyp.status = status
 
     def set_verdict(self, hid: str, verdict: Verdict) -> None:
         if verdict.label not in VERDICTS:

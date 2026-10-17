@@ -3,17 +3,22 @@
 from __future__ import annotations
 
 import argparse
+import contextlib
+import io
+import json
 import subprocess
+import tempfile
 import sys
 from pathlib import Path
 from typing import List, Optional
 
 from shinka.research.notebook import Notebook, Status, Verdict, experiment_dir
-from shinka.research.quant import QuantConfig
+from shinka.research.quant import QuantConfig, run_quant_eval
 from shinka.research.rundb import count_evaluated
 from shinka.research.skeptic import Thresholds, challenge, decide, render_report
 from shinka.research.scaffold import (
     SHINKA_CONFIG_FILENAME,
+    load_config,
     scaffold_experiment,
     verify_experiment,
 )
@@ -23,10 +28,22 @@ PROGRAM_TEMPLATE = """# Research program
 ## Direction
 {direction}
 
-## Constraints
-- Data: <which instrument, bar size, period, file path>
+## Data
+- File: <absolute path to CSV with timestamp + close (+ other columns)>
+- Instrument, bar size, period: <...>
+- Periods per year: <252 for daily equities, 365 for daily crypto, ...>
+
+## Evaluator settings
 - Costs: <bps per unit turnover>
-- Budget: <max hypotheses, generations per experiment, USD per direction>
+- Out-of-sample fraction: 0.3, in-sample folds: 3
+
+## Budget
+- Max hypotheses per round: <n>
+- Generations per experiment: <stage 2 / stage 3>
+- USD per experiment: <...>, per direction: <...>
+
+## Autonomy
+- Checkpoints: ask me to choose hypotheses and to review verdicts (yes/no)
 
 ## Verdict thresholds
 - supported: DSR >= 0.95 and >= 2/3 of out-of-sample sub-periods with positive Sharpe
@@ -84,14 +101,21 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
 
 
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
+    if any("headless/" in a for a in extra):
+        # Headless CLI agents work inside results_dir, which holds private
+        # (out-of-sample) metrics; they would see the holdout.
+        sys.exit(
+            "headless/* mutation models are not allowed: they can read OOS metrics"
+        )
     root = Path(args.dir)
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     verify_experiment(root, hyp.id, exp)
     exp_dir = experiment_dir(root, hyp.id, exp.id)
     results_dir = exp_dir / "results"
-    previous_status = hyp.status
-    hyp.status = Status.running
+    previous_status, previous_verdict = hyp.status, hyp.verdict
+    evaluated_before = count_evaluated(results_dir)
+    hyp.status, hyp.verdict = Status.running, None
     nb.save(root)
 
     cmd = [
@@ -103,14 +127,18 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         *extra,
     ]  # fmt: skip
     print("$ " + " ".join(cmd), flush=True)
-    code = subprocess.call(cmd)
-
-    nb = Notebook.load(root)
-    exp = next(e for e in nb.get(hyp.id).experiments if e.id == exp.id)
-    exp.n_evaluated = count_evaluated(results_dir)
-    if code and exp.n_evaluated == 0:
-        nb.get(hyp.id).status = previous_status
-    nb.save(root)
+    code = 1
+    try:
+        code = subprocess.call(cmd)
+    finally:
+        # Always record what was evaluated, even on Ctrl-C, so trials are counted.
+        nb = Notebook.load(root)
+        hyp = nb.get(hyp.id)
+        exp = next(e for e in hyp.experiments if e.id == exp.id)
+        exp.n_evaluated = count_evaluated(results_dir)
+        if code and exp.n_evaluated == evaluated_before:
+            hyp.status, hyp.verdict = previous_status, previous_verdict
+        nb.save(root)
     if code:
         sys.exit(code)
 
@@ -122,6 +150,31 @@ def _pick_experiment(nb: Notebook, hid: str, eid: Optional[str]):
     if eid is None:
         return hyp, hyp.experiments[-1]
     return hyp, next(e for e in hyp.experiments if e.id == eid)
+
+
+def cmd_probe(args: argparse.Namespace) -> None:
+    """Score a program with the frozen evaluator, showing public metrics only."""
+    root = Path(args.dir)
+    nb = Notebook.load(root)
+    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+    verify_experiment(root, hyp.id, exp)
+    cfg = load_config(experiment_dir(root, hyp.id, exp.id) / "task")
+    with (
+        tempfile.TemporaryDirectory() as tmp,
+        contextlib.redirect_stdout(io.StringIO()),
+    ):
+        metrics, correct, err = run_quant_eval(args.program, tmp, cfg)
+    # Probing is a manual search step: count it as a trial for the DSR.
+    exp.n_probed += 1
+    nb.save(root)
+    shown = {
+        "correct": correct,
+        "error": err,
+        "combined_score": metrics.get("combined_score"),
+        "public": metrics.get("public"),
+        "text_feedback": metrics.get("text_feedback"),
+    }
+    print(json.dumps(shown, indent=2, default=float))
 
 
 def cmd_skeptic(args: argparse.Namespace) -> None:
@@ -136,7 +189,7 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     report = challenge(root, nb, hyp.id, exp, th)
     label, reason = decide(report, th)
     exp.skeptic = {**report, "rule_label": label.value, "rule_reason": reason}
-    hyp.status = Status.challenged
+    hyp.status, hyp.verdict = Status.challenged, None
     nb.save(root)
     out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
     out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
@@ -221,6 +274,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--eid")
     s.add_argument("--num-generations", type=int, default=20)
     s.set_defaults(func=cmd_run, takes_extra=True)
+
+    s = sub.add_parser(
+        "probe", help="Score a program with the frozen evaluator (public only)"
+    )
+    s.add_argument("dir")
+    s.add_argument("hid")
+    s.add_argument("program")
+    s.add_argument("--eid")
+    s.set_defaults(func=cmd_probe)
 
     s = sub.add_parser("skeptic", help="Challenge an experiment on the holdout")
     s.add_argument("dir")

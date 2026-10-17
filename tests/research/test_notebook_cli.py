@@ -114,3 +114,41 @@ def test_verdict_rules_and_trials(tmp_path: Path, example_dir: Path) -> None:
     nb.set_verdict("h001", Verdict(label=Status.refuted, reason="OOS Sharpe < 0"))
     assert nb.get("h001").status is Status.refuted
     assert nb.total_trials == 7
+
+
+def test_probe_shows_public_metrics_only(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, capsys
+) -> None:
+    import json
+
+    root = _init(tmp_path, example_dir)
+    cli.main(
+        [
+            "scaffold", str(root), "h001",
+            "--initial", str(example_dir / "initial.py"),
+            "--data", str(bars_csv),
+        ]
+    )  # fmt: skip
+    capsys.readouterr()
+    cli.main(["probe", str(root), "h001", str(example_dir / "initial.py")])
+    out = capsys.readouterr().out
+    shown = json.loads(out)
+    assert shown["correct"] is True
+    assert "is_sharpe_mean" in shown["public"]
+    assert "oos" not in out.lower()
+    assert Notebook.load(root).total_trials == 1  # probes count as trials
+
+
+def test_status_guard_and_headless_guard(tmp_path: Path, example_dir: Path) -> None:
+    root = _init(tmp_path, example_dir)
+    nb = Notebook.load(root)
+    nb.add_experiment("h001", "a", "/d.csv", "b")
+    nb.get("h001").status = Status.running
+    nb.save(root)
+    with pytest.raises(ValueError, match="running"):
+        cli.main(["hypothesis", "status", str(root), "h001", "dropped"])
+    with pytest.raises(SystemExit, match="headless"):
+        cli.main(
+            ["run", str(root), "h001", "--",
+             "--set", 'evo.llm_models=["headless/claude"]']
+        )  # fmt: skip

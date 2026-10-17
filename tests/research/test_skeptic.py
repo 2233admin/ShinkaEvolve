@@ -43,11 +43,19 @@ def test_positive_fraction() -> None:
 
 def test_decide_rules() -> None:
     th = Thresholds()
-    base = {"n_trials": 10, "dsr": 0.99, "oos_positive_fraction": 1.0}
+    base = {
+        "n_trials": 10,
+        "dsr": 0.99,
+        "oos_positive_fraction": 1.0,
+        "baseline_buy_hold_oos_sharpe": 0.2,
+    }
     assert decide({**base, "oos_sharpe": -0.1}, th)[0] is Status.refuted
     assert decide({**base, "oos_sharpe": 1.0}, th)[0] is Status.supported
     weak = {**base, "oos_sharpe": 0.3, "dsr": 0.6}
     assert decide(weak, th)[0] is Status.inconclusive
+    # Strong statistics but no better than passive exposure: not supported.
+    below_hold = {**base, "oos_sharpe": 0.15}
+    assert decide(below_hold, th)[0] is Status.inconclusive
 
 
 def _fake_results(results_dir: Path, programs: list) -> None:

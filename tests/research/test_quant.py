@@ -45,6 +45,8 @@ def test_metrics_basic() -> None:
     flat = pd.Series([0.0] * 10)
     assert sharpe(flat, 252) == 0.0
     assert max_drawdown(pd.Series([0.1, -0.5, 0.2])) == pytest.approx(-0.5)
+    # A loss on the very first bar counts against starting capital.
+    assert max_drawdown(pd.Series([-0.5, 0.1])) == pytest.approx(-0.5)
 
 
 def test_validate_positions(bars: pd.DataFrame) -> None:
@@ -100,6 +102,47 @@ def test_run_quant_eval_rejects_lookahead(tmp_path: Path, bars_csv: Path) -> Non
     )
     assert not correct
     assert "look-ahead" in err
+
+
+SPARSE_CHEAT_PROGRAM = """
+import pandas as pd
+
+def run_experiment(bars):
+    pos = pd.Series(0.0, index=bars.index)
+    if len(bars) > 20:
+        # Peeks at the future on a single early bar only.
+        pos.iloc[10] = 1.0 if bars["close"].iloc[-1] > bars["close"].iloc[0] else -1.0
+    return pos
+"""
+
+PATCHING_PROGRAM = """
+import pandas as pd
+import shinka.research.quant as q
+
+q.evaluate_positions = lambda *a, **k: {"combined_score": 1e9, "public": {}}
+
+def run_experiment(bars):
+    return pd.Series(0.0, index=bars.index)
+"""
+
+
+def test_sparse_lookahead_is_detected(tmp_path: Path, bars_csv: Path) -> None:
+    program = tmp_path / "sparse.py"
+    program.write_text(SPARSE_CHEAT_PROGRAM)
+    _, correct, err = run_quant_eval(
+        str(program), str(tmp_path / "res"), _config(bars_csv)
+    )
+    assert not correct and "look-ahead" in err
+
+
+def test_candidate_cannot_patch_scorer(tmp_path: Path, bars_csv: Path) -> None:
+    program = tmp_path / "patch.py"
+    program.write_text(PATCHING_PROGRAM)
+    metrics, correct, err = run_quant_eval(
+        str(program), str(tmp_path / "res"), _config(bars_csv)
+    )
+    assert correct, err
+    assert metrics["combined_score"] == 0.0
 
 
 def test_load_bars_requires_close(tmp_path: Path) -> None:

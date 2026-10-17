@@ -21,4 +21,15 @@ hashes it together with the data; `run` refuses to start if either changed.
 The mutation LLM only sees in-sample walk-forward metrics; the out-of-sample
 holdout is stored as private metrics for the skeptic.
 
+After evolution, challenge the result on the holdout and record the verdict:
+
+```bash
+shinka_research skeptic runs/momentum h001   # DSR, OOS sub-periods, baselines
+shinka_research verdict runs/momentum h001
+```
+
+To let a coding agent drive the whole loop (literature search, hypothesis
+tree, staged evolution, ablations, report), point it at
+`skills/shinka-research/SKILL.md`.
+
 See `docs/research/design.md` for the full design.
