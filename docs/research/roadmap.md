@@ -44,5 +44,12 @@
 - [x] 跨方向知识沉淀：结论写回 wiki 的 finding 页，每轮 lint
 - [x] skill：自主模式、简单性原则、编译/问答/写回/lint 步骤
 
+## P5 · 研究层前端（只读）
+- [ ] 视觉规范 DESIGN.md（design-pipeline），所有者验收
+- [ ] `shinka_research ui <workspace>`：工作区、方向、资料库三页，跳转上游 viz_tree
+- [ ] 可见性测试：未出结论不露验证段证据，未 confirm 不露 lockbox 数字
+
+完成标准：人不用 CLI 就能看清一个方向的全部状态，且看不到 agent 也不该看到的数字。
+
 ## 之后 · 通用化
 - [ ] 把 `quant/` 抽象为可替换的"领域评估框架"接口，接入第二个领域验证
