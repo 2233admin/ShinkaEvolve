@@ -1,0 +1,60 @@
+{
+  "schema": "design-pipeline.workflow-state.v1",
+  "deliverable": "ui",
+  "tier": "standard",
+  "mode": "brief",
+  "director": null,
+  "assistedBy": "Claude Code + claude-opus-5-5",
+  "decisions": {
+    "intake": {
+      "answer": "Product: Shinka Research read-only research UI (workspace / direction / library pages); the viewer must understand a research direction's state at a glance: hypotheses with status and evidence, trials N vs multiple-testing bar, budget, lockbox sealed/opened. Audience: owner on a desktop browser, and shared with other people (needs explanatory text and onboarding for newcomers); phone must be readable. Style: independent from upstream Shinka WebUI, but not jarring when linking into it. Assets: none beyond our own; no logos needed. Not a film: no duration. Delegation: agent produces direction previews and implementation; owner wants to see every step including the DESIGN.md draft, selects the direction and gives final acceptance.",
+      "briefSha256": "sha256:dd6b7c2d746be6c9f6030c136fad1530e3c57a19ff1de3f67ad7ee6669639ddc",
+      "by": "owner"
+    },
+    "roles": [
+      {
+        "stage": "intake",
+        "by": "owner",
+        "answer": "Product: Shinka Research read-only research UI (workspace / direction / library pages); the viewer must understand a research direction's state at a glance: hypotheses with status and evidence, trials N vs multiple-testing bar, budget, lockbox sealed/opened. Audience: owner on a desktop browser, and shared with other people (needs explanatory text and onboarding for newcomers); phone must be reada",
+        "at": "2026-10-17T14:13:01.808Z"
+      },
+      {
+        "stage": "concept",
+        "by": "owner",
+        "choice": "ops-spec",
+        "answer": "第二个（ops-spec）。组件不手搓，用现成组件库：Astro UXDS 与 Carbon 对比后拼成一套（Astro 管顶栏、状态符号、时间线、事件流；Carbon 管表格、页签、术语提示、折叠、提示条、图表、代码），「现在样子挺好的 就这样」。研究界面与 KatanaConsole 分开，组件库也分开。",
+        "at": "2026-10-17T16:14:14.927Z"
+      }
+    ],
+    "concept": "ops-spec",
+    "conceptNotes": "第二个（ops-spec）。组件不手搓，用现成组件库：Astro UXDS 与 Carbon 对比后拼成一套（Astro 管顶栏、状态符号、时间线、事件流；Carbon 管表格、页签、术语提示、折叠、提示条、图表、代码），「现在样子挺好的 就这样」。研究界面与 KatanaConsole 分开，组件库也分开。"
+  },
+  "gates": {},
+  "rules": [],
+  "createdAt": "2026-10-17T14:10:58.191Z",
+  "delegation": {
+    "intake": {
+      "to": "owner",
+      "set": "default"
+    },
+    "concept": {
+      "to": "owner",
+      "set": "default"
+    },
+    "deliver": {
+      "to": "owner",
+      "set": "owner"
+    },
+    "review": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    },
+    "creative-intent": {
+      "to": "owner",
+      "locked": true,
+      "set": "default"
+    }
+  },
+  "updatedAt": "2026-10-17T16:14:14.927Z"
+}

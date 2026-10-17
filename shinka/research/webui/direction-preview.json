@@ -1,0 +1,100 @@
+{
+  "schema": "design-pipeline.direction-preview.v1",
+  "changeId": "webui",
+  "applicability": {
+    "status": "required",
+    "reason": "visual-redesign"
+  },
+  "comparison": {
+    "brief": {
+      "path": "brief.md",
+      "sha256": "cc6cb2b6ae5b51f67352d7070da3c5fe212103fdad9bb6f92c4eb30da7f19d4b"
+    },
+    "index": {
+      "path": "direction-previews/index.html",
+      "sha256": "2a62291b0a2ad30819a1f24c4c1cbc6344c00d8f9d87e2ca88bca1f3003ddee7"
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 960
+    },
+    "contentFixtureSha256": "8cfaa14267a72f3dcf1e14b99804c15e7ddfed27ef160c1de74e9fdcc223d0de",
+    "stateCoverage": [
+      "supported",
+      "refuted",
+      "inconclusive",
+      "running",
+      "proposed",
+      "dropped",
+      "lockbox-sealed",
+      "budget-partial",
+      "validation-hidden-before-verdict",
+      "dark-theme"
+    ]
+  },
+  "directions": [
+    {
+      "id": "night-ledger",
+      "name": "夜间记录本",
+      "thesis": "已验收的记录本搬到夜里：结构不变，每条记录头上加一条分段规格条。",
+      "signature": "分段磁带格规格条（编号 · 日期 · 状态）+ 等宽页边编号",
+      "axes": {
+        "luminance": "dark",
+        "typeFamily": "cjk-serif-titles-mono-labels",
+        "color": "warm-brown-sand-rust",
+        "layout": "single-column-with-margin",
+        "density": "low",
+        "era": "classic-ledger",
+        "material": "paper-at-night"
+      },
+      "screenshot": {
+        "path": "direction-previews/night-ledger.png",
+        "sha256": "3c8c5c48874408a1e60c3b20e681e66fee543396f02f2e9b5a97104ffef9521c"
+      }
+    },
+    {
+      "id": "ops-spec",
+      "name": "运维规格台",
+      "thesis": "研究方向是一台在运行的设备：顶部规格栏，假设是规格卡，试验是竖向索引条纹。",
+      "signature": "竖向索引条纹（每次试验一条）+ 规格卡键值字段",
+      "axes": {
+        "luminance": "dark",
+        "typeFamily": "single-family-sans-mono",
+        "color": "operations-dark-signal-orange",
+        "layout": "spec-grid-two-pane",
+        "density": "high",
+        "era": "neo-industrial",
+        "material": "machine-plate"
+      },
+      "screenshot": {
+        "path": "direction-previews/ops-spec.png",
+        "sha256": "584aefe945c027f53b9b4115283d51594656c2194dfc7a16aff87118c38575cd"
+      }
+    },
+    {
+      "id": "tape-archive",
+      "name": "档案磁带",
+      "thesis": "每个假设是一卷磁带：轨道上的亮段是保留的改进，断口是被丢弃的试验。",
+      "signature": "带断口的磁带轨道 + 琥珀色最优点标记",
+      "axes": {
+        "luminance": "dark",
+        "typeFamily": "mono-dominant",
+        "color": "graphite-amber",
+        "layout": "horizontal-tracks",
+        "density": "medium",
+        "era": "retro-analog-storage",
+        "material": "magnetic-tape"
+      },
+      "screenshot": {
+        "path": "direction-previews/tape-archive.png",
+        "sha256": "9c55fef45c9da674ed372463625dad9bedc8ab4107c0481ab99424d51b099bea"
+      }
+    }
+  ],
+  "decision": {
+    "status": "selected",
+    "selectedDirectionId": "ops-spec",
+    "rationale": "第二个（ops-spec）。组件不手搓，用现成组件库：Astro UXDS 与 Carbon 对比后拼成一套（Astro 管顶栏、状态符号、时间线、事件流；Carbon 管表格、页签、术语提示、折叠、提示条、图表、代码），「现在样子挺好的 就这样」。研究界面与 KatanaConsole 分开，组件库也分开。",
+    "by": "owner"
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema": "design-pipeline.state.v1",
+  "changeId": "research-ui",
+  "status": "needs-review",
+  "phase": "stage-3-design-spec",
+  "updatedAt": "2026-10-17T14:22:30.271Z",
+  "artifactRoot": "design/changes/research-ui",
+  "projectRoot": ".",
+  "surfaces": [
+    "DESIGN.md"
+  ],
+  "capabilities": {
+    "missing": [],
+    "fallbacks": []
+  },
+  "openSpec": {
+    "detected": false,
+    "changeId": "research-ui",
+    "paths": [
+      "design/changes/research-ui"
+    ]
+  },
+  "gbrain": {
+    "detected": false,
+    "syncPlanned": false,
+    "paths": []
+  },
+  "motion": {
+    "required": false,
+    "motionSpec": "design/changes/research-ui/motion.md",
+    "implementationLibrary": "unknown",
+    "reducedMotion": "pending"
+  },
+  "qa": {
+    "status": "not-run",
+    "evidenceRoot": "design/changes/research-ui/qa.md",
+    "scores": {}
+  },
+  "decisions": [
+    "Treat reference sites and DESIGN.md templates as attributed evidence, not product authority"
+  ],
+  "blockers": [],
+  "nextActions": [
+    "Assess the declared surfaces, workflows, integrations, unknowns, and decisions.",
+    "Validate or synthesize project MOTION.md, then continue into implementation from both project foundations and the change artifacts."
+  ],
+  "designFoundation": {
+    "path": "DESIGN.md",
+    "status": "ready",
+    "sha256": "927b15550a056a1193deab339b95daac24812ffaf13b100227d945dec5035b0b"
+  },
+  "designSynthesis": {
+    "manifest": "design/changes/research-ui/design-synthesis.json",
+    "status": "needs-review",
+    "stage": "design-validation",
+    "output": "DESIGN.md"
+  }
+}

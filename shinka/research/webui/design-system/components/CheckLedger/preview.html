@@ -1,0 +1,15 @@
+<!-- @dsCard group="Status" height=200 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>CheckLedger — preview</title></head>
+<body>
+<div id="root" class="sr-preview">
+<p class="sr-kicker">h002 · 支持：全部通过</p>
+<ul class="sr-checks"><li class="sr-check is-pass">✓ 验证段 Sharpe &gt; 0</li><li class="sr-check is-pass">✓ 跑赢买入持有</li><li class="sr-check is-pass">✓ DSR ≥ 0.95</li><li class="sr-check is-pass">✓ 子区间为正 ≥ 2/3</li><li class="sr-check is-pass">✓ PBO ≤ 0.5</li></ul>
+<p class="sr-kicker" style="margin-top:16px">h003 · 不确定：第二条决定结论</p>
+<ul class="sr-checks"><li class="sr-check is-pass">✓ 验证段 Sharpe &gt; 0</li><li class="sr-check is-fail is-decider" title="这一条决定了结论">✗ 跑赢买入持有</li><li class="sr-check is-fail">✗ DSR ≥ 0.95</li><li class="sr-check is-pass">✓ 子区间为正 ≥ 2/3</li><li class="sr-check is-pass">✓ PBO ≤ 0.5</li></ul>
+<p class="sr-kicker" style="margin-top:16px">PBO 无法计算</p>
+<ul class="sr-checks"><li class="sr-check is-pass">✓ 验证段 Sharpe &gt; 0</li><li class="sr-check is-pass">✓ 跑赢买入持有</li><li class="sr-check is-pass">✓ DSR ≥ 0.95</li><li class="sr-check is-pass">✓ 子区间为正 ≥ 2/3</li><li class="sr-check is-na">— PBO 不适用</li></ul>
+</div>
+</body>
+</html>

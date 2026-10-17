@@ -1,0 +1,3161 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>暗色方向预览 · Shinka Research</title>
+<style>
+  html, body { margin: 0; background: #2a2a2a; color: #ddd;
+    font-family: system-ui, "Noto Sans CJK SC", sans-serif; }
+  .shell { padding: 20px 24px 8px; max-width: 1440px; margin: 0 auto; }
+  .shell h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; color: #fff; }
+  .shell p { margin: 0; font-size: 13px; color: #bbb; line-height: 1.6; }
+  .stage { margin: 16px auto 32px; max-width: 1440px; }
+  .label { font-size: 13px; color: #ccc; padding: 0 24px 6px; }
+  .label b { color: #fff; }
+  .frame { width: 1440px; height: 960px; overflow: hidden; margin: 0 auto; }
+  body.solo { background: #000; }
+  body.solo .shell, body.solo .label { display: none; }
+  body.solo .stage { margin: 0; }
+  @media (max-width: 1439px) { .frame { width: 100%; height: auto; min-height: 960px; } }
+  .num { font-variant-numeric: tabular-nums; }
+  abbr { text-decoration: underline dotted; text-underline-offset: 3px; }
+
+  /* ================= A · 夜间记录本 Night Ledger =================
+     warm brown-black, sand ink, rust limits; serif titles; margin column kept;
+     construct: segmented tape cells (spec strip) */
+  .A { --bg:#17130f; --bg2:#1f1a14; --rule:#3a3128; --rule2:#5a4c3d; --ink:#efe6d6; --ink2:#c9bda8; --ink3:#a39580;
+       --held:#8fc79a; --limit:#e0866f; --unsure:#d8b86a; --run:#8fb5e0; --rust:#c8643f;
+       background: var(--bg); color: var(--ink); height: 100%;
+       font-family: system-ui, "Noto Sans CJK SC", sans-serif; }
+  .A .page { width: 1060px; margin: 0 auto; padding: 36px 0 0; display: grid; grid-template-columns: 160px 1fr; column-gap: 40px; }
+  .A .mg { text-align: right; font: 12px/1.6 "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; color: var(--ink3); }
+  .A .tape { grid-column: 2; display: flex; border: 1px solid var(--rule2); font: 11px/1 "DejaVu Sans Mono", monospace; letter-spacing: .08em; color: var(--ink3); }
+  .A .tape span { padding: 6px 10px; border-right: 1px solid var(--rule2); }
+  .A .tape span:last-child { border-right: 0; margin-left: auto; color: var(--rust); }
+  .A h1 { grid-column: 2; font: 600 30px/1.35 "Noto Serif CJK SC", serif; margin: 18px 0 8px; }
+  .A .lede { grid-column: 2; color: var(--ink2); font-size: 15px; line-height: 1.75; margin: 0 0 16px; max-width: 40em; }
+  .A .facts { grid-column: 2; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--rule2); }
+  .A .facts div { padding: 10px 12px 10px 0; }
+  .A .facts small { display: block; font: 10.5px/1.4 "DejaVu Sans Mono", monospace; letter-spacing: .1em; color: var(--ink3); text-transform: uppercase; }
+  .A .facts b { font-size: 19px; font-weight: 600; }
+  .A .facts em { font-style: normal; font-size: 12px; color: var(--ink3); }
+  .A .seal { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid var(--rust); border-radius: 50%; color: var(--rust); font: 600 11px "Noto Serif CJK SC", serif; margin-right: 6px; vertical-align: -4px; }
+  .A .meter { height: 4px; display: flex; gap: 2px; margin-top: 6px; }
+  .A .meter i { flex: 1; background: var(--rule2); } .A .meter i.on { background: var(--ink2); }
+  .A h2 { grid-column: 2; font: 11px/1 "DejaVu Sans Mono", monospace; letter-spacing: .14em; color: var(--ink3); margin: 22px 0 8px; }
+  .A .chart { grid-column: 2; }
+  .A .row { display: contents; }
+  .A .row .mg { padding-top: 12px; }
+  .A .row .mg b { display: block; font: 600 14px "DejaVu Sans Mono", monospace; color: var(--ink); }
+  .A .ent { border-top: 1px solid var(--rule); padding: 10px 0; }
+  .A .spec { display: flex; gap: 0; font: 10.5px/1 "DejaVu Sans Mono", monospace; letter-spacing: .06em; color: var(--ink3); margin-bottom: 6px; }
+  .A .spec span { padding: 3px 8px; border: 1px solid var(--rule2); border-left: 0; } .A .spec span:first-child { border-left: 1px solid var(--rule2); }
+  .A .spec .st { color: var(--bg); font-weight: 700; border-color: transparent; }
+  .A .ent h3 { margin: 0; font: 600 17px/1.45 "Noto Serif CJK SC", serif; }
+  .A .ev { margin: 3px 0 0; color: var(--ink2); font-size: 14px; line-height: 1.7; }
+  .A .ck { font-size: 12.5px; margin-top: 3px; } .A .ck span { margin-right: 14px; } .A .ok { color: var(--held); } .A .no { color: var(--limit); }
+  .A .dec { text-decoration: underline 1px var(--limit); text-underline-offset: 4px; }
+
+  /* ================= B · 运维规格台 Ops Spec Sheet =================
+     near-black, one family (sans + mono), signal orange; 12-col spec grid, dense;
+     construct: vertical index striping */
+  /* tokens: the owner's Neo-Industrial DESIGN.md, Operations Dark roles */
+  .B { --bg:#151815; --bg2:#20251F; --rule:#3C4438; --ink:#EFEEE8; --ink2:#B3B9AB; --ink3:#B3B9AB; --sig:#F45D22;
+       --held:#9CD1AC; --limit:#FFA095; --unsure:#E5C06F; --run:#9fc3f0;
+       background: var(--bg); color: var(--ink); height: 100%; font-family: "Noto Sans CJK SC", system-ui, sans-serif; font-size: 13px; }
+  .B .mono { font-family: "Noto Sans Mono CJK SC", "DejaVu Sans Mono", monospace; }
+  .B .top { display: grid; grid-template-columns: 2.4fr repeat(5, 1fr); border-bottom: 1px solid var(--rule); }
+  .B .top > div { padding: 14px 16px; border-right: 1px solid var(--rule); }
+  .B .k { font: 10.5px/1.4 "Noto Sans Mono CJK SC", monospace; letter-spacing: .08em; color: var(--ink3); text-transform: uppercase; }
+  .B .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .B .v small { font-size: 12px; color: var(--ink3); font-weight: 400; }
+  .B .q { font-size: 17px; font-weight: 700; line-height: 1.35; }
+  .B .stripes { height: 10px; background: repeating-linear-gradient(90deg, var(--sig) 0 2px, transparent 2px 6px); opacity: .9; }
+  .B .body { display: grid; grid-template-columns: 1.15fr 1fr; height: calc(100% - 92px); }
+  .B .pane { padding: 14px 16px; border-right: 1px solid var(--rule); overflow: hidden; }
+  .B h2 { font: 10.5px/1 "Noto Sans Mono CJK SC", monospace; letter-spacing: .12em; color: var(--ink3); margin: 0 0 10px; display: flex; justify-content: space-between; }
+  .B .card { display: grid; grid-template-columns: 112px 1fr 104px; border-top: 1px solid var(--rule); padding: 10px 0; gap: 0 12px; }
+  .B .card .id { font: 700 15px "Noto Sans Mono CJK SC", monospace; }
+  .B .card .id small { display: block; font-size: 10.5px; color: var(--ink3); font-weight: 400; margin-top: 3px; }
+  .B .card .t { font-weight: 700; font-size: 14.5px; }
+  .B .kv { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; font: 11.5px/1.5 "Noto Sans Mono CJK SC", monospace; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .B .kv i { font-style: normal; color: var(--ink3); }
+  .B .st { justify-self: end; align-self: start; font: 700 11px/1 "Noto Sans Mono CJK SC", monospace; letter-spacing: .08em; padding: 5px 7px; border: 1px solid currentColor; }
+  .B .gates { display: flex; gap: 3px; margin-top: 6px; } .B .gates i { width: 22px; height: 6px; }
+  .B .gates .ok { background: var(--held); } .B .gates .no { background: transparent; box-shadow: inset 0 0 0 1.5px var(--limit); } .B .gates .dec { background: var(--limit); }
+  .B .log div { display: grid; grid-template-columns: 96px 46px 64px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--rule); font: 11.5px/1.4 "Noto Sans Mono CJK SC", monospace; color: var(--ink2); }
+
+  /* ================= C · 档案磁带 Tape Archive =================
+     graphite + amber, mono-dominant with serif-free titles; horizontal tape tracks;
+     construct: tracks with breaks (断口) */
+  .C { --bg:#121417; --bg2:#1a1d21; --rule:#2c3036; --ink:#e6e3da; --ink2:#b7b3a8; --ink3:#8d8a82; --amber:#e6a23c;
+       --held:#7cc796; --limit:#f08470; --unsure:#d9c070; --run:#86b0e8;
+       background: var(--bg); color: var(--ink); height: 100%; font-family: "Noto Sans Mono CJK SC", "DejaVu Sans Mono", monospace; font-size: 13px; }
+  .C .wrap { padding: 28px 40px; }
+  .C .hdr { display: grid; grid-template-columns: 1fr auto; align-items: end; border-bottom: 2px solid var(--amber); padding-bottom: 14px; }
+  .C .hdr h1 { margin: 6px 0 0; font: 700 28px/1.3 "Noto Sans CJK SC", sans-serif; letter-spacing: -.005em; }
+  .C .tag { font-size: 11px; letter-spacing: .14em; color: var(--amber); }
+  .C .kv { display: grid; grid-template-columns: repeat(5, auto); gap: 4px 28px; font-size: 11.5px; color: var(--ink2); text-align: right; }
+  .C .kv b { display: block; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .C h2 { font-size: 11px; letter-spacing: .14em; color: var(--ink3); margin: 22px 0 10px; font-weight: 400; }
+  .C .tracks { display: grid; gap: 10px; }
+  .C .tr { display: grid; grid-template-columns: 160px 1fr 120px; gap: 16px; align-items: center; }
+  .C .tr .nm { font-size: 12px; color: var(--ink2); } .C .tr .nm b { display: block; color: var(--ink); font-size: 14px; }
+  .C .tr .nm span { font-family: "Noto Sans CJK SC", sans-serif; }
+  .C .bar { position: relative; height: 26px; background: var(--bg2); border: 1px solid var(--rule); }
+  .C .bar i { position: absolute; top: 4px; bottom: 4px; background: var(--ink3); }
+  .C .bar i.cut { background: transparent; border-left: 2px solid var(--bg); }
+  .C .bar .best { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--amber); }
+  .C .tr .st { font-size: 11px; letter-spacing: .08em; text-align: right; }
+  .C .ev { grid-column: 2 / 4; font-family: "Noto Sans CJK SC", sans-serif; font-size: 13px; color: var(--ink2); margin-top: -4px; }
+  .C .ev .g { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 11.5px; }
+  .C .ok { color: var(--held); } .C .no { color: var(--limit); } .C .dec { text-decoration: underline 1px var(--limit); text-underline-offset: 3px; }
+  .C .bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; }
+  .C .log div { display: grid; grid-template-columns: 92px 44px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--rule); font-size: 11.5px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<header class="shell" data-direction-preview>
+  <h1>暗色方向预览（不是最终产品）· Shinka Research 研究界面</h1>
+  <p>三个候选都保留记录本的内容组织（假设分组、证据句、判据、噪声门槛、流水），默认暗色；同一份内容、同一视口 1440×960、同样的状态覆盖。差别在规格化元数据的放法和贯穿全局的那一个图形构造。</p>
+</header>
+
+<section class="stage" data-direction-id="night-ledger">
+  <div class="label"><b>A · 夜间记录本</b> — 暖黑底、沙色字、锈色标界限；保留宋体标题和页边栏；构造：分段磁带格（每条记录头上一条规格条）。</div>
+  <div class="frame"><div class="A" id="A"></div></div>
+</section>
+<section class="stage" data-direction-id="ops-spec">
+  <div class="label"><b>B · 运维规格台</b> — 直接用你那份新工业 DESIGN.md 的 Operations Dark 色值（#151815 底、#F45D22 信号橙）、单一字族（无衬线 + 等宽）；12 栏规格网格、高密度；构造：竖向索引条纹（试验密度条）。</div>
+  <div class="frame"><div class="B" id="B"></div></div>
+</section>
+<section class="stage" data-direction-id="tape-archive">
+  <div class="label"><b>C · 档案磁带</b> — 石墨底、琥珀色；等宽为主；每个假设是一条磁带轨道；构造：带断口的轨道（每次改进是一段，断口是丢弃的试验区间）。</div>
+  <div class="frame"><div class="C" id="C"></div></div>
+</section>
+
+<script id="fx" type="application/json">{
+ "direction": "BTC 永续日线：时间序列动量在扣除成本后是否仍有超额？",
+ "workspace": "btc-research",
+ "data": {
+  "bars": "2019-01-01 → 2025-02-28",
+  "n_dev": 2251,
+  "n_total": 2814,
+  "lockbox_start": "2025-03-01",
+  "lockbox_fraction": 0.2,
+  "opened": false,
+  "cost_bps": 5
+ },
+ "budget": {
+  "limit": 40.0,
+  "spent": 23.6
+ },
+ "trials": 412,
+ "hypotheses": [
+  {
+   "id": "h001",
+   "title": "20 日动量方向持仓",
+   "status": "refuted",
+   "n": 96,
+   "evidence": {
+    "val_sharpe": -0.12,
+    "dsr": 0.03,
+    "pbo": 0.61,
+    "pos_frac": "1/3",
+    "bh": 0.78,
+    "seed": 0.35
+   },
+   "checks": {
+    "val>0": false,
+    "beats_bh": false,
+    "dsr>=0.95": false,
+    "subperiod": false,
+    "pbo<=0.5": false
+   }
+  },
+  {
+   "id": "h002",
+   "title": "波动率目标仓位的动量",
+   "status": "supported",
+   "n": 142,
+   "evidence": {
+    "val_sharpe": 1.21,
+    "dsr": 0.97,
+    "pbo": 0.22,
+    "pos_frac": "3/3",
+    "bh": 0.78,
+    "seed": 0.35
+   },
+   "checks": {
+    "val>0": true,
+    "beats_bh": true,
+    "dsr>=0.95": true,
+    "subperiod": true,
+    "pbo<=0.5": true
+   }
+  },
+  {
+   "id": "h003",
+   "title": "资金费率极值后的反转",
+   "status": "inconclusive",
+   "n": 56,
+   "evidence": {
+    "val_sharpe": 0.41,
+    "dsr": 0.41,
+    "pbo": 0.38,
+    "pos_frac": "2/3",
+    "bh": 0.78,
+    "seed": 0.12
+   },
+   "checks": {
+    "val>0": true,
+    "beats_bh": false,
+    "dsr>=0.95": false,
+    "subperiod": true,
+    "pbo<=0.5": true
+   }
+  },
+  {
+   "id": "h004",
+   "title": "周末流动性缺口后的延续",
+   "status": "running",
+   "n": 118,
+   "in_sample": {
+    "best_is_sharpe": 0.93,
+    "generation": "23 / 40"
+   }
+  },
+  {
+   "id": "h005",
+   "title": "链上活跃地址领先价格",
+   "status": "proposed"
+  },
+  {
+   "id": "h006",
+   "title": "成交量突破确认",
+   "status": "dropped"
+  }
+ ],
+ "events": [
+  [
+   "10-17 09:12",
+   "h004",
+   "e01",
+   "run",
+   "第 23 代，最优样本内 Sharpe 0.93"
+  ],
+  [
+   "10-16 22:40",
+   "h002",
+   "e01",
+   "verdict",
+   "supported（规则判定）"
+  ],
+  [
+   "10-16 22:31",
+   "h002",
+   "e01",
+   "skeptic",
+   "DSR 0.97，PBO 0.22"
+  ],
+  [
+   "10-16 18:05",
+   "h003",
+   "e01",
+   "verdict",
+   "inconclusive：未跑赢买入持有"
+  ],
+  [
+   "10-15 11:20",
+   "h001",
+   "e01",
+   "verdict",
+   "refuted：验证段 Sharpe ≤ 0"
+  ]
+ ],
+ "library": {
+  "pages": 14,
+  "pending": 2
+ },
+ "points": [
+  {
+   "n": 1,
+   "h": "h001",
+   "score": 0.06,
+   "kept": true
+  },
+  {
+   "n": 2,
+   "h": "h001",
+   "score": 0.333,
+   "kept": true
+  },
+  {
+   "n": 3,
+   "h": "h001",
+   "score": 0.079,
+   "kept": false
+  },
+  {
+   "n": 4,
+   "h": "h001",
+   "score": 0.052,
+   "kept": false
+  },
+  {
+   "n": 5,
+   "h": "h001",
+   "score": -0.16,
+   "kept": false
+  },
+  {
+   "n": 6,
+   "h": "h001",
+   "score": 0.095,
+   "kept": false
+  },
+  {
+   "n": 7,
+   "h": "h001",
+   "score": 0.563,
+   "kept": true
+  },
+  {
+   "n": 8,
+   "h": "h001",
+   "score": 0.326,
+   "kept": false
+  },
+  {
+   "n": 9,
+   "h": "h001",
+   "score": 0.545,
+   "kept": false
+  },
+  {
+   "n": 10,
+   "h": "h001",
+   "score": 0.273,
+   "kept": false
+  },
+  {
+   "n": 11,
+   "h": "h001",
+   "score": 0.328,
+   "kept": false
+  },
+  {
+   "n": 12,
+   "h": "h001",
+   "score": 0.259,
+   "kept": false
+  },
+  {
+   "n": 13,
+   "h": "h001",
+   "score": -0.385,
+   "kept": false
+  },
+  {
+   "n": 14,
+   "h": "h001",
+   "score": 0.501,
+   "kept": false
+  },
+  {
+   "n": 15,
+   "h": "h001",
+   "score": 0.383,
+   "kept": false
+  },
+  {
+   "n": 16,
+   "h": "h001",
+   "score": 0.385,
+   "kept": false
+  },
+  {
+   "n": 17,
+   "h": "h001",
+   "score": -0.378,
+   "kept": false
+  },
+  {
+   "n": 18,
+   "h": "h001",
+   "score": -0.392,
+   "kept": false
+  },
+  {
+   "n": 19,
+   "h": "h001",
+   "score": -0.089,
+   "kept": false
+  },
+  {
+   "n": 20,
+   "h": "h001",
+   "score": 0.062,
+   "kept": false
+  },
+  {
+   "n": 21,
+   "h": "h001",
+   "score": 0.337,
+   "kept": false
+  },
+  {
+   "n": 22,
+   "h": "h001",
+   "score": 0.218,
+   "kept": false
+  },
+  {
+   "n": 23,
+   "h": "h001",
+   "score": 0.42,
+   "kept": false
+  },
+  {
+   "n": 24,
+   "h": "h001",
+   "score": 0.017,
+   "kept": false
+  },
+  {
+   "n": 25,
+   "h": "h001",
+   "score": 0.354,
+   "kept": false
+  },
+  {
+   "n": 26,
+   "h": "h001",
+   "score": 0.388,
+   "kept": false
+  },
+  {
+   "n": 27,
+   "h": "h001",
+   "score": 0.023,
+   "kept": false
+  },
+  {
+   "n": 28,
+   "h": "h001",
+   "score": 0.859,
+   "kept": true
+  },
+  {
+   "n": 29,
+   "h": "h001",
+   "score": 0.457,
+   "kept": false
+  },
+  {
+   "n": 30,
+   "h": "h001",
+   "score": 0.685,
+   "kept": false
+  },
+  {
+   "n": 31,
+   "h": "h001",
+   "score": 0.053,
+   "kept": false
+  },
+  {
+   "n": 32,
+   "h": "h001",
+   "score": 0.015,
+   "kept": false
+  },
+  {
+   "n": 33,
+   "h": "h001",
+   "score": 0.158,
+   "kept": false
+  },
+  {
+   "n": 34,
+   "h": "h001",
+   "score": 0.245,
+   "kept": false
+  },
+  {
+   "n": 35,
+   "h": "h001",
+   "score": 0.507,
+   "kept": false
+  },
+  {
+   "n": 36,
+   "h": "h001",
+   "score": 0.377,
+   "kept": false
+  },
+  {
+   "n": 37,
+   "h": "h001",
+   "score": 0.137,
+   "kept": false
+  },
+  {
+   "n": 38,
+   "h": "h001",
+   "score": -0.037,
+   "kept": false
+  },
+  {
+   "n": 39,
+   "h": "h001",
+   "score": 0.12,
+   "kept": false
+  },
+  {
+   "n": 40,
+   "h": "h001",
+   "score": 0.733,
+   "kept": false
+  },
+  {
+   "n": 41,
+   "h": "h001",
+   "score": 0.027,
+   "kept": false
+  },
+  {
+   "n": 42,
+   "h": "h001",
+   "score": 0.4,
+   "kept": false
+  },
+  {
+   "n": 43,
+   "h": "h001",
+   "score": 0.467,
+   "kept": false
+  },
+  {
+   "n": 44,
+   "h": "h001",
+   "score": -0.199,
+   "kept": false
+  },
+  {
+   "n": 45,
+   "h": "h001",
+   "score": 0.343,
+   "kept": false
+  },
+  {
+   "n": 46,
+   "h": "h001",
+   "score": 0.787,
+   "kept": false
+  },
+  {
+   "n": 47,
+   "h": "h001",
+   "score": -0.371,
+   "kept": false
+  },
+  {
+   "n": 48,
+   "h": "h001",
+   "score": 0.225,
+   "kept": false
+  },
+  {
+   "n": 49,
+   "h": "h001",
+   "score": 0.305,
+   "kept": false
+  },
+  {
+   "n": 50,
+   "h": "h001",
+   "score": 0.06,
+   "kept": false
+  },
+  {
+   "n": 51,
+   "h": "h001",
+   "score": 0.524,
+   "kept": false
+  },
+  {
+   "n": 52,
+   "h": "h001",
+   "score": 0.332,
+   "kept": false
+  },
+  {
+   "n": 53,
+   "h": "h001",
+   "score": -0.155,
+   "kept": false
+  },
+  {
+   "n": 54,
+   "h": "h001",
+   "score": 0.652,
+   "kept": false
+  },
+  {
+   "n": 55,
+   "h": "h001",
+   "score": 0.6,
+   "kept": false
+  },
+  {
+   "n": 56,
+   "h": "h001",
+   "score": 0.701,
+   "kept": false
+  },
+  {
+   "n": 57,
+   "h": "h001",
+   "score": 0.878,
+   "kept": true
+  },
+  {
+   "n": 58,
+   "h": "h001",
+   "score": 0.505,
+   "kept": false
+  },
+  {
+   "n": 59,
+   "h": "h001",
+   "score": 0.424,
+   "kept": false
+  },
+  {
+   "n": 60,
+   "h": "h001",
+   "score": -0.069,
+   "kept": false
+  },
+  {
+   "n": 61,
+   "h": "h001",
+   "score": 0.605,
+   "kept": false
+  },
+  {
+   "n": 62,
+   "h": "h001",
+   "score": 0.18,
+   "kept": false
+  },
+  {
+   "n": 63,
+   "h": "h001",
+   "score": 0.24,
+   "kept": false
+  },
+  {
+   "n": 64,
+   "h": "h001",
+   "score": -0.041,
+   "kept": false
+  },
+  {
+   "n": 65,
+   "h": "h001",
+   "score": 0.067,
+   "kept": false
+  },
+  {
+   "n": 66,
+   "h": "h001",
+   "score": 0.224,
+   "kept": false
+  },
+  {
+   "n": 67,
+   "h": "h001",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 68,
+   "h": "h001",
+   "score": -0.293,
+   "kept": false
+  },
+  {
+   "n": 69,
+   "h": "h001",
+   "score": -0.088,
+   "kept": false
+  },
+  {
+   "n": 70,
+   "h": "h001",
+   "score": 0.51,
+   "kept": false
+  },
+  {
+   "n": 71,
+   "h": "h001",
+   "score": 0.935,
+   "kept": true
+  },
+  {
+   "n": 72,
+   "h": "h001",
+   "score": 0.636,
+   "kept": false
+  },
+  {
+   "n": 73,
+   "h": "h001",
+   "score": -0.227,
+   "kept": false
+  },
+  {
+   "n": 74,
+   "h": "h001",
+   "score": -0.439,
+   "kept": false
+  },
+  {
+   "n": 75,
+   "h": "h001",
+   "score": 0.571,
+   "kept": false
+  },
+  {
+   "n": 76,
+   "h": "h001",
+   "score": 0.192,
+   "kept": false
+  },
+  {
+   "n": 77,
+   "h": "h001",
+   "score": 0.062,
+   "kept": false
+  },
+  {
+   "n": 78,
+   "h": "h001",
+   "score": 0.8,
+   "kept": false
+  },
+  {
+   "n": 79,
+   "h": "h001",
+   "score": 0.848,
+   "kept": false
+  },
+  {
+   "n": 80,
+   "h": "h001",
+   "score": 0.521,
+   "kept": false
+  },
+  {
+   "n": 81,
+   "h": "h001",
+   "score": 0.556,
+   "kept": false
+  },
+  {
+   "n": 82,
+   "h": "h001",
+   "score": 0.626,
+   "kept": false
+  },
+  {
+   "n": 83,
+   "h": "h001",
+   "score": 1.036,
+   "kept": true
+  },
+  {
+   "n": 84,
+   "h": "h001",
+   "score": 0.699,
+   "kept": false
+  },
+  {
+   "n": 85,
+   "h": "h001",
+   "score": 0.668,
+   "kept": false
+  },
+  {
+   "n": 86,
+   "h": "h001",
+   "score": 0.682,
+   "kept": false
+  },
+  {
+   "n": 87,
+   "h": "h001",
+   "score": -0.055,
+   "kept": false
+  },
+  {
+   "n": 88,
+   "h": "h001",
+   "score": 0.947,
+   "kept": false
+  },
+  {
+   "n": 89,
+   "h": "h001",
+   "score": 0.836,
+   "kept": false
+  },
+  {
+   "n": 90,
+   "h": "h001",
+   "score": 0.691,
+   "kept": false
+  },
+  {
+   "n": 91,
+   "h": "h001",
+   "score": -0.181,
+   "kept": false
+  },
+  {
+   "n": 92,
+   "h": "h001",
+   "score": 0.292,
+   "kept": false
+  },
+  {
+   "n": 93,
+   "h": "h001",
+   "score": 0.813,
+   "kept": false
+  },
+  {
+   "n": 94,
+   "h": "h001",
+   "score": -0.112,
+   "kept": false
+  },
+  {
+   "n": 95,
+   "h": "h001",
+   "score": 0.462,
+   "kept": false
+  },
+  {
+   "n": 96,
+   "h": "h001",
+   "score": 0.887,
+   "kept": false
+  },
+  {
+   "n": 97,
+   "h": "h002",
+   "score": -0.074,
+   "kept": true
+  },
+  {
+   "n": 98,
+   "h": "h002",
+   "score": 1.098,
+   "kept": true
+  },
+  {
+   "n": 99,
+   "h": "h002",
+   "score": 0.679,
+   "kept": false
+  },
+  {
+   "n": 100,
+   "h": "h002",
+   "score": 0.402,
+   "kept": false
+  },
+  {
+   "n": 101,
+   "h": "h002",
+   "score": 0.596,
+   "kept": false
+  },
+  {
+   "n": 102,
+   "h": "h002",
+   "score": 0.73,
+   "kept": false
+  },
+  {
+   "n": 103,
+   "h": "h002",
+   "score": 0.522,
+   "kept": false
+  },
+  {
+   "n": 104,
+   "h": "h002",
+   "score": 0.936,
+   "kept": false
+  },
+  {
+   "n": 105,
+   "h": "h002",
+   "score": 0.217,
+   "kept": false
+  },
+  {
+   "n": 106,
+   "h": "h002",
+   "score": 0.32,
+   "kept": false
+  },
+  {
+   "n": 107,
+   "h": "h002",
+   "score": 0.907,
+   "kept": false
+  },
+  {
+   "n": 108,
+   "h": "h002",
+   "score": 0.505,
+   "kept": false
+  },
+  {
+   "n": 109,
+   "h": "h002",
+   "score": 0.146,
+   "kept": false
+  },
+  {
+   "n": 110,
+   "h": "h002",
+   "score": 0.881,
+   "kept": false
+  },
+  {
+   "n": 111,
+   "h": "h002",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 112,
+   "h": "h002",
+   "score": 0.332,
+   "kept": false
+  },
+  {
+   "n": 113,
+   "h": "h002",
+   "score": -0.038,
+   "kept": false
+  },
+  {
+   "n": 114,
+   "h": "h002",
+   "score": 0.464,
+   "kept": false
+  },
+  {
+   "n": 115,
+   "h": "h002",
+   "score": 0.462,
+   "kept": false
+  },
+  {
+   "n": 116,
+   "h": "h002",
+   "score": 0.407,
+   "kept": false
+  },
+  {
+   "n": 117,
+   "h": "h002",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 118,
+   "h": "h002",
+   "score": 0.123,
+   "kept": false
+  },
+  {
+   "n": 119,
+   "h": "h002",
+   "score": 1.042,
+   "kept": false
+  },
+  {
+   "n": 120,
+   "h": "h002",
+   "score": 0.035,
+   "kept": false
+  },
+  {
+   "n": 121,
+   "h": "h002",
+   "score": 0.231,
+   "kept": false
+  },
+  {
+   "n": 122,
+   "h": "h002",
+   "score": 0.803,
+   "kept": false
+  },
+  {
+   "n": 123,
+   "h": "h002",
+   "score": 1.005,
+   "kept": false
+  },
+  {
+   "n": 124,
+   "h": "h002",
+   "score": 0.902,
+   "kept": false
+  },
+  {
+   "n": 125,
+   "h": "h002",
+   "score": 0.7,
+   "kept": false
+  },
+  {
+   "n": 126,
+   "h": "h002",
+   "score": 0.623,
+   "kept": false
+  },
+  {
+   "n": 127,
+   "h": "h002",
+   "score": 0.631,
+   "kept": false
+  },
+  {
+   "n": 128,
+   "h": "h002",
+   "score": 0.804,
+   "kept": false
+  },
+  {
+   "n": 129,
+   "h": "h002",
+   "score": 0.508,
+   "kept": false
+  },
+  {
+   "n": 130,
+   "h": "h002",
+   "score": 0.693,
+   "kept": false
+  },
+  {
+   "n": 131,
+   "h": "h002",
+   "score": 0.815,
+   "kept": false
+  },
+  {
+   "n": 132,
+   "h": "h002",
+   "score": 0.59,
+   "kept": false
+  },
+  {
+   "n": 133,
+   "h": "h002",
+   "score": 0.9,
+   "kept": false
+  },
+  {
+   "n": 134,
+   "h": "h002",
+   "score": 0.824,
+   "kept": false
+  },
+  {
+   "n": 135,
+   "h": "h002",
+   "score": 1.406,
+   "kept": true
+  },
+  {
+   "n": 136,
+   "h": "h002",
+   "score": 0.736,
+   "kept": false
+  },
+  {
+   "n": 137,
+   "h": "h002",
+   "score": 0.439,
+   "kept": false
+  },
+  {
+   "n": 138,
+   "h": "h002",
+   "score": 0.465,
+   "kept": false
+  },
+  {
+   "n": 139,
+   "h": "h002",
+   "score": 0.613,
+   "kept": false
+  },
+  {
+   "n": 140,
+   "h": "h002",
+   "score": 0.992,
+   "kept": false
+  },
+  {
+   "n": 141,
+   "h": "h002",
+   "score": 0.491,
+   "kept": false
+  },
+  {
+   "n": 142,
+   "h": "h002",
+   "score": 0.784,
+   "kept": false
+  },
+  {
+   "n": 143,
+   "h": "h002",
+   "score": 1.369,
+   "kept": false
+  },
+  {
+   "n": 144,
+   "h": "h002",
+   "score": -0.388,
+   "kept": false
+  },
+  {
+   "n": 145,
+   "h": "h002",
+   "score": 0.192,
+   "kept": false
+  },
+  {
+   "n": 146,
+   "h": "h002",
+   "score": 0.744,
+   "kept": false
+  },
+  {
+   "n": 147,
+   "h": "h002",
+   "score": 0.809,
+   "kept": false
+  },
+  {
+   "n": 148,
+   "h": "h002",
+   "score": 0.749,
+   "kept": false
+  },
+  {
+   "n": 149,
+   "h": "h002",
+   "score": 0.486,
+   "kept": false
+  },
+  {
+   "n": 150,
+   "h": "h002",
+   "score": 0.924,
+   "kept": false
+  },
+  {
+   "n": 151,
+   "h": "h002",
+   "score": 0.779,
+   "kept": false
+  },
+  {
+   "n": 152,
+   "h": "h002",
+   "score": 0.461,
+   "kept": false
+  },
+  {
+   "n": 153,
+   "h": "h002",
+   "score": 1.646,
+   "kept": true
+  },
+  {
+   "n": 154,
+   "h": "h002",
+   "score": 0.82,
+   "kept": false
+  },
+  {
+   "n": 155,
+   "h": "h002",
+   "score": 0.46,
+   "kept": false
+  },
+  {
+   "n": 156,
+   "h": "h002",
+   "score": 0.646,
+   "kept": false
+  },
+  {
+   "n": 157,
+   "h": "h002",
+   "score": 0.6,
+   "kept": false
+  },
+  {
+   "n": 158,
+   "h": "h002",
+   "score": 0.669,
+   "kept": false
+  },
+  {
+   "n": 159,
+   "h": "h002",
+   "score": -0.393,
+   "kept": false
+  },
+  {
+   "n": 160,
+   "h": "h002",
+   "score": 0.507,
+   "kept": false
+  },
+  {
+   "n": 161,
+   "h": "h002",
+   "score": 1.109,
+   "kept": false
+  },
+  {
+   "n": 162,
+   "h": "h002",
+   "score": 0.243,
+   "kept": false
+  },
+  {
+   "n": 163,
+   "h": "h002",
+   "score": 0.687,
+   "kept": false
+  },
+  {
+   "n": 164,
+   "h": "h002",
+   "score": 1.099,
+   "kept": false
+  },
+  {
+   "n": 165,
+   "h": "h002",
+   "score": 1.064,
+   "kept": false
+  },
+  {
+   "n": 166,
+   "h": "h002",
+   "score": 1.322,
+   "kept": false
+  },
+  {
+   "n": 167,
+   "h": "h002",
+   "score": 0.049,
+   "kept": false
+  },
+  {
+   "n": 168,
+   "h": "h002",
+   "score": 0.593,
+   "kept": false
+  },
+  {
+   "n": 169,
+   "h": "h002",
+   "score": 0.602,
+   "kept": false
+  },
+  {
+   "n": 170,
+   "h": "h002",
+   "score": 0.991,
+   "kept": false
+  },
+  {
+   "n": 171,
+   "h": "h002",
+   "score": 1.183,
+   "kept": false
+  },
+  {
+   "n": 172,
+   "h": "h002",
+   "score": -0.323,
+   "kept": false
+  },
+  {
+   "n": 173,
+   "h": "h002",
+   "score": 1.189,
+   "kept": false
+  },
+  {
+   "n": 174,
+   "h": "h002",
+   "score": 0.179,
+   "kept": false
+  },
+  {
+   "n": 175,
+   "h": "h002",
+   "score": 1.035,
+   "kept": false
+  },
+  {
+   "n": 176,
+   "h": "h002",
+   "score": 0.169,
+   "kept": false
+  },
+  {
+   "n": 177,
+   "h": "h002",
+   "score": 0.84,
+   "kept": false
+  },
+  {
+   "n": 178,
+   "h": "h002",
+   "score": 1.252,
+   "kept": false
+  },
+  {
+   "n": 179,
+   "h": "h002",
+   "score": 0.718,
+   "kept": false
+  },
+  {
+   "n": 180,
+   "h": "h002",
+   "score": 0.858,
+   "kept": false
+  },
+  {
+   "n": 181,
+   "h": "h002",
+   "score": 1.105,
+   "kept": false
+  },
+  {
+   "n": 182,
+   "h": "h002",
+   "score": 0.847,
+   "kept": false
+  },
+  {
+   "n": 183,
+   "h": "h002",
+   "score": 0.759,
+   "kept": false
+  },
+  {
+   "n": 184,
+   "h": "h002",
+   "score": 1.411,
+   "kept": false
+  },
+  {
+   "n": 185,
+   "h": "h002",
+   "score": 1.221,
+   "kept": false
+  },
+  {
+   "n": 186,
+   "h": "h002",
+   "score": 0.688,
+   "kept": false
+  },
+  {
+   "n": 187,
+   "h": "h002",
+   "score": 1.908,
+   "kept": true
+  },
+  {
+   "n": 188,
+   "h": "h002",
+   "score": 0.355,
+   "kept": false
+  },
+  {
+   "n": 189,
+   "h": "h002",
+   "score": 1.184,
+   "kept": false
+  },
+  {
+   "n": 190,
+   "h": "h002",
+   "score": 0.716,
+   "kept": false
+  },
+  {
+   "n": 191,
+   "h": "h002",
+   "score": 0.879,
+   "kept": false
+  },
+  {
+   "n": 192,
+   "h": "h002",
+   "score": 1.112,
+   "kept": false
+  },
+  {
+   "n": 193,
+   "h": "h002",
+   "score": 0.923,
+   "kept": false
+  },
+  {
+   "n": 194,
+   "h": "h002",
+   "score": 1.093,
+   "kept": false
+  },
+  {
+   "n": 195,
+   "h": "h002",
+   "score": 0.231,
+   "kept": false
+  },
+  {
+   "n": 196,
+   "h": "h002",
+   "score": 0.242,
+   "kept": false
+  },
+  {
+   "n": 197,
+   "h": "h002",
+   "score": 1.096,
+   "kept": false
+  },
+  {
+   "n": 198,
+   "h": "h002",
+   "score": 0.469,
+   "kept": false
+  },
+  {
+   "n": 199,
+   "h": "h002",
+   "score": 0.447,
+   "kept": false
+  },
+  {
+   "n": 200,
+   "h": "h002",
+   "score": 0.274,
+   "kept": false
+  },
+  {
+   "n": 201,
+   "h": "h002",
+   "score": 1.373,
+   "kept": false
+  },
+  {
+   "n": 202,
+   "h": "h002",
+   "score": 1.169,
+   "kept": false
+  },
+  {
+   "n": 203,
+   "h": "h002",
+   "score": 1.463,
+   "kept": false
+  },
+  {
+   "n": 204,
+   "h": "h002",
+   "score": 0.503,
+   "kept": false
+  },
+  {
+   "n": 205,
+   "h": "h002",
+   "score": 0.882,
+   "kept": false
+  },
+  {
+   "n": 206,
+   "h": "h002",
+   "score": 0.43,
+   "kept": false
+  },
+  {
+   "n": 207,
+   "h": "h002",
+   "score": 1.196,
+   "kept": false
+  },
+  {
+   "n": 208,
+   "h": "h002",
+   "score": 1.53,
+   "kept": false
+  },
+  {
+   "n": 209,
+   "h": "h002",
+   "score": 0.542,
+   "kept": false
+  },
+  {
+   "n": 210,
+   "h": "h002",
+   "score": 1.526,
+   "kept": false
+  },
+  {
+   "n": 211,
+   "h": "h002",
+   "score": 1.301,
+   "kept": false
+  },
+  {
+   "n": 212,
+   "h": "h002",
+   "score": 0.839,
+   "kept": false
+  },
+  {
+   "n": 213,
+   "h": "h002",
+   "score": 0.125,
+   "kept": false
+  },
+  {
+   "n": 214,
+   "h": "h002",
+   "score": 1.481,
+   "kept": false
+  },
+  {
+   "n": 215,
+   "h": "h002",
+   "score": 0.883,
+   "kept": false
+  },
+  {
+   "n": 216,
+   "h": "h002",
+   "score": 0.685,
+   "kept": false
+  },
+  {
+   "n": 217,
+   "h": "h002",
+   "score": 1.09,
+   "kept": false
+  },
+  {
+   "n": 218,
+   "h": "h002",
+   "score": 1.098,
+   "kept": false
+  },
+  {
+   "n": 219,
+   "h": "h002",
+   "score": 1.537,
+   "kept": false
+  },
+  {
+   "n": 220,
+   "h": "h002",
+   "score": 0.534,
+   "kept": false
+  },
+  {
+   "n": 221,
+   "h": "h002",
+   "score": 1.4,
+   "kept": false
+  },
+  {
+   "n": 222,
+   "h": "h002",
+   "score": 1.545,
+   "kept": false
+  },
+  {
+   "n": 223,
+   "h": "h002",
+   "score": 1.535,
+   "kept": false
+  },
+  {
+   "n": 224,
+   "h": "h002",
+   "score": 0.886,
+   "kept": false
+  },
+  {
+   "n": 225,
+   "h": "h002",
+   "score": 0.664,
+   "kept": false
+  },
+  {
+   "n": 226,
+   "h": "h002",
+   "score": 1.373,
+   "kept": false
+  },
+  {
+   "n": 227,
+   "h": "h002",
+   "score": 1.016,
+   "kept": false
+  },
+  {
+   "n": 228,
+   "h": "h002",
+   "score": 1.024,
+   "kept": false
+  },
+  {
+   "n": 229,
+   "h": "h002",
+   "score": 1.548,
+   "kept": false
+  },
+  {
+   "n": 230,
+   "h": "h002",
+   "score": 0.877,
+   "kept": false
+  },
+  {
+   "n": 231,
+   "h": "h002",
+   "score": 0.067,
+   "kept": false
+  },
+  {
+   "n": 232,
+   "h": "h002",
+   "score": 0.835,
+   "kept": false
+  },
+  {
+   "n": 233,
+   "h": "h002",
+   "score": 0.252,
+   "kept": false
+  },
+  {
+   "n": 234,
+   "h": "h002",
+   "score": 1.326,
+   "kept": false
+  },
+  {
+   "n": 235,
+   "h": "h002",
+   "score": 1.129,
+   "kept": false
+  },
+  {
+   "n": 236,
+   "h": "h002",
+   "score": 0.762,
+   "kept": false
+  },
+  {
+   "n": 237,
+   "h": "h002",
+   "score": 1.006,
+   "kept": false
+  },
+  {
+   "n": 238,
+   "h": "h002",
+   "score": 1.347,
+   "kept": false
+  },
+  {
+   "n": 239,
+   "h": "h003",
+   "score": 0.124,
+   "kept": true
+  },
+  {
+   "n": 240,
+   "h": "h003",
+   "score": 0.502,
+   "kept": true
+  },
+  {
+   "n": 241,
+   "h": "h003",
+   "score": 0.09,
+   "kept": false
+  },
+  {
+   "n": 242,
+   "h": "h003",
+   "score": 0.424,
+   "kept": false
+  },
+  {
+   "n": 243,
+   "h": "h003",
+   "score": 0.563,
+   "kept": true
+  },
+  {
+   "n": 244,
+   "h": "h003",
+   "score": 0.603,
+   "kept": true
+  },
+  {
+   "n": 245,
+   "h": "h003",
+   "score": -0.078,
+   "kept": false
+  },
+  {
+   "n": 246,
+   "h": "h003",
+   "score": 0.392,
+   "kept": false
+  },
+  {
+   "n": 247,
+   "h": "h003",
+   "score": -0.431,
+   "kept": false
+  },
+  {
+   "n": 248,
+   "h": "h003",
+   "score": -0.189,
+   "kept": false
+  },
+  {
+   "n": 249,
+   "h": "h003",
+   "score": -0.449,
+   "kept": false
+  },
+  {
+   "n": 250,
+   "h": "h003",
+   "score": 0.465,
+   "kept": false
+  },
+  {
+   "n": 251,
+   "h": "h003",
+   "score": -0.222,
+   "kept": false
+  },
+  {
+   "n": 252,
+   "h": "h003",
+   "score": 0.148,
+   "kept": false
+  },
+  {
+   "n": 253,
+   "h": "h003",
+   "score": 0.098,
+   "kept": false
+  },
+  {
+   "n": 254,
+   "h": "h003",
+   "score": 0.151,
+   "kept": false
+  },
+  {
+   "n": 255,
+   "h": "h003",
+   "score": -0.013,
+   "kept": false
+  },
+  {
+   "n": 256,
+   "h": "h003",
+   "score": 0.238,
+   "kept": false
+  },
+  {
+   "n": 257,
+   "h": "h003",
+   "score": 0.709,
+   "kept": true
+  },
+  {
+   "n": 258,
+   "h": "h003",
+   "score": 0.189,
+   "kept": false
+  },
+  {
+   "n": 259,
+   "h": "h003",
+   "score": 0.339,
+   "kept": false
+  },
+  {
+   "n": 260,
+   "h": "h003",
+   "score": 0.484,
+   "kept": false
+  },
+  {
+   "n": 261,
+   "h": "h003",
+   "score": 0.129,
+   "kept": false
+  },
+  {
+   "n": 262,
+   "h": "h003",
+   "score": -0.186,
+   "kept": false
+  },
+  {
+   "n": 263,
+   "h": "h003",
+   "score": 0.029,
+   "kept": false
+  },
+  {
+   "n": 264,
+   "h": "h003",
+   "score": 0.522,
+   "kept": false
+  },
+  {
+   "n": 265,
+   "h": "h003",
+   "score": -0.29,
+   "kept": false
+  },
+  {
+   "n": 266,
+   "h": "h003",
+   "score": 0.029,
+   "kept": false
+  },
+  {
+   "n": 267,
+   "h": "h003",
+   "score": 0.514,
+   "kept": false
+  },
+  {
+   "n": 268,
+   "h": "h003",
+   "score": 0.454,
+   "kept": false
+  },
+  {
+   "n": 269,
+   "h": "h003",
+   "score": 0.222,
+   "kept": false
+  },
+  {
+   "n": 270,
+   "h": "h003",
+   "score": 0.466,
+   "kept": false
+  },
+  {
+   "n": 271,
+   "h": "h003",
+   "score": 0.278,
+   "kept": false
+  },
+  {
+   "n": 272,
+   "h": "h003",
+   "score": -0.122,
+   "kept": false
+  },
+  {
+   "n": 273,
+   "h": "h003",
+   "score": -0.233,
+   "kept": false
+  },
+  {
+   "n": 274,
+   "h": "h003",
+   "score": 0.048,
+   "kept": false
+  },
+  {
+   "n": 275,
+   "h": "h003",
+   "score": 0.521,
+   "kept": false
+  },
+  {
+   "n": 276,
+   "h": "h003",
+   "score": 0.078,
+   "kept": false
+  },
+  {
+   "n": 277,
+   "h": "h003",
+   "score": -0.019,
+   "kept": false
+  },
+  {
+   "n": 278,
+   "h": "h003",
+   "score": 0.025,
+   "kept": false
+  },
+  {
+   "n": 279,
+   "h": "h003",
+   "score": -0.2,
+   "kept": false
+  },
+  {
+   "n": 280,
+   "h": "h003",
+   "score": 0.229,
+   "kept": false
+  },
+  {
+   "n": 281,
+   "h": "h003",
+   "score": -0.086,
+   "kept": false
+  },
+  {
+   "n": 282,
+   "h": "h003",
+   "score": 0.381,
+   "kept": false
+  },
+  {
+   "n": 283,
+   "h": "h003",
+   "score": -0.432,
+   "kept": false
+  },
+  {
+   "n": 284,
+   "h": "h003",
+   "score": 0.378,
+   "kept": false
+  },
+  {
+   "n": 285,
+   "h": "h003",
+   "score": 0.092,
+   "kept": false
+  },
+  {
+   "n": 286,
+   "h": "h003",
+   "score": -0.295,
+   "kept": false
+  },
+  {
+   "n": 287,
+   "h": "h003",
+   "score": 0.509,
+   "kept": false
+  },
+  {
+   "n": 288,
+   "h": "h003",
+   "score": 0.213,
+   "kept": false
+  },
+  {
+   "n": 289,
+   "h": "h003",
+   "score": -0.369,
+   "kept": false
+  },
+  {
+   "n": 290,
+   "h": "h003",
+   "score": 0.041,
+   "kept": false
+  },
+  {
+   "n": 291,
+   "h": "h003",
+   "score": 0.395,
+   "kept": false
+  },
+  {
+   "n": 292,
+   "h": "h003",
+   "score": 0.174,
+   "kept": false
+  },
+  {
+   "n": 293,
+   "h": "h003",
+   "score": 0.55,
+   "kept": false
+  },
+  {
+   "n": 294,
+   "h": "h003",
+   "score": 0.544,
+   "kept": false
+  },
+  {
+   "n": 295,
+   "h": "h004",
+   "score": 0.553,
+   "kept": true
+  },
+  {
+   "n": 296,
+   "h": "h004",
+   "score": 0.428,
+   "kept": false
+  },
+  {
+   "n": 297,
+   "h": "h004",
+   "score": 0.815,
+   "kept": true
+  },
+  {
+   "n": 298,
+   "h": "h004",
+   "score": 0.563,
+   "kept": false
+  },
+  {
+   "n": 299,
+   "h": "h004",
+   "score": 0.487,
+   "kept": false
+  },
+  {
+   "n": 300,
+   "h": "h004",
+   "score": -0.472,
+   "kept": false
+  },
+  {
+   "n": 301,
+   "h": "h004",
+   "score": 0.665,
+   "kept": false
+  },
+  {
+   "n": 302,
+   "h": "h004",
+   "score": 0.826,
+   "kept": true
+  },
+  {
+   "n": 303,
+   "h": "h004",
+   "score": 0.219,
+   "kept": false
+  },
+  {
+   "n": 304,
+   "h": "h004",
+   "score": 0.158,
+   "kept": false
+  },
+  {
+   "n": 305,
+   "h": "h004",
+   "score": 1.077,
+   "kept": true
+  },
+  {
+   "n": 306,
+   "h": "h004",
+   "score": -0.324,
+   "kept": false
+  },
+  {
+   "n": 307,
+   "h": "h004",
+   "score": 0.526,
+   "kept": false
+  },
+  {
+   "n": 308,
+   "h": "h004",
+   "score": 1.273,
+   "kept": true
+  },
+  {
+   "n": 309,
+   "h": "h004",
+   "score": 0.004,
+   "kept": false
+  },
+  {
+   "n": 310,
+   "h": "h004",
+   "score": 0.622,
+   "kept": false
+  },
+  {
+   "n": 311,
+   "h": "h004",
+   "score": 1.081,
+   "kept": false
+  },
+  {
+   "n": 312,
+   "h": "h004",
+   "score": 0.322,
+   "kept": false
+  },
+  {
+   "n": 313,
+   "h": "h004",
+   "score": 0.585,
+   "kept": false
+  },
+  {
+   "n": 314,
+   "h": "h004",
+   "score": 0.719,
+   "kept": false
+  },
+  {
+   "n": 315,
+   "h": "h004",
+   "score": 0.036,
+   "kept": false
+  },
+  {
+   "n": 316,
+   "h": "h004",
+   "score": 0.35,
+   "kept": false
+  },
+  {
+   "n": 317,
+   "h": "h004",
+   "score": 0.499,
+   "kept": false
+  },
+  {
+   "n": 318,
+   "h": "h004",
+   "score": 0.706,
+   "kept": false
+  },
+  {
+   "n": 319,
+   "h": "h004",
+   "score": 0.383,
+   "kept": false
+  },
+  {
+   "n": 320,
+   "h": "h004",
+   "score": 0.326,
+   "kept": false
+  },
+  {
+   "n": 321,
+   "h": "h004",
+   "score": 0.018,
+   "kept": false
+  },
+  {
+   "n": 322,
+   "h": "h004",
+   "score": 0.272,
+   "kept": false
+  },
+  {
+   "n": 323,
+   "h": "h004",
+   "score": 0.751,
+   "kept": false
+  },
+  {
+   "n": 324,
+   "h": "h004",
+   "score": 0.455,
+   "kept": false
+  },
+  {
+   "n": 325,
+   "h": "h004",
+   "score": 0.096,
+   "kept": false
+  },
+  {
+   "n": 326,
+   "h": "h004",
+   "score": 0.104,
+   "kept": false
+  },
+  {
+   "n": 327,
+   "h": "h004",
+   "score": 1.441,
+   "kept": true
+  },
+  {
+   "n": 328,
+   "h": "h004",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 329,
+   "h": "h004",
+   "score": 0.678,
+   "kept": false
+  },
+  {
+   "n": 330,
+   "h": "h004",
+   "score": -0.545,
+   "kept": false
+  },
+  {
+   "n": 331,
+   "h": "h004",
+   "score": 0.68,
+   "kept": false
+  },
+  {
+   "n": 332,
+   "h": "h004",
+   "score": 0.631,
+   "kept": false
+  },
+  {
+   "n": 333,
+   "h": "h004",
+   "score": 1.092,
+   "kept": false
+  },
+  {
+   "n": 334,
+   "h": "h004",
+   "score": 0.619,
+   "kept": false
+  },
+  {
+   "n": 335,
+   "h": "h004",
+   "score": 0.434,
+   "kept": false
+  },
+  {
+   "n": 336,
+   "h": "h004",
+   "score": 0.663,
+   "kept": false
+  },
+  {
+   "n": 337,
+   "h": "h004",
+   "score": -0.271,
+   "kept": false
+  },
+  {
+   "n": 338,
+   "h": "h004",
+   "score": 0.865,
+   "kept": false
+  },
+  {
+   "n": 339,
+   "h": "h004",
+   "score": 0.599,
+   "kept": false
+  },
+  {
+   "n": 340,
+   "h": "h004",
+   "score": 0.213,
+   "kept": false
+  },
+  {
+   "n": 341,
+   "h": "h004",
+   "score": 0.988,
+   "kept": false
+  },
+  {
+   "n": 342,
+   "h": "h004",
+   "score": 1.176,
+   "kept": false
+  },
+  {
+   "n": 343,
+   "h": "h004",
+   "score": -0.041,
+   "kept": false
+  },
+  {
+   "n": 344,
+   "h": "h004",
+   "score": 0.243,
+   "kept": false
+  },
+  {
+   "n": 345,
+   "h": "h004",
+   "score": 0.611,
+   "kept": false
+  },
+  {
+   "n": 346,
+   "h": "h004",
+   "score": 0.574,
+   "kept": false
+  },
+  {
+   "n": 347,
+   "h": "h004",
+   "score": 0.357,
+   "kept": false
+  },
+  {
+   "n": 348,
+   "h": "h004",
+   "score": 0.142,
+   "kept": false
+  },
+  {
+   "n": 349,
+   "h": "h004",
+   "score": 1.322,
+   "kept": false
+  },
+  {
+   "n": 350,
+   "h": "h004",
+   "score": 0.914,
+   "kept": false
+  },
+  {
+   "n": 351,
+   "h": "h004",
+   "score": 0.07,
+   "kept": false
+  },
+  {
+   "n": 352,
+   "h": "h004",
+   "score": 0.017,
+   "kept": false
+  },
+  {
+   "n": 353,
+   "h": "h004",
+   "score": 1.179,
+   "kept": false
+  },
+  {
+   "n": 354,
+   "h": "h004",
+   "score": 0.912,
+   "kept": false
+  },
+  {
+   "n": 355,
+   "h": "h004",
+   "score": 1.232,
+   "kept": false
+  },
+  {
+   "n": 356,
+   "h": "h004",
+   "score": 0.852,
+   "kept": false
+  },
+  {
+   "n": 357,
+   "h": "h004",
+   "score": 0.217,
+   "kept": false
+  },
+  {
+   "n": 358,
+   "h": "h004",
+   "score": 0.651,
+   "kept": false
+  },
+  {
+   "n": 359,
+   "h": "h004",
+   "score": -0.265,
+   "kept": false
+  },
+  {
+   "n": 360,
+   "h": "h004",
+   "score": 0.276,
+   "kept": false
+  },
+  {
+   "n": 361,
+   "h": "h004",
+   "score": 0.542,
+   "kept": false
+  },
+  {
+   "n": 362,
+   "h": "h004",
+   "score": 0.767,
+   "kept": false
+  },
+  {
+   "n": 363,
+   "h": "h004",
+   "score": 0.296,
+   "kept": false
+  },
+  {
+   "n": 364,
+   "h": "h004",
+   "score": 0.529,
+   "kept": false
+  },
+  {
+   "n": 365,
+   "h": "h004",
+   "score": 0.754,
+   "kept": false
+  },
+  {
+   "n": 366,
+   "h": "h004",
+   "score": 0.727,
+   "kept": false
+  },
+  {
+   "n": 367,
+   "h": "h004",
+   "score": 0.83,
+   "kept": false
+  },
+  {
+   "n": 368,
+   "h": "h004",
+   "score": 0.671,
+   "kept": false
+  },
+  {
+   "n": 369,
+   "h": "h004",
+   "score": 0.473,
+   "kept": false
+  },
+  {
+   "n": 370,
+   "h": "h004",
+   "score": 0.9,
+   "kept": false
+  },
+  {
+   "n": 371,
+   "h": "h004",
+   "score": 0.623,
+   "kept": false
+  },
+  {
+   "n": 372,
+   "h": "h004",
+   "score": 0.294,
+   "kept": false
+  },
+  {
+   "n": 373,
+   "h": "h004",
+   "score": 0.374,
+   "kept": false
+  },
+  {
+   "n": 374,
+   "h": "h004",
+   "score": 0.616,
+   "kept": false
+  },
+  {
+   "n": 375,
+   "h": "h004",
+   "score": 0.578,
+   "kept": false
+  },
+  {
+   "n": 376,
+   "h": "h004",
+   "score": 0.684,
+   "kept": false
+  },
+  {
+   "n": 377,
+   "h": "h004",
+   "score": 0.628,
+   "kept": false
+  },
+  {
+   "n": 378,
+   "h": "h004",
+   "score": 0.699,
+   "kept": false
+  },
+  {
+   "n": 379,
+   "h": "h004",
+   "score": 0.585,
+   "kept": false
+  },
+  {
+   "n": 380,
+   "h": "h004",
+   "score": 0.162,
+   "kept": false
+  },
+  {
+   "n": 381,
+   "h": "h004",
+   "score": 0.804,
+   "kept": false
+  },
+  {
+   "n": 382,
+   "h": "h004",
+   "score": 1.048,
+   "kept": false
+  },
+  {
+   "n": 383,
+   "h": "h004",
+   "score": 0.817,
+   "kept": false
+  },
+  {
+   "n": 384,
+   "h": "h004",
+   "score": 0.584,
+   "kept": false
+  },
+  {
+   "n": 385,
+   "h": "h004",
+   "score": 0.83,
+   "kept": false
+  },
+  {
+   "n": 386,
+   "h": "h004",
+   "score": 0.297,
+   "kept": false
+  },
+  {
+   "n": 387,
+   "h": "h004",
+   "score": -0.053,
+   "kept": false
+  },
+  {
+   "n": 388,
+   "h": "h004",
+   "score": 0.695,
+   "kept": false
+  },
+  {
+   "n": 389,
+   "h": "h004",
+   "score": 0.322,
+   "kept": false
+  },
+  {
+   "n": 390,
+   "h": "h004",
+   "score": 0.961,
+   "kept": false
+  },
+  {
+   "n": 391,
+   "h": "h004",
+   "score": 0.272,
+   "kept": false
+  },
+  {
+   "n": 392,
+   "h": "h004",
+   "score": -0.311,
+   "kept": false
+  },
+  {
+   "n": 393,
+   "h": "h004",
+   "score": 0.297,
+   "kept": false
+  },
+  {
+   "n": 394,
+   "h": "h004",
+   "score": 1.296,
+   "kept": false
+  },
+  {
+   "n": 395,
+   "h": "h004",
+   "score": 0.555,
+   "kept": false
+  },
+  {
+   "n": 396,
+   "h": "h004",
+   "score": 0.184,
+   "kept": false
+  },
+  {
+   "n": 397,
+   "h": "h004",
+   "score": 0.418,
+   "kept": false
+  },
+  {
+   "n": 398,
+   "h": "h004",
+   "score": 0.91,
+   "kept": false
+  },
+  {
+   "n": 399,
+   "h": "h004",
+   "score": 0.905,
+   "kept": false
+  },
+  {
+   "n": 400,
+   "h": "h004",
+   "score": 0.787,
+   "kept": false
+  },
+  {
+   "n": 401,
+   "h": "h004",
+   "score": 1.288,
+   "kept": false
+  },
+  {
+   "n": 402,
+   "h": "h004",
+   "score": 0.996,
+   "kept": false
+  },
+  {
+   "n": 403,
+   "h": "h004",
+   "score": 0.724,
+   "kept": false
+  },
+  {
+   "n": 404,
+   "h": "h004",
+   "score": 0.963,
+   "kept": false
+  },
+  {
+   "n": 405,
+   "h": "h004",
+   "score": 1.369,
+   "kept": false
+  },
+  {
+   "n": 406,
+   "h": "h004",
+   "score": 1.113,
+   "kept": false
+  },
+  {
+   "n": 407,
+   "h": "h004",
+   "score": 1.137,
+   "kept": false
+  },
+  {
+   "n": 408,
+   "h": "h004",
+   "score": 0.341,
+   "kept": false
+  },
+  {
+   "n": 409,
+   "h": "h004",
+   "score": 0.7,
+   "kept": false
+  },
+  {
+   "n": 410,
+   "h": "h004",
+   "score": 1.037,
+   "kept": false
+  },
+  {
+   "n": 411,
+   "h": "h004",
+   "score": 0.651,
+   "kept": false
+  },
+  {
+   "n": 412,
+   "h": "h004",
+   "score": 1.174,
+   "kept": false
+  }
+ ],
+ "bar": [
+  {
+   "n": 2,
+   "bar": 0.236
+  },
+  {
+   "n": 8,
+   "bar": 0.664
+  },
+  {
+   "n": 14,
+   "bar": 0.791
+  },
+  {
+   "n": 20,
+   "bar": 0.864
+  },
+  {
+   "n": 26,
+   "bar": 0.916
+  },
+  {
+   "n": 32,
+   "bar": 0.955
+  },
+  {
+   "n": 38,
+   "bar": 0.986
+  },
+  {
+   "n": 44,
+   "bar": 1.013
+  },
+  {
+   "n": 50,
+   "bar": 1.035
+  },
+  {
+   "n": 56,
+   "bar": 1.055
+  },
+  {
+   "n": 62,
+   "bar": 1.072
+  },
+  {
+   "n": 68,
+   "bar": 1.088
+  },
+  {
+   "n": 74,
+   "bar": 1.102
+  },
+  {
+   "n": 80,
+   "bar": 1.115
+  },
+  {
+   "n": 86,
+   "bar": 1.127
+  },
+  {
+   "n": 92,
+   "bar": 1.137
+  },
+  {
+   "n": 98,
+   "bar": 1.148
+  },
+  {
+   "n": 104,
+   "bar": 1.157
+  },
+  {
+   "n": 110,
+   "bar": 1.166
+  },
+  {
+   "n": 116,
+   "bar": 1.174
+  },
+  {
+   "n": 122,
+   "bar": 1.182
+  },
+  {
+   "n": 128,
+   "bar": 1.19
+  },
+  {
+   "n": 134,
+   "bar": 1.197
+  },
+  {
+   "n": 140,
+   "bar": 1.204
+  },
+  {
+   "n": 146,
+   "bar": 1.21
+  },
+  {
+   "n": 152,
+   "bar": 1.216
+  },
+  {
+   "n": 158,
+   "bar": 1.222
+  },
+  {
+   "n": 164,
+   "bar": 1.228
+  },
+  {
+   "n": 170,
+   "bar": 1.233
+  },
+  {
+   "n": 176,
+   "bar": 1.239
+  },
+  {
+   "n": 182,
+   "bar": 1.244
+  },
+  {
+   "n": 188,
+   "bar": 1.248
+  },
+  {
+   "n": 194,
+   "bar": 1.253
+  },
+  {
+   "n": 200,
+   "bar": 1.258
+  },
+  {
+   "n": 206,
+   "bar": 1.262
+  },
+  {
+   "n": 212,
+   "bar": 1.266
+  },
+  {
+   "n": 218,
+   "bar": 1.27
+  },
+  {
+   "n": 224,
+   "bar": 1.274
+  },
+  {
+   "n": 230,
+   "bar": 1.278
+  },
+  {
+   "n": 236,
+   "bar": 1.282
+  },
+  {
+   "n": 242,
+   "bar": 1.286
+  },
+  {
+   "n": 248,
+   "bar": 1.289
+  },
+  {
+   "n": 254,
+   "bar": 1.293
+  },
+  {
+   "n": 260,
+   "bar": 1.296
+  },
+  {
+   "n": 266,
+   "bar": 1.3
+  },
+  {
+   "n": 272,
+   "bar": 1.303
+  },
+  {
+   "n": 278,
+   "bar": 1.306
+  },
+  {
+   "n": 284,
+   "bar": 1.309
+  },
+  {
+   "n": 290,
+   "bar": 1.312
+  },
+  {
+   "n": 296,
+   "bar": 1.315
+  },
+  {
+   "n": 302,
+   "bar": 1.318
+  },
+  {
+   "n": 308,
+   "bar": 1.321
+  },
+  {
+   "n": 314,
+   "bar": 1.323
+  },
+  {
+   "n": 320,
+   "bar": 1.326
+  },
+  {
+   "n": 326,
+   "bar": 1.329
+  },
+  {
+   "n": 332,
+   "bar": 1.331
+  },
+  {
+   "n": 338,
+   "bar": 1.334
+  },
+  {
+   "n": 344,
+   "bar": 1.336
+  },
+  {
+   "n": 350,
+   "bar": 1.339
+  },
+  {
+   "n": 356,
+   "bar": 1.341
+  },
+  {
+   "n": 362,
+   "bar": 1.343
+  },
+  {
+   "n": 368,
+   "bar": 1.346
+  },
+  {
+   "n": 374,
+   "bar": 1.348
+  },
+  {
+   "n": 380,
+   "bar": 1.35
+  },
+  {
+   "n": 386,
+   "bar": 1.352
+  },
+  {
+   "n": 392,
+   "bar": 1.355
+  },
+  {
+   "n": 398,
+   "bar": 1.357
+  },
+  {
+   "n": 404,
+   "bar": 1.359
+  },
+  {
+   "n": 410,
+   "bar": 1.361
+  }
+ ],
+ "score_sd": 0.455
+}</script>
+<script>
+const FX = JSON.parse(document.getElementById("fx").textContent);
+const solo = location.hash.slice(1);
+if (solo) { document.body.classList.add("solo"); document.querySelectorAll(".stage").forEach(s => { if (s.dataset.directionId !== solo) s.remove(); }); }
+const ST = { supported: "支持", refuted: "证伪", inconclusive: "不确定", running: "运行中", proposed: "待选", dropped: "已放弃" };
+const EN = { supported: "SUPPORTED", refuted: "REFUTED", inconclusive: "INCONCLUSIVE", running: "RUNNING", proposed: "PROPOSED", dropped: "DROPPED" };
+const GL = { supported: "✓", refuted: "✗", inconclusive: "?", running: "▸", proposed: "○", dropped: "–" };
+const CHECKS = [["val>0","验证段 Sharpe > 0"],["beats_bh","跑赢买入持有"],["dsr>=0.95","DSR ≥ 0.95"],["subperiod","子区间为正 ≥ 2/3"],["pbo<=0.5","PBO ≤ 0.5"]];
+const DATES = { h001: "10-15", h002: "10-16", h003: "10-16", h004: "10-17", h005: "10-14", h006: "10-14" };
+const f2 = x => (x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+const d = FX.data, b = FX.budget, H = FX.hypotheses, barNow = FX.bar.at(-1).bar;
+const dec = h => h.checks ? CHECKS.find(([k]) => !h.checks[k])?.[0] : null;
+const colorOf = (root, st) => getComputedStyle(root).getPropertyValue({ supported: "--held", refuted: "--limit", inconclusive: "--unsure", running: "--run" }[st] || "--ink3");
+const evidence = h => h.evidence ? `验证段 Sharpe ${f2(h.evidence.val_sharpe)}，DSR ${h.evidence.dsr.toFixed(2)}（N = ${FX.trials}），PBO ${h.evidence.pbo.toFixed(2)}，子区间为正 ${h.evidence.pos_frac}；买入持有 ${f2(h.evidence.bh)}。`
+  : h.in_sample ? `进化中，第 ${h.in_sample.generation} 代，样本内最优 Sharpe ${f2(h.in_sample.best_is_sharpe)}。验证段证据出结论后才显示。`
+  : h.status === "proposed" ? "等待人选择。" : "已放弃，未进入实验。";
+
+function chart(o) {
+  const W = o.w, Hh = o.h, L = 38, R = 12, T = 14, Bm = 26, n = FX.trials;
+  const ymin = -1, ymax = 2, x = v => L + (v - 1) / (n - 1) * (W - L - R), y = v => T + (ymax - v) / (ymax - ymin) * (Hh - T - Bm);
+  const groups = {}; FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">`;
+  Object.entries(groups).forEach(([hid, ps], i) => {
+    const x0 = x(ps[0].n), x1 = x(ps.at(-1).n);
+    if (o.bands && i % 2) s += `<rect x="${x0}" y="${T}" width="${x1 - x0}" height="${Hh - T - Bm}" fill="${o.band}"/>`;
+    s += `<text x="${(x0 + x1) / 2}" y="${Hh - 7}" text-anchor="middle" font-size="10.5" fill="${o.axis}" font-family="DejaVu Sans Mono, monospace">${hid.toUpperCase()}</text>`;
+  });
+  for (let v = ymin; v <= ymax; v += 0.5) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${o.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10.5" fill="${o.axis}" font-family="DejaVu Sans Mono, monospace">${v < 0 ? "−" + (-v).toFixed(1) : v.toFixed(1)}</text>`;
+  if (o.stripes) FX.points.forEach(p => { if (!p.kept && p.score > ymin) s += `<line x1="${x(p.n)}" x2="${x(p.n)}" y1="${y(Math.min(p.score, ymax))}" y2="${y(ymin)}" stroke="${o.dot}" stroke-width="1"/>`; });
+  else FX.points.forEach(p => { if (!p.kept && p.score > ymin && p.score < ymax) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="1.8" fill="${o.dot}"/>`; });
+  Object.values(groups).forEach(ps => {
+    let path = ""; ps.forEach(p => { if (p.kept) path += path ? `H${x(p.n)}V${y(p.score)}` : `M${x(p.n)} ${y(p.score)}`; });
+    s += `<path d="${path}H${x(ps.at(-1).n)}" fill="none" stroke="${o.front}" stroke-width="1.6"/>`;
+    ps.forEach(p => { if (p.kept) s += `<rect x="${x(p.n) - 2.5}" y="${y(p.score) - 2.5}" width="5" height="5" fill="${o.front}"/>`; });
+  });
+  s += `<path d="${FX.bar.map((q, i) => (i ? "L" : "M") + x(q.n) + " " + y(q.bar)).join("")}" fill="none" stroke="${o.bar}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  s += `<text x="${W - R - 4}" y="${y(barNow) - 7}" text-anchor="end" font-size="11" fill="${o.bar}" font-family="DejaVu Sans Mono, monospace" paint-order="stroke" stroke="${o.bg}" stroke-width="4">${o.barLabel} ${barNow.toFixed(2)}</text>`;
+  return s + "</svg>";
+}
+
+/* ---------- A ---------- */
+(function () {
+  const el = document.getElementById("A"); if (!el) return;
+  const segs = 10, used = Math.round(b.spent / b.limit * segs);
+  let h = `<div class="page">
+    <div class="mg">WS / ${FX.workspace}</div>
+    <div class="tape"><span>DIRECTION · BTC-MOMENTUM</span><span>DATA ${d.bars}</span><span>COST ${d.cost_bps}BP</span><span>N ${FX.trials}</span><span>LOCKBOX SEALED</span></div>
+    <div></div><h1>${FX.direction}</h1>
+    <div></div><p class="lede">每个假设由同一个冻结的评估器检验；验证段证据只在出结论后写进来。试得越多，“支持”的门槛越高。</p>
+    <div></div><div class="facts num">
+      <div><small>Budget</small><b>$${b.spent.toFixed(1)}</b> <em>/ $${b.limit}</em><div class="meter">${Array.from({ length: segs }, (_, i) => `<i class="${i < used ? "on" : ""}"></i>`).join("")}</div></div>
+      <div><small>Trials N</small><b>${FX.trials}</b> <em>门槛 ${barNow.toFixed(2)}</em></div>
+      <div><small>Lockbox</small><span class="seal">封</span>未启封<br><em>自 ${d.lockbox_start}</em></div>
+      <div><small>Library</small><b>${FX.library.pages}</b> <em>页 · ${FX.library.pending} 待编译</em></div>
+      <div><small>Updated</small><b>10-17</b> <em>09:12</em></div>
+    </div>
+    <div class="mg" style="padding-top:30px">虚线：N 个纯噪声试验的期望最高分。实线：每个假设的最优前沿。</div>
+    <div class="chart"><h2 style="margin-left:0">TRIALS / NOISE BAR</h2>${chart({ w: 860, h: 190, bands: true, band: "#1f1a14", grid: "#2b241d", axis: "#a39580", dot: "#6b5c4b", front: "#efe6d6", bar: "#e0866f", bg: "#17130f", barLabel: "噪声门槛" })}</div>
+    <div></div><h2>已有结论 · 在研 · 已关闭</h2>`;
+  const root = el;
+  H.forEach(x => {
+    const c = { supported: "#8fc79a", refuted: "#e0866f", inconclusive: "#d8b86a", running: "#8fb5e0" }[x.status] || "#a39580";
+    const ck = x.checks ? `<div class="ck">${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"} ${dec(x) === k ? "dec" : ""}">${x.checks[k] ? "✓" : "✗"} ${l}</span>`).join("")}</div>` : "";
+    h += `<div class="row"><div class="mg"><b>${x.id.toUpperCase().replace("H", "H-")}</b>${x.n ? x.n + " TRIALS" : "—"}</div>
+      <div class="ent"><div class="spec"><span>E01</span><span>${DATES[x.id]}</span><span class="st" style="background:${c}">${EN[x.status]}</span></div>
+      <h3>${x.title}</h3><p class="ev num">${evidence(x)}</p>${ck}</div></div>`;
+  });
+  el.innerHTML = h + "</div>";
+})();
+
+/* ---------- B ---------- */
+(function () {
+  const el = document.getElementById("B"); if (!el) return;
+  let h = `<div class="top">
+    <div><div class="k">DIR / BTC-MOMENTUM · ${FX.workspace}</div><div class="q">${FX.direction}</div></div>
+    <div><div class="k">TRIALS N</div><div class="v">${FX.trials} <small>BAR ${barNow.toFixed(2)}</small></div></div>
+    <div><div class="k">BUDGET</div><div class="v">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div></div>
+    <div><div class="k">LOCKBOX</div><div class="v" style="color:var(--sig)">SEALED</div><div class="k">FROM ${d.lockbox_start}</div></div>
+    <div><div class="k">DATA</div><div class="v" style="font-size:15px">2019 → 2025-02</div><div class="k">COST ${d.cost_bps}BP</div></div>
+    <div><div class="k">STATUS</div><div class="v" style="font-size:15px">1 / 1 / 1 / 1</div><div class="k">SUP REF INC RUN</div></div>
+  </div><div class="stripes"></div>
+  <div class="body"><div class="pane"><h2><span>HYPOTHESES · SPEC CARDS</span><span>验证段证据只在出结论后显示</span></h2>`;
+  H.forEach(x => {
+    const c = { supported: "var(--held)", refuted: "var(--limit)", inconclusive: "var(--unsure)", running: "var(--run)" }[x.status] || "var(--ink3)";
+    const e = x.evidence;
+    const kv = e ? `<span><i>VAL</i> ${f2(e.val_sharpe)}</span><span><i>DSR</i> ${e.dsr.toFixed(2)}</span><span><i>PBO</i> ${e.pbo.toFixed(2)}</span><span><i>SUB</i> ${e.pos_frac}</span><span><i>B&amp;H</i> ${f2(e.bh)}</span>`
+      : x.in_sample ? `<span><i>IS BEST</i> ${f2(x.in_sample.best_is_sharpe)}</span><span><i>GEN</i> ${x.in_sample.generation}</span><span><i>VAL</i> 出结论后显示</span>` : `<span><i>${x.status === "proposed" ? "AWAITING SELECTION" : "NOT RUN"}</i></span>`;
+    const gates = x.checks ? `<div class="gates" title="${CHECKS.map(([k, l]) => (x.checks[k] ? "✓ " : "✗ ") + l).join(" / ")}">${CHECKS.map(([k]) => `<i class="${x.checks[k] ? "ok" : dec(x) === k ? "dec" : "no"}"></i>`).join("")}</div>` : "";
+    h += `<div class="card"><div class="id">${x.id.toUpperCase().replace("H", "H-")}<small>E01 · ${x.n || 0} TR · ${DATES[x.id]}</small></div>
+      <div><div class="t">${x.title}</div><div class="kv">${kv}</div>${gates}</div>
+      <div class="st" style="color:${c}">${GL[x.status]} ${EN[x.status]}</div></div>`;
+  });
+  h += `</div><div class="pane"><h2><span>TRIALS · INDEX STRIPES · NOISE BAR</span><span>${FX.trials} PTS</span></h2>
+    ${chart({ w: 640, h: 300, stripes: true, bands: false, grid: "#2a3027", axis: "#B3B9AB", dot: "#4a5446", front: "#EFEEE8", bar: "#F45D22", bg: "#151815", barLabel: "NOISE BAR" })}
+    <h2 style="margin-top:16px"><span>LOG · RESULTS.TSV</span></h2><div class="log">
+    ${FX.events.map(([t, hid, , ev, note]) => `<div><span>${t}</span><span>${hid.toUpperCase()}</span><span>${ev.toUpperCase()}</span><span style="font-family:'Noto Sans CJK SC',sans-serif">${note}</span></div>`).join("")}</div></div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- C ---------- */
+(function () {
+  const el = document.getElementById("C"); if (!el) return;
+  const groups = {}; FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  let h = `<div class="wrap"><div class="hdr"><div><div class="tag">ARCHIVE · DIRECTION BTC-MOMENTUM · REEL 01</div><h1>${FX.direction}</h1></div>
+    <div class="kv num"><span>TRIALS<b>${FX.trials}</b></span><span>NOISE BAR<b>${barNow.toFixed(2)}</b></span><span>BUDGET<b>$${b.spent.toFixed(1)}</b></span><span>LOCKBOX<b style="color:var(--amber)">SEALED</b></span><span>DATA<b>2019→25</b></span></div></div>
+    <h2>TRACKS — 每个假设一条磁带；亮段是保留的改进，断口是丢弃的试验区间，琥珀线是最优点</h2><div class="tracks">`;
+  H.forEach(x => {
+    const c = { supported: "var(--held)", refuted: "var(--limit)", inconclusive: "var(--unsure)", running: "var(--run)" }[x.status] || "var(--ink3)";
+    const ps = groups[x.id] || [];
+    let bar = "";
+    if (ps.length) {
+      const n = ps.length; let last = 0, best = -9, bi = 0;
+      ps.forEach((p, i) => { if (p.kept) { bar += `<i style="left:${last / n * 100}%;width:${Math.max(0.6, (i - last) / n * 100 - 0.4)}%;background:${i - last > 8 ? "var(--ink3)" : "var(--ink2)"}"></i>`; last = i + 1; } if (p.score > best) { best = p.score; bi = i; } });
+      bar += `<i style="left:${last / n * 100}%;width:${(n - last) / n * 100}%;opacity:.35"></i><span class="best" style="left:${bi / n * 100}%"></span>`;
+    }
+    const ck = x.checks ? ` · ${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"} ${dec(x) === k ? "dec" : ""}">${x.checks[k] ? "✓" : "✗"}</span>`).join(" ")}` : "";
+    h += `<div class="tr"><div class="nm"><b>${x.id.toUpperCase().replace("H", "H-")} · E01</b><span>${x.title}</span></div>
+      <div class="bar">${bar || '<span style="position:absolute;left:10px;top:6px;font-size:11px;color:var(--ink3)">NO TAPE</span>'}</div>
+      <div class="st" style="color:${c}">${GL[x.status]} ${EN[x.status]}<br><span style="color:var(--ink3)">${x.n || 0} TR · ${DATES[x.id]}</span></div>
+      <div class="ev num">${evidence(x)}<span class="g">${ck}</span></div></div>`;
+  });
+  h += `</div><div class="bottom"><div><h2>TRIALS / NOISE BAR</h2>${chart({ w: 780, h: 180, bands: true, band: "#171a1e", grid: "#23272c", axis: "#8d8a82", dot: "#4a4e55", front: "#e6e3da", bar: "#e6a23c", bg: "#121417", barLabel: "NOISE BAR" })}</div>
+    <div><h2>LOG</h2><div class="log">${FX.events.map(([t, hid, , ev, note]) => `<div><span>${t}</span><span>${hid.toUpperCase()}</span><span style="font-family:'Noto Sans CJK SC',sans-serif">${note}</span></div>`).join("")}</div></div></div></div>`;
+  el.innerHTML = h;
+})();
+</script>
+</body>
+</html>

@@ -98,13 +98,18 @@ def test_skeptic_and_verdict_cli(
     with pytest.raises(SystemExit):
         cli.main(["verdict", str(root), "h001"])  # not challenged yet
 
-    cli.main(["skeptic", str(root), "h001"])
+    cli.main(["skeptic", str(root), "h001", "--dsr", "0.8"])
     nb = Notebook.load(root)
     rep = nb.get("h001").experiments[0].skeptic
     assert nb.get("h001").status is Status.challenged
     assert rep["program_id"] == "p1"  # best correct, not the broken 9.9
     assert rep["n_trials"] == 3
     assert 0.0 <= rep["dsr"] <= 1.0
+    assert rep["thresholds"] == {
+        "dsr_supported": 0.8,
+        "min_positive_fraction": 2.0 / 3.0,
+        "max_pbo": 0.5,
+    }
     assert (results.parent / "skeptic.md").exists()
     assert "(5)" in (results.parent / "best_program.py").read_text()
 
@@ -116,3 +121,4 @@ def test_skeptic_and_verdict_cli(
     hyp = Notebook.load(root).get("h001")
     assert hyp.status.value == rep["rule_label"]
     assert hyp.verdict and hyp.verdict.evidence["experiment"] == "e01"
+    assert hyp.verdict.evidence["thresholds"]["dsr_supported"] == 0.8

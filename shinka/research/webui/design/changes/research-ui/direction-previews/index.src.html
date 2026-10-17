@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>方向预览 · Shinka Research 研究界面</title>
+<style>
+  /* ---------- neutral comparison shell ---------- */
+  html, body { margin: 0; background: #e9e9e9; color: #222;
+    font-family: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans CJK SC", sans-serif; }
+  .shell-head { padding: 20px 24px 8px; max-width: 1440px; margin: 0 auto; }
+  .shell-head h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; }
+  .shell-head p { margin: 0; font-size: 13px; color: #555; line-height: 1.6; }
+  .stage { margin: 16px auto 32px; max-width: 1440px; }
+  .stage-label { font-size: 13px; color: #444; padding: 0 24px 6px; }
+  .stage-label b { color: #111; }
+  .frame { width: 1440px; height: 960px; overflow: hidden; margin: 0 auto; box-shadow: 0 0 0 1px #c8c8c8; }
+  body.solo { background: none; }
+  body.solo .shell-head, body.solo .stage-label { display: none; }
+  body.solo .stage { margin: 0; }
+  body.solo .frame { box-shadow: none; }
+  @media (max-width: 1439px) { .frame { width: 100%; height: auto; min-height: 960px; } }
+  abbr { text-decoration: underline dotted; text-underline-offset: 3px; cursor: help; }
+  .num { font-variant-numeric: tabular-nums; }
+
+  /* =========================================================
+     A · 研究记录本 — light, warm paper, serif, single column with margin
+     ========================================================= */
+  .A { background: #f5f0e6; color: #1f1c17; height: 100%;
+       font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", serif; }
+  .A .page { width: 1040px; margin: 0 auto; padding: 44px 0 0; display: grid;
+             grid-template-columns: 150px 1fr; column-gap: 40px; }
+  .A .margin { font-size: 12px; color: #7a7062; line-height: 1.6; text-align: right; }
+  .A .kicker { grid-column: 2; font-size: 12px; letter-spacing: .12em; color: #7a7062; }
+  .A h1 { grid-column: 2; font-size: 30px; line-height: 1.35; margin: 6px 0 10px; font-weight: 600; }
+  .A .lede { grid-column: 2; font-size: 15px; line-height: 1.75; color: #4a443a; margin: 0 0 18px; max-width: 40em; }
+  .A .facts { grid-column: 2; display: flex; gap: 28px; border-top: 1.5px solid #1f1c17;
+              border-bottom: 1px solid #b9ad99; padding: 10px 0; font-size: 14px; }
+  .A .facts div span { display: block; font-size: 11px; color: #7a7062; letter-spacing: .08em; }
+  .A .facts b { font-weight: 600; font-size: 18px; }
+  .A .seal { display: inline-flex; align-items: center; gap: 8px; }
+  .A .seal i { width: 26px; height: 26px; border: 1.5px solid #8a2b1f; border-radius: 50%;
+               display: inline-grid; place-items: center; font-style: normal; color: #8a2b1f; font-size: 13px; }
+  .A h2 { grid-column: 2; font-size: 13px; letter-spacing: .14em; color: #7a7062; font-weight: 600;
+          margin: 26px 0 6px; }
+  .A .entry { display: contents; }
+  .A .entry .margin { padding-top: 13px; }
+  .A .entry .margin b { display: block; font-size: 15px; color: #1f1c17; }
+  .A .body { border-top: 1px solid #d3c8b5; padding: 12px 0 12px; }
+  .A .body h3 { margin: 0; font-size: 18px; font-weight: 600; display: flex; gap: 12px; align-items: baseline; }
+  .A .stamp { font-size: 12px; border: 1.5px solid currentColor; padding: 0 6px; letter-spacing: .1em;
+              font-weight: 600; }
+  .A .s-supported { color: #2c5a37; } .A .s-refuted { color: #8a2b1f; }
+  .A .s-inconclusive { color: #6b5a2a; } .A .s-running { color: #1f4a7a; }
+  .A .s-proposed, .A .s-dropped { color: #7a7062; }
+  .A .prose { font-size: 14.5px; line-height: 1.75; margin: 4px 0 0; color: #3a352d; }
+  .A .ledger { font-size: 13px; color: #4a443a; margin-top: 4px; }
+  .A .ledger span { margin-right: 14px; } .A .ok { color: #2c5a37; } .A .no { color: #8a2b1f; }
+  .A .chart { grid-column: 2; }
+  .A .chart svg text { font-family: inherit; }
+
+  /* =========================================================
+     B · 交易台终端 — dark, mono numerals, dense multi-pane
+     ========================================================= */
+  .B { background: #0c0f0e; color: #d5ddd8; height: 100%; font-size: 13px;
+       font-family: system-ui, "Noto Sans CJK SC", "PingFang SC", sans-serif; }
+  .B .mono, .B .num { font-family: ui-monospace, "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; }
+  .B .bar { display: grid; grid-template-columns: 1.6fr repeat(4, 1fr); border-bottom: 1px solid #263029; }
+  .B .bar > div { padding: 12px 16px; border-right: 1px solid #263029; }
+  .B .bar .q { font-size: 15px; font-weight: 600; color: #f2f5f3; line-height: 1.45; }
+  .B .bar .q small { display: block; font-weight: 400; color: #7f8c84; font-size: 12px; margin-top: 2px; }
+  .B .k { font-size: 11px; color: #7f8c84; letter-spacing: .06em; }
+  .B .v { font-size: 20px; color: #f2f5f3; margin-top: 2px; }
+  .B .v small { font-size: 12px; color: #7f8c84; }
+  .B .meter { height: 4px; background: #263029; margin-top: 8px; }
+  .B .meter i { display: block; height: 100%; background: #f0b429; }
+  .B .lock { color: #f0b429; }
+  .B .grid { display: grid; grid-template-columns: 1.25fr 1fr; height: calc(100% - 74px); }
+  .B .pane { border-right: 1px solid #263029; padding: 12px 16px; overflow: hidden; }
+  .B .pane h2 { font-size: 11px; letter-spacing: .1em; color: #7f8c84; font-weight: 600; margin: 0 0 8px;
+                display: flex; justify-content: space-between; }
+  .B table { width: 100%; border-collapse: collapse; }
+  .B th { font-size: 11px; color: #7f8c84; font-weight: 500; text-align: right; padding: 6px 6px;
+          border-bottom: 1px solid #263029; }
+  .B th:nth-child(-n+3) { text-align: left; }
+  .B td { padding: 8px 6px; border-bottom: 1px solid #18201b; text-align: right; white-space: nowrap; }
+  .B td:nth-child(-n+3) { text-align: left; }
+  .B td.t { white-space: normal; color: #eef2ef; }
+  .B .st { font-size: 12px; padding: 1px 6px; border: 1px solid; }
+  .B .s-supported { color: #5fd38d; } .B .s-refuted { color: #ff7a6b; } .B .s-inconclusive { color: #c9c08a; }
+  .B .s-running { color: #f0b429; } .B .s-proposed, .B .s-dropped { color: #7f8c84; }
+  .B .pips i { display: inline-block; width: 9px; height: 9px; margin-left: 3px; }
+  .B .pips .ok { background: #5fd38d; } .B .pips .no { background: transparent; box-shadow: inset 0 0 0 1.5px #ff7a6b; }
+  .B .muted { color: #6b776f; }
+  .B .tape div { display: grid; grid-template-columns: 92px 44px 64px 1fr; gap: 8px; padding: 6px 0;
+                 border-bottom: 1px solid #18201b; }
+  .B .help { color: #7f8c84; font-size: 12px; margin: 6px 0 10px; }
+
+  /* =========================================================
+     C · 审计档案 — light cool, sans, sidebar + case cards with test ladder
+     ========================================================= */
+  .C { background: #f3f4f6; color: #15171c; height: 100%; display: grid; grid-template-columns: 208px 1fr;
+       font-family: system-ui, "Noto Sans CJK SC", "PingFang SC", sans-serif; font-size: 14px; }
+  .C nav { background: #fff; border-right: 1px solid #dfe2e7; padding: 20px 16px; }
+  .C nav .brand { font-weight: 700; font-size: 15px; margin-bottom: 18px; }
+  .C nav a { display: block; padding: 7px 10px; color: #3b414c; text-decoration: none; border-radius: 4px; }
+  .C nav a.on { background: #eef1fb; color: #2347d6; font-weight: 600; }
+  .C nav .sub { font-size: 12px; color: #6a7180; margin: 16px 10px 6px; }
+  .C main { padding: 22px 28px; overflow: hidden; }
+  .C .crumbs { font-size: 12px; color: #6a7180; }
+  .C h1 { font-size: 22px; margin: 4px 0 4px; font-weight: 700; line-height: 1.4; }
+  .C .lede { color: #4a505c; margin: 0 0 14px; line-height: 1.6; }
+  .C .strip { display: grid; grid-template-columns: repeat(4, 1fr); background: #fff; border: 1px solid #dfe2e7; }
+  .C .strip > div { padding: 10px 14px; border-right: 1px solid #dfe2e7; }
+  .C .strip .k { font-size: 12px; color: #6a7180; } .C .strip .v { font-size: 18px; font-weight: 600; margin-top: 2px; }
+  .C .strip .v small { font-size: 12px; color: #6a7180; font-weight: 400; }
+  .C .meter { height: 6px; background: #e6e8ec; margin-top: 6px; } .C .meter i { display: block; height: 100%; background: #2347d6; }
+  .C .cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 14px; }
+  .C .card { background: #fff; border: 1px solid #dfe2e7; padding: 12px 14px; }
+  .C .card header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .C .card h3 { font-size: 15px; margin: 4px 0 8px; line-height: 1.45; }
+  .C .id { font-size: 12px; color: #6a7180; }
+  .C .chip { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 3px; }
+  .C .s-supported { background: #e5f4ea; color: #1d6b3a; } .C .s-refuted { background: #fbe9e7; color: #a32a1c; }
+  .C .s-inconclusive { background: #f4f0dc; color: #6b5a12; } .C .s-running { background: #e7ecfb; color: #2347d6; }
+  .C .s-proposed, .C .s-dropped { background: #eceef1; color: #4a505c; }
+  .C .ladder { border-top: 1px solid #eceef1; }
+  .C .ladder div { display: grid; grid-template-columns: 18px 1fr auto; gap: 6px; padding: 5px 0;
+                   border-bottom: 1px solid #f1f2f4; font-size: 13px; }
+  .C .ladder .decider { background: #fff6e0; margin: 0 -14px; padding: 5px 14px; }
+  .C .ok { color: #1d6b3a; } .C .no { color: #a32a1c; }
+  .C .pending { font-size: 13px; color: #4a505c; line-height: 1.6; }
+  .C .row2 { display: grid; grid-template-columns: 2fr 1fr; gap: 12px; margin-top: 12px; }
+  .C .panel { background: #fff; border: 1px solid #dfe2e7; padding: 12px 14px; }
+  .C .panel h2 { font-size: 13px; margin: 0 0 6px; }
+  .C .ev { font-size: 12.5px; padding: 5px 0; border-bottom: 1px solid #f1f2f4; display: grid;
+           grid-template-columns: 82px 40px 1fr; gap: 6px; }
+</style>
+</head>
+<body>
+<header class="shell-head" data-direction-preview>
+  <h1>方向预览（不是最终产品）· Shinka Research 研究界面</h1>
+  <p>三个候选用同一份内容（fixture.json）、同一视口 1440×960、同样的状态覆盖：支持 / 证伪 / 不确定 / 运行中 / 待选 / 已放弃、lockbox 未启封、预算进行中。选一个方向即可，细节之后在 DESIGN.md 里定。</p>
+</header>
+
+<section class="stage" data-direction-id="notebook">
+  <div class="stage-label"><b>A · 研究记录本</b> — 浅色暖纸、宋体、单栏加页边，像一本实验记录；结论像记账一样写出来。</div>
+  <div class="frame"><div class="A" id="A"></div></div>
+</section>
+
+<section class="stage" data-direction-id="desk">
+  <div class="stage-label"><b>B · 交易台终端</b> — 深色、等宽数字、多窗格高密度；一眼扫完所有数字。</div>
+  <div class="frame"><div class="B" id="B"></div></div>
+</section>
+
+<section class="stage" data-direction-id="audit">
+  <div class="stage-label"><b>C · 审计档案</b> — 浅冷灰、无衬线、侧栏 + 假设卡片；每张卡用"判定阶梯"标出是哪条规则定的结论。</div>
+  <div class="frame"><div class="C" id="C"></div></div>
+</section>
+
+<script id="fx" type="application/json">__FIXTURE__</script>
+<script>
+const FX = JSON.parse(document.getElementById("fx").textContent);
+const solo = location.hash.slice(1);
+if (solo) {
+  document.body.classList.add("solo");
+  document.querySelectorAll(".stage").forEach(s => { if (s.dataset.directionId !== solo) s.remove(); });
+}
+const ST = { supported: "支持", refuted: "证伪", inconclusive: "不确定", running: "运行中",
+             proposed: "待选", dropped: "已放弃" };
+const GLYPH = { supported: "✓", refuted: "✗", inconclusive: "?", running: "▸", proposed: "○", dropped: "–" };
+const CHECKS = [
+  ["val>0", "验证段 Sharpe > 0"], ["beats_bh", "跑赢买入持有"], ["dsr>=0.95", "DSR ≥ 0.95"],
+  ["subperiod", "子区间为正 ≥ 2/3"], ["pbo<=0.5", "PBO ≤ 0.5"]];
+const TERM = {
+  DSR: "Deflated Sharpe Ratio：考虑试验次数 N 后，真实 Sharpe 超过噪声门槛的概率。",
+  PBO: "回测过拟合概率：样本内最优的策略，在样本外排到中位数以下的比例。",
+  N: "试验数：这个方向里评估过的所有变体（含 probe）。试得越多，门槛越高。",
+  lockbox: "数据尾段，研究期间谁都看不到；收尾时 confirm 一次性打开，只开一次。",
+};
+const term = (k, label) => `<abbr title="${TERM[k]}">${label || k}</abbr>`;
+const f2 = x => (x >= 0 ? "" : "−") + Math.abs(x).toFixed(2);
+const d = FX.data, b = FX.budget, H = FX.hypotheses;
+const barNow = FX.bar[FX.bar.length - 1].bar;
+const decider = h => h.checks ? CHECKS.find(([k]) => !h.checks[k]) : null;
+
+function chart(o) {
+  const W = o.w, Hh = o.h, L = 40, R = 12, T = 18, Bm = 28;
+  const n = FX.trials, ys = FX.points.map(p => p.score);
+  const ymin = Math.floor(Math.min(...ys) * 2) / 2, ymax = Math.ceil(Math.max(...ys, barNow) * 2) / 2;
+  const x = v => L + (v - 1) / (n - 1) * (W - L - R), y = v => T + (ymax - v) / (ymax - ymin) * (Hh - T - Bm);
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" role="img" aria-label="试验分数与噪声门槛">`;
+  const groups = {};
+  FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  Object.entries(groups).forEach(([hid, ps], i) => {
+    const x0 = x(ps[0].n), x1 = x(ps[ps.length - 1].n);
+    if (i % 2) s += `<rect x="${x0}" y="${T}" width="${x1 - x0}" height="${Hh - T - Bm}" fill="${o.band}"/>`;
+    s += `<text x="${(x0 + x1) / 2}" y="${Hh - 8}" text-anchor="middle" font-size="11" fill="${o.axis}">${hid}</text>`;
+  });
+  for (let v = ymin; v <= ymax + 1e-9; v += 0.5)
+    s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${o.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="11" fill="${o.axis}">${v.toFixed(1)}</text>`;
+  FX.points.forEach(p => { if (!p.kept) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="1.8" fill="${o.dot}"/>`; });
+  Object.values(groups).forEach(ps => {
+    let best = -9, path = "";
+    ps.forEach(p => { if (p.score > best) { path += path ? `H${x(p.n)}V${y(p.score)}` : `M${x(p.n)} ${y(p.score)}`; best = p.score; } });
+    path += `H${x(ps[ps.length - 1].n)}`;
+    s += `<path d="${path}" fill="none" stroke="${o.front}" stroke-width="1.6"/>`;
+    ps.forEach(p => { if (p.kept) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="2.8" fill="${o.front}"/>`; });
+  });
+  s += `<path d="${FX.bar.map((q, i) => (i ? "L" : "M") + x(q.n) + " " + y(q.bar)).join("")}" fill="none" stroke="${o.bar}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  s += `<text x="${W - R - 4}" y="${y(barNow) - 6}" text-anchor="end" font-size="11.5" fill="${o.bar}">${o.barLabel} ${barNow.toFixed(2)}</text>`;
+  return s + `</svg>`;
+}
+
+/* ---------- A ---------- */
+(function () {
+  const el = document.getElementById("A"); if (!el) return;
+  let h = `<div class="page">
+    <div class="margin">工作区<br>${FX.workspace}</div>
+    <div class="kicker">研究方向 · 记录本</div>
+    <div></div><h1>${FX.direction}</h1>
+    <div></div><p class="lede">每个假设都由同一个冻结的评估器检验；验证段的证据只在出结论后写进来。这一页试了 ${term("N", "N = " + FX.trials)} 个变体，所以“支持”的门槛也随之抬高。</p>
+    <div></div><div class="facts num">
+      <div><span>开发数据</span>${d.bars}</div>
+      <div><span>预算</span><b>$${b.spent.toFixed(1)}</b> / $${b.limit}</div>
+      <div><span>试验数</span><b>${FX.trials}</b></div>
+      <div><span>LOCKBOX</span><span class="seal"><i>封</i>${term("lockbox", "未启封")} · 自 ${d.lockbox_start}</span></div>
+    </div>
+    <div></div><h2>假设与结论</h2>`;
+  H.forEach(x => {
+    const e = x.evidence;
+    let body = "";
+    if (e) {
+      body = `<p class="prose num">验证段 Sharpe ${f2(e.val_sharpe)}，${term("DSR")} ${e.dsr.toFixed(2)}（N = ${FX.trials}），${term("PBO")} ${e.pbo.toFixed(2)}，子区间为正 ${e.pos_frac}；买入持有 ${f2(e.bh)}。</p>
+        <div class="ledger">${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"}">${x.checks[k] ? "✓" : "✗"} ${l}</span>`).join("")}</div>`;
+    } else if (x.in_sample) {
+      body = `<p class="prose num">进化中，第 ${x.in_sample.generation} 代，样本内最优 Sharpe ${f2(x.in_sample.best_is_sharpe)}，${x.n} 次试验。验证段证据出结论后才写入。</p>`;
+    } else body = `<p class="prose">${x.status === "proposed" ? "等待人选择。" : "已放弃，未进入实验。"}</p>`;
+    h += `<div class="entry"><div class="margin"><b>${x.id}</b>${x.n ? x.n + " 次试验" : ""}</div>
+      <div class="body"><h3>${x.title}<span class="stamp s-${x.status}">${ST[x.status]}</span></h3>${body}</div></div>`;
+  });
+  h += `<div class="margin" style="padding-top:34px">虚线：N 个纯噪声试验的期望最高分。实线：每个假设的最优前沿。</div>
+    <div class="chart"><h2 style="margin-left:0">试验与门槛</h2>${chart({ w: 850, h: 230, band: "#efe7d8", grid: "#e2d8c6", axis: "#7a7062", dot: "#b9ad99", front: "#1f1c17", bar: "#8a2b1f", barLabel: "噪声门槛" })}</div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- B ---------- */
+(function () {
+  const el = document.getElementById("B"); if (!el) return;
+  let h = `<div class="bar">
+    <div class="q">${FX.direction}<small>${FX.workspace} · ${d.bars} · 成本 ${d.cost_bps}bp</small></div>
+    <div><div class="k">${term("N", "试验数 N")}</div><div class="v num">${FX.trials} <small>门槛 ${barNow.toFixed(2)}</small></div></div>
+    <div><div class="k">预算</div><div class="v num">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div><div class="meter"><i style="width:${b.spent / b.limit * 100}%"></i></div></div>
+    <div><div class="k">${term("lockbox", "LOCKBOX")}</div><div class="v lock">■ 未启封 <small>${d.lockbox_start} 起 ${d.lockbox_fraction * 100}%</small></div></div>
+    <div><div class="k">资料库</div><div class="v num">${FX.library.pages} 页 <small>${FX.library.pending} 待编译</small></div></div>
+  </div>
+  <div class="grid"><div class="pane"><h2><span>假设</span><span>验证段证据只在出结论后显示</span></h2>
+  <table><thead><tr><th>ID</th><th>假设</th><th>状态</th><th>验证 Sharpe</th><th>${term("DSR")}</th><th>${term("PBO")}</th><th>买入持有</th><th>判据</th><th>N</th></tr></thead><tbody>`;
+  H.forEach(x => {
+    const e = x.evidence;
+    const cells = e ? `<td class="num">${f2(e.val_sharpe)}</td><td class="num">${e.dsr.toFixed(2)}</td><td class="num">${e.pbo.toFixed(2)}</td><td class="num">${f2(e.bh)}</td><td class="pips" title="${CHECKS.map(([k, l]) => (x.checks[k] ? "✓ " : "✗ ") + l).join("\n")}">${CHECKS.map(([k]) => `<i class="${x.checks[k] ? "ok" : "no"}"></i>`).join("")}</td>`
+      : x.in_sample ? `<td class="muted num" colspan="4">样本内最优 ${f2(x.in_sample.best_is_sharpe)} · 第 ${x.in_sample.generation} 代</td><td class="muted">—</td>`
+      : `<td class="muted" colspan="5">—</td>`;
+    h += `<tr><td class="mono muted">${x.id}</td><td class="t">${x.title}</td><td><span class="st s-${x.status}">${GLYPH[x.status]} ${ST[x.status]}</span></td>${cells}<td class="num muted">${x.n || ""}</td></tr>`;
+  });
+  h += `</tbody></table></div><div class="pane"><h2><span>试验 · 前沿 · 噪声门槛</span><span>${FX.trials} 个点</span></h2>
+    <p class="help">灰点是丢弃的试验，绿线是每个假设的最优前沿，琥珀虚线是 N 个纯噪声试验的期望最高分。</p>
+    ${chart({ w: 600, h: 300, band: "#111814", grid: "#1b241f", axis: "#6b776f", dot: "#3a4740", front: "#5fd38d", bar: "#f0b429", barLabel: "门槛" })}
+    <h2 style="margin-top:14px"><span>流水 results.tsv</span></h2><div class="tape num">
+    ${FX.events.map(([t, hid, eid, ev, note]) => `<div><span class="muted">${t}</span><span class="mono">${hid}</span><span class="mono">${ev}</span><span>${note}</span></div>`).join("")}</div></div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- C ---------- */
+(function () {
+  const el = document.getElementById("C"); if (!el) return;
+  let h = `<nav><div class="brand">Shinka Research</div>
+    <a href="#">工作区</a><a class="on" href="#">方向</a><a href="#">资料库</a>
+    <div class="sub">${FX.workspace}</div><a href="#">btc-momentum</a><a href="#">eth-basis</a></nav><main>
+    <div class="crumbs">工作区 / ${FX.workspace} / 方向</div>
+    <h1>${FX.direction}</h1>
+    <p class="lede">每个假设经过同一组判定规则；卡片里高亮的那一行就是决定结论的规则。验证段证据在出结论后显示。</p>
+    <div class="strip num">
+      <div><div class="k">${term("N", "试验数 N")}</div><div class="v">${FX.trials} <small>噪声门槛 ${barNow.toFixed(2)}</small></div></div>
+      <div><div class="k">预算</div><div class="v">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div><div class="meter"><i style="width:${b.spent / b.limit * 100}%"></i></div></div>
+      <div><div class="k">${term("lockbox", "Lockbox")}</div><div class="v">未启封 <small>${d.lockbox_start} 起</small></div></div>
+      <div><div class="k">开发数据</div><div class="v" style="font-size:14px">${d.bars}</div></div>
+    </div><div class="cards">`;
+  H.forEach(x => {
+    const e = x.evidence, dec = decider(x);
+    let body;
+    if (e) {
+      const val = { "val>0": f2(e.val_sharpe), beats_bh: `${f2(e.val_sharpe)} vs ${f2(e.bh)}`, "dsr>=0.95": e.dsr.toFixed(2), subperiod: e.pos_frac, "pbo<=0.5": e.pbo.toFixed(2) };
+      body = `<div class="ladder num">${CHECKS.map(([k, l]) => `<div class="${dec && dec[0] === k ? "decider" : ""}"><span class="${x.checks[k] ? "ok" : "no"}">${x.checks[k] ? "✓" : "✗"}</span><span>${l.replace("DSR", term("DSR")).replace("PBO", term("PBO"))}</span><span>${val[k]}</span></div>`).join("")}</div>`;
+    } else if (x.in_sample) body = `<p class="pending num">进化中 · 第 ${x.in_sample.generation} 代<br>样本内最优 Sharpe ${f2(x.in_sample.best_is_sharpe)} · ${x.n} 次试验</p>`;
+    else body = `<p class="pending">${x.status === "proposed" ? "等待人选择" : "已放弃，未进入实验"}</p>`;
+    h += `<article class="card"><header><span class="id">${x.id}${x.n ? " · " + x.n + " 次试验" : ""}</span><span class="chip s-${x.status}">${GLYPH[x.status]} ${ST[x.status]}</span></header><h3>${x.title}</h3>${body}</article>`;
+  });
+  h += `</div><div class="row2"><div class="panel"><h2>试验与噪声门槛</h2>${chart({ w: 720, h: 200, band: "#f5f6f8", grid: "#eceef1", axis: "#6a7180", dot: "#c3c8d0", front: "#2347d6", bar: "#b4540a", barLabel: "噪声门槛" })}</div>
+    <div class="panel"><h2>最近事件</h2>${FX.events.map(([t, hid, eid, ev, note]) => `<div class="ev num"><span style="color:#6a7180">${t}</span><b>${hid}</b><span>${note}</span></div>`).join("")}</div></div></main>`;
+  el.innerHTML = h;
+})();
+</script>
+</body>
+</html>

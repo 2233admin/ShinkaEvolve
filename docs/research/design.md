@@ -156,6 +156,27 @@ research/<direction-slug>/
 - **预算**：`init --budget-usd` 设定方向预算；`run` 前汇总各运行结果库里记录的模型费用，用完即拒绝运行。
 - **实验流水**：方向目录下的 `results.tsv` 每个事件一行（scaffold / run / skeptic / verdict / confirm），对应 autoresearch 的 results.tsv。
 
+## 7.3 研究层前端（只读）
+
+上游 WebUI 只看一次进化运行（一个 `programs.sqlite`）。研究层缺的是方向级视图：假设与状态、结论证据、试验数 N、预算、lockbox、资料库、`results.tsv` 流水。
+
+参考（2026-10 调研）：
+- Karpathy autoresearch：`results.tsv` + 进度图（灰点丢弃、绿点保留、阶梯前沿线、保留点带描述）。照搬这个形式，补上它缺的：按假设分组、试验数门槛。
+- Optuna Dashboard：视图少、单进程直接读库、每个 study 一份 markdown 笔记。照搬"少视图、直接读文件"。
+- WorldQuant BRAIN：alpha 必须过一组硬门槛才算数。照搬成每条判定规则的 ✓/✗ 清单。
+- MLflow 的阶段标签不带证据、W&B workspace 自动面板堆积、AI-Scientist-v2 的单次静态树 HTML：都是反例。状态旁必须挂证据；页面固定、不自动生成面板；跨实验在方向页汇总。
+- 主流工具都不显式展示试验数、DSR、PBO，也没有"一次性不可逆"的留存集状态。这是本前端要补的。
+
+决定：
+- 入口 `shinka_research ui <方向目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/snapshot`（一份方向快照）和打包好的前端，不改上游。每个实验的进化细节跳转到上游 viz_tree（默认隐藏 private 指标）。
+- 前端在 `shinka/research/webui/app/`（Vite + React 19 + TypeScript），构建到 `webui/dist/`（不入库，`pnpm build` 生成）。照 Optuna Dashboard：Python 端只读文件、出 JSON，界面是单独打包的前端。
+- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。
+- 只读。选中/放弃假设、出结论、confirm 仍走 CLI；confirm 永远不进 UI（不可逆操作不做成一次点击）。
+- 页面：工作区（方向列表）、方向（头部状态条、假设表、前沿图、流水、报告）、资料库（index、wiki、`[[链接]]`、待编译、log）。
+- 前沿图：方向内所有试验的样本内分数按时间排开，叠加"N 个纯噪声试验的期望最大值"门槛线（与质疑者同一近似：方差取试验样本内分数）。试得越多线越高，直观表达多重检验代价。
+- 可见性纪律与 agent 相同：未出结论的假设只显示样本内指标，验证段证据在 verdict 之后才显示；lockbox 数字只在 `confirm` 之后显示。过滤在服务端做（`ui.snapshot`），浏览器拿不到不该显示的数；质疑者事件的说明里带验证段数字，未出结论时同样隐去。
+- 视觉规范按 design-pipeline 走：方向与组件选型由所有者定，DESIGN.md 与设计系统包从 token 生成。
+
 ## 8. 分阶段路线（渐进式，每一步都端到端可用）
 
 见 [roadmap.md](roadmap.md)。

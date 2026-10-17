@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>暗色方向预览 · Shinka Research</title>
+<style>
+  html, body { margin: 0; background: #2a2a2a; color: #ddd;
+    font-family: system-ui, "Noto Sans CJK SC", sans-serif; }
+  .shell { padding: 20px 24px 8px; max-width: 1440px; margin: 0 auto; }
+  .shell h1 { font-size: 18px; margin: 0 0 4px; font-weight: 600; color: #fff; }
+  .shell p { margin: 0; font-size: 13px; color: #bbb; line-height: 1.6; }
+  .stage { margin: 16px auto 32px; max-width: 1440px; }
+  .label { font-size: 13px; color: #ccc; padding: 0 24px 6px; }
+  .label b { color: #fff; }
+  .frame { width: 1440px; height: 960px; overflow: hidden; margin: 0 auto; }
+  body.solo { background: #000; }
+  body.solo .shell, body.solo .label { display: none; }
+  body.solo .stage { margin: 0; }
+  @media (max-width: 1439px) { .frame { width: 100%; height: auto; min-height: 960px; } }
+  .num { font-variant-numeric: tabular-nums; }
+  abbr { text-decoration: underline dotted; text-underline-offset: 3px; }
+
+  /* ================= A · 夜间记录本 Night Ledger =================
+     warm brown-black, sand ink, rust limits; serif titles; margin column kept;
+     construct: segmented tape cells (spec strip) */
+  .A { --bg:#17130f; --bg2:#1f1a14; --rule:#3a3128; --rule2:#5a4c3d; --ink:#efe6d6; --ink2:#c9bda8; --ink3:#a39580;
+       --held:#8fc79a; --limit:#e0866f; --unsure:#d8b86a; --run:#8fb5e0; --rust:#c8643f;
+       background: var(--bg); color: var(--ink); height: 100%;
+       font-family: system-ui, "Noto Sans CJK SC", sans-serif; }
+  .A .page { width: 1060px; margin: 0 auto; padding: 36px 0 0; display: grid; grid-template-columns: 160px 1fr; column-gap: 40px; }
+  .A .mg { text-align: right; font: 12px/1.6 "DejaVu Sans Mono", "Noto Sans Mono CJK SC", monospace; color: var(--ink3); }
+  .A .tape { grid-column: 2; display: flex; border: 1px solid var(--rule2); font: 11px/1 "DejaVu Sans Mono", monospace; letter-spacing: .08em; color: var(--ink3); }
+  .A .tape span { padding: 6px 10px; border-right: 1px solid var(--rule2); }
+  .A .tape span:last-child { border-right: 0; margin-left: auto; color: var(--rust); }
+  .A h1 { grid-column: 2; font: 600 30px/1.35 "Noto Serif CJK SC", serif; margin: 18px 0 8px; }
+  .A .lede { grid-column: 2; color: var(--ink2); font-size: 15px; line-height: 1.75; margin: 0 0 16px; max-width: 40em; }
+  .A .facts { grid-column: 2; display: grid; grid-template-columns: repeat(5, 1fr); border-top: 1.5px solid var(--ink); border-bottom: 1px solid var(--rule2); }
+  .A .facts div { padding: 10px 12px 10px 0; }
+  .A .facts small { display: block; font: 10.5px/1.4 "DejaVu Sans Mono", monospace; letter-spacing: .1em; color: var(--ink3); text-transform: uppercase; }
+  .A .facts b { font-size: 19px; font-weight: 600; }
+  .A .facts em { font-style: normal; font-size: 12px; color: var(--ink3); }
+  .A .seal { display: inline-grid; place-items: center; width: 22px; height: 22px; border: 1.5px solid var(--rust); border-radius: 50%; color: var(--rust); font: 600 11px "Noto Serif CJK SC", serif; margin-right: 6px; vertical-align: -4px; }
+  .A .meter { height: 4px; display: flex; gap: 2px; margin-top: 6px; }
+  .A .meter i { flex: 1; background: var(--rule2); } .A .meter i.on { background: var(--ink2); }
+  .A h2 { grid-column: 2; font: 11px/1 "DejaVu Sans Mono", monospace; letter-spacing: .14em; color: var(--ink3); margin: 22px 0 8px; }
+  .A .chart { grid-column: 2; }
+  .A .row { display: contents; }
+  .A .row .mg { padding-top: 12px; }
+  .A .row .mg b { display: block; font: 600 14px "DejaVu Sans Mono", monospace; color: var(--ink); }
+  .A .ent { border-top: 1px solid var(--rule); padding: 10px 0; }
+  .A .spec { display: flex; gap: 0; font: 10.5px/1 "DejaVu Sans Mono", monospace; letter-spacing: .06em; color: var(--ink3); margin-bottom: 6px; }
+  .A .spec span { padding: 3px 8px; border: 1px solid var(--rule2); border-left: 0; } .A .spec span:first-child { border-left: 1px solid var(--rule2); }
+  .A .spec .st { color: var(--bg); font-weight: 700; border-color: transparent; }
+  .A .ent h3 { margin: 0; font: 600 17px/1.45 "Noto Serif CJK SC", serif; }
+  .A .ev { margin: 3px 0 0; color: var(--ink2); font-size: 14px; line-height: 1.7; }
+  .A .ck { font-size: 12.5px; margin-top: 3px; } .A .ck span { margin-right: 14px; } .A .ok { color: var(--held); } .A .no { color: var(--limit); }
+  .A .dec { text-decoration: underline 1px var(--limit); text-underline-offset: 4px; }
+
+  /* ================= B · 运维规格台 Ops Spec Sheet =================
+     near-black, one family (sans + mono), signal orange; 12-col spec grid, dense;
+     construct: vertical index striping */
+  /* tokens: the owner's Neo-Industrial DESIGN.md, Operations Dark roles */
+  .B { --bg:#151815; --bg2:#20251F; --rule:#3C4438; --ink:#EFEEE8; --ink2:#B3B9AB; --ink3:#B3B9AB; --sig:#F45D22;
+       --held:#9CD1AC; --limit:#FFA095; --unsure:#E5C06F; --run:#9fc3f0;
+       background: var(--bg); color: var(--ink); height: 100%; font-family: "Noto Sans CJK SC", system-ui, sans-serif; font-size: 13px; }
+  .B .mono { font-family: "Noto Sans Mono CJK SC", "DejaVu Sans Mono", monospace; }
+  .B .top { display: grid; grid-template-columns: 2.4fr repeat(5, 1fr); border-bottom: 1px solid var(--rule); }
+  .B .top > div { padding: 14px 16px; border-right: 1px solid var(--rule); }
+  .B .k { font: 10.5px/1.4 "Noto Sans Mono CJK SC", monospace; letter-spacing: .08em; color: var(--ink3); text-transform: uppercase; }
+  .B .v { font-size: 22px; font-weight: 600; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .B .v small { font-size: 12px; color: var(--ink3); font-weight: 400; }
+  .B .q { font-size: 17px; font-weight: 700; line-height: 1.35; }
+  .B .stripes { height: 10px; background: repeating-linear-gradient(90deg, var(--sig) 0 2px, transparent 2px 6px); opacity: .9; }
+  .B .body { display: grid; grid-template-columns: 1.15fr 1fr; height: calc(100% - 92px); }
+  .B .pane { padding: 14px 16px; border-right: 1px solid var(--rule); overflow: hidden; }
+  .B h2 { font: 10.5px/1 "Noto Sans Mono CJK SC", monospace; letter-spacing: .12em; color: var(--ink3); margin: 0 0 10px; display: flex; justify-content: space-between; }
+  .B .card { display: grid; grid-template-columns: 112px 1fr 104px; border-top: 1px solid var(--rule); padding: 10px 0; gap: 0 12px; }
+  .B .card .id { font: 700 15px "Noto Sans Mono CJK SC", monospace; }
+  .B .card .id small { display: block; font-size: 10.5px; color: var(--ink3); font-weight: 400; margin-top: 3px; }
+  .B .card .t { font-weight: 700; font-size: 14.5px; }
+  .B .kv { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; font: 11.5px/1.5 "Noto Sans Mono CJK SC", monospace; color: var(--ink2); font-variant-numeric: tabular-nums; }
+  .B .kv i { font-style: normal; color: var(--ink3); }
+  .B .st { justify-self: end; align-self: start; font: 700 11px/1 "Noto Sans Mono CJK SC", monospace; letter-spacing: .08em; padding: 5px 7px; border: 1px solid currentColor; }
+  .B .gates { display: flex; gap: 3px; margin-top: 6px; } .B .gates i { width: 22px; height: 6px; }
+  .B .gates .ok { background: var(--held); } .B .gates .no { background: transparent; box-shadow: inset 0 0 0 1.5px var(--limit); } .B .gates .dec { background: var(--limit); }
+  .B .log div { display: grid; grid-template-columns: 96px 46px 64px 1fr; gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--rule); font: 11.5px/1.4 "Noto Sans Mono CJK SC", monospace; color: var(--ink2); }
+
+  /* ================= C · 档案磁带 Tape Archive =================
+     graphite + amber, mono-dominant with serif-free titles; horizontal tape tracks;
+     construct: tracks with breaks (断口) */
+  .C { --bg:#121417; --bg2:#1a1d21; --rule:#2c3036; --ink:#e6e3da; --ink2:#b7b3a8; --ink3:#8d8a82; --amber:#e6a23c;
+       --held:#7cc796; --limit:#f08470; --unsure:#d9c070; --run:#86b0e8;
+       background: var(--bg); color: var(--ink); height: 100%; font-family: "Noto Sans Mono CJK SC", "DejaVu Sans Mono", monospace; font-size: 13px; }
+  .C .wrap { padding: 28px 40px; }
+  .C .hdr { display: grid; grid-template-columns: 1fr auto; align-items: end; border-bottom: 2px solid var(--amber); padding-bottom: 14px; }
+  .C .hdr h1 { margin: 6px 0 0; font: 700 28px/1.3 "Noto Sans CJK SC", sans-serif; letter-spacing: -.005em; }
+  .C .tag { font-size: 11px; letter-spacing: .14em; color: var(--amber); }
+  .C .kv { display: grid; grid-template-columns: repeat(5, auto); gap: 4px 28px; font-size: 11.5px; color: var(--ink2); text-align: right; }
+  .C .kv b { display: block; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .C h2 { font-size: 11px; letter-spacing: .14em; color: var(--ink3); margin: 22px 0 10px; font-weight: 400; }
+  .C .tracks { display: grid; gap: 10px; }
+  .C .tr { display: grid; grid-template-columns: 160px 1fr 120px; gap: 16px; align-items: center; }
+  .C .tr .nm { font-size: 12px; color: var(--ink2); } .C .tr .nm b { display: block; color: var(--ink); font-size: 14px; }
+  .C .tr .nm span { font-family: "Noto Sans CJK SC", sans-serif; }
+  .C .bar { position: relative; height: 26px; background: var(--bg2); border: 1px solid var(--rule); }
+  .C .bar i { position: absolute; top: 4px; bottom: 4px; background: var(--ink3); }
+  .C .bar i.cut { background: transparent; border-left: 2px solid var(--bg); }
+  .C .bar .best { position: absolute; top: -1px; bottom: -1px; width: 2px; background: var(--amber); }
+  .C .tr .st { font-size: 11px; letter-spacing: .08em; text-align: right; }
+  .C .ev { grid-column: 2 / 4; font-family: "Noto Sans CJK SC", sans-serif; font-size: 13px; color: var(--ink2); margin-top: -4px; }
+  .C .ev .g { font-family: "Noto Sans Mono CJK SC", monospace; font-size: 11.5px; }
+  .C .ok { color: var(--held); } .C .no { color: var(--limit); } .C .dec { text-decoration: underline 1px var(--limit); text-underline-offset: 3px; }
+  .C .bottom { display: grid; grid-template-columns: 1.4fr 1fr; gap: 28px; }
+  .C .log div { display: grid; grid-template-columns: 92px 44px 1fr; gap: 8px; padding: 5px 0; border-bottom: 1px dashed var(--rule); font-size: 11.5px; color: var(--ink2); }
+</style>
+</head>
+<body>
+<header class="shell" data-direction-preview>
+  <h1>暗色方向预览（不是最终产品）· Shinka Research 研究界面</h1>
+  <p>三个候选都保留记录本的内容组织（假设分组、证据句、判据、噪声门槛、流水），默认暗色；同一份内容、同一视口 1440×960、同样的状态覆盖。差别在规格化元数据的放法和贯穿全局的那一个图形构造。</p>
+</header>
+
+<section class="stage" data-direction-id="night-ledger">
+  <div class="label"><b>A · 夜间记录本</b> — 暖黑底、沙色字、锈色标界限；保留宋体标题和页边栏；构造：分段磁带格（每条记录头上一条规格条）。</div>
+  <div class="frame"><div class="A" id="A"></div></div>
+</section>
+<section class="stage" data-direction-id="ops-spec">
+  <div class="label"><b>B · 运维规格台</b> — 直接用你那份新工业 DESIGN.md 的 Operations Dark 色值（#151815 底、#F45D22 信号橙）、单一字族（无衬线 + 等宽）；12 栏规格网格、高密度；构造：竖向索引条纹（试验密度条）。</div>
+  <div class="frame"><div class="B" id="B"></div></div>
+</section>
+<section class="stage" data-direction-id="tape-archive">
+  <div class="label"><b>C · 档案磁带</b> — 石墨底、琥珀色；等宽为主；每个假设是一条磁带轨道；构造：带断口的轨道（每次改进是一段，断口是丢弃的试验区间）。</div>
+  <div class="frame"><div class="C" id="C"></div></div>
+</section>
+
+<script id="fx" type="application/json">__FIXTURE__</script>
+<script>
+const FX = JSON.parse(document.getElementById("fx").textContent);
+const solo = location.hash.slice(1);
+if (solo) { document.body.classList.add("solo"); document.querySelectorAll(".stage").forEach(s => { if (s.dataset.directionId !== solo) s.remove(); }); }
+const ST = { supported: "支持", refuted: "证伪", inconclusive: "不确定", running: "运行中", proposed: "待选", dropped: "已放弃" };
+const EN = { supported: "SUPPORTED", refuted: "REFUTED", inconclusive: "INCONCLUSIVE", running: "RUNNING", proposed: "PROPOSED", dropped: "DROPPED" };
+const GL = { supported: "✓", refuted: "✗", inconclusive: "?", running: "▸", proposed: "○", dropped: "–" };
+const CHECKS = [["val>0","验证段 Sharpe > 0"],["beats_bh","跑赢买入持有"],["dsr>=0.95","DSR ≥ 0.95"],["subperiod","子区间为正 ≥ 2/3"],["pbo<=0.5","PBO ≤ 0.5"]];
+const DATES = { h001: "10-15", h002: "10-16", h003: "10-16", h004: "10-17", h005: "10-14", h006: "10-14" };
+const f2 = x => (x < 0 ? "−" : "") + Math.abs(x).toFixed(2);
+const d = FX.data, b = FX.budget, H = FX.hypotheses, barNow = FX.bar.at(-1).bar;
+const dec = h => h.checks ? CHECKS.find(([k]) => !h.checks[k])?.[0] : null;
+const colorOf = (root, st) => getComputedStyle(root).getPropertyValue({ supported: "--held", refuted: "--limit", inconclusive: "--unsure", running: "--run" }[st] || "--ink3");
+const evidence = h => h.evidence ? `验证段 Sharpe ${f2(h.evidence.val_sharpe)}，DSR ${h.evidence.dsr.toFixed(2)}（N = ${FX.trials}），PBO ${h.evidence.pbo.toFixed(2)}，子区间为正 ${h.evidence.pos_frac}；买入持有 ${f2(h.evidence.bh)}。`
+  : h.in_sample ? `进化中，第 ${h.in_sample.generation} 代，样本内最优 Sharpe ${f2(h.in_sample.best_is_sharpe)}。验证段证据出结论后才显示。`
+  : h.status === "proposed" ? "等待人选择。" : "已放弃，未进入实验。";
+
+function chart(o) {
+  const W = o.w, Hh = o.h, L = 38, R = 12, T = 14, Bm = 26, n = FX.trials;
+  const ymin = -1, ymax = 2, x = v => L + (v - 1) / (n - 1) * (W - L - R), y = v => T + (ymax - v) / (ymax - ymin) * (Hh - T - Bm);
+  const groups = {}; FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  let s = `<svg viewBox="0 0 ${W} ${Hh}" width="100%" style="display:block">`;
+  Object.entries(groups).forEach(([hid, ps], i) => {
+    const x0 = x(ps[0].n), x1 = x(ps.at(-1).n);
+    if (o.bands && i % 2) s += `<rect x="${x0}" y="${T}" width="${x1 - x0}" height="${Hh - T - Bm}" fill="${o.band}"/>`;
+    s += `<text x="${(x0 + x1) / 2}" y="${Hh - 7}" text-anchor="middle" font-size="10.5" fill="${o.axis}" font-family="DejaVu Sans Mono, monospace">${hid.toUpperCase()}</text>`;
+  });
+  for (let v = ymin; v <= ymax; v += 0.5) s += `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="${o.grid}"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" font-size="10.5" fill="${o.axis}" font-family="DejaVu Sans Mono, monospace">${v < 0 ? "−" + (-v).toFixed(1) : v.toFixed(1)}</text>`;
+  if (o.stripes) FX.points.forEach(p => { if (!p.kept && p.score > ymin) s += `<line x1="${x(p.n)}" x2="${x(p.n)}" y1="${y(Math.min(p.score, ymax))}" y2="${y(ymin)}" stroke="${o.dot}" stroke-width="1"/>`; });
+  else FX.points.forEach(p => { if (!p.kept && p.score > ymin && p.score < ymax) s += `<circle cx="${x(p.n)}" cy="${y(p.score)}" r="1.8" fill="${o.dot}"/>`; });
+  Object.values(groups).forEach(ps => {
+    let path = ""; ps.forEach(p => { if (p.kept) path += path ? `H${x(p.n)}V${y(p.score)}` : `M${x(p.n)} ${y(p.score)}`; });
+    s += `<path d="${path}H${x(ps.at(-1).n)}" fill="none" stroke="${o.front}" stroke-width="1.6"/>`;
+    ps.forEach(p => { if (p.kept) s += `<rect x="${x(p.n) - 2.5}" y="${y(p.score) - 2.5}" width="5" height="5" fill="${o.front}"/>`; });
+  });
+  s += `<path d="${FX.bar.map((q, i) => (i ? "L" : "M") + x(q.n) + " " + y(q.bar)).join("")}" fill="none" stroke="${o.bar}" stroke-width="1.6" stroke-dasharray="5 4"/>`;
+  s += `<text x="${W - R - 4}" y="${y(barNow) - 7}" text-anchor="end" font-size="11" fill="${o.bar}" font-family="DejaVu Sans Mono, monospace" paint-order="stroke" stroke="${o.bg}" stroke-width="4">${o.barLabel} ${barNow.toFixed(2)}</text>`;
+  return s + "</svg>";
+}
+
+/* ---------- A ---------- */
+(function () {
+  const el = document.getElementById("A"); if (!el) return;
+  const segs = 10, used = Math.round(b.spent / b.limit * segs);
+  let h = `<div class="page">
+    <div class="mg">WS / ${FX.workspace}</div>
+    <div class="tape"><span>DIRECTION · BTC-MOMENTUM</span><span>DATA ${d.bars}</span><span>COST ${d.cost_bps}BP</span><span>N ${FX.trials}</span><span>LOCKBOX SEALED</span></div>
+    <div></div><h1>${FX.direction}</h1>
+    <div></div><p class="lede">每个假设由同一个冻结的评估器检验；验证段证据只在出结论后写进来。试得越多，“支持”的门槛越高。</p>
+    <div></div><div class="facts num">
+      <div><small>Budget</small><b>$${b.spent.toFixed(1)}</b> <em>/ $${b.limit}</em><div class="meter">${Array.from({ length: segs }, (_, i) => `<i class="${i < used ? "on" : ""}"></i>`).join("")}</div></div>
+      <div><small>Trials N</small><b>${FX.trials}</b> <em>门槛 ${barNow.toFixed(2)}</em></div>
+      <div><small>Lockbox</small><span class="seal">封</span>未启封<br><em>自 ${d.lockbox_start}</em></div>
+      <div><small>Library</small><b>${FX.library.pages}</b> <em>页 · ${FX.library.pending} 待编译</em></div>
+      <div><small>Updated</small><b>10-17</b> <em>09:12</em></div>
+    </div>
+    <div class="mg" style="padding-top:30px">虚线：N 个纯噪声试验的期望最高分。实线：每个假设的最优前沿。</div>
+    <div class="chart"><h2 style="margin-left:0">TRIALS / NOISE BAR</h2>${chart({ w: 860, h: 190, bands: true, band: "#1f1a14", grid: "#2b241d", axis: "#a39580", dot: "#6b5c4b", front: "#efe6d6", bar: "#e0866f", bg: "#17130f", barLabel: "噪声门槛" })}</div>
+    <div></div><h2>已有结论 · 在研 · 已关闭</h2>`;
+  const root = el;
+  H.forEach(x => {
+    const c = { supported: "#8fc79a", refuted: "#e0866f", inconclusive: "#d8b86a", running: "#8fb5e0" }[x.status] || "#a39580";
+    const ck = x.checks ? `<div class="ck">${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"} ${dec(x) === k ? "dec" : ""}">${x.checks[k] ? "✓" : "✗"} ${l}</span>`).join("")}</div>` : "";
+    h += `<div class="row"><div class="mg"><b>${x.id.toUpperCase().replace("H", "H-")}</b>${x.n ? x.n + " TRIALS" : "—"}</div>
+      <div class="ent"><div class="spec"><span>E01</span><span>${DATES[x.id]}</span><span class="st" style="background:${c}">${EN[x.status]}</span></div>
+      <h3>${x.title}</h3><p class="ev num">${evidence(x)}</p>${ck}</div></div>`;
+  });
+  el.innerHTML = h + "</div>";
+})();
+
+/* ---------- B ---------- */
+(function () {
+  const el = document.getElementById("B"); if (!el) return;
+  let h = `<div class="top">
+    <div><div class="k">DIR / BTC-MOMENTUM · ${FX.workspace}</div><div class="q">${FX.direction}</div></div>
+    <div><div class="k">TRIALS N</div><div class="v">${FX.trials} <small>BAR ${barNow.toFixed(2)}</small></div></div>
+    <div><div class="k">BUDGET</div><div class="v">$${b.spent.toFixed(1)} <small>/ $${b.limit}</small></div></div>
+    <div><div class="k">LOCKBOX</div><div class="v" style="color:var(--sig)">SEALED</div><div class="k">FROM ${d.lockbox_start}</div></div>
+    <div><div class="k">DATA</div><div class="v" style="font-size:15px">2019 → 2025-02</div><div class="k">COST ${d.cost_bps}BP</div></div>
+    <div><div class="k">STATUS</div><div class="v" style="font-size:15px">1 / 1 / 1 / 1</div><div class="k">SUP REF INC RUN</div></div>
+  </div><div class="stripes"></div>
+  <div class="body"><div class="pane"><h2><span>HYPOTHESES · SPEC CARDS</span><span>验证段证据只在出结论后显示</span></h2>`;
+  H.forEach(x => {
+    const c = { supported: "var(--held)", refuted: "var(--limit)", inconclusive: "var(--unsure)", running: "var(--run)" }[x.status] || "var(--ink3)";
+    const e = x.evidence;
+    const kv = e ? `<span><i>VAL</i> ${f2(e.val_sharpe)}</span><span><i>DSR</i> ${e.dsr.toFixed(2)}</span><span><i>PBO</i> ${e.pbo.toFixed(2)}</span><span><i>SUB</i> ${e.pos_frac}</span><span><i>B&amp;H</i> ${f2(e.bh)}</span>`
+      : x.in_sample ? `<span><i>IS BEST</i> ${f2(x.in_sample.best_is_sharpe)}</span><span><i>GEN</i> ${x.in_sample.generation}</span><span><i>VAL</i> 出结论后显示</span>` : `<span><i>${x.status === "proposed" ? "AWAITING SELECTION" : "NOT RUN"}</i></span>`;
+    const gates = x.checks ? `<div class="gates" title="${CHECKS.map(([k, l]) => (x.checks[k] ? "✓ " : "✗ ") + l).join(" / ")}">${CHECKS.map(([k]) => `<i class="${x.checks[k] ? "ok" : dec(x) === k ? "dec" : "no"}"></i>`).join("")}</div>` : "";
+    h += `<div class="card"><div class="id">${x.id.toUpperCase().replace("H", "H-")}<small>E01 · ${x.n || 0} TR · ${DATES[x.id]}</small></div>
+      <div><div class="t">${x.title}</div><div class="kv">${kv}</div>${gates}</div>
+      <div class="st" style="color:${c}">${GL[x.status]} ${EN[x.status]}</div></div>`;
+  });
+  h += `</div><div class="pane"><h2><span>TRIALS · INDEX STRIPES · NOISE BAR</span><span>${FX.trials} PTS</span></h2>
+    ${chart({ w: 640, h: 300, stripes: true, bands: false, grid: "#2a3027", axis: "#B3B9AB", dot: "#4a5446", front: "#EFEEE8", bar: "#F45D22", bg: "#151815", barLabel: "NOISE BAR" })}
+    <h2 style="margin-top:16px"><span>LOG · RESULTS.TSV</span></h2><div class="log">
+    ${FX.events.map(([t, hid, , ev, note]) => `<div><span>${t}</span><span>${hid.toUpperCase()}</span><span>${ev.toUpperCase()}</span><span style="font-family:'Noto Sans CJK SC',sans-serif">${note}</span></div>`).join("")}</div></div></div>`;
+  el.innerHTML = h;
+})();
+
+/* ---------- C ---------- */
+(function () {
+  const el = document.getElementById("C"); if (!el) return;
+  const groups = {}; FX.points.forEach(p => (groups[p.h] = groups[p.h] || []).push(p));
+  let h = `<div class="wrap"><div class="hdr"><div><div class="tag">ARCHIVE · DIRECTION BTC-MOMENTUM · REEL 01</div><h1>${FX.direction}</h1></div>
+    <div class="kv num"><span>TRIALS<b>${FX.trials}</b></span><span>NOISE BAR<b>${barNow.toFixed(2)}</b></span><span>BUDGET<b>$${b.spent.toFixed(1)}</b></span><span>LOCKBOX<b style="color:var(--amber)">SEALED</b></span><span>DATA<b>2019→25</b></span></div></div>
+    <h2>TRACKS — 每个假设一条磁带；亮段是保留的改进，断口是丢弃的试验区间，琥珀线是最优点</h2><div class="tracks">`;
+  H.forEach(x => {
+    const c = { supported: "var(--held)", refuted: "var(--limit)", inconclusive: "var(--unsure)", running: "var(--run)" }[x.status] || "var(--ink3)";
+    const ps = groups[x.id] || [];
+    let bar = "";
+    if (ps.length) {
+      const n = ps.length; let last = 0, best = -9, bi = 0;
+      ps.forEach((p, i) => { if (p.kept) { bar += `<i style="left:${last / n * 100}%;width:${Math.max(0.6, (i - last) / n * 100 - 0.4)}%;background:${i - last > 8 ? "var(--ink3)" : "var(--ink2)"}"></i>`; last = i + 1; } if (p.score > best) { best = p.score; bi = i; } });
+      bar += `<i style="left:${last / n * 100}%;width:${(n - last) / n * 100}%;opacity:.35"></i><span class="best" style="left:${bi / n * 100}%"></span>`;
+    }
+    const ck = x.checks ? ` · ${CHECKS.map(([k, l]) => `<span class="${x.checks[k] ? "ok" : "no"} ${dec(x) === k ? "dec" : ""}">${x.checks[k] ? "✓" : "✗"}</span>`).join(" ")}` : "";
+    h += `<div class="tr"><div class="nm"><b>${x.id.toUpperCase().replace("H", "H-")} · E01</b><span>${x.title}</span></div>
+      <div class="bar">${bar || '<span style="position:absolute;left:10px;top:6px;font-size:11px;color:var(--ink3)">NO TAPE</span>'}</div>
+      <div class="st" style="color:${c}">${GL[x.status]} ${EN[x.status]}<br><span style="color:var(--ink3)">${x.n || 0} TR · ${DATES[x.id]}</span></div>
+      <div class="ev num">${evidence(x)}<span class="g">${ck}</span></div></div>`;
+  });
+  h += `</div><div class="bottom"><div><h2>TRIALS / NOISE BAR</h2>${chart({ w: 780, h: 180, bands: true, band: "#171a1e", grid: "#23272c", axis: "#8d8a82", dot: "#4a4e55", front: "#e6e3da", bar: "#e6a23c", bg: "#121417", barLabel: "NOISE BAR" })}</div>
+    <div><h2>LOG</h2><div class="log">${FX.events.map(([t, hid, , ev, note]) => `<div><span>${t}</span><span>${hid.toUpperCase()}</span><span style="font-family:'Noto Sans CJK SC',sans-serif">${note}</span></div>`).join("")}</div></div></div></div>`;
+  el.innerHTML = h;
+})();
+</script>
+</body>
+</html>
