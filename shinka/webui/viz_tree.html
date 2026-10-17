@@ -5739,8 +5739,10 @@ console.error("[DEBUG] Error in processData:", error);
                 for (const [key, value] of Object.entries(data.private_metrics)) {
                     privateMetricsHtml += `<p><strong>${key}:</strong> ${formatScore(value)}</p>`;
                 }
-            } else {
+            } else if (data.private_metrics_hidden) {
                 privateMetricsHtml = '<p>Hidden (held-out data). Run <code>shinka_visualize --show-private</code> to show.</p>';
+            } else {
+                privateMetricsHtml = '<p>No private metrics available.</p>';
             }
 
             let metadataHtml = '';
@@ -12695,7 +12697,7 @@ console.error("[DEBUG] Error in processData:", error);
                         // Create toggle button
                         const toggleButton = document.createElement('button');
                         toggleButton.id = `toggle-btn-${plotIndex}`;
-                        toggleButton.textContent = 'Switch to Cumulative Min';
+                        toggleButton.textContent = metricPath === 'combined_score' ? 'Switch to Cumulative Min' : 'Switch to Cumulative Max';
                         toggleButton.style.padding = '5px 10px';
                         toggleButton.style.fontSize = '12px';
                         toggleButton.style.border = '1px solid #ddd';
@@ -12793,14 +12795,16 @@ console.error("[DEBUG] Error in processData:", error);
                         hoverinfo: 'skip'
                     };
 
-                    // Best so far (default view; Shinka maximizes scores)
+                    // Best so far: combined_score is maximized; other metrics
+                    // (rmse, runtime, ...) may not be, so they keep the min view.
+                    const startMax = metricPath === 'combined_score';
                     const cumulativeTrace = {
                         x: cumulativeStats.map(d => d.x),
-                        y: cumulativeStats.map(d => d.cumulativeMax),
+                        y: cumulativeStats.map(d => startMax ? d.cumulativeMax : d.cumulativeMin),
                         mode: 'lines+markers',
                         type: 'scatter',
-                        name: 'Cumulative Max',
-                        line: { color: '#9b59b6', width: 2, dash: 'dot' },
+                        name: startMax ? 'Cumulative Max' : 'Cumulative Min',
+                        line: { color: startMax ? '#9b59b6' : '#27ae60', width: 2, dash: 'dot' },
                         marker: { size: 4 },
                         hoverinfo: 'skip'
                     };
@@ -12843,7 +12847,7 @@ console.error("[DEBUG] Error in processData:", error);
 
                     // Store data for toggle functionality
                     plotContainer.cumulativeStats = cumulativeStats;
-                    plotContainer.currentMode = 'max'; // 'min' or 'max'
+                    plotContainer.currentMode = startMax ? 'max' : 'min';
 
                     // Add toggle button functionality
                     toggleButton.addEventListener('click', function() {

@@ -1715,10 +1715,13 @@ def _hide_private_metrics(obj):
     """Blank every ``private_metrics`` mapping. Private metrics hold held-out
     results that should not inform design decisions unless asked for."""
     if isinstance(obj, dict):
-        return {
+        out = {
             k: ({} if k == "private_metrics" else _hide_private_metrics(v))
             for k, v in obj.items()
         }
+        if "private_metrics" in obj:
+            out["private_metrics_hidden"] = True  # lets the UI say "hidden"
+        return out
     if isinstance(obj, list):
         return [_hide_private_metrics(item) for item in obj]
     return obj
