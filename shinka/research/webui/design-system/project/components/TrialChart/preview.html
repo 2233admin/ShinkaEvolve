@@ -1,0 +1,32 @@
+<!-- @dsCard group="Charts" height=330 -->
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><title>TrialChart — preview</title></head>
+<body>
+<div id="root" class="sr-preview">
+<div class="sr-chart-wrap" id="w"></div>
+<p class="sr-chart-caption">虚线：N 个纯噪声试验的期望最高分。实线：每个假设的最优前沿。失败 7 次。</p>
+</div>
+<script>
+var W=820,H=230,L=40,R=12,T=16,B=28,rnd=(function(s){return function(){s=(s*16807)%2147483647;return s/2147483647}})(7);
+function g(){var u=rnd()||1e-9,v=rnd();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)}
+var plan=[["h001",96,0.15,0.35],["h002",142,0.45,0.40],["h003",56,0.10,0.30],["h004",118,0.30,0.38]],pts=[],n=0;
+plan.forEach(function(p){var best=-9;for(var k=0;k<p[1];k++){var s=p[2]+0.004*k+p[3]*g();n++;var kept=s>best;if(kept)best=s;pts.push({n:n,h:p[0],s:s,kept:kept,gen:Math.floor(k/6)+1})}});
+var m=pts.reduce(function(a,p){return a+p.s},0)/n,sd=Math.sqrt(pts.reduce(function(a,p){return a+(p.s-m)*(p.s-m)},0)/(n-1));
+function z(p){var a=[2.50662823884,-18.61500062529,41.39119773534,-25.44106049637],b=[-8.4735109309,23.08336743743,-21.06224101826,3.13082909833],c=[0.3374754822726147,0.9761690190917186,0.1607979714918209,0.0276438810333863,0.0038405729373609,0.0003951896511919,0.0000321767881768,0.0000002888167364,0.0000003960315187],y=p-0.5,r,x;if(Math.abs(y)<0.42){r=y*y;return y*(((a[3]*r+a[2])*r+a[1])*r+a[0])/((((b[3]*r+b[2])*r+b[1])*r+b[0])*r+1)}r=p;if(y>0)r=1-p;r=Math.log(-Math.log(r));x=c[0]+r*(c[1]+r*(c[2]+r*(c[3]+r*(c[4]+r*(c[5]+r*(c[6]+r*(c[7]+r*c[8])))))));return y<0?-x:x}
+function emax(k){if(k<2)return 0;var G=0.5772156649;return sd*((1-G)*z(1-1/k)+G*z(1-1/(k*Math.E)))}
+var ymin=-1,ymax=2,x=function(v){return L+(v-1)/(n-1)*(W-L-R)},y=function(v){return T+(ymax-v)/(ymax-ymin)*(H-T-B)};
+var s='<svg class="sr-chart" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="412 次试验的样本内分数与噪声门槛">',grp={};
+pts.forEach(function(p){(grp[p.h]=grp[p.h]||[]).push(p)});
+Object.keys(grp).forEach(function(h,i){var a=grp[h],x0=x(a[0].n),x1=x(a[a.length-1].n);if(i%2)s+='<rect class="band" x="'+x0+'" y="'+T+'" width="'+(x1-x0)+'" height="'+(H-T-B)+'"/>';s+='<text x="'+(x0+x1)/2+'" y="'+(H-8)+'" text-anchor="middle">'+h+'</text>'});
+for(var v=ymin;v<=ymax;v+=0.5)s+='<line class="grid" x1="'+L+'" x2="'+(W-R)+'" y1="'+y(v)+'" y2="'+y(v)+'"/><text x="'+(L-6)+'" y="'+(y(v)+4)+'" text-anchor="end">'+(v<0?'−'+(-v).toFixed(1):v.toFixed(1))+'</text>';
+pts.forEach(function(p){if(!p.kept&&p.s>ymin&&p.s<ymax)s+='<circle class="dot" cx="'+x(p.n)+'" cy="'+y(p.s)+'" r="1.8"/>'});
+Object.keys(grp).forEach(function(h){var a=grp[h],d='',best=-9;a.forEach(function(p){if(p.kept){d+=d?'H'+x(p.n)+'V'+y(p.s):'M'+x(p.n)+' '+y(p.s);best=p.s}});d+='H'+x(a[a.length-1].n);s+='<path class="front" d="'+d+'"/>';
+a.forEach(function(p){if(p.kept)s+='<circle class="kept" tabindex="0" cx="'+x(p.n)+'" cy="'+y(p.s)+'" r="2.8" data-tip="第 '+p.n+' 次 · '+p.h+' · 第 '+p.gen+' 代 · 样本内 Sharpe '+p.s.toFixed(2)+'"/>'})});
+var d='';for(var k=2;k<=n;k+=4)d+=(d?'L':'M')+x(k)+' '+y(emax(k));s+='<path class="bar" d="'+d+'"/><text class="bar-label" x="'+(W-R-4)+'" y="'+(y(emax(n))-6)+'" text-anchor="end">噪声门槛 '+emax(n).toFixed(2)+'</text></svg>';
+var w=document.getElementById('w');w.innerHTML=s;var tip=document.createElement('div');tip.className='sr-chart-tip';tip.style.display='none';w.appendChild(tip);
+function show(e){var c=e.target;if(!c.dataset||!c.dataset.tip)return;tip.textContent=c.dataset.tip;tip.style.display='block';var r=c.getBoundingClientRect(),o=w.getBoundingClientRect();tip.style.left=(r.left-o.left+8)+'px';tip.style.top=(r.top-o.top-30)+'px'}
+w.addEventListener('mouseover',show);w.addEventListener('focusin',show);w.addEventListener('mouseout',function(){tip.style.display='none'});
+</script>
+</body>
+</html>
