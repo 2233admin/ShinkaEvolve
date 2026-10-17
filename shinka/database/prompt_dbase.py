@@ -15,6 +15,7 @@ from dataclasses import asdict, dataclass, field
 from functools import wraps
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+from urllib.parse import quote
 import numpy as np
 
 logger = logging.getLogger(__name__)
@@ -265,7 +266,8 @@ class SystemPromptDatabase:
                     raise FileNotFoundError(
                         f"Prompt database file not found for read-only connection: {db_file}"
                     )
-                db_uri = f"file:{db_file}?mode=ro"
+                # Preserve the native filename without a SQLite URI authority.
+                db_uri = f"file:{quote(str(db_file), safe='')}?mode=ro"
                 self.conn = sqlite3.connect(db_uri, uri=True, timeout=30.0)
                 logger.debug(
                     "Connected to SystemPrompt SQLite database in read-only mode: %s",

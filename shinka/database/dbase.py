@@ -5,6 +5,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from functools import wraps
 from pathlib import Path
+from urllib.parse import quote
 import numpy as np
 from typing import Any, Dict, List, Optional, Tuple, Union
 import math
@@ -335,7 +336,9 @@ class ProgramDatabase:
                     raise FileNotFoundError(
                         f"Database file not found for read-only connection: {db_file}"
                     )
-                db_uri = f"file:{db_file}?mode=ro"
+                # Encode the native filename, including Windows UNC separators,
+                # without turning a server name into a SQLite URI authority.
+                db_uri = f"file:{quote(str(db_file), safe='')}?mode=ro"
                 self.conn = sqlite3.connect(db_uri, uri=True, timeout=60.0)
                 logger.debug(
                     "Connected to SQLite database in read-only mode: %s",
