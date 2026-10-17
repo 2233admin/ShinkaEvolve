@@ -78,12 +78,14 @@ def test_server_serves_snapshot(tmp_path: Path, monkeypatch) -> None:
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html><title>t</title>")
     monkeypatch.setattr(ui, "DIST", dist)
-    root = _direction(tmp_path / "d")
+    root = tmp_path / "workspace"
+    direction = _direction(root / "d")
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(ui._Handler, root=root))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
-        snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot").read())
+        query = urllib.parse.urlencode({"direction": direction.name})
+        snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot?{query}").read())
         assert snap["hypotheses"][1]["verdict"] is None
         assert b"<title>t</title>" in urllib.request.urlopen(f"{base}/").read()
     finally:

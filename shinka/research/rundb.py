@@ -5,6 +5,7 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 from typing import List, Optional, Tuple
+from urllib.parse import quote
 
 DB_FILENAME = "programs.sqlite"
 
@@ -29,7 +30,10 @@ def _query(results_dir: Path, sql: str, params: tuple = ()) -> list:
     db = Path(results_dir) / DB_FILENAME
     if not db.exists():
         raise FileNotFoundError(db)
-    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+    # Encode the native filename so UNC paths never become URI authorities.
+    with sqlite3.connect(
+        f"file:{quote(str(db.resolve()), safe='')}?mode=ro", uri=True
+    ) as conn:
         return conn.execute(sql, params).fetchall()
 
 
@@ -119,7 +123,9 @@ def total_cost(results_dir: Path) -> float:
         cost += float(c)
     prompts = results_dir / PROMPT_DB_FILENAME
     if prompts.exists():
-        with sqlite3.connect(f"file:{prompts}?mode=ro", uri=True) as conn:
+        with sqlite3.connect(
+            f"file:{quote(str(prompts.resolve()), safe='')}?mode=ro", uri=True
+        ) as conn:
             ((c,),) = conn.execute(
                 "SELECT COALESCE(SUM(CASE WHEN json_type(metadata, '$.llm.cost') "
                 "IN ('integer', 'real') THEN json_extract(metadata, '$.llm.cost') "

@@ -34,7 +34,7 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 
 ## Rules that protect the research
 
-- Read-only: no control writes research state, and never a confirm or lockbox button. The theme switch and the refresh button are the only controls.
+- Read-only: no control writes research state, and never a confirm or lockbox button. Controls only change the theme, refresh the displayed files or navigate between the workspace, a direction and the shared library.
 - Validation evidence only after a verdict; lockbox figures only after confirmation.
 - Every best score has the noise line beside it. Failed trials are counted and said, never plotted as 0.
 - The evaluator, data split and out-of-sample metrics are never reachable from this page.

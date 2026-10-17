@@ -425,7 +425,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 def cmd_ui(args: argparse.Namespace) -> None:
     from shinka.research import ui
 
-    ui.serve(Path(args.dir), args.port, not args.no_browser)
+    ui.serve(Path(args.workspace), args.port, not args.no_browser)
 
 
 def _add_threshold_args(s: argparse.ArgumentParser) -> None:
@@ -560,7 +560,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_status)
 
     s = sub.add_parser("ui", help="Read-only research UI in the browser")
-    s.add_argument("dir")
+    s.add_argument(
+        "workspace", help="Workspace directory containing research directions"
+    )
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--no-browser", action="store_true")
     s.set_defaults(func=cmd_ui)

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { renderMarkdown } from './markdown'
+import { renderMarkdown } from './renderMarkdown'
 
 // html: false 下 markdown-it 不放行任何原始 HTML，链接协议也由它校验，所以直接注入是安全的。
 export function Markdown({ text, onWiki }: { text: string; onWiki?: (name: string) => void }) {

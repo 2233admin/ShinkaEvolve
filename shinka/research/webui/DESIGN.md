@@ -94,7 +94,7 @@ spacing:
 
 ## Overview
 
-An ops-spec sheet for a research run: spec-sheet key–value blocks, rules instead of filled panels,
+An ops-spec sheet for a research workspace and each direction: spec-sheet key–value blocks, rules instead of filled panels,
 orange index stripes under the top bar, and orange used only for limits and signals (the sealed
 lockbox, the noise line, the selected-row mark, actions). Default theme is neutral ink-black; the
 switchable light theme is Technical Paper. The signal layer (top bar, status symbols, timeline, event
@@ -118,6 +118,11 @@ SC and Noto Sans SC. Styles and their uses: `design-system/tokens.json` `type`.
 A page of at most `page-max` with a grid of table, trial chart, timeline and events beside a sticky
 `side-width` spec card; stacked below 900px. All corners are square. Rules and breakpoints:
 `design-system/README.md` › Visual foundations.
+
+The workspace uses a Carbon table of real direction summaries, not a card grid. A direction link opens
+a new document; its breadcrumb returns to the workspace. Both views reuse the same library reader.
+Directory identity, empty/error states and read-only navigation follow
+[`docs/research/workspace.md`](../../../docs/research/workspace.md).
 
 ## Components
 

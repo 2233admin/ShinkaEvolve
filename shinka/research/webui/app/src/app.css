@@ -6,6 +6,12 @@
 .page-head p { font: 13px/1.7 var(--font-sans); margin: 0; max-width: 72ch; }
 .page-head-row .cds--btn { flex: none; padding-inline-end: var(--space-4); min-inline-size: 0; }
 
+/* 工作区表格沿用 Carbon 的滚动容器，只补页面内的宽度与换行。 */
+.workspace-table { min-width: 0; max-width: 100%; }
+.workspace-table .title-cell,
+.workspace-table .workspace-error { overflow-wrap: anywhere; }
+.workspace-table .workspace-folder { display: block; margin-block-start: var(--space-1); }
+
 /* 研究页：表格 → 试验图 → 时间线 → 事件，右侧规格卡 */
 .grid {
   display: grid; grid-template-columns: minmax(0, 1fr) var(--side-width); gap: var(--space-8) var(--space-6); align-items: start;

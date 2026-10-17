@@ -97,3 +97,29 @@ export interface Snapshot {
   tree_url: string | null
   library: Library | null
 }
+
+export interface DirectionSummary {
+  id: string
+  direction: string
+  created: string
+  hypotheses: number
+  trials: number
+  spend_usd: number
+  budget_usd: number | null
+  lockbox_opened: boolean | null
+  error: null
+}
+
+export interface DirectionError {
+  id: string
+  direction: string
+  error: string
+}
+
+export type DirectionEntry = DirectionSummary | DirectionError
+
+export interface WorkspaceSnapshot {
+  name: string
+  directions: DirectionEntry[]
+  library: Library | null
+}

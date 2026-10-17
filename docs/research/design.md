@@ -168,7 +168,7 @@ research/<direction-slug>/
 - 主流工具都不显式展示试验数、DSR、PBO，也没有"一次性不可逆"的留存集状态。这是本前端要补的。
 
 决定：
-- 入口 `shinka_research ui <方向目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/snapshot`（一份方向快照）和打包好的前端，不改上游。每个实验的进化细节跳转到上游 viz_tree（默认隐藏 private 指标）。
+- 入口 `shinka_research ui <工作区目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/workspace`（方向摘要与共享资料库）、`/api/snapshot?direction=<目录名>`（单方向快照）和构建好的前端，不改上游。方向以原生链接进入并返回工作区；每个实验的进化细节仍跳转到限定该方向的上游 viz_tree（隐藏 private 指标）。完整目录、身份与错误契约见 [workspace.md](workspace.md)。
 - 前端在 `shinka/research/webui/app/`（Vite + React 19 + TypeScript），构建到 `webui/dist/`（不入库，`pnpm build` 生成）。照 Optuna Dashboard：Python 端只读文件、出 JSON，界面是单独打包的前端。
 - 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。
 - 只读。选中/放弃假设、出结论、confirm 仍走 CLI；confirm 永远不进 UI（不可逆操作不做成一次点击）。
