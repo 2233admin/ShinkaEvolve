@@ -87,14 +87,30 @@ _COST = " + ".join(
 )
 
 
+PROMPT_DB_FILENAME = "prompts.sqlite"
+
+
 def total_cost(results_dir: Path) -> float:
-    """LLM spend recorded for evaluated programs (USD), as Shinka reports it."""
-    if not (Path(results_dir) / DB_FILENAME).exists():
-        return 0.0
-    ((cost,),) = _query(
-        results_dir, f"SELECT COALESCE(SUM({_COST}), 0) FROM programs WHERE {_NOT_COPY}"
-    )
-    return float(cost)
+    """LLM spend of a run (USD), as Shinka totals it: program costs plus
+    prompt-evolution costs (``prompts.sqlite``, metadata.llm.cost)."""
+    results_dir = Path(results_dir)
+    cost = 0.0
+    if (results_dir / DB_FILENAME).exists():
+        ((c,),) = _query(
+            results_dir,
+            f"SELECT COALESCE(SUM({_COST}), 0) FROM programs WHERE {_NOT_COPY}",
+        )
+        cost += float(c)
+    prompts = results_dir / PROMPT_DB_FILENAME
+    if prompts.exists():
+        with sqlite3.connect(f"file:{prompts}?mode=ro", uri=True) as conn:
+            ((c,),) = conn.execute(
+                "SELECT COALESCE(SUM(CASE WHEN json_type(metadata, '$.llm.cost') "
+                "IN ('integer', 'real') THEN json_extract(metadata, '$.llm.cost') "
+                "ELSE 0 END), 0) FROM system_prompts"
+            ).fetchall()
+        cost += float(c)
+    return cost
 
 
 def best_score(results_dir: Path) -> float | None:

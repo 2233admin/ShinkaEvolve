@@ -78,6 +78,15 @@ def test_total_cost_excludes_copies(tmp_path: Path) -> None:
     _fake_results(tmp_path / "r", [0.5, 0.25])
     assert total_cost(tmp_path / "r") == pytest.approx(0.77)
     assert total_cost(tmp_path / "missing") == 0.0
+    # prompt-evolution charges live in prompts.sqlite
+    with sqlite3.connect(tmp_path / "r" / "prompts.sqlite") as conn:
+        conn.execute("CREATE TABLE system_prompts (id TEXT, metadata TEXT)")
+        conn.execute(
+            "INSERT INTO system_prompts VALUES ('s', ?)",
+            (json.dumps({"llm": {"cost": 0.2}}),),
+        )
+        conn.execute("INSERT INTO system_prompts VALUES ('t', NULL)")
+    assert total_cost(tmp_path / "r") == pytest.approx(0.97)
 
 
 def test_budget_stops_runs(tmp_path: Path, example_dir: Path, bars_csv: Path) -> None:
