@@ -415,6 +415,12 @@ def cmd_status(args: argparse.Namespace) -> None:
         print(line)
 
 
+def cmd_ui(args: argparse.Namespace) -> None:
+    from shinka.research import ui
+
+    ui.serve(Path(args.dir), args.port, not args.no_browser)
+
+
 def _add_threshold_args(s: argparse.ArgumentParser) -> None:
     s.add_argument("--dsr", type=float, default=0.95)
     s.add_argument("--min-positive-fraction", type=float, default=2.0 / 3.0)
@@ -545,6 +551,12 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="Show the notebook")
     s.add_argument("dir")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser("ui", help="Read-only research UI in the browser")
+    s.add_argument("dir")
+    s.add_argument("--port", type=int, default=8765)
+    s.add_argument("--no-browser", action="store_true")
+    s.set_defaults(func=cmd_ui)
     return p
 
 
