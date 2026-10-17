@@ -1577,7 +1577,7 @@
                 <div class="left-tab"
                 data-tab="islands-view">Islands</div>
                 <div class="left-tab" data-tab="model-posteriors-view">Ensembling</div>
-                <div class="left-tab" data-tab="best-path-view">Path</div>
+                <div class="left-tab" data-tab="best-path-view" title="Path from the root to the best program">Path</div>
                 <div class="left-tab" data-tab="maps-view">MAPs</div>
 
             </div>
@@ -2080,8 +2080,26 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/highlight.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/diff@5.1.0/dist/diff.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/languages/python.min.js"></script>
-    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-1.58.5.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <script>
+        // Say so instead of rendering empty views when CDN scripts are blocked.
+        (function () {
+            const missing = Object.entries({
+                d3: window.d3, Plotly: window.Plotly, Chart: window.Chart,
+                marked: window.marked, hljs: window.hljs, Diff: window.Diff,
+            }).filter(([, lib]) => !lib).map(([name]) => name);
+            if (!missing.length) return;
+            const show = () => {
+                const bar = document.createElement('div');
+                bar.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;padding:8px 16px;background:#b91c1c;color:#fff;font:13px system-ui,sans-serif';
+                bar.textContent = 'Could not load ' + missing.join(', ') +
+                    ' from the CDN (offline or blocked network). Some views will be empty.';
+                document.body.prepend(bar);
+            };
+            document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', show) : show();
+        })();
+    </script>
 
     <!-- Add our script after all external dependencies -->
     <script>
@@ -4787,7 +4805,7 @@ console.error("[DEBUG] Error in processData:", error);
                                 <strong>Score:</strong> ${score}<br>
                                 <strong>Type:</strong> ${patchType}<br>
                                 <strong>Island:</strong> ${islandIdx}<br>
-                                <strong>Model:</strong> ${modelName}
+                                <strong>Model:</strong> ${escapeHtml(displayModelName(modelName))}
                             `);
                             }
                         }
@@ -5722,7 +5740,7 @@ console.error("[DEBUG] Error in processData:", error);
                     privateMetricsHtml += `<p><strong>${key}:</strong> ${formatScore(value)}</p>`;
                 }
             } else {
-                privateMetricsHtml = '<p>No private metrics available.</p>';
+                privateMetricsHtml = '<p>Hidden (held-out data). Run <code>shinka_visualize --show-private</code> to show.</p>';
             }
 
             let metadataHtml = '';
@@ -12122,6 +12140,11 @@ console.error("[DEBUG] Error in processData:", error);
 
         // --- Pareto Front Visualization ---
 
+        // "local/name@http://host/v1?api_key_env=X" -> "local/name"
+        function displayModelName(name) {
+            return String(name ?? 'N/A').split('@')[0].split('?')[0];
+        }
+
         function getNestedValue(obj, path) {
             if (!path) return undefined;
             const parts = path.split('.');
@@ -12672,7 +12695,7 @@ console.error("[DEBUG] Error in processData:", error);
                         // Create toggle button
                         const toggleButton = document.createElement('button');
                         toggleButton.id = `toggle-btn-${plotIndex}`;
-                        toggleButton.textContent = 'Switch to Cumulative Max';
+                        toggleButton.textContent = 'Switch to Cumulative Min';
                         toggleButton.style.padding = '5px 10px';
                         toggleButton.style.fontSize = '12px';
                         toggleButton.style.border = '1px solid #ddd';
@@ -12758,26 +12781,26 @@ console.error("[DEBUG] Error in processData:", error);
                         };
                     });
 
-                    // Add trend line for best performance (default: raw max)
+                    // Best program within each generation
                     const trendTrace = {
                         x: genStats.map(d => d.x),
                         y: genStats.map(d => d.max),
                         mode: 'lines+markers',
                         type: 'scatter',
-                        name: 'Best',
+                        name: 'Generation best',
                         line: { color: '#e74c3c', width: 3 },
                         marker: { size: 6 },
                         hoverinfo: 'skip'
                     };
 
-                    // Add cumulative min trace (default view)
+                    // Best so far (default view; Shinka maximizes scores)
                     const cumulativeTrace = {
                         x: cumulativeStats.map(d => d.x),
-                        y: cumulativeStats.map(d => d.cumulativeMin),
+                        y: cumulativeStats.map(d => d.cumulativeMax),
                         mode: 'lines+markers',
                         type: 'scatter',
-                        name: 'Cumulative Min',
-                        line: { color: '#27ae60', width: 2, dash: 'dot' },
+                        name: 'Cumulative Max',
+                        line: { color: '#9b59b6', width: 2, dash: 'dot' },
                         marker: { size: 4 },
                         hoverinfo: 'skip'
                     };
@@ -12814,13 +12837,13 @@ console.error("[DEBUG] Error in processData:", error);
                         plot_bgcolor: '#ffffff'
                     };
 
-                    // Initial traces (raw scores + cumulative min)
+                    // Initial traces (raw scores + cumulative max)
                     let currentTraces = [scatterTrace, trendTrace, cumulativeTrace];
                     Plotly.newPlot(plotContainer.id, currentTraces, layout, { responsive: true });
 
                     // Store data for toggle functionality
                     plotContainer.cumulativeStats = cumulativeStats;
-                    plotContainer.currentMode = 'min'; // 'min' or 'max'
+                    plotContainer.currentMode = 'max'; // 'min' or 'max'
 
                     // Add toggle button functionality
                     toggleButton.addEventListener('click', function() {

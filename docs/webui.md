@@ -34,6 +34,9 @@ shinka_visualize results_20241201_120000/ --port 8888 --open
 
 # Or target a specific database file
 shinka_visualize --db results_20241201_120000/evolution_db.sqlite --port 8888 --open
+
+# Private (held-out) metrics are hidden by default; show them explicitly
+shinka_visualize results_20241201_120000/ --port 8888 --show-private
 ```
 
 ### Remote experiment
