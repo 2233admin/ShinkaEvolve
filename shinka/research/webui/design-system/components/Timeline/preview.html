@@ -1,0 +1,43 @@
+<!-- @dsCard group="Signal" height=420 -->
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Timeline — preview</title>
+<!-- Pinned library builds. Layered so the design system's own bundle.css always wins over their defaults. Without network the page still reads: see the fallback rules at the end of bundle.css. -->
+<style>
+@import url("https://cdn.jsdelivr.net/npm/@carbon/styles@1.117.0/css/styles.min.css") layer(vendor);
+@import url("https://cdn.jsdelivr.net/npm/@astrouxds/astro-web-components@8.0.0/dist/astro-web-components/astro-web-components.css") layer(vendor);
+@import url("https://cdn.jsdelivr.net/npm/@fontsource-variable/inter@5.3.0/index.css") layer(vendor);
+@import url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.3.0/400.css") layer(vendor);
+@import url("https://cdn.jsdelivr.net/npm/@fontsource/ibm-plex-mono@5.3.0/500.css") layer(vendor);
+</style>
+<script type="module" src="https://cdn.jsdelivr.net/npm/@astrouxds/astro-web-components@8.0.0/dist/astro-web-components/astro-web-components.esm.js"></script>
+<style>
+.frame { padding: var(--space-5); }
+.frame > * + * { margin-top: var(--space-6); }
+.cap { font: 500 11px/1.4 var(--font-mono); letter-spacing: .08em; color: var(--muted); margin: 0 0 var(--space-2); }
+</style>
+</head>
+<body class="cds--g100">
+<div class="frame">
+<section>
+<p class="cap">每个有试验的假设一条轨道；区间从它所有实验的第一次试验到最后一次；选中的一段有 1px 正文色边</p>
+<h2 class="section-title">实验时间线</h2>
+<div class="timeline-wrap"><rux-timeline start="2026-10-12T00:00:00.000Z" end="2026-10-14T00:00:00.000Z" interval="day" zoom="3" timezone="UTC" hide-j-day><rux-track><div slot="label" class="track-label"><span class="mono">h001</span></div><rux-time-region start="2026-10-12T09:16:00.000Z" end="2026-10-13T13:53:00.000Z" status="normal" selected>TS momentum survives costs</rux-time-region></rux-track><rux-track><div slot="label" class="track-label"><span class="mono">h002</span></div><rux-time-region start="2026-10-13T08:00:00.000Z" end="2026-10-13T19:31:00.000Z" status="standby">短期均值回归</rux-time-region></rux-track></rux-timeline></div>
+</section>
+<section>
+<p class="cap">没有试验</p>
+<h2 class="section-title">实验时间线</h2>
+<p class="muted">还没有试验，画不出时间线——用 <code class="mono">shinka_research run</code> 跑实验。</p>
+</section></div>
+<script>
+// Preview only: when the pinned Carbon stylesheet could not load, switch on the offline fallbacks in bundle.css.
+const probe = document.body.appendChild(document.createElement('span'));
+probe.className = 'cds--visually-hidden';
+if (getComputedStyle(probe).position !== 'absolute') document.documentElement.classList.add('no-vendor');
+probe.remove();
+</script>
+</body>
+</html>

@@ -46,7 +46,7 @@
 
 ## P5 · 研究层前端（只读）
 - [x] 视觉方向与组件选型（design-pipeline）：ops-spec，Astro UXDS × Carbon，所有者确认
-- [ ] 设计系统包与 DESIGN.md 改到选定方向
+- [x] 设计系统包与 DESIGN.md 改到选定方向（tokens.json 是唯一值来源，界面直接读它）
 - [x] `shinka_research ui <方向目录>` 第一页：顶栏、假设表、规格卡、事件流
 - [x] 可见性测试：未出结论不露验证段证据（含质疑者事件说明），未 confirm 不露 lockbox 数字
 - [x] 页面按研究进度换内容：试验图（噪声线）、实验时间线、资料库页，跳转上游 viz_tree
