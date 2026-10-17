@@ -37,10 +37,12 @@
 - [x] 质疑者加 PBO（CSCV），并纳入 `supported` 判据
 - [x] skill 加入 lockbox 规则与前向测试关卡
 
-## P4 · 持续研究
-- [ ] 下一轮选题自动读取笔记本（避免重复、在已有结论上深挖）
-- [ ] 方向级预算与进度汇总
-- [ ] 跨方向的知识沉淀
+## P4 · 持续研究与资料库
+- [x] 工作区资料库（Karpathy LLM knowledge base）：`raw/` → agent 编译的 `wiki/`，`library add/pending/compiled/log`
+- [x] 下一轮选题读取 `brief`（假设与证据、试验数、花费、lockbox、未编译资料、最近事件）
+- [x] 方向级预算（`init --budget-usd`，`run` 超预算拒绝）与 `results.tsv` 实验流水
+- [x] 跨方向知识沉淀：结论写回 wiki 的 finding 页，每轮 lint
+- [x] skill：自主模式、简单性原则、编译/问答/写回/lint 步骤
 
 ## 之后 · 通用化
 - [ ] 把 `quant/` 抽象为可替换的"领域评估框架"接口，接入第二个领域验证
