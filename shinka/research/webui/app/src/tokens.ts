@@ -13,7 +13,7 @@ function read(): Tokens {
   ) as Tokens
 }
 
-// 画布类组件（Carbon Charts）吃不了 CSS 变量，运行时从 theme.css 读成色值；
+// 画布类组件（Carbon Charts）吃不了 CSS 变量，运行时从 virtual:tokens.css（design-system/tokens.json）读成色值；
 // 主题切换时重读。App 在 layout effect 里改主题，这里的 passive effect 一定在其后。
 export function useTokens(light: boolean): Tokens | null {
   const [t, setT] = useState<Tokens | null>(null)

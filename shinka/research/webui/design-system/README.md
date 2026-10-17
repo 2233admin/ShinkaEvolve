@@ -1,39 +1,45 @@
-Shinka Research is a research notebook, not a dashboard. Every page records where a research direction stands — which hypotheses hold, how many variants were tried, how high that pushed the bar for “supported”, how much budget is left, and whether the lockbox is still sealed — so that the owner, or someone the owner shared a link with, understands it within one screen. The console only reads files; nothing on it changes research state.
+Shinka Research's read-only console is an ink-black ops-spec sheet: rules and key–value blocks instead of filled panels, orange reserved for limits and signals, and ready-made Astro UXDS and Carbon components instead of hand-drawn ones. `tokens.json` holds every value, `components/bundle.css` maps them onto the two libraries and styles the shared pieces, and the app and the previews load the same files.
 
 ## Content fundamentals
 
-- Write Chinese interface copy. Keep statistical terms in their English abbreviations — Sharpe, DSR, PBO, N — and explain each with `Term` the first time it appears on a page.
-- State a verdict as a sentence with its evidence, numbers inside the sentence: “验证段 Sharpe 1.21，DSR 0.97（N = 412），PBO 0.22，子区间为正 3/3；买入持有 0.78。” Never a bare number without what it measures.
-- Name what a figure was chosen from. A best score always travels with its N and the noise bar (门槛 1.36).
-- Say what is hidden and when it appears, instead of hiding silently: “验证段证据出结论后才显示。”
-- Empty and error states name what is missing and the command that creates it: “还没有假设——用 `shinka_research hypothesis add` 添加。”
-- Tone: plain, exact, unhurried. No exclamation marks, no emoji, no praise (“表现优异”), no hedging adverbs. Prefer the researcher's words: 假设、证伪、不确定、试验、门槛、启封.
-- Punctuation: full-width Chinese punctuation（，。：；（）“”）in Chinese sentences; one space between Han characters and Latin words or numerals, none before % or full-width punctuation. Numbers are ASCII digits; minus is − (U+2212); Sharpe, DSR and PBO take two decimals; money takes `$` and one decimal.
-- Status words are fixed: 待选 · 已选 · 运行中 · 质疑中 · 支持 · 证伪 · 不确定 · 已确认 · 未确认 · 已放弃. Event words are fixed: 建立实验 · 进化 · 试探 · 质疑 · 结论 · 启封.
+- **Language.** Interface copy is Chinese. Commands, ids, file names and `SHINKA RESEARCH` stay in Latin. Put a space between Chinese and a Latin word or number only where the source copy does (`有 2 份资料待整理`, `Sharpe`).
+- **Voice.** Plain statements of fact, no first person, no exclamation marks, no apology, no blame. Say what is missing and the command that fixes it: 还没有试验——用 `shinka_research run` 跑实验。 Empty states are one muted sentence, never an illustration.
+- **Notice titles** end with a full-width colon and the subtitle follows: 读取失败：, 还没有假设：, 有 2 份资料待整理：, 还没出结论：.
+- **Terms.** Explain every statistical term once, in place, with `Term` (a Carbon definition tooltip) and the definitions in `terms.ts`; the sentence must still read without the tooltip. The names are fixed: 样本内, 验证段, 封存段, 试验数, 噪声线, Sharpe, DSR, PBO, 子区间, 买入持有.
+- **Status words** are fixed and always paired with their symbol: 待跑, 已选, 运行中, 待判定, 成立, 否定, 未定, 已确认, 未确认, 放弃.
+- **Numbers.** Set ids and figures in `data-cell` or `data-sm` (mono, tabular). Sharpe and scores two decimals, DSR three, PBO two, fractions as whole percents, money `$0.00`, time `YYYY-MM-DD HH:MM` (UTC). A missing figure is `—`, never `0`, `N/A` or blank.
+- **Casing.** Section labels are set in `label-section` and `label-spec` (mono, `letter-spacing: .08em`); write them in plain case, the style does the rest. Commands, ids and file names are always in `<code class="mono">`.
+- **Withheld results.** Validation figures appear only after a verdict and lockbox figures only after confirmation; before that the cell says `—` with the tooltip 出结论后显示.
 
 ## Visual foundations
 
-**Colour.** Paper and ink. Set every page on `paper`; text in `ink` (titles, figures), `ink-secondary` (sentences) or `ink-muted` (margin notes, labels — the lowest contrast allowed, 5.7:1). Draw hairlines between entries in `rule` and the rule under the facts row in `rule-strong`, with a 1.5px `ink` rule above it. Use `paper-deep` only for alternating hypothesis bands in charts and `paper-raised` only under code and diffs. The four status inks — `supported`, `refuted`, `inconclusive`, `running` — are the only hues; spend them on stamps, checks, the seal and the noise bar, never on grounds or headings. `refuted` marks every limit the research may not cross: refuted verdicts, the deciding failed rule (`decider`), the noise bar (`noise-bar`), the sealed lockbox, an exhausted budget. Links, toggles and the focus ring use `link` / `focus` (the running blue-black). There is one theme, Paper: prints and shared screenshots must look like the screen.
-
-**Colour never carries meaning alone.** Every status is a word plus a glyph, every check is ✓ or ✗, every diff line starts with + or −. A grey-scale print must still read.
-
-**Type.** Two voices. The serif (`--font-serif`) is the notebook's hand: `display-lg` for the direction question and experiment title, `display-md` for workspace, library and wiki titles, `entry-title` for hypotheses and ledger entries, `entry-id` for ids in the margin, `stamp` for stamps. The sans (`--font-sans`) carries everything that must read on any OS: `body-md` for sentences, `body-sm` for margin notes, checks and events, `label` for kickers and fact labels, `data-md` and `data-lg` for figures (tabular numerals, right-aligned in columns), `chart` inside charts. Wiki pages read in `reading` (serif, falling back to Microsoft YaHei rather than SimSun on Windows) with `reading-h2` headings. Code, diffs and hashes use `code`. Weights are 400 and 600 only; never negative tracking on Chinese; emphasis is weight, never underline.
-
-**Layout.** A centred `page` (1040px) with a right-aligned `margin-col` (150px) and a `gutter` (40px). The margin column holds what a researcher writes beside an entry — ids, trial counts, generations, timestamps, chart captions, wiki metadata — so scanning down it indexes the page. Prose stops at `measure` (40em); wiki text at `reading-measure` (36em). Space with `space-3` around entry rules, `space-8` between sections, `space-12` from the top bar to the kicker. Put the state first: kicker → title → lede → `FactsRow` → `TrialChart` → entries → `EventLog`. Group hypotheses under 在研, 已有结论 and 已关闭; closed entries collapse to one line.
-
-**Depth, borders, radii.** Flat paper: no shadows, no cards, no gradients, no blur. Hierarchy is rules, whitespace and type. Every corner is square (`radius-none`) except the lockbox seal (`radius-seal`). The only layer above the page is the `ink` tooltip with `on-ink` text.
-
-**States.** Hover underlines links and turns them `ink`. Keyboard focus is a solid 2px `focus` outline offset 2px, 8.0:1 on `paper`. Expanded toggles turn `ink` with ▾. Nothing animates (MOTION.md: static).
-
-**Responsive.** Below 1100px the margin narrows to 110px; below 760px it folds into a line above each entry, the facts row goes two-up, checks stack, toggles grow to 44px and the page takes a 16px gutter. Code and diffs scroll inside their block; the page never scrolls sideways.
+- **Colour.** Two themes from one token set: `dark` (the default, neutral ink-black: `base` as the ground, `raised` one step up) and `light` (Technical Paper). Text is `ink`; secondary text, labels and keys are `muted`; rules are `line`, and anything that must be seen as a mark is `line-strong`. The three status colours are `ok`, `warn`, `err` and are marks, always paired with a shape or a word. Use only token names; never write a hex value in a component or a page.
+- **Orange is a limit or a signal.** `accent` appears on: the index stripes under the top bar, the sealed-lockbox icon, the selected-row mark, the noise line in the trial chart, action borders, focus rings. `accent-text` is the orange for text (links, tertiary actions); `accent-hover` is the hover. Nothing decorative is orange.
+- **Structure.** Rules instead of filled panels: sections are separated by `line` hairlines and whitespace; a region is lifted with `raised` only for the selected table row and the spec card's border. The spec sheet (`dl.spec`) is the signature shape: mono key on the left (`--spec-key-width`), value on the right, one hairline between rows.
+- **Type.** Inter for text, IBM Plex Mono for ids, figures, keys and section labels (`--font-sans`, `--font-mono`; CJK falls back to PingFang SC / Noto Sans SC). Page title `title-page` (28px, 22px under 900px), spec card title `title-card`, reading text `text-reading`, spec values `text-field`, captions `text-note`, section labels `label-section`, spec keys `label-spec`, table figures `data-cell`, ledger values and code `data-sm`, library headings `heading-reading`. Weights are 400, 500 (mono labels) and 600 (titles).
+- **Spacing and layout.** 4px base: `space-1`…`space-16`. The page is at most `page-max` wide with `space-8` side padding (`space-4` below 900px); the research view is a grid of the table, trial chart, timeline and events beside a sticky `side-width` spec card; below 900px everything stacks and the spec card follows the table. The library is a `library-nav-width` tree beside a reading column of at most `78ch`. Tables scroll inside their wrapper; the page never scrolls sideways.
+- **Borders and radii.** Hairline 1px `line`; `line-strong` for header underlines and quote rules. Every corner is square (`radius-none`); Astro's and Carbon's radii are mapped to it.
+- **Depth.** None. No shadows, gradients (except the stripes), blur or overlays; the only layer above the page is Carbon's popover for a definition.
+- **States.** Hover: Carbon's own step to `hover`. Selected: `selected` for a tree node or time region, `raised` plus a 2px `accent` inset bar for a table row. Focus: a 2px `accent` outline (3:1 on `base`, `raised` and `hover`). Disabled: Carbon's default, set in `muted`. Withheld: `—` with a tooltip.
+- **Motion.** None of our own; only the libraries' micro-transitions. See MOTION.md.
+- **The two libraries.** Astro UXDS 8.0 owns the signal layer: `rux-global-status-bar`, `rux-monitoring-icon`, `rux-status`, `rux-timeline`, `rux-log`. Carbon 1.118 owns the content: `DataTable`, `Tabs`, `DefinitionTooltip`, `InlineNotification`, `Toggle`, `TreeView`, `StructuredList` and `Tile` for blocks, `Tag`, Carbon Charts for plots. Astro's tabs, accordion and notification are not used (their accent use is too loud); neither is `rux-classification-marking`. Do not hand-draw a component a library already provides; map its variables in `bundle.css` instead.
+- **Theme switch.** The app sets `data-theme` on `<html>` and the Carbon `Theme` (`g100` for dark, `white` for light); `body.light-theme` is set for Astro. Both come from the same `tokens.json`.
 
 ## Iconography
 
-There is no icon set and no logo. Glyphs carry state: ✓ ✗ ? ▸ ◇ ○ ● – in stamps (set in the sans via `<span class="g">`), ✓ ✗ — in check ledgers, ▸ ▾ on toggles, → after links that leave the page, + − @@ in diffs. The lockbox seal is a CSS ring around one serif character, 封 or 启. The product name is set in plain type.
+- No custom icon set and no logo: the product name is `SHINKA` in the bold weight and `RESEARCH` in regular, set by the Astro status bar.
+- Icons come from the libraries: Astro monitoring icons (`assessment`, `attach-money`, `lock`, `lock-open`) in the top bar, Astro `rux-status` symbols for state (circle, square, triangle, ring and dot shapes), Carbon's own sort, tree and notification icons. Do not add another icon font or SVG set.
+- Status is shape plus word, never colour alone; the sealed lockbox is the only orange icon.
+- `↗` follows a link that leaves the page; `—` marks a withheld or missing value.
 
 ## Rules that protect the research
 
-- Never add a control that writes research state, and never a confirm or lockbox button.
-- Show validation evidence only after a hypothesis has a verdict; show lockbox figures only after `confirm`.
-- Count failed trials and say so; never plot them as 0.
-- Load nothing from the network: no webfonts, no CDN scripts.
+- Read-only: no control writes research state, and never a confirm or lockbox button. The theme switch and the refresh button are the only controls.
+- Validation evidence only after a verdict; lockbox figures only after confirmation.
+- Every best score has the noise line beside it. Failed trials are counted and said, never plotted as 0.
+- The evaluator, data split and out-of-sample metrics are never reachable from this page.
+
+## Using the package
+
+- The app reads `tokens.json` through the Vite plugin in `app/vite.config.ts` (`virtual:tokens.css`) and imports `components/bundle.css`; nothing is copied. Change a value in `tokens.json`, regenerate the `DESIGN.md` token groups (`design-system design-md-tokens`) and run the checks.
+- Previews load the pinned library builds (Astro Web Components 8.0.0, `@carbon/styles` 1.117.0) from a CDN inside a CSS layer, so `bundle.css` always wins over library defaults; offline they stay readable through the `:not(:defined)` fallbacks at the end of `bundle.css`.
