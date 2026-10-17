@@ -89,6 +89,7 @@ class Hypothesis(BaseModel):
 class Notebook(BaseModel):
     direction: str
     created: str = Field(default_factory=_now)
+    budget_usd: Optional[float] = None
     data: Optional[DataSplit] = None
     hypotheses: List[Hypothesis] = Field(default_factory=list)
 
@@ -166,6 +167,20 @@ class Notebook(BaseModel):
         if hyp.status in (Status.proposed, Status.selected):
             hyp.status = Status.selected
         return exp
+
+
+RESULTS_LOG = "results.tsv"
+_LOG_HEADER = "time\thypothesis\texperiment\tevent\tnote\n"
+
+
+def append_log(root: Path, hid: str, eid: str, event: str, note: str) -> None:
+    """One line per research event, autoresearch's results.tsv style."""
+    path = Path(root) / RESULTS_LOG
+    if not path.exists():
+        path.write_text(_LOG_HEADER)
+    clean = " ".join(note.split())
+    with path.open("a") as f:
+        f.write(f"{_now()}\t{hid}\t{eid}\t{event}\t{clean}\n")
 
 
 def experiment_dir(root: Path, hid: str, eid: str) -> Path:

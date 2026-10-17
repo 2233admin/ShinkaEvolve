@@ -78,3 +78,30 @@ def program_code(results_dir: Path, program_id: str) -> str:
     if not rows:
         raise LookupError(f"program {program_id} not in {results_dir}")
     return str(rows[0][0])
+
+
+_COST = " + ".join(
+    f"CASE WHEN json_type(metadata, '$.{k}') IN ('integer', 'real') "
+    f"THEN json_extract(metadata, '$.{k}') ELSE 0 END"
+    for k in ("api_costs", "embed_cost", "novelty_cost", "meta_cost")
+)
+
+
+def total_cost(results_dir: Path) -> float:
+    """LLM spend recorded for evaluated programs (USD), as Shinka reports it."""
+    if not (Path(results_dir) / DB_FILENAME).exists():
+        return 0.0
+    ((cost,),) = _query(
+        results_dir, f"SELECT COALESCE(SUM({_COST}), 0) FROM programs WHERE {_NOT_COPY}"
+    )
+    return float(cost)
+
+
+def best_score(results_dir: Path) -> float | None:
+    if not (Path(results_dir) / DB_FILENAME).exists():
+        return None
+    ((score,),) = _query(
+        results_dir,
+        f"SELECT MAX(combined_score) FROM programs WHERE correct = 1 AND {_NOT_COPY}",
+    )
+    return None if score is None else float(score)

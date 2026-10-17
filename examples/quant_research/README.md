@@ -7,13 +7,15 @@ survive transaction costs on a (synthetic) instrument?
 cd examples/quant_research
 python make_data.py bars.csv                       # or bring your own CSV: timestamp,close,...
 
-shinka_research init runs/momentum --direction "Time-series momentum"
+shinka_research init runs/momentum --direction "Time-series momentum" --budget-usd 20
+shinka_research library add runs/momentum paper.pdf https://example.org/tsmom  # sources -> runs/library/raw
 shinka_research hypothesis add runs/momentum \
     --title "TS momentum survives costs" --file hypothesis.md
 shinka_research scaffold runs/momentum h001 --initial initial.py --data bars.csv
 shinka_research run runs/momentum h001 --num-generations 20 \
     -- --set 'evo.llm_models=["gpt-5-mini"]'       # anything after -- goes to shinka_run
 shinka_research status runs/momentum
+shinka_research brief runs/momentum      # digest the agent reads before the next round
 ```
 
 `scaffold` freezes the evaluator (`task/evaluate.py`, config embedded) and

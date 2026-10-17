@@ -14,7 +14,8 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 
 | 来源 | 拿什么 | 不拿什么 |
 |---|---|---|
-| **Karpathy autoresearch** | 三方分工：人写 `program.md` 定方向和约束；agent 改实验代码；固定的评估器（`prepare.py`）谁都不能动。"keep or revert" 的棘轮循环。 | 单文件单指标的局限 |
+| **Karpathy autoresearch** | 三方分工：人写 `program.md` 定方向和约束；agent 改实验代码；固定的评估器（`prepare.py`）谁都不能动。"keep or revert" 的棘轮循环；每次尝试记一行 `results.tsv`；简单性原则；自主模式下不停下来问。 | 单文件单指标的局限 |
+| **Karpathy LLM knowledge base** | 人把原始资料丢进 `raw/`，LLM 增量"编译"成互相链接的 markdown wiki（概念页、摘要、反向链接）；直接用 wiki 回答研究问题；问答结果写回 wiki；定期 lint 找矛盾、补缺失、发现新联系。 | Obsidian 等具体工具不是依赖（可选用来浏览） |
 | **AI-Scientist-v2** | 选题时结合文献查新；结构化的想法格式（假设 / 相关工作 / 实验 / 风险）；实验分阶段推进：`initial_implementation → baseline_tuning → creative_research → ablation_studies`；评审者挑毛病。 | **不搬代码**（其许可证为 RAIL 衍生，与 Apache-2.0 混用有问题）；不要论文/LaTeX 产线；不要它的 BFTS 搜索（与 Shinka 重叠） |
 | **DeepEvolve** | "深度调研 + 进化"互相反馈：调研给方向，进化结果回流修正调研。消融显示无调研的纯进化很快停滞。 | 具体实现 |
 | **ShinkaEvolve（本仓库）** | 整个进化引擎原样使用：`initial.py` 的 EVOLVE-BLOCK、`evaluate.py`、`public`/`private` 指标、岛屿、预算上限、SQLite 结果库、agent skills。 | — |
@@ -77,7 +78,8 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
 | `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
 | `shinka/research/skeptic.py` | DSR、PBO、子区间稳定性、样本内外衰减、基线；lockbox 一次性确认 |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `status` |
+| `shinka/research/library.py` | 工作区资料库的记账：`raw/` 中哪些资料是新的/已编译（按哈希）、操作日志；编译本身由 agent 完成 |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `library` / `brief` / `status` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）
@@ -132,6 +134,27 @@ research/<direction-slug>/
 - **PBO**（Bailey, Borwein, López de Prado & Zhu, 2014 的 CSCV）：质疑者取该实验得分最高的至多 64 个不同程序，在开发数据上算逐 K 线收益矩阵，切成 16 块，枚举所有"一半样本内、一半样本外"的组合，统计"样本内第一名在样本外落到中位数及以下"的比例。PBO > 0.5（可调）时不判 `supported`。
 - **前向测试**（工具之外的最终关卡）：`confirmed` 的策略到模拟盘上用研究开始后才产生的新数据跑一段时间。
 - **不采用** Thresholdout / Ladder 这类可复用留存集：查询预算约随留存样本数平方增长，几百到几千根 K 线太少，且其独立样本假设不适用于有自相关的行情数据。
+
+## 7.2 资料库与知识积累（P4）
+
+外来资料的输入方式参照 Karpathy 的 LLM knowledge base：
+
+```
+<workspace>/library/
+  raw/          人放资料：PDF、论文、网页剪藏、笔记；网址写进 links.md（`library add` 也行）
+  wiki/         agent 编译的页面：paper / concept / finding，互相 [[链接]]，每条结论引用 raw 来源
+  index.md      wiki 目录（agent 维护）
+  log.md        编译、问答、lint、结论写回的流水
+  manifest.json 已编译资料的哈希（命令行记账）
+<workspace>/<direction>/   研究方向，同一工作区共用一个资料库
+```
+
+- **编译**：`library pending` 列出新的或改过的资料，agent 读完写成 wiki 页，再 `library compiled` 记账。agent 自己检索到的网络资料也先 `library add` 进 raw，保证所有结论都有来源可查。
+- **结论写回**：每个结论出来后，agent 为该机制写/更新 finding 页（验证段证据、DSR 及试验数、PBO、消融结论），lockbox 数字在 `confirm` 之前不写。这就是跨方向的知识积累：下一个方向读 wiki 就知道"这个机制测过、结论是什么"。
+- **Lint**：每轮检查 wiki 的矛盾、无来源的断言、过期结论、缺页的高频概念，结果记入 `log.md`。
+- **简报**：`shinka_research brief` 汇总方向状态（假设与证据、试验数、花费与预算、lockbox 状态、未编译资料数、最近事件），agent 每轮选题前先读。
+- **预算**：`init --budget-usd` 设定方向预算；`run` 前汇总各运行结果库里记录的模型费用，用完即拒绝运行。
+- **实验流水**：方向目录下的 `results.tsv` 每个事件一行（scaffold / run / skeptic / verdict / confirm），对应 autoresearch 的 results.tsv。
 
 ## 8. 分阶段路线（渐进式，每一步都端到端可用）
 

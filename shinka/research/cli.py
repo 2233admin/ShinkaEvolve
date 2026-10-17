@@ -12,9 +12,17 @@ import sys
 from pathlib import Path
 from typing import List, Optional
 
-from shinka.research.notebook import Notebook, Status, Verdict, experiment_dir
+from shinka.research import library
+from shinka.research.notebook import (
+    RESULTS_LOG,
+    Notebook,
+    Status,
+    Verdict,
+    append_log,
+    experiment_dir,
+)
 from shinka.research.quant import QuantConfig, run_quant_eval
-from shinka.research.rundb import count_evaluated
+from shinka.research.rundb import best_score, count_evaluated, total_cost
 from shinka.research.skeptic import (
     Thresholds,
     challenge,
@@ -48,10 +56,13 @@ PROGRAM_TEMPLATE = """# Research program
 ## Budget
 - Max hypotheses per round: <n>
 - Generations per experiment: <stage 2 / stage 3>
-- USD per experiment: <...>, per direction: <...>
+- USD per experiment: <...>; per direction: set by `init --budget-usd`
 
 ## Autonomy
-- Checkpoints: ask me to choose hypotheses and to review verdicts (yes/no)
+- Autonomy: checkpoints   # or "autonomous": run until the budget is spent
+
+## Library
+- Sources for this direction are in ../library/raw/ (papers, clips, notes, links.md)
 
 ## Verdict thresholds
 - supported: DSR >= 0.95, >= 2/3 of validation sub-periods positive, PBO <= 0.5,
@@ -69,7 +80,8 @@ def cmd_init(args: argparse.Namespace) -> None:
     root.mkdir(parents=True, exist_ok=True)
     if Notebook.path(root).exists():
         sys.exit(f"{root} already has a notebook")
-    Notebook(direction=args.direction).save(root)
+    Notebook(direction=args.direction, budget_usd=args.budget_usd).save(root)
+    library.ensure(library.library_root(root))
     program = root / "program.md"
     if not program.exists():
         program.write_text(PROGRAM_TEMPLATE.format(direction=args.direction))
@@ -113,7 +125,17 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     )
     exp, task_dir = scaffold_experiment(root, nb, args.hid, Path(args.initial), cfg)
     nb.save(root)
+    append_log(root, args.hid, exp.id, "scaffold", f"seed {Path(args.initial).name}")
     print(task_dir)
+
+
+def direction_spend(root: Path, nb: Notebook) -> float:
+    """LLM spend (USD) across every experiment of the direction."""
+    return sum(
+        total_cost(experiment_dir(root, h.id, e.id) / "results")
+        for h in nb.hypotheses
+        for e in h.experiments
+    )
 
 
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
@@ -127,6 +149,12 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     verify_experiment(root, nb, hyp.id, exp)
+    if nb.budget_usd is not None:
+        spent = direction_spend(root, nb)
+        if spent >= nb.budget_usd:
+            sys.exit(
+                f"direction budget exhausted: ${spent:.2f} of ${nb.budget_usd:.2f}"
+            )
     exp_dir = experiment_dir(root, hyp.id, exp.id)
     results_dir = exp_dir / "results"
     previous_status, previous_verdict = hyp.status, hyp.verdict
@@ -155,6 +183,14 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         if code and exp.n_evaluated == evaluated_before:
             hyp.status, hyp.verdict = previous_status, previous_verdict
         nb.save(root)
+        best = best_score(results_dir)
+        append_log(
+            root, hyp.id, exp.id, "run" if code == 0 else "run-failed",
+            f"{exp.n_evaluated - evaluated_before} new programs, "
+            f"{exp.n_evaluated} total, best IS score "
+            f"{'n/a' if best is None else f'{best:.3f}'}, "
+            f"spend ${total_cost(results_dir):.2f}",
+        )  # fmt: skip
     if code:
         sys.exit(code)
 
@@ -203,6 +239,7 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     exp.skeptic = {**report, "rule_label": label.value, "rule_reason": reason}
     hyp.status, hyp.verdict = Status.challenged, None
     nb.save(root)
+    append_log(root, hyp.id, exp.id, "skeptic", f"rule says {label.value}: {reason}")
     out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
     out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
     print(out.read_text())
@@ -253,6 +290,12 @@ def cmd_confirm(args: argparse.Namespace) -> None:
             f"| check | value |\n|---|---|\n{rows}\n"
         )
     nb.save(root)
+    for hid, rep in reports.items():
+        append_log(
+            root, hid, rep["experiment"], "confirm",
+            f"{nb.get(hid).status.value}: lockbox Sharpe {rep['lockbox_sharpe']:.2f}, "
+            f"DSR {rep['dsr']:.3f}",
+        )  # fmt: skip
     (root / "CONFIRMATION.md").write_text("\n".join(lines))
     for hid in hids:
         print(f"{hid}: {nb.get(hid).status.value}")
@@ -275,7 +318,83 @@ def cmd_verdict(args: argparse.Namespace) -> None:
         ),
     )
     nb.save(root)
+    append_log(root, hyp.id, exp.id, "verdict", f"{label.value}: {reason}")
     print(f"{hyp.id}: {label.value} — {reason}")
+
+
+def _library(path: str) -> Path:
+    """Accept a direction (its workspace library) or a workspace directory."""
+    p = Path(path)
+    lib = library.library_root(p) if Notebook.path(p).exists() else p / "library"
+    return library.ensure(lib)
+
+
+def cmd_library_add(args: argparse.Namespace) -> None:
+    lib = _library(args.dir)
+    for source in args.sources:
+        print(library.add(lib, source).relative_to(lib).as_posix())
+
+
+def cmd_library_pending(args: argparse.Namespace) -> None:
+    for rel in library.pending(_library(args.dir)):
+        print(rel)
+
+
+def cmd_library_compiled(args: argparse.Namespace) -> None:
+    lib = _library(args.dir)
+    rels = library.pending(lib) if args.all else args.files
+    library.mark_compiled(lib, rels)
+    print(f"{len(rels)} marked compiled")
+
+
+def cmd_library_log(args: argparse.Namespace) -> None:
+    library.log(_library(args.dir), args.kind, args.text)
+
+
+def _evidence(h) -> str:
+    ev = h.verdict.evidence if h.verdict else {}
+    keys = (("is_sharpe", "IS"), ("oos_sharpe", "val"), ("dsr", "DSR"), ("pbo", "PBO"))
+    parts = [
+        f"{label} {ev[k]:.2f}" for k, label in keys if isinstance(ev.get(k), float)
+    ]
+    return ", ".join(parts)
+
+
+def cmd_brief(args: argparse.Namespace) -> None:
+    """Digest for the researcher agent before proposing the next round."""
+    root = Path(args.dir)
+    nb = Notebook.load(root)
+    lib = library.library_root(root)
+    spent = direction_spend(root, nb)
+    budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
+    out = [f"# Brief: {nb.direction}", ""]
+    out.append(f"- Trials so far: {nb.total_trials} (raise the bar for 'supported')")
+    out.append(f"- LLM spend: ${spent:.2f}{budget}")
+    if nb.data:
+        state = "OPENED" if nb.data.opened else "sealed"
+        out.append(f"- Lockbox: {state} (from {nb.data.lockbox_start})")
+    pend = library.pending(lib) if lib.exists() else []
+    out.append(
+        f"- Library: {len(library.wiki_pages(lib))} wiki pages, "
+        f"{len(pend)} raw sources not compiled yet ({lib})"
+    )
+    out += ["", "## Hypotheses", ""]
+    if not nb.hypotheses:
+        out.append("(none yet)")
+    for h in nb.hypotheses:
+        line = f"- {h.id} [{h.status.value}] {h.title}"
+        if h.verdict:
+            line += f" — {h.verdict.reason}"
+            ev = _evidence(h)
+            if ev:
+                line += f" ({ev})"
+        out.append(line)
+    log_path = root / RESULTS_LOG
+    if log_path.exists():
+        recent = log_path.read_text().splitlines()[1:][-args.recent :]
+        out += ["", f"## Last {len(recent)} events ({RESULTS_LOG})", ""]
+        out += [f"    {line}" for line in recent]
+    print("\n".join(out))
 
 
 def cmd_status(args: argparse.Namespace) -> None:
@@ -313,6 +432,9 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("init", help="Start a research direction")
     s.add_argument("dir")
     s.add_argument("--direction", required=True)
+    s.add_argument(
+        "--budget-usd", type=float, help="Stop runs once LLM spend hits this"
+    )
     s.set_defaults(func=cmd_init)
 
     s = sub.add_parser("hypothesis", help="Manage hypotheses")
@@ -394,6 +516,31 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--label", choices=["supported", "refuted", "inconclusive"])
     s.add_argument("--reason")
     s.set_defaults(func=cmd_verdict)
+
+    s = sub.add_parser("library", help="Workspace research library (raw -> wiki)")
+    lsub = s.add_subparsers(dest="action", required=True)
+    a = lsub.add_parser("add", help="Add files or URLs to library/raw")
+    a.add_argument("dir", help="A direction or a workspace directory")
+    a.add_argument("sources", nargs="+")
+    a.set_defaults(func=cmd_library_add)
+    a = lsub.add_parser("pending", help="List raw sources not compiled yet")
+    a.add_argument("dir")
+    a.set_defaults(func=cmd_library_pending)
+    a = lsub.add_parser("compiled", help="Mark raw sources as compiled into the wiki")
+    a.add_argument("dir")
+    a.add_argument("files", nargs="*")
+    a.add_argument("--all", action="store_true", help="Every pending source")
+    a.set_defaults(func=cmd_library_compiled)
+    a = lsub.add_parser("log", help="Append to library/log.md (lint, qa, finding)")
+    a.add_argument("dir")
+    a.add_argument("kind")
+    a.add_argument("text")
+    a.set_defaults(func=cmd_library_log)
+
+    s = sub.add_parser("brief", help="Digest of the direction for the next round")
+    s.add_argument("dir")
+    s.add_argument("--recent", type=int, default=15)
+    s.set_defaults(func=cmd_brief)
 
     s = sub.add_parser("status", help="Show the notebook")
     s.add_argument("dir")
