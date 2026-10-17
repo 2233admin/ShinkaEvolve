@@ -168,12 +168,14 @@ research/<direction-slug>/
 - 主流工具都不显式展示试验数、DSR、PBO，也没有"一次性不可逆"的留存集状态。这是本前端要补的。
 
 决定：
-- 入口 `shinka_research ui <workspace>`，代码在 `shinka/research/`，复用上游 stdlib 服务，不改上游。每个实验的进化细节跳转到上游 viz_tree（默认隐藏 private 指标）。
+- 入口 `shinka_research ui <方向目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/snapshot`（一份方向快照）和打包好的前端，不改上游。每个实验的进化细节跳转到上游 viz_tree（默认隐藏 private 指标）。
+- 前端在 `shinka/research/webui/app/`（Vite + React 19 + TypeScript），构建到 `webui/dist/`（不入库，`pnpm build` 生成）。照 Optuna Dashboard：Python 端只读文件、出 JSON，界面是单独打包的前端。
+- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。
 - 只读。选中/放弃假设、出结论、confirm 仍走 CLI；confirm 永远不进 UI（不可逆操作不做成一次点击）。
 - 页面：工作区（方向列表）、方向（头部状态条、假设表、前沿图、流水、报告）、资料库（index、wiki、`[[链接]]`、待编译、log）。
 - 前沿图：方向内所有试验的样本内分数按时间排开，叠加"N 个纯噪声试验的期望最大值"门槛线（与质疑者同一近似：方差取试验样本内分数）。试得越多线越高，直观表达多重检验代价。
-- 可见性纪律与 agent 相同：未出结论的假设只显示样本内指标，验证段证据在 verdict 之后才显示；lockbox 数字只在 `confirm` 之后显示。
-- 视觉规范按 design-pipeline 先写 DESIGN.md，所有者验收后再写代码。
+- 可见性纪律与 agent 相同：未出结论的假设只显示样本内指标，验证段证据在 verdict 之后才显示；lockbox 数字只在 `confirm` 之后显示。过滤在服务端做（`ui.snapshot`），浏览器拿不到不该显示的数；质疑者事件的说明里带验证段数字，未出结论时同样隐去。
+- 视觉规范按 design-pipeline 走：方向与组件选型由所有者定，DESIGN.md 与设计系统包从 token 生成。
 
 ## 8. 分阶段路线（渐进式，每一步都端到端可用）
 

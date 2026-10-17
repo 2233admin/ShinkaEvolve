@@ -92,8 +92,9 @@
     }
   ],
   "decision": {
-    "status": "pending",
-    "selectedDirectionId": null,
-    "rationale": null
+    "status": "selected",
+    "selectedDirectionId": "ops-spec",
+    "rationale": "第二个（ops-spec）。组件不手搓，用现成组件库：Astro UXDS 与 Carbon 对比后拼成一套（Astro 管顶栏、状态符号、时间线、事件流；Carbon 管表格、页签、术语提示、折叠、提示条、图表、代码），「现在样子挺好的 就这样」。研究界面与 KatanaConsole 分开，组件库也分开。",
+    "by": "owner"
   }
 }

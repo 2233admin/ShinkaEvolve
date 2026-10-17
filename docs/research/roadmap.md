@@ -45,9 +45,11 @@
 - [x] skill：自主模式、简单性原则、编译/问答/写回/lint 步骤
 
 ## P5 · 研究层前端（只读）
-- [ ] 视觉规范 DESIGN.md（design-pipeline），所有者验收
-- [ ] `shinka_research ui <workspace>`：工作区、方向、资料库三页，跳转上游 viz_tree
-- [ ] 可见性测试：未出结论不露验证段证据，未 confirm 不露 lockbox 数字
+- [x] 视觉方向与组件选型（design-pipeline）：ops-spec，Astro UXDS × Carbon，所有者确认
+- [ ] 设计系统包与 DESIGN.md 改到选定方向
+- [x] `shinka_research ui <方向目录>` 第一页：顶栏、假设表、规格卡、事件流
+- [x] 可见性测试：未出结论不露验证段证据（含质疑者事件说明），未 confirm 不露 lockbox 数字
+- [ ] 试验图（噪声线）、实验时间线、资料库页，跳转上游 viz_tree
 
 完成标准：人不用 CLI 就能看清一个方向的全部状态，且看不到 agent 也不该看到的数字。
 
