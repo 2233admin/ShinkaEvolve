@@ -236,7 +236,14 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     th = _thresholds(args)
     report = challenge(root, nb, hyp.id, exp, th)
     label, reason = decide(report, th)
-    exp.skeptic = {**report, "rule_label": label.value, "rule_reason": reason}
+    exp.skeptic = {
+        **report,
+        "rule_label": label.value,
+        "rule_reason": reason,
+        "thresholds": th.model_dump(
+            include={"dsr_supported", "min_positive_fraction", "max_pbo"}
+        ),
+    }
     hyp.status, hyp.verdict = Status.challenged, None
     nb.save(root)
     append_log(root, hyp.id, exp.id, "skeptic", f"rule says {label.value}: {reason}")

@@ -1,4 +1,4 @@
-import type { Evidence, Hypothesis, Status } from './types'
+import type { Evidence, Hypothesis, Status, Thresholds } from './types'
 
 export type RuxStatus = 'normal' | 'caution' | 'critical' | 'standby' | 'off'
 
@@ -52,8 +52,8 @@ export const oosOf = (h: Hypothesis): number | null => (h.verdict ? num(h.verdic
 
 export type Check = { key: string; label: string; pass: boolean | null; value: string }
 
-// 五条规则与 skeptic.decide() 一一对应；阈值取默认值。
-export function checksOf(ev: Evidence): Check[] {
+// 五条规则与 skeptic.decide() 一一对应，阈值用判定时记下的那组。
+export function checksOf(ev: Evidence, th: Thresholds): Check[] {
   const oos = num(ev.oos_sharpe)
   const hold = num(ev.baseline_buy_hold_oos_sharpe)
   const dsr = num(ev.dsr)
@@ -67,12 +67,17 @@ export function checksOf(ev: Evidence): Check[] {
       pass: oos === null || hold === null ? null : oos > hold,
       value: `${fmt(oos)} vs ${fmt(hold)}`,
     },
-    { key: 'dsr', label: 'DSR ≥ 0.95', pass: dsr === null ? null : dsr >= 0.95, value: fmt(dsr, 3) },
-    { key: 'sub', label: '子区间为正 ≥ 2/3', pass: frac === null ? null : frac >= 2 / 3, value: pct(frac) },
+    { key: 'dsr', label: `DSR ≥ ${th.dsr_supported}`, pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
+    {
+      key: 'sub',
+      label: `子区间为正 ≥ ${pct(th.min_positive_fraction)}`,
+      pass: frac === null ? null : frac >= th.min_positive_fraction,
+      value: pct(frac),
+    },
     {
       key: 'pbo',
-      label: 'PBO ≤ 0.5',
-      pass: pbo === null ? true : pbo <= 0.5,
+      label: `PBO ≤ ${th.max_pbo}`,
+      pass: pbo === null ? true : pbo <= th.max_pbo,
       value: pbo === null ? '无法计算，视为通过' : fmt(pbo),
     },
   ]

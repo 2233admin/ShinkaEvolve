@@ -1,5 +1,5 @@
 import { InlineNotification, Tile } from '@carbon/react'
-import { STATUS, checksOf, fmt, num, spendOf, trialsOf, usd, when } from './format'
+import { STATUS, checksOf, fmt, num, pct, spendOf, trialsOf, usd, when } from './format'
 import { Term } from './Term'
 import type { Evidence, Hypothesis } from './types'
 
@@ -47,20 +47,21 @@ function Confirmation({ data }: { data: Evidence }) {
 function Ledger({ h }: { h: Hypothesis }) {
   const v = h.verdict!
   const ev = v.evidence
+  const th = ev.thresholds
   const noise = num(ev.expected_max_sharpe_annual)
   return (
     <section>
       <h3>检查台账</h3>
       <ul className="ledger">
-        {checksOf(ev).map((c) => (
+        {checksOf(ev, th).map((c) => (
           <li key={c.key}>
             <rux-status status={c.pass === null ? 'off' : c.pass ? 'normal' : 'critical'} />
             <span className="ledger-label">
               {c.key === 'oos' && (<><Term k="validation">验证段</Term> <Term k="sharpe">Sharpe</Term> {'> 0'}</>)}
               {c.key === 'hold' && (<>跑赢<Term k="buyhold">买入持有</Term></>)}
-              {c.key === 'dsr' && (<><Term k="dsr">DSR</Term> ≥ 0.95</>)}
-              {c.key === 'sub' && (<><Term k="subperiod">子区间</Term>为正 ≥ 2/3</>)}
-              {c.key === 'pbo' && (<><Term k="pbo">PBO</Term> ≤ 0.5</>)}
+              {c.key === 'dsr' && (<><Term k="dsr">DSR</Term> ≥ {th.dsr_supported}</>)}
+              {c.key === 'sub' && (<><Term k="subperiod">子区间</Term>为正 ≥ {pct(th.min_positive_fraction)}</>)}
+              {c.key === 'pbo' && (<><Term k="pbo">PBO</Term> ≤ {th.max_pbo}</>)}
             </span>
             <span className="mono ledger-value">{c.value}</span>
           </li>

@@ -12,6 +12,13 @@ export type Status =
 
 export type Evidence = Record<string, number | string | null | undefined>
 
+// skeptic 判定时实际用的阈值（cli.cmd_skeptic 写入），台账照它比较。
+export interface Thresholds {
+  dsr_supported: number
+  min_positive_fraction: number
+  max_pbo: number
+}
+
 export interface Experiment {
   id: string
   created: string
@@ -25,7 +32,7 @@ export interface Experiment {
 export interface Verdict {
   label: Status
   reason: string
-  evidence: Evidence
+  evidence: Evidence & { thresholds: Thresholds }
   created: string
 }
 
