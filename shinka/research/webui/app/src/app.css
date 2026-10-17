@@ -93,3 +93,85 @@ rux-monitoring-icon {
 }
 /* 方向 B 的索引条纹：顶栏下一道橙色竖纹。 */
 .stripes { height: 8px; background: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 6px); }
+
+/* 标签页 */
+.cds--tabs { margin-bottom: 0; }
+.cds--tab-content { padding: 24px 0 0; }
+.tab-label { display: inline-flex; align-items: center; gap: 8px; }
+
+/* 研究页：表格 → 试验图 → 时间线 → 事件，右侧规格卡 */
+.grid {
+  grid-template-areas: 'table side' 'chart side' 'timeline side' 'events side';
+  grid-template-rows: auto auto auto 1fr;
+}
+.area-chart { grid-area: chart; }
+.area-timeline { grid-area: timeline; }
+@media (max-width: 900px) {
+  .grid { grid-template-areas: 'table' 'side' 'chart' 'timeline' 'events'; }
+}
+.chart-note { font: 12px/1.7 var(--sans); color: var(--muted); margin: 0 0 12px; max-width: 72ch; }
+.trial-chart .cds--cc--chart-wrapper, .trial-chart .cds--cc--chart-wrapper svg { background: transparent; }
+.trial-chart .cds--chart-holder { background: transparent; }
+.timeline-wrap { overflow-x: auto; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.track-label { font-size: 12px; }
+rux-timeline { --timeline-background: var(--base); }
+code { font-family: var(--mono); font-size: .92em; }
+
+/* 规格卡里的小节 */
+.trees { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.trees li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+
+/* Markdown 正文：只用线和字，不加底色块 */
+.md { font: 13px/1.75 var(--sans); overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.spec-card .md { margin-top: 16px; padding-top: 12px; border-top: 1px solid var(--line); }
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--sans); font-weight: 600; line-height: 1.4; margin: 1.4em 0 .5em; }
+.md h1 { font-size: 20px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 14px; }
+.spec-card .md h1, .spec-card .md h2, .spec-card .md h3 { font-size: 13px; }
+.md p, .md ul, .md ol, .md blockquote, .md pre, .md table { margin: 0 0 .9em; }
+.md ul, .md ol { padding-left: 1.4em; }
+.md a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
+.md a:hover { color: var(--accent-hover); }
+.md code { font-family: var(--mono); font-size: 12px; border-bottom: 1px solid var(--line); }
+.md pre { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.md pre code { border: 0; }
+.md blockquote { margin-left: 0; padding-left: 12px; border-left: 2px solid var(--line-strong); color: var(--muted); }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { text-align: left; padding: 6px 12px 6px 0; border-bottom: 1px solid var(--line); }
+.md th { font: 500 11px/1.4 var(--mono); letter-spacing: .08em; color: var(--muted); border-bottom-color: var(--line-strong); }
+
+/* 资料库 */
+.cds--tab-content > .cds--inline-notification { max-width: none; margin: 0 0 24px; }
+.lib { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; align-items: start; }
+.lib-list { display: flex; flex-direction: column; gap: 24px; }
+
+.lib-empty { font-size: 12px; margin: 0; }
+.lib-page { max-width: 78ch; min-width: 0; }
+@media (max-width: 900px) {
+  .lib { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+}
+
+/* Carbon Charts：去掉自带的灰底，网格与字体走 token */
+.trial-chart .cds--cc--grid rect.chart-grid-backdrop { fill: transparent; stroke: var(--line); }
+.trial-chart .cds--cc--grid line { stroke: var(--line); }
+.trial-chart text, .trial-chart .cds--cc--legend { font-family: var(--sans); }
+.trial-chart .cds--cc--axes text { fill: var(--muted); }
+.trial-chart .cds--cc--legend .legend-item p { color: var(--muted); }
+/* 选中的时间段只抬一层底色，不铺大块反白，也不用强调橙（橙只给界线与信号）。 */
+rux-timeline, rux-track, rux-time-region {
+  --color-background-interactive-default: var(--selected);
+  --color-text-inverse: var(--ink);
+}
+.trial-chart .cds--cc--grid rect.chart-grid-backdrop { stroke: none; }
+.md p, .md li, .md td, .md th, .md blockquote { font-size: inherit; line-height: inherit; letter-spacing: inherit; }
+rux-time-region {
+  --status-symbol-color-fill-normal-on-dark: var(--ok);
+  --status-symbol-color-fill-caution-on-dark: var(--warn);
+  --status-symbol-color-fill-serious-on-dark: var(--warn);
+  --status-symbol-color-fill-critical-on-dark: var(--err);
+  --status-symbol-color-fill-standby-on-dark: var(--muted);
+  --status-symbol-color-fill-off-on-dark: var(--muted);
+}
+p.muted { font: 13px/1.7 var(--sans); margin: 0; }

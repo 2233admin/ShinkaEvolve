@@ -16,6 +16,9 @@ declare module 'react' {
       'rux-monitoring-icon': El<{ icon: string; label?: string; sublabel?: string; status?: RuxStatusValue; title?: string }>
       'rux-status': El<{ status: RuxStatusValue }>
       'rux-log': El<{ data: RuxLogEntry[] }>
+      'rux-timeline': El<{ start: string; end: string; interval?: 'month' | 'week' | 'hour' | 'day' | 'minute'; timezone?: string; hideJDay?: boolean; zoom?: number; showGrid?: boolean; rulerPosition?: 'top' | 'bottom' | 'both' }>
+      'rux-track': El
+      'rux-time-region': El<{ start: string; end: string; status?: RuxStatusValue; selected?: boolean; hideTimestamp?: boolean }>
     }
   }
 }

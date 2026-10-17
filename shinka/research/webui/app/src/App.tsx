@@ -1,8 +1,7 @@
-import { useCallback, useEffect, useState } from 'react'
-import { Button, InlineNotification, Theme } from '@carbon/react'
-import { EventStream } from './EventStream'
-import { HypothesisTable } from './HypothesisTable'
-import { SpecCard } from './SpecCard'
+import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
+import { Button, InlineNotification, Tab, TabList, TabPanel, TabPanels, Tabs, Tag, Theme } from '@carbon/react'
+import { LibraryTab } from './LibraryTab'
+import { ResearchTab } from './ResearchTab'
 import { Term } from './Term'
 import { TopBar } from './TopBar'
 import type { Snapshot } from './types'
@@ -30,7 +29,8 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string | null>(null)
 
-  useEffect(() => {
+  // layout effect：先于子组件读取主题色值的 passive effect 生效。
+  useLayoutEffect(() => {
     document.documentElement.dataset.theme = light ? 'light' : 'dark'
     document.body.classList.toggle('light-theme', light)
     try {
@@ -57,6 +57,7 @@ export default function App() {
     void refresh()
   }, [refresh])
 
+  const pending = snap?.library?.pending.length ?? 0
   const current = snap?.hypotheses.find((h) => h.id === selected) ?? snap?.hypotheses[0] ?? null
 
   return (
@@ -96,22 +97,30 @@ export default function App() {
           />
         )}
 
-        {snap && current && (
-          <div className="grid">
-            <section className="area-table">
-              <h2 className="section-title">假设</h2>
-              <div className="table-wrap">
-                <HypothesisTable hyps={snap.hypotheses} selected={current.id} onSelect={setSelected} />
-              </div>
-            </section>
-            <aside className="area-side">
-              <SpecCard h={current} />
-            </aside>
-            <section className="area-events">
-              <h2 className="section-title">事件</h2>
-              <EventStream events={snap.events} />
-            </section>
-          </div>
+        {snap && (
+          <Tabs>
+            <TabList aria-label="内容" contained={false}>
+              <Tab>研究</Tab>
+              <Tab>
+                <span className="tab-label">
+                  资料库
+                  {pending > 0 && (
+                    <Tag size="sm" type="gray" title={`${pending} 份资料待整理`}>
+                      {pending}
+                    </Tag>
+                  )}
+                </span>
+              </Tab>
+            </TabList>
+            <TabPanels>
+              <TabPanel>
+                {current && <ResearchTab snap={snap} current={current} light={light} onSelect={setSelected} />}
+              </TabPanel>
+              <TabPanel>
+                <LibraryTab lib={snap.library} />
+              </TabPanel>
+            </TabPanels>
+          </Tabs>
         )}
       </main>
     </Theme>

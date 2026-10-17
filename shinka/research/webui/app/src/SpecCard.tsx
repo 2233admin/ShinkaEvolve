@@ -1,7 +1,8 @@
-import { InlineNotification, Tile } from '@carbon/react'
+import { InlineNotification, Link, Tile } from '@carbon/react'
+import { Markdown } from './Markdown'
 import { STATUS, checksOf, fmt, num, pct, spendOf, trialsOf, usd, when } from './format'
 import { Term } from './Term'
-import type { Evidence, Hypothesis } from './types'
+import type { Evidence, Hypothesis, TrialPoint } from './types'
 
 function Spec({ rows }: { rows: [React.ReactNode, React.ReactNode][] }) {
   return (
@@ -79,8 +80,75 @@ function Ledger({ h }: { h: Hypothesis }) {
   )
 }
 
-export function SpecCard({ h }: { h: Hypothesis }) {
+const Code = ({ children }: { children: string }) => <code className="mono">{children}</code>
+
+// 还没有试验的两种情形：没搭实验，或搭了没跑。
+function NextStep({ h }: { h: Hypothesis }) {
+  return (
+    <section>
+      <h3>下一步</h3>
+      <p className="reason">
+        {h.experiments.length === 0 ? (
+          <>这个假设还没有实验。用 <Code>shinka_research scaffold</Code> 搭好实验，再用 <Code>shinka_research run</Code> 开始进化。</>
+        ) : (
+          <>实验已搭好，还没有试验。用 <Code>shinka_research run</Code> 开始进化。</>
+        )}
+      </p>
+    </section>
+  )
+}
+
+// 有试验、没结论：只看这个假设自己的样本内进度，对着此刻的噪声线读。
+function Progress({ pts, bar }: { pts: TrialPoint[]; bar: number | null }) {
+  const scores = pts.flatMap((p) => (p.score === null ? [] : [p.score]))
+  const best = scores.length ? Math.max(...scores) : null
+  let reading = '这个假设的试验都失败了，还没有分数可读。'
+  if (best !== null && bar !== null)
+    reading =
+      best > bar
+        ? '最好分数高于噪声线：有信号，但这只是样本内，还没经过验证段检验。'
+        : '最好分数低于噪声线：目前和碰运气分不开。'
+  return (
+    <section>
+      <h3>进度</h3>
+      <Spec
+        rows={[
+          [<Term k="trials">试验数</Term>, <span className="mono">{pts.length}（失败 {pts.length - scores.length}）</span>],
+          [<>最好<Term k="insample">样本内</Term>分数</>, <span className="mono">{fmt(best)}</span>],
+          [<>此刻<Term k="noise">噪声线</Term></>, <span className="mono">{fmt(bar)}</span>],
+        ]}
+      />
+      <p className="reason">{reading}</p>
+    </section>
+  )
+}
+
+function Trees({ h, treeUrl }: { h: Hypothesis; treeUrl: string }) {
+  const exps = h.experiments.filter((e) => e.tree_db)
+  if (exps.length === 0) return null
+  return (
+    <section>
+      <h3>进化树</h3>
+      <ul className="trees">
+        {exps.map((e) => (
+          <li key={e.id}>
+            <span className="mono">{e.id}</span>
+            <Link href={`${treeUrl}?db_path=${encodeURIComponent(e.tree_db!)}`} target="_blank" rel="noopener noreferrer">
+              看进化树 ↗
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+type Props = { h: Hypothesis; points: TrialPoint[]; treeUrl: string | null }
+
+export function SpecCard({ h, points, treeUrl }: Props) {
   const st = STATUS[h.status]
+  const mine = points.filter((p) => p.hypothesis === h.id)
+  const bar = points.length ? points[points.length - 1].bar : null
   return (
     <Tile className="spec-card">
       <h2 className="spec-title">{h.title}</h2>
@@ -100,17 +168,23 @@ export function SpecCard({ h }: { h: Hypothesis }) {
           ['花费', <span className="mono">{usd(spendOf(h))}</span>],
         ]}
       />
-      {h.body.trim() && <pre className="body">{h.body}</pre>}
+      {h.body.trim() && <Markdown text={h.body} />}
+      {treeUrl && <Trees h={h} treeUrl={treeUrl} />}
       {h.verdict ? (
         <Ledger h={h} />
+      ) : mine.length === 0 ? (
+        <NextStep h={h} />
       ) : (
-        <InlineNotification
-          kind="info"
-          lowContrast
-          hideCloseButton
-          title="还没出结论："
-          subtitle="验证段结果出结论后显示。"
-        />
+        <>
+          <Progress pts={mine} bar={bar} />
+          <InlineNotification
+            kind="info"
+            lowContrast
+            hideCloseButton
+            title="还没出结论："
+            subtitle="验证段结果出结论后显示。"
+          />
+        </>
       )}
       {h.confirmation && <Confirmation data={h.confirmation} />}
     </Tile>
