@@ -30,6 +30,9 @@ directory (use `shinka-run`) or for non-quant tasks (not supported yet).
   variants on the holdout by hand.
 - **Stop for the human twice**: after proposing hypotheses (they choose) and
   after verdicts (they review). Skip a checkpoint only if `program.md` says so.
+- **The lockbox is the human's.** The tail of the data is sealed at the first
+  `scaffold` and is opened once per direction by `confirm --yes`. Never run
+  `confirm` unless the human says to close the direction.
 - **Respect the budget** in `program.md`: hypotheses, generations, and USD
   (pass `--set evo.max_api_costs=<usd>` to each run).
 
@@ -70,7 +73,13 @@ causal expression of the claim. Copy the structure of
 index. Then freeze the evaluator with the settings from `program.md`:
 ```bash
 shinka_research scaffold <dir> <hid> --initial initial.py --data <bars.csv> \
-    --cost-bps <bps> --periods-per-year <n> --oos-fraction 0.3 --n-folds 3
+    --lockbox-fraction 0.2 --cost-bps <bps> --periods-per-year <n> \
+    --oos-fraction 0.3 --n-folds 3
+```
+`--data` and `--lockbox-fraction` are fixed by the direction's first
+experiment; later experiments omit `--data` (other data needs a new
+direction). Then check the seed:
+```bash
 shinka_research probe <dir> <hid> <dir>/experiments/<hid>/e01/task/initial.py
 ```
 `probe` scores a program with the frozen evaluator and prints only public
@@ -104,11 +113,12 @@ Record which components carry the in-sample edge in the hypothesis file.
 
 ### 5. Challenge and decide
 ```bash
-shinka_research skeptic <dir> <hid>      # DSR, OOS sub-periods, baselines, decay
+shinka_research skeptic <dir> <hid>      # DSR, PBO, sub-periods, baselines, decay
 shinka_research verdict <dir> <hid>      # records the rule-based verdict
 ```
 Use the thresholds from `program.md` (`--dsr`, `--min-positive-fraction`,
-`--subperiods`). Only override with `--label ... --reason "..."` when the
+`--subperiods`, `--max-pbo`). These verdicts use the validation segment,
+which every round reuses, so treat `supported` as development-grade evidence. Only override with `--label ... --reason "..."` when the
 rule clearly misreads the evidence (e.g. the edge is entirely from one
 crisis), and say so in the report. "Inconclusive" is a valid result.
 
@@ -124,6 +134,20 @@ New hypotheses should follow from verdicts: deepen supported mechanisms
 experiment increases the trial count, so the bar for "supported" rises — that
 is intended.
 
+### 8. Close the direction: lockbox, then forward test
+When the human decides the direction is done:
+```bash
+shinka_research confirm <dir> --data <bars.csv>          # shows what opens
+shinka_research confirm <dir> --data <bars.csv> --yes    # opens it, once
+```
+All `supported` hypotheses are confirmed together (the program each verdict
+challenged, reloaded from the results database); each becomes `confirmed` or `unconfirmed`
+(`CONFIRMATION.md`). Add the outcome to `REPORT.md`. The lockbox cannot be
+reopened; further work on the same idea needs a new direction with new data.
+The final gate is outside this tool: run `confirmed` strategies on a paper
+trading account with data that did not exist when the research started, and
+only then consider real capital.
+
 ## Notebook layout
 ```
 <dir>/program.md            human: direction, constraints, budget, thresholds
@@ -132,7 +156,9 @@ is intended.
 <dir>/experiments/<hid>/<eid>/task/      frozen evaluate.py, initial.py, shinka.yaml
 <dir>/experiments/<hid>/<eid>/results/   Shinka run (programs.sqlite)
 <dir>/experiments/<hid>/<eid>/skeptic.md and best_program.py
+<dir>/data/dev.csv          development data (the lockbox tail is not in it)
 <dir>/REPORT.md
+<dir>/CONFIRMATION.md       lockbox results (after `confirm`)
 ```
 
 Design rationale: `docs/research/design.md` in the ShinkaEvolve fork.

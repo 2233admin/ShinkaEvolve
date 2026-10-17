@@ -17,6 +17,9 @@
 - Skeptic: OOS Sharpe, sub-period stability, decay, baselines
 - Verdict and reasoning (note any override of the rule)
 
+## Lockbox confirmation
+<After `confirm`: confirmed / unconfirmed per hypothesis, lockbox Sharpe, DSR, vs buy-and-hold; forward-test plan.>
+
 ## What this rules out
 <Mechanisms or variants that are now unlikely, and why.>
 

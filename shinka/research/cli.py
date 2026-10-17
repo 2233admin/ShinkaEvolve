@@ -15,10 +15,17 @@ from typing import List, Optional
 from shinka.research.notebook import Notebook, Status, Verdict, experiment_dir
 from shinka.research.quant import QuantConfig, run_quant_eval
 from shinka.research.rundb import count_evaluated
-from shinka.research.skeptic import Thresholds, challenge, decide, render_report
+from shinka.research.skeptic import (
+    Thresholds,
+    challenge,
+    confirm,
+    decide,
+    render_report,
+)
 from shinka.research.scaffold import (
     SHINKA_CONFIG_FILENAME,
     load_config,
+    prepare_data,
     scaffold_experiment,
     verify_experiment,
 )
@@ -35,7 +42,8 @@ PROGRAM_TEMPLATE = """# Research program
 
 ## Evaluator settings
 - Costs: <bps per unit turnover>
-- Out-of-sample fraction: 0.3, in-sample folds: 3
+- Lockbox fraction: 0.2 (sealed at the first scaffold, opened once by `confirm`)
+- Validation fraction of the development data: 0.3, in-sample folds: 3
 
 ## Budget
 - Max hypotheses per round: <n>
@@ -46,7 +54,8 @@ PROGRAM_TEMPLATE = """# Research program
 - Checkpoints: ask me to choose hypotheses and to review verdicts (yes/no)
 
 ## Verdict thresholds
-- supported: DSR >= 0.95 and >= 2/3 of out-of-sample sub-periods with positive Sharpe
+- supported: DSR >= 0.95, >= 2/3 of validation sub-periods positive, PBO <= 0.5,
+  beats buy-and-hold
 - refuted: out-of-sample Sharpe <= 0
 - otherwise: inconclusive
 
@@ -86,9 +95,16 @@ def cmd_hypothesis_status(args: argparse.Namespace) -> None:
 def cmd_scaffold(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
+    split = prepare_data(
+        root,
+        nb,
+        Path(args.data) if args.data else None,
+        args.timestamp_col,
+        args.lockbox_fraction,
+    )
     cfg = QuantConfig(
-        data_path=args.data,
-        timestamp_col=args.timestamp_col,
+        data_path=split.dev_path,
+        timestamp_col=split.timestamp_col,
         oos_fraction=args.oos_fraction,
         n_folds=args.n_folds,
         cost_bps=args.cost_bps,
@@ -110,7 +126,7 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    verify_experiment(root, hyp.id, exp)
+    verify_experiment(root, nb, hyp.id, exp)
     exp_dir = experiment_dir(root, hyp.id, exp.id)
     results_dir = exp_dir / "results"
     previous_status, previous_verdict = hyp.status, hyp.verdict
@@ -157,7 +173,7 @@ def cmd_probe(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    verify_experiment(root, hyp.id, exp)
+    verify_experiment(root, nb, hyp.id, exp)
     cfg = load_config(experiment_dir(root, hyp.id, exp.id) / "task")
     with (
         tempfile.TemporaryDirectory() as tmp,
@@ -181,11 +197,7 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    th = Thresholds(
-        dsr_supported=args.dsr,
-        min_positive_fraction=args.min_positive_fraction,
-        n_subperiods=args.subperiods,
-    )
+    th = _thresholds(args)
     report = challenge(root, nb, hyp.id, exp, th)
     label, reason = decide(report, th)
     exp.skeptic = {**report, "rule_label": label.value, "rule_reason": reason}
@@ -194,6 +206,56 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
     out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
     print(out.read_text())
+
+
+def _thresholds(args: argparse.Namespace) -> Thresholds:
+    return Thresholds(
+        dsr_supported=args.dsr,
+        min_positive_fraction=args.min_positive_fraction,
+        n_subperiods=args.subperiods,
+        max_pbo=args.max_pbo,
+    )
+
+
+def cmd_confirm(args: argparse.Namespace) -> None:
+    root = Path(args.dir)
+    nb = Notebook.load(root)
+    if nb.data is None:
+        sys.exit("this direction has no data yet")
+    if nb.data.opened:
+        sys.exit("the lockbox was already opened; start a new direction with new data")
+    # The lockbox opens once, so every supported hypothesis is confirmed together.
+    hids = [h.id for h in nb.hypotheses if h.status is Status.supported]
+    if not hids:
+        sys.exit("no supported hypotheses to confirm; the lockbox stays closed")
+    if not args.yes:
+        sys.exit(
+            f"This opens the lockbox (from {nb.data.lockbox_start}) once for the whole "
+            f"direction and scores {', '.join(hids)}. Re-run with --yes to proceed."
+        )
+    th = _thresholds(args)
+    with tempfile.TemporaryDirectory() as tmp:
+        reports = {
+            hid: confirm(root, nb, hid, th, Path(args.data), Path(tmp)) for hid in hids
+        }
+    nb.data.opened = True
+    lines = [f"# Lockbox confirmation\n\nLockbox from {nb.data.lockbox_start}.\n"]
+    for hid, rep in reports.items():
+        hyp = nb.get(hid)
+        hyp.confirmation = rep
+        hyp.status = Status.confirmed if rep["passed"] else Status.unconfirmed
+        rows = "\n".join(
+            f"| {k} | {v:.4g} |" if isinstance(v, float) else f"| {k} | {v} |"
+            for k, v in rep.items()
+        )
+        lines.append(
+            f"## {hid}: {hyp.title} — {hyp.status.value}\n\n"
+            f"| check | value |\n|---|---|\n{rows}\n"
+        )
+    nb.save(root)
+    (root / "CONFIRMATION.md").write_text("\n".join(lines))
+    for hid in hids:
+        print(f"{hid}: {nb.get(hid).status.value}")
 
 
 def cmd_verdict(args: argparse.Namespace) -> None:
@@ -220,12 +282,25 @@ def cmd_status(args: argparse.Namespace) -> None:
     nb = Notebook.load(Path(args.dir))
     print(f"Direction: {nb.direction}")
     print(f"Total trials: {nb.total_trials}")
+    if nb.data:
+        state = "OPENED" if nb.data.opened else "sealed"
+        print(
+            f"Lockbox: {state} (from {nb.data.lockbox_start}, "
+            f"{nb.data.n_total - nb.data.n_dev} of {nb.data.n_total} bars)"
+        )
     for h in nb.hypotheses:
         exps = ", ".join(f"{e.id}({e.n_evaluated})" for e in h.experiments) or "-"
         line = f"{h.id}  {h.status.value:<12} {h.title}  [{exps}]"
         if h.verdict:
             line += f"\n      verdict: {h.verdict.reason}"
         print(line)
+
+
+def _add_threshold_args(s: argparse.ArgumentParser) -> None:
+    s.add_argument("--dsr", type=float, default=0.95)
+    s.add_argument("--min-positive-fraction", type=float, default=2.0 / 3.0)
+    s.add_argument("--subperiods", type=int, default=3)
+    s.add_argument("--max-pbo", type=float, default=0.5)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -257,7 +332,16 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("dir")
     s.add_argument("hid")
     s.add_argument("--initial", required=True, help="Seed program (initial.py)")
-    s.add_argument("--data", required=True, help="CSV with timestamp + close")
+    s.add_argument(
+        "--data",
+        help="CSV with timestamp + close (required for the first experiment)",
+    )
+    s.add_argument(
+        "--lockbox-fraction",
+        type=float,
+        default=0.2,
+        help="Tail reserved for `confirm` (set once per direction)",
+    )
     s.add_argument("--timestamp-col", default="timestamp")
     s.add_argument("--oos-fraction", type=float, default=0.3)
     s.add_argument("--n-folds", type=int, default=3)
@@ -288,10 +372,20 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("dir")
     s.add_argument("hid")
     s.add_argument("--eid")
-    s.add_argument("--dsr", type=float, default=0.95)
-    s.add_argument("--min-positive-fraction", type=float, default=2.0 / 3.0)
-    s.add_argument("--subperiods", type=int, default=3)
+    _add_threshold_args(s)
     s.set_defaults(func=cmd_skeptic)
+
+    s = sub.add_parser(
+        "confirm",
+        help="Open the lockbox once and confirm supported hypotheses",
+    )
+    s.add_argument("dir")
+    s.add_argument(
+        "--data", required=True, help="The source CSV the direction was split from"
+    )
+    s.add_argument("--yes", action="store_true", help="Really open the lockbox")
+    _add_threshold_args(s)
+    s.set_defaults(func=cmd_confirm)
 
     s = sub.add_parser("verdict", help="Record the verdict (rule-based by default)")
     s.add_argument("dir")

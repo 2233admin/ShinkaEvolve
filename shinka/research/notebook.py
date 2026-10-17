@@ -34,6 +34,8 @@ class Status(str, Enum):
     supported = "supported"
     refuted = "refuted"
     inconclusive = "inconclusive"
+    confirmed = "confirmed"
+    unconfirmed = "unconfirmed"
     dropped = "dropped"
 
 
@@ -45,6 +47,22 @@ class Verdict(BaseModel):
     reason: str
     evidence: Dict[str, Any] = Field(default_factory=dict)
     created: str = Field(default_factory=_now)
+
+
+class DataSplit(BaseModel):
+    """Direction-wide data. The lockbox (the tail of the source file) is never
+    copied into experiments; only `confirm` reads it, once per direction.
+
+    The source path is deliberately not stored: candidate programs can read
+    this notebook, so `confirm` takes the file again and checks its hash."""
+
+    source_hash: str
+    timestamp_col: str
+    dev_path: str
+    n_total: int
+    n_dev: int
+    lockbox_start: str
+    opened: bool = False
 
 
 class Experiment(BaseModel):
@@ -65,11 +83,13 @@ class Hypothesis(BaseModel):
     created: str = Field(default_factory=_now)
     experiments: List[Experiment] = Field(default_factory=list)
     verdict: Optional[Verdict] = None
+    confirmation: Optional[Dict[str, Any]] = None
 
 
 class Notebook(BaseModel):
     direction: str
     created: str = Field(default_factory=_now)
+    data: Optional[DataSplit] = None
     hypotheses: List[Hypothesis] = Field(default_factory=list)
 
     # ---- persistence -----------------------------------------------------

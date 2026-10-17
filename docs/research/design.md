@@ -76,8 +76,8 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
 | `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
-| `shinka/research/skeptic.py` | DSR、子区间稳定性、样本内外衰减（P2） |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `status` |
+| `shinka/research/skeptic.py` | DSR、PBO、子区间稳定性、样本内外衰减、基线；lockbox 一次性确认 |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `status` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）
@@ -99,7 +99,7 @@ research/<direction-slug>/
 
 - **输入**：用户自备的 K 线数据（CSV/Parquet，带时间戳的 OHLCV）。不接数据源。
 - **策略接口**（EVOLVE-BLOCK 内实现）：`generate_positions(bars: DataFrame) -> Series`，输出每根 K 线收盘后的目标仓位（-1…1）。框架负责按下一根 K 线收益结算，策略不接触收益计算。
-- **切分**：按时间前 70% 为样本内，后 30% 为样本外留存（可配置）；样本内再切成 k 个连续折。
+- **切分（三段）**：方向的第一个实验 scaffold 时，把数据源的最后 20% 切成 lockbox（可配置），只把前 80% 写成 `data/dev.csv` 交给评估器；lockbox 段在物理上不进入任何实验。开发数据再按时间切成样本内（前 70%，再分 k 个连续折）和验证段（后 30%）。默认整体约为 56% / 24% / 20%。同一方向只能用同一份数据，换数据就开新方向。
 - **成本**：按换手 × 每边成本（bps）扣除，默认值写在 `program.md` 里并计入评估器哈希。
 - **public**（驱动进化）：样本内各折 Sharpe 的均值作为 `combined_score`，并报告各折 Sharpe 的标准差、最大回撤、换手、年化收益。
 - **private**（只给质疑者）：样本外 Sharpe、收益、回撤；逐 K 线收益序列存入 `extra_data` 供 DSR 使用。
@@ -107,7 +107,7 @@ research/<direction-slug>/
 
 - **执行隔离**：评估进程从不导入候选代码。每个数据视图（完整 + 各截断点）都在独立的新解释器（`python -I -m shinka.research.child`）里运行，只把浮点数组以 `.npy`（禁用 pickle）传回。这样候选代码无法篡改评分函数，也无法在不同视图之间缓存"未来"结果来骗过前视检测。
 
-已知局限（第一版接受）：候选代码仍可读写磁盘（可借此跨进程传递信息）；不做撮合级仿真（滑点仅用 bps 近似）；单品种。
+已知局限（第一版接受）：候选代码仍可读写磁盘（可借此跨进程传递信息，或自己在磁盘上找到原始数据文件；真正封死需要文件系统沙箱）；不做撮合级仿真（滑点仅用 bps 近似）；单品种。
 
 ## 7. 质疑者（第一版）
 
@@ -121,10 +121,17 @@ research/<direction-slug>/
   - 其余（包括未能胜过买入持有、DSR 不够）：`inconclusive`——没证明有效不等于证明无效。
   阈值只是默认值，agent 可在报告里给出不同解读，但笔记本里记录的是规则判定结果。
 
-## 7.1 待决：留存集被多轮复用
+## 7.1 留存集复用：验证段 + lockbox + PBO + 前向测试
 
-每一轮的结论（来自样本外）会进入笔记本，下一轮选题会读到它，所以从第二轮起样本外不再是严格意义上的留存集。DSR 按方向累计试验数做了部分校正，但校正不了"根据结论调整方向"这种自适应复用。
-拟定方案（成熟做法：train / validation / lockbox）：在样本外之后再切出一段 lockbox，逐假设的质疑者只用中间的验证段；lockbox 只在方向收尾时用一次（`confirm`），对最终入选的结论做确认。lockbox 的数字在此之前不出现在任何文件或输出里。
+问题：每一轮的结论（来自验证段）会进入笔记本，下一轮选题会读到它，所以验证段会被自适应复用。DSR 按方向累计试验数做了部分校正，但校正不了"根据结论调整方向"。
+
+做法（参照 train / validation / lockbox 的成熟实践，以及量化研究里"最终段只开一次、看过再修就降级为开发数据"的规则）：
+
+- **验证段**：逐假设的质疑者和结论只用它，可多轮复用，结论算"开发级证据"（`supported`）。
+- **Lockbox**：`shinka_research confirm --data <源文件>` 在方向收尾时整个方向只开一次（需要 `--yes`，由人决定），一次性确认全部 `supported` 的假设：用的是结论里记录的那个实验、从结果库重新取出的那个程序，并校验评估器、开发数据和源文件哈希。笔记本里不存源文件路径（候选代码能读到笔记本），只存哈希。，结果为 `confirmed` / `unconfirmed`，写入 `CONFIRMATION.md`。确认同样要求：Sharpe > 0 且高于买入持有、DSR（试验数 = 全方向）、子区间稳定；并在 lockbox 内再做一次前视检测。开过之后不能再开，继续研究要用新数据开新方向。
+- **PBO**（Bailey, Borwein, López de Prado & Zhu, 2014 的 CSCV）：质疑者取该实验得分最高的至多 64 个不同程序，在开发数据上算逐 K 线收益矩阵，切成 16 块，枚举所有"一半样本内、一半样本外"的组合，统计"样本内第一名在样本外落到中位数及以下"的比例。PBO > 0.5（可调）时不判 `supported`。
+- **前向测试**（工具之外的最终关卡）：`confirmed` 的策略到模拟盘上用研究开始后才产生的新数据跑一段时间。
+- **不采用** Thresholdout / Ladder 这类可复用留存集：查询预算约随留存样本数平方增长，几百到几千根 K 线太少，且其独立样本假设不适用于有自相关的行情数据。
 
 ## 8. 分阶段路线（渐进式，每一步都端到端可用）
 

@@ -56,6 +56,9 @@ def test_decide_rules() -> None:
     # Strong statistics but no better than passive exposure: not supported.
     below_hold = {**base, "oos_sharpe": 0.15}
     assert decide(below_hold, th)[0] is Status.inconclusive
+    # Likely an artefact of picking the best of many trials.
+    overfit = {**base, "oos_sharpe": 1.0, "pbo": 0.8}
+    assert decide(overfit, th)[0] is Status.inconclusive
 
 
 def _fake_results(results_dir: Path, programs: list) -> None:

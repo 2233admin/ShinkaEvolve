@@ -25,12 +25,12 @@ _NOT_COPY = (
 )
 
 
-def _query(results_dir: Path, sql: str) -> list:
+def _query(results_dir: Path, sql: str, params: tuple = ()) -> list:
     db = Path(results_dir) / DB_FILENAME
     if not db.exists():
         raise FileNotFoundError(db)
     with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
-        return conn.execute(sql).fetchall()
+        return conn.execute(sql, params).fetchall()
 
 
 def best_program(results_dir: Path) -> Tuple[str, str, float]:
@@ -54,3 +54,27 @@ def correct_scores(results_dir: Path) -> List[float]:
         f"SELECT combined_score FROM programs WHERE correct = 1 AND {_NOT_COPY}",
     )
     return [float(s) for (s,) in rows if s is not None]
+
+
+def top_correct_programs(results_dir: Path, limit: int) -> List[Tuple[str, str]]:
+    """(id, code) of the best correct programs, distinct code, by score."""
+    rows = _query(
+        results_dir,
+        "SELECT id, code FROM programs "
+        f"WHERE correct = 1 AND {_NOT_COPY} ORDER BY combined_score DESC",
+    )
+    seen, out = set(), []
+    for pid, code in rows:
+        if code not in seen:
+            seen.add(code)
+            out.append((str(pid), str(code)))
+        if len(out) == limit:
+            break
+    return out
+
+
+def program_code(results_dir: Path, program_id: str) -> str:
+    rows = _query(results_dir, "SELECT code FROM programs WHERE id = ?", (program_id,))
+    if not rows:
+        raise LookupError(f"program {program_id} not in {results_dir}")
+    return str(rows[0][0])
