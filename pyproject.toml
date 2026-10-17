@@ -57,6 +57,7 @@ wandb = ["wandb>=0.19"]
 shinka_launch = "shinka.cli.launch:main"
 shinka_models = "shinka.cli.models:main"
 shinka_run = "shinka.cli.run:main"
+shinka_research = "shinka.research.cli:main"
 shinka_visualize = "shinka.webui.visualization:main"
 
 [tool.setuptools]

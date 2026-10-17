@@ -73,10 +73,11 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | 模块 | 职责 |
 |---|---|
 | `shinka/research/notebook.py` | 研究笔记本的数据模型与文件存储（方向 → 假设 → 实验 → 结论） |
-| `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；记录评估器与数据的哈希；校验未被篡改 |
-| `shinka/research/quant/` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
-| `shinka/research/skeptic.py` | DSR、子区间稳定性、样本内外衰减；读 Shinka 结果库统计试验次数 |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `skeptic` / `verdict` / `status` |
+| `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
+| `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
+| `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
+| `shinka/research/skeptic.py` | DSR、子区间稳定性、样本内外衰减（P2） |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `status`，P2 增加 `skeptic` / `verdict` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）
@@ -102,7 +103,7 @@ research/<direction-slug>/
 - **成本**：按换手 × 每边成本（bps）扣除，默认值写在 `program.md` 里并计入评估器哈希。
 - **public**（驱动进化）：样本内各折 Sharpe 的均值作为 `combined_score`，并报告各折 Sharpe 的标准差、最大回撤、换手、年化收益。
 - **private**（只给质疑者）：样本外 Sharpe、收益、回撤；逐 K 线收益序列存入 `extra_data` 供 DSR 使用。
-- **前视检测**：随机取若干截断点 t，比较"用全部数据算出的仓位"与"只用 t 之前数据算出的仓位"在 t 处是否一致；不一致即判为错误程序（`correct=False`）。
+- **前视检测**：随机取若干截断点 t，比较"用全部数据算出的仓位"与"只用 t 之前数据算出的仓位"在 t 处是否一致；不一致即判为错误程序（`correct=False`）。实现上直接复用 `run_shinka_eval` 的多次运行：第 0 次传完整数据，第 1…k 次传截断数据，在聚合函数里比对。
 
 已知局限（第一版接受）：进化出的代码理论上仍可自行读磁盘文件；不做撮合级仿真（滑点仅用 bps 近似）；单品种。
 
