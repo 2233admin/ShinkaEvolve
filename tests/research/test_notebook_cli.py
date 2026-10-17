@@ -136,3 +136,19 @@ def test_probe_shows_public_metrics_only(
     assert shown["correct"] is True
     assert "is_sharpe_mean" in shown["public"]
     assert "oos" not in out.lower()
+    assert Notebook.load(root).total_trials == 1  # probes count as trials
+
+
+def test_status_guard_and_headless_guard(tmp_path: Path, example_dir: Path) -> None:
+    root = _init(tmp_path, example_dir)
+    nb = Notebook.load(root)
+    nb.add_experiment("h001", "a", "/d.csv", "b")
+    nb.get("h001").status = Status.running
+    nb.save(root)
+    with pytest.raises(ValueError, match="running"):
+        cli.main(["hypothesis", "status", str(root), "h001", "dropped"])
+    with pytest.raises(SystemExit, match="headless"):
+        cli.main(
+            ["run", str(root), "h001", "--",
+             "--set", 'evo.llm_models=["headless/claude"]']
+        )  # fmt: skip

@@ -79,8 +79,16 @@ def positive_fraction(returns: pd.Series, n: int, periods_per_year: float) -> fl
 
 
 def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
+    """Rule-based verdict. Failing to show an edge is inconclusive, not a
+    refutation; only a non-positive OOS Sharpe refutes."""
     if report["oos_sharpe"] <= 0.0:
         return Status.refuted, f"OOS Sharpe {report['oos_sharpe']:.2f} <= 0"
+    hold = report["baseline_buy_hold_oos_sharpe"]
+    if report["oos_sharpe"] <= hold:
+        return Status.inconclusive, (
+            f"OOS Sharpe {report['oos_sharpe']:.2f} does not beat buy-and-hold "
+            f"({hold:.2f})"
+        )
     if (
         report["dsr"] >= th.dsr_supported
         and report["oos_positive_fraction"] >= th.min_positive_fraction
@@ -88,7 +96,7 @@ def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
         return Status.supported, (
             f"DSR {report['dsr']:.3f} >= {th.dsr_supported} over "
             f"{report['n_trials']} trials; {report['oos_positive_fraction']:.0%} "
-            "of OOS sub-periods positive"
+            f"of OOS sub-periods positive; beats buy-and-hold ({hold:.2f})"
         )
     return Status.inconclusive, (
         f"OOS Sharpe {report['oos_sharpe']:.2f} > 0 but DSR {report['dsr']:.3f} "
@@ -101,7 +109,9 @@ def decide(report: Dict[str, Any], th: Thresholds) -> tuple[Status, str]:
 def _oos_returns(
     program: Path, bars: pd.DataFrame, cfg: QuantConfig
 ) -> tuple[pd.Series, pd.Series]:
-    rets = strategy_returns(positions_for(program, bars), bars["close"], cfg.cost_bps)
+    rets = strategy_returns(
+        positions_for(program, cfg, bars), bars["close"], cfg.cost_bps
+    )
     cut = split_index(len(bars), cfg.oos_fraction)
     return rets.iloc[:cut], rets.iloc[cut:]
 
@@ -126,14 +136,17 @@ def challenge(
     hold_oos = hold.iloc[split_index(len(bars), cfg.oos_fraction) :]
 
     scores: List[float] = []
+    n_trials = 0
     for h in nb.hypotheses:
         for e in h.experiments:
+            n_trials += e.n_probed
             rd = experiment_dir(root, h.id, e.id) / "results"
             if (rd / rundb.DB_FILENAME).exists():
                 scores.extend(rundb.correct_scores(rd))
+                n_trials += rundb.count_evaluated(rd)
+    n_trials = max(n_trials, 1)
     per_period = np.asarray(scores) / math.sqrt(ppy)
     var_trials = float(per_period.var(ddof=1)) if len(per_period) > 1 else 0.0
-    n_trials = max(nb.total_trials, 1)
 
     oos_sharpe = sharpe(oos, ppy)
     is_sharpe = sharpe(is_rets, ppy)
