@@ -224,19 +224,20 @@ def cmd_confirm(args: argparse.Namespace) -> None:
         sys.exit("this direction has no data yet")
     if nb.data.opened:
         sys.exit("the lockbox was already opened; start a new direction with new data")
-    hids = args.hid or [h.id for h in nb.hypotheses if h.status is Status.supported]
+    # The lockbox opens once, so every supported hypothesis is confirmed together.
+    hids = [h.id for h in nb.hypotheses if h.status is Status.supported]
     if not hids:
         sys.exit("no supported hypotheses to confirm; the lockbox stays closed")
-    for hid in hids:
-        if nb.get(hid).status is not Status.supported:
-            sys.exit(f"{hid} is {nb.get(hid).status.value}, not supported")
     if not args.yes:
         sys.exit(
             f"This opens the lockbox (from {nb.data.lockbox_start}) once for the whole "
             f"direction and scores {', '.join(hids)}. Re-run with --yes to proceed."
         )
     th = _thresholds(args)
-    reports = {hid: confirm(root, nb, hid, th) for hid in hids}
+    with tempfile.TemporaryDirectory() as tmp:
+        reports = {
+            hid: confirm(root, nb, hid, th, Path(args.data), Path(tmp)) for hid in hids
+        }
     nb.data.opened = True
     lines = [f"# Lockbox confirmation\n\nLockbox from {nb.data.lockbox_start}.\n"]
     for hid, rep in reports.items():
@@ -379,7 +380,9 @@ def build_parser() -> argparse.ArgumentParser:
         help="Open the lockbox once and confirm supported hypotheses",
     )
     s.add_argument("dir")
-    s.add_argument("hid", nargs="*", help="Default: all supported hypotheses")
+    s.add_argument(
+        "--data", required=True, help="The source CSV the direction was split from"
+    )
     s.add_argument("--yes", action="store_true", help="Really open the lockbox")
     _add_threshold_args(s)
     s.set_defaults(func=cmd_confirm)

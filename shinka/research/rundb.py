@@ -25,12 +25,12 @@ _NOT_COPY = (
 )
 
 
-def _query(results_dir: Path, sql: str) -> list:
+def _query(results_dir: Path, sql: str, params: tuple = ()) -> list:
     db = Path(results_dir) / DB_FILENAME
     if not db.exists():
         raise FileNotFoundError(db)
     with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
-        return conn.execute(sql).fetchall()
+        return conn.execute(sql, params).fetchall()
 
 
 def best_program(results_dir: Path) -> Tuple[str, str, float]:
@@ -71,3 +71,10 @@ def top_correct_programs(results_dir: Path, limit: int) -> List[Tuple[str, str]]
         if len(out) == limit:
             break
     return out
+
+
+def program_code(results_dir: Path, program_id: str) -> str:
+    rows = _query(results_dir, "SELECT code FROM programs WHERE id = ?", (program_id,))
+    if not rows:
+        raise LookupError(f"program {program_id} not in {results_dir}")
+    return str(rows[0][0])

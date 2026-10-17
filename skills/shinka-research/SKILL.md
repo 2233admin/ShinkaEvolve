@@ -137,10 +137,11 @@ is intended.
 ### 8. Close the direction: lockbox, then forward test
 When the human decides the direction is done:
 ```bash
-shinka_research confirm <dir>            # shows what will be opened
-shinka_research confirm <dir> --yes      # opens the lockbox, once
+shinka_research confirm <dir> --data <bars.csv>          # shows what opens
+shinka_research confirm <dir> --data <bars.csv> --yes    # opens it, once
 ```
-Every `supported` hypothesis becomes `confirmed` or `unconfirmed`
+All `supported` hypotheses are confirmed together (the program each verdict
+challenged, reloaded from the results database); each becomes `confirmed` or `unconfirmed`
 (`CONFIRMATION.md`). Add the outcome to `REPORT.md`. The lockbox cannot be
 reopened; further work on the same idea needs a new direction with new data.
 The final gate is outside this tool: run `confirmed` strategies on a paper

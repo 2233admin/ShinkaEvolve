@@ -51,9 +51,11 @@ class Verdict(BaseModel):
 
 class DataSplit(BaseModel):
     """Direction-wide data. The lockbox (the tail of the source file) is never
-    copied into experiments; only `confirm` reads it, once per direction."""
+    copied into experiments; only `confirm` reads it, once per direction.
 
-    source_path: str
+    The source path is deliberately not stored: candidate programs can read
+    this notebook, so `confirm` takes the file again and checks its hash."""
+
     source_hash: str
     timestamp_col: str
     dev_path: str

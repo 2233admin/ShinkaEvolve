@@ -258,26 +258,34 @@ def render_report(hid: str, eid: str, report: Dict[str, Any], label: Status) -> 
     )
 
 
-def confirm(root: Path, nb: Notebook, hid: str, th: Thresholds) -> Dict[str, Any]:
-    """Score one supported hypothesis's best program on the lockbox.
+def confirm(
+    root: Path, nb: Notebook, hid: str, th: Thresholds, source: Path, tmp: Path
+) -> Dict[str, Any]:
+    """Score one supported hypothesis's verdict program on the lockbox.
 
-    The caller opens the lockbox once for the whole direction; this reads the
-    full source file, checks causality inside the lockbox too, and returns the
-    evidence (it does not modify the notebook)."""
+    Uses exactly the experiment named in the verdict and reloads the program
+    it challenged from the results database; checks the evaluator, the dev
+    data and the source file; re-checks causality inside the lockbox. Returns
+    the evidence and does not modify the notebook."""
     split = nb.data
     if split is None:
         raise ValueError("direction has no data yet")
     hyp = nb.get(hid)
-    exp = next((e for e in reversed(hyp.experiments) if e.skeptic is not None), None)
-    if exp is None:
-        raise ValueError(f"{hid} has no challenged experiment")
+    if hyp.verdict is None or hyp.status is not Status.supported:
+        raise ValueError(f"{hid} is not supported")
+    eid = hyp.verdict.evidence["experiment"]
+    exp = next(e for e in hyp.experiments if e.id == eid)
+    verify_experiment(root, nb, hid, exp)
+    if file_sha256(Path(source)) != split.source_hash:
+        raise ValueError(f"{source} is not the data this direction was split from")
     exp_dir = experiment_dir(root, hid, exp.id)
-    best = exp_dir / "best_program.py"
-    dev_cfg = load_config(exp_dir / "task")
-    cfg = dev_cfg.model_copy(update={"data_path": split.source_path})
-    if file_sha256(Path(split.source_path)) != split.source_hash:
-        raise RuntimeError(f"{split.source_path} changed since it was split")
-    bars = load_bars(Path(split.source_path), split.timestamp_col)
+    pid = hyp.verdict.evidence["program_id"]
+    best = Path(tmp) / f"{hid}_{pid}.py"
+    best.write_text(rundb.program_code(exp_dir / "results", pid))
+    cfg = load_config(exp_dir / "task").model_copy(
+        update={"data_path": str(Path(source).resolve())}
+    )
+    bars = load_bars(Path(source), split.timestamp_col)
     ppy = cfg.periods_per_year
 
     full = positions_for(best, cfg, bars).to_numpy()
@@ -297,6 +305,7 @@ def confirm(root: Path, nb: Notebook, hid: str, th: Thresholds) -> Dict[str, Any
     n_trials, var_trials = direction_trials(root, nb, ppy)
     report = {
         "experiment": exp.id,
+        "program_id": pid,
         "lockbox_start": split.lockbox_start,
         "lockbox_bars": len(lock),
         "lockbox_sharpe": sharpe(lock, ppy),

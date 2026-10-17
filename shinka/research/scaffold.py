@@ -70,11 +70,8 @@ def prepare_data(
     if nb.data is not None:
         if source is not None and file_sha256(Path(source)) != nb.data.source_hash:
             raise ValueError(
-                "this direction already uses "
-                f"{nb.data.source_path}; start a new direction for other data"
+                "this direction already uses other data; start a new direction"
             )
-        if file_sha256(Path(nb.data.source_path)) != nb.data.source_hash:
-            raise RuntimeError(f"{nb.data.source_path} changed since it was split")
         return nb.data
     if source is None:
         raise ValueError("--data is required for the direction's first experiment")
@@ -87,7 +84,6 @@ def prepare_data(
     dev_path.parent.mkdir(parents=True, exist_ok=True)
     bars.iloc[:cut].to_csv(dev_path)
     nb.data = DataSplit(
-        source_path=str(source),
         source_hash=file_sha256(source),
         timestamp_col=timestamp_col,
         dev_path=str(dev_path),
@@ -147,9 +143,7 @@ def load_config(task_dir: Path) -> QuantConfig:
 
 
 def verify_experiment(root: Path, nb: Notebook, hid: str, exp: Experiment) -> None:
-    """Raise if the evaluator, the dev data or the source file changed."""
-    if nb.data and file_sha256(Path(nb.data.source_path)) != nb.data.source_hash:
-        raise RuntimeError(f"{nb.data.source_path}: data changed since it was split")
+    """Raise if the evaluator or the development data changed."""
     evaluate = experiment_dir(root, hid, exp.id) / "task" / "evaluate.py"
     if file_sha256(evaluate) != exp.evaluator_hash:
         raise RuntimeError(f"{evaluate}: evaluator was modified")

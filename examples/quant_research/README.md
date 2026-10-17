@@ -33,7 +33,7 @@ The first `scaffold` seals the last 20% of the data as a lockbox (only
 once to confirm the supported hypotheses:
 
 ```bash
-shinka_research confirm runs/momentum --yes
+shinka_research confirm runs/momentum --data bars.csv --yes
 ```
 
 To let a coding agent drive the whole loop (literature search, hypothesis

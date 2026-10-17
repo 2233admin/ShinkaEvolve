@@ -68,8 +68,9 @@ def test_verify_detects_data_change(
             "--data", str(bars_csv),
         ]
     )  # fmt: skip
-    exp = Notebook.load(root).get("h001").experiments[0]
-    with bars_csv.open("a") as f:
+    nb = Notebook.load(root)
+    exp = nb.get("h001").experiments[0]
+    with open(nb.data.dev_path, "a") as f:
         f.write("2099-01-01,1.0\n")
     with pytest.raises(RuntimeError, match="data changed"):
         verify_experiment(root, Notebook.load(root), "h001", exp)

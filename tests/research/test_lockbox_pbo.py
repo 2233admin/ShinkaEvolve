@@ -1,11 +1,13 @@
 from pathlib import Path
 
+import sqlite3
+
 import numpy as np
 import pandas as pd
 import pytest
 
 from shinka.research import cli
-from shinka.research.notebook import Notebook, Status
+from shinka.research.notebook import Notebook, Status, Verdict
 from shinka.research.skeptic import pbo
 
 
@@ -66,25 +68,39 @@ def run_experiment(bars):
 
 
 def _mark_supported(root: Path, code: str) -> None:
+    results = root / "experiments/h001/e01/results"
+    results.mkdir(parents=True)
+    with sqlite3.connect(results / "programs.sqlite") as conn:
+        conn.execute(
+            "CREATE TABLE programs (id TEXT, code TEXT, combined_score REAL, "
+            "correct INTEGER, metadata TEXT)"
+        )
+        conn.execute("INSERT INTO programs VALUES ('p1', ?, 1.0, 1, '{}')", (code,))
     nb = Notebook.load(root)
-    hyp = nb.get("h001")
-    exp = hyp.experiments[0]
-    exp.skeptic = {"rule_label": "supported", "rule_reason": "test"}
-    hyp.status = Status.supported
+    exp = nb.get("h001").experiments[0]
+    exp.skeptic = {"rule_label": "supported", "rule_reason": "t", "program_id": "p1"}
+    nb.get("h001").status = Status.challenged
+    nb.set_verdict(
+        "h001",
+        Verdict(
+            label=Status.supported,
+            reason="t",
+            evidence={"experiment": "e01", **exp.skeptic},
+        ),
+    )
     nb.save(root)
-    (root / "experiments/h001/e01/best_program.py").write_text(code)
 
 
 def test_confirm_opens_lockbox_once(tmp_path: Path, example_dir: Path, bars_csv: Path):
     root = _direction(tmp_path, example_dir, bars_csv)
     with pytest.raises(SystemExit, match="no supported"):
-        cli.main(["confirm", str(root)])
+        cli.main(["confirm", str(root), "--data", str(bars_csv)])
     _mark_supported(root, (example_dir / "initial.py").read_text())
     with pytest.raises(SystemExit, match="--yes"):
-        cli.main(["confirm", str(root)])
+        cli.main(["confirm", str(root), "--data", str(bars_csv)])
     assert not Notebook.load(root).data.opened
 
-    cli.main(["confirm", str(root), "--yes"])
+    cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
     nb = Notebook.load(root)
     hyp = nb.get("h001")
     assert nb.data.opened
@@ -92,7 +108,7 @@ def test_confirm_opens_lockbox_once(tmp_path: Path, example_dir: Path, bars_csv:
     assert hyp.confirmation["lockbox_bars"] == 200
     assert (root / "CONFIRMATION.md").exists()
     with pytest.raises(SystemExit, match="already opened"):
-        cli.main(["confirm", str(root), "--yes"])
+        cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
 
 
 def test_confirm_detects_lookahead_in_lockbox(
@@ -101,5 +117,22 @@ def test_confirm_detects_lookahead_in_lockbox(
     root = _direction(tmp_path, example_dir, bars_csv)
     _mark_supported(root, LOCKBOX_PEEK)
     with pytest.raises(ValueError, match="look-ahead"):
-        cli.main(["confirm", str(root), "--yes"])
+        cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
     assert not Notebook.load(root).data.opened
+
+
+def test_confirm_checks_source_and_evaluator(
+    tmp_path: Path, example_dir: Path, bars_csv: Path
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    other = tmp_path / "other.csv"
+    other.write_text(bars_csv.read_text() + "2099-01-01,1.0\n")
+    with pytest.raises(ValueError, match="not the data"):
+        cli.main(["confirm", str(root), "--data", str(other), "--yes"])
+    (root / "experiments/h001/e01/task/evaluate.py").write_text("# tampered\n")
+    with pytest.raises(RuntimeError, match="modified"):
+        cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
+    nb = Notebook.load(root)
+    assert not nb.data.opened
+    assert "source_path" not in Notebook.path(root).read_text()
