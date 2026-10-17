@@ -115,7 +115,10 @@ def test_stalled_local_openai_query_respects_configured_retry_bounds():
         check=True,
         capture_output=True,
         text=True,
-        timeout=5,
+        # Only a hang guard: the bound under test is `elapsed` (measured inside the
+        # child, after imports). Cold imports of the LLM SDKs alone can take
+        # several seconds on CI runners, which made a 5s guard flaky.
+        timeout=60,
     )
     payload = json.loads(result.stdout.splitlines()[-1])
 
