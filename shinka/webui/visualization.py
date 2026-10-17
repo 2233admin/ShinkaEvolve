@@ -1719,7 +1719,7 @@ def _hide_private_metrics(obj):
             k: ({} if k == "private_metrics" else _hide_private_metrics(v))
             for k, v in obj.items()
         }
-        if "private_metrics" in obj:
+        if obj.get("private_metrics"):
             out["private_metrics_hidden"] = True  # lets the UI say "hidden"
         return out
     if isinstance(obj, list):

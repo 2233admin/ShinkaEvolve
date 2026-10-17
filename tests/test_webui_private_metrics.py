@@ -17,4 +17,6 @@ def test_private_metrics_are_blanked_recursively() -> None:
     assert out["programs"][0]["public_metrics"] == {"x": 1}
     assert out["programs"][1]["private_metrics_hidden"] is True
     assert "private_metrics_hidden" not in _hide_private_metrics({"id": "c"})
+    empty = _hide_private_metrics({"id": "d", "private_metrics": {}})
+    assert "private_metrics_hidden" not in empty  # absent, not redacted
     assert data["programs"][0]["private_metrics"] == {"oos": 2}  # input untouched

@@ -12783,10 +12783,14 @@ console.error("[DEBUG] Error in processData:", error);
                         };
                     });
 
-                    // Best program within each generation
+                    // Best so far: combined_score is maximized; other metrics
+                    // (rmse, runtime, ...) may not be, so they start in min mode.
+                    const startMax = metricPath === 'combined_score';
+
+                    // Best program within each generation (follows the mode)
                     const trendTrace = {
                         x: genStats.map(d => d.x),
-                        y: genStats.map(d => d.max),
+                        y: genStats.map(d => startMax ? d.max : d.min),
                         mode: 'lines+markers',
                         type: 'scatter',
                         name: 'Generation best',
@@ -12795,9 +12799,6 @@ console.error("[DEBUG] Error in processData:", error);
                         hoverinfo: 'skip'
                     };
 
-                    // Best so far: combined_score is maximized; other metrics
-                    // (rmse, runtime, ...) may not be, so they keep the min view.
-                    const startMax = metricPath === 'combined_score';
                     const cumulativeTrace = {
                         x: cumulativeStats.map(d => d.x),
                         y: cumulativeStats.map(d => startMax ? d.cumulativeMax : d.cumulativeMin),
@@ -12867,7 +12868,11 @@ console.error("[DEBUG] Error in processData:", error);
                         };
 
                         // Update the plot
-                        const newTraces = [scatterTrace, trendTrace, newCumulativeTrace];
+                        const newTrendTrace = {
+                            ...trendTrace,
+                            y: genStats.map(d => newMode === 'max' ? d.max : d.min),
+                        };
+                        const newTraces = [scatterTrace, newTrendTrace, newCumulativeTrace];
                         Plotly.react(plotContainer.id, newTraces, layout);
                         
                         // Update button text and mode
