@@ -1,0 +1,40 @@
+name: Research CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "shinka/research/**"
+      - "tests/research/**"
+      - "examples/quant_research/**"
+      - "skills/shinka-research/**"
+      - "pyproject.toml"
+      - ".github/workflows/research-ci.yml"
+  pull_request:
+    paths:
+      - "shinka/research/**"
+      - "tests/research/**"
+      - "examples/quant_research/**"
+      - "skills/shinka-research/**"
+      - "pyproject.toml"
+      - ".github/workflows/research-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          python-version: "3.11"
+      - run: uv sync --dev
+      - name: Ruff
+        run: |
+          uv run ruff check shinka/research tests/research
+          uv run ruff format --check shinka/research tests/research
+      - name: Pytest
+        run: uv run pytest -q tests/research
