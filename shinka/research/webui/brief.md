@@ -1,3 +1,6 @@
-# Brief
+# Brief: Shinka Research console, dark default
 
-Product: Shinka Research read-only research UI (workspace / direction / library pages); the viewer must understand a research direction's state at a glance: hypotheses with status and evidence, trials N vs multiple-testing bar, budget, lockbox sealed/opened. Audience: owner on a desktop browser, and shared with other people (needs explanatory text and onboarding for newcomers); phone must be readable. Style: independent from upstream Shinka WebUI, but not jarring when linking into it. Assets: none beyond our own; no logos needed. Not a film: no duration. Delegation: agent produces direction previews and implementation; owner wants to see every step including the DESIGN.md draft, selects the direction and gives final acceptance.
+Read-only research console (workspace, direction, experiment, library). Owner decisions on 2026-10-17:
+the notebook design system is accepted; the console defaults to a dark theme with a switch to the
+light one; it absorbs Neo-Industrial structure (spec-card metadata, one graphic construct) per the
+owner's Neo-Industrial DESIGN.md (Brass Hands research), keeping the notebook's content organisation.
