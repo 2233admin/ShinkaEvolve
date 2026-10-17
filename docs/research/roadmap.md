@@ -9,18 +9,18 @@
 - [x] research 专用 CI（只跑 research 相关的 lint 和测试，带超时）
 
 ## P1 · 最小闭环：一个假设手动走通
-- [ ] `shinka/research/notebook.py`：方向 / 假设 / 实验 / 结论的数据模型与文件存储
-- [ ] `shinka/research/quant/`：数据加载、样本内多折 + 样本外留存、成本模型、绩效指标、前视检测、`run_shinka_eval` 适配
-- [ ] `shinka/research/scaffold.py`：假设 → Shinka 任务目录，评估器与数据哈希记录与校验
-- [ ] `examples/quant_research/`：可直接运行的示例方向（合成数据），`shinka_run` 能跑
-- [ ] `shinka_research` CLI：`init` / `hypothesis` / `scaffold` / `run` / `status`
+- [x] `shinka/research/notebook.py`：方向 / 假设 / 实验 / 结论的数据模型与文件存储
+- [x] `shinka/research/quant.py`：数据加载、样本内多折 + 样本外留存、成本模型、绩效指标、前视检测、`run_shinka_eval` 适配
+- [x] `shinka/research/scaffold.py`：假设 → Shinka 任务目录，评估器与数据哈希记录与校验
+- [x] `examples/quant_research/`：可直接运行的示例方向（合成数据），`shinka_run` 能跑
+- [x] `shinka_research` CLI：`init` / `hypothesis` / `scaffold` / `run` / `status`
 
 完成标准：在示例方向上 `init → hypothesis → scaffold → run` 能跑通，笔记本正确记录。
 
 ## P2 · 质疑者与结论
-- [ ] `shinka/research/skeptic.py`：DSR、子区间稳定性、样本内外衰减、累计试验数
-- [ ] CLI：`skeptic` / `verdict`，结论写回笔记本
-- [ ] 评估器篡改检测接入 `run` / `skeptic`
+- [x] `shinka/research/skeptic.py`：DSR、子区间稳定性、样本内外衰减、累计试验数
+- [x] CLI：`skeptic` / `verdict`，结论写回笔记本
+- [x] 评估器篡改检测接入 `run` / `skeptic`
 
 完成标准：对一次进化结果给出带证据的结论并入册。
 

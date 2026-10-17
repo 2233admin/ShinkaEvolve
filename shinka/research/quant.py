@@ -220,3 +220,14 @@ def run_quant_eval(
         get_experiment_kwargs=get_kwargs,
         aggregate_metrics_fn=aggregate,
     )
+
+
+def positions_for(program_path: Path, bars: pd.DataFrame) -> pd.Series:
+    """Load a program and compute its validated full-history positions."""
+    from shinka.core.wrap_eval import load_program
+
+    positions = load_program(str(program_path)).run_experiment(bars.copy())
+    err = validate_positions(positions, bars)
+    if err:
+        raise ValueError(err)
+    return positions

@@ -109,7 +109,8 @@ research/<direction-slug>/
 
 ## 7. 质疑者（第一版）
 
-- **DSR**：以样本外逐 K 线收益计算 Sharpe，试验次数 N = 该方向累计评估过的变体数，按 Bailey & López de Prado（2014）计算 Deflated Sharpe Ratio。
+- **DSR**：以样本外逐 K 线收益计算 Sharpe，试验次数 N = 该方向累计评估过的变体数，按 Bailey & López de Prado（2014）计算 Deflated Sharpe Ratio。试验间 Sharpe 的方差用该方向所有正确程序的样本内得分估计（近似：没有为每个试验单独算样本外 Sharpe）。
+- **基线**：同一留存期上的买入持有、种子程序（`initial.py`）的样本外 Sharpe，写进证据供解读。
 - **子区间稳定性**：样本外切成若干段，统计 Sharpe 为正的段数占比。
 - **样本内外衰减**：样本外 Sharpe / 样本内 Sharpe。
 - **结论规则**（默认阈值写在 `program.md`，可调）：
