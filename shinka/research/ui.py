@@ -69,7 +69,9 @@ def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, str]]:
     rows = []
     for line in path.read_text().splitlines()[1:][-limit:]:
         time, hid, eid, event, note = (line.split("\t", 4) + [""] * 5)[:5]
-        if event == "skeptic" and hid not in judged:
+        # skeptic and verdict notes quote validation figures; a re-run clears
+        # the verdict, so an old verdict note must hide again too.
+        if event in ("skeptic", "verdict") and hid not in judged:
             note = HIDDEN
         rows.append(
             {

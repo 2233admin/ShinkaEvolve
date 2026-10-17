@@ -39,6 +39,7 @@ def _direction(root: Path) -> Path:
     nb.save(root)
     append_log(root, "h001", "e01", "skeptic", "rule says supported: val Sharpe 1.23")
     append_log(root, "h002", "e01", "skeptic", "rule says refuted: val Sharpe -0.40")
+    append_log(root, "h002", "e01", "verdict", "refuted: OOS Sharpe -0.40 <= 0")
     return root
 
 
@@ -50,8 +51,12 @@ def test_validation_evidence_hidden_until_verdict(tmp_path: Path) -> None:
     assert "skeptic" not in h2["experiments"][0]
     assert h2["verdict"] is None
     assert "-0.40" not in json.dumps(snap)
-    notes = {e["hypothesis"]: e["note"] for e in snap["events"]}
-    assert notes == {"h001": "rule says supported: val Sharpe 1.23", "h002": ui.HIDDEN}
+    notes = [(e["hypothesis"], e["event"], e["note"]) for e in snap["events"]]
+    assert notes == [
+        ("h002", "verdict", ui.HIDDEN),  # verdict cleared by a re-run
+        ("h002", "skeptic", ui.HIDDEN),
+        ("h001", "skeptic", "rule says supported: val Sharpe 1.23"),
+    ]
 
 
 def test_snapshot_shape(tmp_path: Path) -> None:
