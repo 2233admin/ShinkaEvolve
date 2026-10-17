@@ -114,3 +114,25 @@ def test_verdict_rules_and_trials(tmp_path: Path, example_dir: Path) -> None:
     nb.set_verdict("h001", Verdict(label=Status.refuted, reason="OOS Sharpe < 0"))
     assert nb.get("h001").status is Status.refuted
     assert nb.total_trials == 7
+
+
+def test_probe_shows_public_metrics_only(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, capsys
+) -> None:
+    import json
+
+    root = _init(tmp_path, example_dir)
+    cli.main(
+        [
+            "scaffold", str(root), "h001",
+            "--initial", str(example_dir / "initial.py"),
+            "--data", str(bars_csv),
+        ]
+    )  # fmt: skip
+    capsys.readouterr()
+    cli.main(["probe", str(root), "h001", str(example_dir / "initial.py")])
+    out = capsys.readouterr().out
+    shown = json.loads(out)
+    assert shown["correct"] is True
+    assert "is_sharpe_mean" in shown["public"]
+    assert "oos" not in out.lower()

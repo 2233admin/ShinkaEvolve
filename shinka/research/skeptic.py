@@ -33,7 +33,7 @@ from shinka.research.quant import (
     split_index,
     strategy_returns,
 )
-from shinka.research.scaffold import verify_experiment
+from shinka.research.scaffold import load_config, verify_experiment
 
 EULER_GAMMA = 0.5772156649015329
 
@@ -106,12 +106,6 @@ def _oos_returns(
     return rets.iloc[:cut], rets.iloc[cut:]
 
 
-def _load_config(task_dir: Path) -> QuantConfig:
-    from shinka.core.wrap_eval import load_program
-
-    return load_program(str(task_dir / "evaluate.py")).CONFIG
-
-
 def challenge(
     root: Path, nb: Notebook, hid: str, exp: Experiment, th: Thresholds
 ) -> Dict[str, Any]:
@@ -119,7 +113,7 @@ def challenge(
     verify_experiment(root, hid, exp)
     exp_dir = experiment_dir(root, hid, exp.id)
     task_dir, results_dir = exp_dir / "task", exp_dir / "results"
-    cfg = _load_config(task_dir)
+    cfg = load_config(task_dir)
     bars = load_bars(Path(cfg.data_path), cfg.timestamp_col)
     ppy = cfg.periods_per_year
 

@@ -98,6 +98,13 @@ def scaffold_experiment(
     return exp, task_dir
 
 
+def load_config(task_dir: Path) -> QuantConfig:
+    """Read the config embedded in a frozen evaluate.py."""
+    from shinka.core.wrap_eval import load_program
+
+    return load_program(str(Path(task_dir) / "evaluate.py")).CONFIG
+
+
 def verify_experiment(root: Path, hid: str, exp: Experiment) -> None:
     """Raise if the evaluator or the data changed since scaffolding."""
     evaluate = experiment_dir(root, hid, exp.id) / "task" / "evaluate.py"

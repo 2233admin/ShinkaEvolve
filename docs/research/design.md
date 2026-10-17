@@ -77,7 +77,7 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
 | `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
 | `shinka/research/skeptic.py` | DSR、子区间稳定性、样本内外衰减（P2） |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `status`，P2 增加 `skeptic` / `verdict` |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `status` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）
