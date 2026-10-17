@@ -120,7 +120,11 @@ class _Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path.split("?")[0] == "/api/snapshot":
-            body = json.dumps(snapshot(self.research_root), ensure_ascii=False).encode()
+            body = json.dumps(
+                snapshot(self.research_root),
+                ensure_ascii=False,
+                allow_nan=False,
+            ).encode()
             self.send_response(200)
             self.send_header("Content-Type", "application/json; charset=utf-8")
             self.send_header("Cache-Control", "no-store")

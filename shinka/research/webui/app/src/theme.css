@@ -1,0 +1,134 @@
+/* 一份 token，同时喂给 Astro（--color-*、--font-*）和 Carbon（--cds-*）。值取自 Operations Dark / Technical Paper。 */
+:root {
+  --ink: #EFEEE8;
+  --muted: #B3B9AB;
+  --base: #151815;
+  --raised: #20251F;
+  --hover: #2a3028;
+  --selected: #2f362c;
+  --line: #3C4438;
+  --line-strong: #818A79;
+  --accent: #F45D22;
+  --accent-hover: #FF7A3E;
+  --accent-text: #F45D22;
+  --ok: #9CD1AC;
+  --warn: #E5C06F;
+  --err: #FFA095;
+  --sans: 'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  --mono: 'IBM Plex Mono', 'PingFang SC', monospace;
+}
+:root[data-theme='light'] {
+  --ink: #171A17;
+  --muted: #4E554A;
+  --base: #EFEEE8;
+  --raised: #F7F6F1;
+  --hover: #E4E2DA;
+  --selected: #DAD8CF;
+  --line: #C9C7BE;
+  --line-strong: #6D7368;
+  --accent: #F45D22;
+  --accent-hover: #D9481A;
+  --accent-text: #9E360B;
+  --ok: #2F7A4A;
+  --warn: #8A6410;
+  --err: #B3261E;
+}
+
+:root, body.light-theme, rux-global-status-bar, rux-monitoring-icon, rux-classification-marking, rux-tag, rux-status, rux-notification, rux-card, rux-log, rux-timeline, rux-track, rux-time-region, rux-tabs, rux-tab, rux-table, rux-accordion, rux-accordion-item, rux-switch, rux-tooltip, rux-clock {
+  --gsb-color-background: var(--raised);
+  --classification-banner-color-background-unclassified: var(--accent);
+  --status-symbol-color-fill-normal-on-dark: var(--ok); --status-symbol-color-fill-normal: var(--ok);
+  --status-symbol-color-fill-critical-on-dark: var(--err); --status-symbol-color-fill-critical: var(--err);
+  --status-symbol-color-fill-off-on-dark: var(--muted); --status-symbol-color-fill-off: var(--muted);
+  --tag-shadow-inner-pass: none; --tag-shadow-inner-fail: none; --tag-shadow-inner-unknown: none;
+  --notification-banner-color-border: var(--warn);
+  --color-status-off: var(--muted); --color-status-standby: var(--muted);
+  --color-text-white: #151815; --color-text-black: #151815;
+  --color-background-base-default: var(--base);
+  --color-background-base-header: var(--raised);
+  --color-background-base-hover: var(--hover);
+  --color-background-base-selected: var(--selected);
+  --color-background-surface-default: var(--raised);
+  --color-background-surface-header: var(--base);
+  --color-background-surface-hover: var(--hover);
+  --color-background-surface-selected: var(--selected);
+  --color-background-interactive-default: var(--accent);
+  --color-background-interactive-hover: var(--accent-hover);
+  --color-background-interactive-muted: var(--selected);
+  --color-border-interactive-default: var(--accent);
+  --color-border-interactive-hover: var(--accent-hover);
+  --color-border-interactive-muted: var(--line);
+  --color-border-focus-default: var(--accent);
+  --color-text-primary: var(--ink);
+  --color-text-secondary: var(--muted);
+  --color-text-interactive-default: var(--accent-text);
+  --color-text-interactive-hover: var(--accent-hover);
+  --color-text-placeholder: var(--muted);
+  --color-text-inverse: #151815;
+  --color-status-normal: var(--ok);
+  --color-status-caution: var(--warn);
+  --color-status-serious: var(--warn);
+  --color-status-critical: var(--err);
+  --normal-fill: var(--ok); --normal-border: var(--ok);
+  --caution-fill: var(--warn); --caution-border: var(--warn);
+  --serious-fill: var(--warn); --serious-border: var(--warn);
+  --critical-fill: var(--err); --critical-border: var(--err);
+  --standby-fill: var(--muted); --standby-border: var(--muted);
+  --container-header-color-background: var(--raised);
+  --container-footer-color-background: var(--raised);
+  --color-classification-unclassified: var(--accent);
+  --color-classification-confidential: var(--line-strong);
+  --font-body-1-font-family: var(--sans); --font-body-1-bold-font-family: var(--sans);
+  --font-body-2-font-family: var(--sans); --font-body-2-bold-font-family: var(--sans);
+  --font-body-3-font-family: var(--sans); --font-body-3-bold-font-family: var(--sans);
+  --font-control-body-1-font-family: var(--sans); --font-control-body-1-bold-font-family: var(--sans);
+  --font-display-1-font-family: var(--sans); --font-display-2-font-family: var(--sans);
+  --font-heading-1-font-family: var(--sans); --font-heading-1-bold-font-family: var(--sans);
+  --font-heading-2-font-family: var(--sans); --font-heading-3-font-family: var(--sans);
+  --font-heading-4-font-family: var(--sans); --font-heading-5-font-family: var(--sans);
+  --font-heading-6-font-family: var(--sans);
+  --font-monospace-1-font-family: var(--mono);
+  --radius-base: 0px;
+}
+
+.cds--g100, .cds--white {
+  --cds-background: var(--base);
+  --cds-background-hover: var(--hover);
+  --cds-layer-01: var(--raised);
+  --cds-layer-02: var(--hover);
+  --cds-layer-hover-01: var(--hover);
+  --cds-layer-selected-01: var(--selected);
+  --cds-layer-accent-01: var(--selected);
+  --cds-field-01: var(--raised);
+  --cds-field-hover-01: var(--hover);
+  --cds-border-subtle-00: var(--line);
+  --cds-border-subtle-01: var(--line);
+  --cds-border-strong-01: var(--line-strong);
+  --cds-border-interactive: var(--accent);
+  --cds-text-primary: var(--ink);
+  --cds-text-secondary: var(--muted);
+  --cds-text-helper: var(--muted);
+  --cds-icon-primary: var(--ink);
+  --cds-icon-secondary: var(--muted);
+  --cds-interactive: var(--accent);
+  --cds-focus: var(--accent);
+  --cds-link-primary: var(--accent-text);
+  --cds-link-primary-hover: var(--accent-hover);
+  --cds-button-primary: var(--accent);
+  --cds-button-primary-hover: var(--accent-hover);
+  --cds-button-tertiary: var(--accent-text);
+  --cds-button-tertiary-hover: var(--accent-hover);
+  --cds-button-tertiary-active: var(--accent-hover);
+  --cds-support-success: var(--ok);
+  --cds-support-warning: var(--warn);
+  --cds-support-error: var(--err);
+  --cds-support-info: var(--muted);
+  --cds-tag-background-gray: var(--selected);
+  --cds-tag-color-gray: var(--ink);
+  background: var(--base);
+  color: var(--ink);
+  font-family: var(--sans);
+}
+.cds--g100 code, .cds--white code, .cds--snippet { font-family: var(--mono); }
+
+html, body { margin: 0; background: var(--base); color: var(--ink); font-family: var(--sans); }
