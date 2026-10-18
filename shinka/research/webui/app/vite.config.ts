@@ -39,7 +39,7 @@ function tokensCss(t: Tokens): string {
 
 const VIRTUAL = 'virtual:tokens.css'
 
-function designTokens(): Plugin {
+export function designTokens(): Plugin {
   return {
     name: 'design-tokens',
     resolveId: (id) => (id === VIRTUAL ? `\0${VIRTUAL}` : null),

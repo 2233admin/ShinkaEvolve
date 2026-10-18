@@ -1,0 +1,18 @@
+{
+  "schema": "design-pipeline.workflow-state.v1",
+  "deliverable": "ui",
+  "tier": "standard",
+  "mode": "brief",
+  "director": null,
+  "decisions": {
+    "intake": {
+      "answer": "Product: integrate the existing Shinka Research workspace and original ShinkaEvolve run browser, comparison and detailed analysis into one coherent frontend. Audience: the owner and technical researchers using a local persistent web application. Duration: not applicable, this is not a film or promo. Assets: reuse the existing ops-spec Astro UXDS and Carbon design system and existing repository UI only. Confirmed requirements: direction overview homepage; global ordinary runs without forced research association; direct experiment analysis within workspace navigation and return to the originating direction; preserve all existing analysis capabilities. Agent conversation remains the research control channel; no research execution, model use, new assets or new web control system in this task.",
+      "briefSha256": "sha256:aa66f21f6be4aa2c6e8948087d9467df209655d96d6cbb07a821675012cda89a"
+    },
+    "delivered": "Technical delivery only; owner visual acceptance remains pending. Recovered custom workbench b31db504; 13 main and 10 detail views; real research and ordinary comparison round trips verified. Native Chrome Page zoom 200 percent verified, CSS zoom 1, DPR 1 to 2, viewport 1440 to 720, restored 100 percent; visible native code capture retained. Copy feedback pure text verified. Windows research105passed; independentWSL1014passed1skip1deselected; Ruff and frontend builds passed. PDF successful conversion is not claimed: missing converter returns honest error. Evidence and task receipt: shinka/research/webui/design/changes/unified-analysis/qa.md, tasks.md, evidence/browser-acceptance.json and PNGs. No research/model/provider/lockbox/execution calls; no award or owner certification."
+  },
+  "gates": {},
+  "rules": [],
+  "createdAt": "2026-10-18T17:16:22.126Z",
+  "updatedAt": "2026-10-18T21:54:46.932Z"
+}

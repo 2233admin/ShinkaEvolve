@@ -12,6 +12,16 @@
 .workspace-table .workspace-error { overflow-wrap: anywhere; }
 .workspace-table .workspace-folder { display: block; margin-block-start: var(--space-1); }
 
+.workspace-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6); border-bottom: 1px solid var(--line); padding-bottom: var(--space-4); margin-bottom: var(--space-6); }
+.workspace-nav a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; }
+.workspace-nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: var(--space-2); }
+.analysis-scroll { width: 100%; border-top: 1px solid var(--line); }
+.analysis-context { margin: 0 0 var(--space-4); padding-block: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font: 12px/1.7 var(--font-sans); max-width: 96ch; }
+.analysis-frame { display: block; width: 100%; height: max(780px, calc(100dvh - 250px)); border: 0; background: var(--base); }
+@media (max-width: 900px) {
+  .analysis-frame { height: 1400px; }
+}
+
 /* 研究页：表格 → 试验图 → 时间线 → 事件，右侧规格卡 */
 .grid {
   display: grid; grid-template-columns: minmax(0, 1fr) var(--side-width); gap: var(--space-8) var(--space-6); align-items: start;

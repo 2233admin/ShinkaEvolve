@@ -4,14 +4,14 @@ The spec card is the right-hand sheet for the selected hypothesis: its title, a 
 
 ## What the consumer provides
 
-- The selected `Hypothesis` (title, id, status, `created`, experiments, `body` Markdown, `verdict`, `confirmation`), the direction's trial points (for progress and the current noise line) and the evolution-tree base URL (`tree_url`, may be `null`).
+- The selected `Hypothesis` (title, id, status, `created`, experiments, `body` Markdown, `verdict`, `confirmation`) and the direction's trial points (for progress and the current noise line). Each experiment may provide its own `analysis_url`; there is no separate tree-service base URL.
 - It sits in the sticky side column (`--side-width`); on narrow screens it follows the table in normal flow.
 
 ## Built from
 
 - Carbon `Tile` with class `spec-card` (a 1px `line` border, no fill step, `space-5` padding, square), `h2.spec-title` (`title-card`).
 - The spec sheet: `dl.spec`, each row `<div><dt>key</dt><dd>value</dd></div>` on a `--spec-key-width` key column. Keys are `label-spec` (mono, muted); values `text-field`, figures and ids in `.mono`. Keys that are terms use `Term`. Rows: 编号 · 状态 (`.status-cell`: Astro `rux-status` + word) · 创建 (`YYYY-MM-DD HH:MM`) · 实验 · 试验数 · 花费 (`$0.00`).
-- `.md` for the hypothesis notes (rendered Markdown, headings shrunk to 13px inside the card); `ul.trees` of experiment ids with a Carbon `Link` "看进化树 ↗" opening in a new tab; section labels are `h3` in `label-section`.
+- `.md` for hypothesis notes (Markdown headings shrink to 13px inside the card); `ul.trees` lists experiments with a Carbon Link “打开实验分析”. The link enters the same workspace with the exact database and originating direction/hypothesis, instead of opening a separate tree window. Section labels use `label-section`.
 - Carbon `InlineNotification` (`kind="info"`, `lowContrast`, `hideCloseButton`) for the no-verdict notice. See CheckLedger for the verdict section.
 
 ## States, by stage

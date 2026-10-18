@@ -10,7 +10,7 @@ from pathlib import Path
 
 import numpy as np
 
-from shinka.research import library, ui
+from shinka.research import analysis, library, ui
 from shinka.research.notebook import (
     Experiment,
     Notebook,
@@ -123,7 +123,7 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
     nb = Notebook.load(root)
     nb.get("h001").experiments[0].n_probed = 2  # probes leave no program row
     nb.save(root)
-    snap = ui.snapshot(root, tree_url="http://127.0.0.1:1/viz_tree.html")
+    snap = ui.snapshot(root)
     pts = snap["trial_points"]
     assert snap["probes"] == 2
     assert [(p["hypothesis"], p["score"], p["record"]) for p in pts] == [
@@ -137,9 +137,7 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
     assert pts[0]["bar"] == expected_max_sharpe(1 + 2, var)
     assert "-7.77" not in json.dumps(snap)
     exp = snap["hypotheses"][0]["experiments"][0]
-    assert exp["tree_db"] == "h001/e01/results/programs.sqlite"
     assert exp["first_trial"].startswith("1970-01-01T00:01:40")
-    assert snap["tree_url"] == "http://127.0.0.1:1/viz_tree.html"
 
 
 def test_library_contents(tmp_path: Path) -> None:
@@ -161,7 +159,7 @@ def test_tree_server_stays_inside_experiments(tmp_path: Path) -> None:
     _programs(outside.parent, [(1.0, 0, 1, 0.5, {})])
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        partial(ui._TreeHandler, search_root=str(root / "experiments")),
+        partial(analysis.AnalysisHandler, search_root=str(root / "experiments")),
     )
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"

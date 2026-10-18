@@ -123,18 +123,18 @@ function Progress({ pts, bar }: { pts: TrialPoint[]; bar: number | null }) {
   )
 }
 
-function Trees({ h, treeUrl }: { h: Hypothesis; treeUrl: string }) {
-  const exps = h.experiments.filter((e) => e.tree_db)
+function Experiments({ h }: { h: Hypothesis }) {
+  const exps = h.experiments.filter((e) => e.analysis_url)
   if (exps.length === 0) return null
   return (
     <section>
-      <h3>进化树</h3>
+      <h3>实验分析</h3>
       <ul className="trees">
         {exps.map((e) => (
           <li key={e.id}>
             <span className="mono">{e.id}</span>
-            <Link href={`${treeUrl}?db_path=${encodeURIComponent(e.tree_db!)}`} target="_blank" rel="noopener noreferrer">
-              看进化树 ↗
+            <Link href={e.analysis_url!}>
+              查看实验分析
             </Link>
           </li>
         ))}
@@ -143,9 +143,9 @@ function Trees({ h, treeUrl }: { h: Hypothesis; treeUrl: string }) {
   )
 }
 
-type Props = { h: Hypothesis; points: TrialPoint[]; treeUrl: string | null }
+type Props = { h: Hypothesis; points: TrialPoint[] }
 
-export function SpecCard({ h, points, treeUrl }: Props) {
+export function SpecCard({ h, points }: Props) {
   const st = STATUS[h.status]
   const mine = points.filter((p) => p.hypothesis === h.id)
   const bar = points.length ? points[points.length - 1].bar : null
@@ -169,7 +169,7 @@ export function SpecCard({ h, points, treeUrl }: Props) {
         ]}
       />
       {h.body.trim() && <Markdown text={h.body} />}
-      {treeUrl && <Trees h={h} treeUrl={treeUrl} />}
+      <Experiments h={h} />
       {h.verdict ? (
         <Ledger h={h} />
       ) : mine.length === 0 ? (

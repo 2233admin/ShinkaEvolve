@@ -124,6 +124,20 @@ a new document; its breadcrumb returns to the workspace. Both views reuse the sa
 Directory identity, empty/error states and read-only navigation follow
 [`docs/research/workspace.md`](../../../docs/research/workspace.md).
 
+The unified workspace keeps research directions as its home, independent ordinary runs under “全部运行”,
+and the shared library. Full experiment analysis reuses this fork's self-developed workbench from
+`b31db504f9ca9616b5d4c8ca523cdcfdab26d8ab`, not the white upstream viewer. The owned analysis build
+shares the tokens, local fonts, theme and keyboard conventions, while retaining its original chart
+engines and document-local state inside a same-origin frame. Research links preserve the originating
+direction and hypothesis; browser history and direct URLs preserve the analysis selection.
+
+Generic `combined_score` is diagnostic, not corrected research evidence. The direction's trial chart
+keeps its direction-wide noise benchmark; generic generation/cost plots do not borrow that horizontal
+axis or invent a null model for unrelated tasks. Failed evaluations do not enter best-score frontiers,
+and absent measurements remain missing. The implementation and rendered quality criteria are in
+`design/changes/unified-analysis/qa.md`; awards are a craft reference, not a certification.
+
+
 ## Components
 
 Ten components, each with guidelines and a live preview under `design-system/components/`: TopBar,

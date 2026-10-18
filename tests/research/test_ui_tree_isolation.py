@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Iterator
 
 from shinka.database import DatabaseConfig, Program, ProgramDatabase
-from shinka.research import ui
+from shinka.research import analysis
 from shinka.webui import visualization
 
 
@@ -31,9 +31,10 @@ def _tree_server(experiments: Path) -> Iterator[str]:
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
         partial(
-            ui._TreeHandler,
+            analysis.AnalysisHandler,
             search_root=str(experiments),
-            show_private=False,
+            # Research analysis must not expose held-out metrics even if enabled.
+            show_private=True,
         ),
     )
     thread = threading.Thread(target=server.serve_forever, daemon=True)
@@ -90,7 +91,7 @@ def test_tree_program_cache_isolates_directions_and_hides_private_metrics(
     try:
         for key in cache_keys:
             visualization.db_cache.pop(key, None)
-        query = urllib.parse.urlencode({"db_path": relative_db_path})
+        query = urllib.parse.urlencode({"db_path": f"workspace/{relative_db_path}"})
         with _tree_server(experiments_a) as base_a:
             with _tree_server(experiments_b) as base_b:
                 responses = []

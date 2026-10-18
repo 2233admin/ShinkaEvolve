@@ -32,7 +32,7 @@ export function ResearchTab({ snap, current, light, onSelect }: Props) {
         <Timeline hyps={snap.hypotheses} selected={current.id} onSelect={onSelect} />
       </section>
       <aside className="area-side">
-        <SpecCard h={current} points={snap.trial_points} treeUrl={snap.tree_url} />
+        <SpecCard h={current} points={snap.trial_points} />
       </aside>
       <section className="area-events">
         <h2 className="section-title">事件</h2>

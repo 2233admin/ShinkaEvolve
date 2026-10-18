@@ -425,7 +425,7 @@ def cmd_status(args: argparse.Namespace) -> None:
 def cmd_ui(args: argparse.Namespace) -> None:
     from shinka.research import ui
 
-    ui.serve(Path(args.workspace), args.port, not args.no_browser)
+    ui.serve(Path(args.workspace), args.port, not args.no_browser, args.runs_root)
 
 
 def _add_threshold_args(s: argparse.ArgumentParser) -> None:
@@ -564,6 +564,12 @@ def build_parser() -> argparse.ArgumentParser:
         "workspace", help="Workspace directory containing research directions"
     )
     s.add_argument("--port", type=int, default=8765)
+    s.add_argument(
+        "--runs-root",
+        type=Path,
+        default=None,
+        help="Explicit additional ordinary-run search root; omitted means workspace only",
+    )
     s.add_argument("--no-browser", action="store_true")
     s.set_defaults(func=cmd_ui)
     return p

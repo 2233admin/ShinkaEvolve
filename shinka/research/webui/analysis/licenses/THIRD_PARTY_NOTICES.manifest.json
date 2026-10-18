@@ -1,0 +1,2014 @@
+{
+  "schemaVersion": 1,
+  "scope": "Locally bundled analysis runtime imports and fonts",
+  "status": "staged-local-collection-with-known-embedded-license-gaps",
+  "runtimeEntry": "E:/projects/ShinkaEvolve/shinka/research/webui/app/src/analysis/runtime.js",
+  "packageManifest": "E:/projects/ShinkaEvolve/shinka/research/webui/app/package.json",
+  "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+  "stageDirectory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9",
+  "noticeFile": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/THIRD_PARTY_NOTICES.txt",
+  "selectionMethod": [
+    "Scope is analysis/runtime.js only, not all dependencies of the unified main application.",
+    "Start from the ten actual imported external packages (eight JS libraries, two font packages); resolve versions/paths against installed metadata, supplied installed license inventory and pnpm-lock.yaml.",
+    "Traverse the pinned production dependencies of D3, markdown-it and JSZip, including resolved transitive dependencies; retain the entire uncertain JSZip production closure despite browser prebundling and substitutions.",
+    "Do not traverse devDependencies. Exclude specifically evidenced CLI-only imports argparse, commander, iconv-lite and rw; exclude safer-buffer only reached through excluded iconv-lite. Other top-level app libraries and build tools are out of this entry scope.",
+    "Select LICENSE/LICENCE/COPYING/NOTICE/COPYRIGHT/license filenames from the actual installed selected package paths. Include the actual DOMPurify LICENSE + LICENSE-MPL + src/license_header, complete JSZip LICENSE.markdown (both MIT and GPL) + lib/license_header.js, pako LICENSE + lib/zlib/README (MIT AND Zlib), isarray README.md (contains full MIT text), and complete font LICENSE files.",
+    "Copy complete selected source files byte-for-byte using cmd copy /b, preceded by separately staged provenance headers. No standard license text is synthesized, fetched or substituted. Entire isarray/pako source README files are retained to preserve all notices and acknowledgments.",
+    "Inspect prebundled distributions independently of package dependency metadata: preserve actual Plotly header at lines 1-6 and entire preserved notice/comment appendix at lines 3804-3878. Record Mapbox module version evidence and all identifiable missing embedded component notices.",
+    "Add installed object-assign@4.1.1 text only as an explicitly unverified Plotly notice candidate. The full safe-buffer@5.1.2 text is already in the rooted closure; it is not proof of the embedded Plotly version.",
+    "This is a conservative installed dependency and locally visible embedded-notice collection, not an exact emitted bundle inventory, source map attribution audit, legal certification or declaration of complete redistribution compliance. No builds, UI checks, installs, downloads or providers were run."
+  ],
+  "rootPackages": [
+    "chart.js",
+    "d3",
+    "diff",
+    "dompurify",
+    "highlight.js",
+    "jszip",
+    "plotly.js-dist-min",
+    "markdown-it",
+    "@fontsource-variable/inter",
+    "@fontsource/ibm-plex-mono"
+  ],
+  "dependencyEdges": {
+    "d3": [
+      "d3-array",
+      "d3-axis",
+      "d3-brush",
+      "d3-chord",
+      "d3-color",
+      "d3-contour",
+      "d3-delaunay",
+      "d3-dispatch",
+      "d3-drag",
+      "d3-dsv",
+      "d3-ease",
+      "d3-fetch",
+      "d3-force",
+      "d3-format",
+      "d3-geo",
+      "d3-hierarchy",
+      "d3-interpolate",
+      "d3-path",
+      "d3-polygon",
+      "d3-quadtree",
+      "d3-random",
+      "d3-scale",
+      "d3-scale-chromatic",
+      "d3-selection",
+      "d3-shape",
+      "d3-time",
+      "d3-time-format",
+      "d3-timer",
+      "d3-transition",
+      "d3-zoom"
+    ],
+    "d3-array": [
+      "internmap"
+    ],
+    "d3-brush": [
+      "d3-dispatch",
+      "d3-drag",
+      "d3-interpolate",
+      "d3-selection",
+      "d3-transition"
+    ],
+    "d3-chord": [
+      "d3-path"
+    ],
+    "d3-contour": [
+      "d3-array"
+    ],
+    "d3-delaunay": [
+      "delaunator"
+    ],
+    "d3-drag": [
+      "d3-dispatch",
+      "d3-selection"
+    ],
+    "d3-fetch": [
+      "d3-dsv"
+    ],
+    "d3-force": [
+      "d3-dispatch",
+      "d3-quadtree",
+      "d3-timer"
+    ],
+    "d3-geo": [
+      "d3-array"
+    ],
+    "d3-interpolate": [
+      "d3-color"
+    ],
+    "d3-scale-chromatic": [
+      "d3-color",
+      "d3-interpolate"
+    ],
+    "d3-scale": [
+      "d3-array",
+      "d3-format",
+      "d3-interpolate",
+      "d3-time",
+      "d3-time-format"
+    ],
+    "d3-shape": [
+      "d3-path"
+    ],
+    "d3-time-format": [
+      "d3-time"
+    ],
+    "d3-time": [
+      "d3-array"
+    ],
+    "d3-transition": [
+      "d3-color",
+      "d3-dispatch",
+      "d3-ease",
+      "d3-selection",
+      "d3-timer"
+    ],
+    "d3-zoom": [
+      "d3-dispatch",
+      "d3-drag",
+      "d3-interpolate",
+      "d3-selection",
+      "d3-transition"
+    ],
+    "delaunator": [
+      "robust-predicates"
+    ],
+    "jszip": [
+      "lie",
+      "pako",
+      "readable-stream",
+      "setimmediate"
+    ],
+    "lie": [
+      "immediate"
+    ],
+    "readable-stream": [
+      "core-util-is",
+      "inherits",
+      "isarray",
+      "process-nextick-args",
+      "safe-buffer",
+      "string_decoder",
+      "util-deprecate"
+    ],
+    "string_decoder": [
+      "safe-buffer"
+    ],
+    "markdown-it": [
+      "entities",
+      "linkify-it",
+      "mdurl",
+      "punycode.js",
+      "uc.micro"
+    ],
+    "linkify-it": [
+      "uc.micro"
+    ]
+  },
+  "counts": {
+    "rootPackages": 10,
+    "rootedRuntimeTransitives": 50,
+    "rootedPackages": 60,
+    "extraInstalledCandidatePackages": 1,
+    "installedPackagesWithFullSourceNotices": 61,
+    "wholeInstalledNoticeSourceFiles": 65,
+    "plotlyPreservedCommentRanges": 2,
+    "embeddedComponentsWithoutFullLocalText": 10,
+    "embeddedComponentsWithUnverifiedLocalCandidate": 2
+  },
+  "packages": [
+    {
+      "name": "chart.js",
+      "version": "3.9.1",
+      "license": "MIT",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/chart.js@3.9.1/node_modules/chart.js",
+      "sectionId": "001",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/chart.js@3.9.1/node_modules/chart.js/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/chart.js@3.9.1/node_modules/chart.js/LICENSE.md",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/001-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3",
+      "version": "7.9.0",
+      "license": "ISC",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3@7.9.0/node_modules/d3",
+      "sectionId": "002",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3@7.9.0/node_modules/d3/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3@7.9.0/node_modules/d3/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/002-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "diff",
+      "version": "9.0.0",
+      "license": "BSD-3-Clause",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/diff@9.0.0/node_modules/diff",
+      "sectionId": "003",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/diff@9.0.0/node_modules/diff/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/diff@9.0.0/node_modules/diff/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/003-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "dompurify",
+      "version": "3.4.17",
+      "license": "(MPL-2.0 OR Apache-2.0)",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/dompurify@3.4.17/node_modules/dompurify",
+      "sectionId": "004",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/dompurify@3.4.17/node_modules/dompurify/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/dompurify@3.4.17/node_modules/dompurify/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/004-0.txt"
+        },
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/dompurify@3.4.17/node_modules/dompurify/LICENSE-MPL",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/004-1.txt"
+        },
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/dompurify@3.4.17/node_modules/dompurify/src/license_header",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/004-2.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "highlight.js",
+      "version": "11.12.0",
+      "license": "BSD-3-Clause",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js",
+      "sectionId": "005",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/highlight.js@11.12.0/node_modules/highlight.js/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/005-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "jszip",
+      "version": "3.10.2",
+      "license": "(MIT OR GPL-3.0-or-later)",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/jszip@3.10.2/node_modules/jszip",
+      "sectionId": "006",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/jszip@3.10.2/node_modules/jszip/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/jszip@3.10.2/node_modules/jszip/LICENSE.markdown",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/006-0.txt"
+        },
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/jszip@3.10.2/node_modules/jszip/lib/license_header.js",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/006-1.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "plotly.js-dist-min",
+      "version": "3.1.0",
+      "license": "MIT",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/plotly.js-dist-min@3.1.0/node_modules/plotly.js-dist-min",
+      "sectionId": "007",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/plotly.js-dist-min@3.1.0/node_modules/plotly.js-dist-min/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/plotly.js-dist-min@3.1.0/node_modules/plotly.js-dist-min/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/007-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "markdown-it",
+      "version": "15.0.3",
+      "license": "MIT",
+      "role": "direct-runtime",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/markdown-it@15.0.3/node_modules/markdown-it",
+      "sectionId": "008",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/markdown-it@15.0.3/node_modules/markdown-it/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/markdown-it@15.0.3/node_modules/markdown-it/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/008-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "@fontsource-variable/inter",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "role": "font-asset",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource-variable+inter@5.3.0/node_modules/@fontsource-variable/inter",
+      "sectionId": "009",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource-variable+inter@5.3.0/node_modules/@fontsource-variable/inter/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource-variable+inter@5.3.0/node_modules/@fontsource-variable/inter/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/009-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "@fontsource/ibm-plex-mono",
+      "version": "5.3.0",
+      "license": "OFL-1.1",
+      "role": "font-asset",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource+ibm-plex-mono@5.3.0/node_modules/@fontsource/ibm-plex-mono",
+      "sectionId": "010",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource+ibm-plex-mono@5.3.0/node_modules/@fontsource/ibm-plex-mono/package.json"
+      },
+      "includedBy": [
+        "analysis/runtime.js direct import"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/@fontsource+ibm-plex-mono@5.3.0/node_modules/@fontsource/ibm-plex-mono/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/010-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-array",
+      "version": "3.2.4",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array",
+      "sectionId": "011",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-contour",
+        "d3-geo",
+        "d3-scale",
+        "d3-time"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-array@3.2.4/node_modules/d3-array/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/011-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-axis",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis",
+      "sectionId": "012",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-axis@3.0.0/node_modules/d3-axis/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/012-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-brush",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush",
+      "sectionId": "013",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-brush@3.0.0/node_modules/d3-brush/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/013-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-chord",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-chord@3.0.1/node_modules/d3-chord",
+      "sectionId": "014",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-chord@3.0.1/node_modules/d3-chord/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-chord@3.0.1/node_modules/d3-chord/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/014-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-color",
+      "version": "3.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color",
+      "sectionId": "015",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-interpolate",
+        "d3-scale-chromatic",
+        "d3-transition"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-color@3.1.0/node_modules/d3-color/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/015-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-contour",
+      "version": "4.0.2",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-contour@4.0.2/node_modules/d3-contour",
+      "sectionId": "016",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-contour@4.0.2/node_modules/d3-contour/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-contour@4.0.2/node_modules/d3-contour/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/016-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-delaunay",
+      "version": "6.0.4",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-delaunay@6.0.4/node_modules/d3-delaunay",
+      "sectionId": "017",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-delaunay@6.0.4/node_modules/d3-delaunay/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-delaunay@6.0.4/node_modules/d3-delaunay/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/017-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-dispatch",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch",
+      "sectionId": "018",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-brush",
+        "d3-drag",
+        "d3-force",
+        "d3-transition",
+        "d3-zoom"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dispatch@3.0.1/node_modules/d3-dispatch/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/018-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-drag",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag",
+      "sectionId": "019",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-brush",
+        "d3-zoom"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-drag@3.0.0/node_modules/d3-drag/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/019-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-dsv",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dsv@3.0.1/node_modules/d3-dsv",
+      "sectionId": "020",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dsv@3.0.1/node_modules/d3-dsv/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-fetch"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-dsv@3.0.1/node_modules/d3-dsv/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/020-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-ease",
+      "version": "3.0.1",
+      "license": "BSD-3-Clause",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease",
+      "sectionId": "021",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-transition"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-ease@3.0.1/node_modules/d3-ease/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/021-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-fetch",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-fetch@3.0.1/node_modules/d3-fetch",
+      "sectionId": "022",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-fetch@3.0.1/node_modules/d3-fetch/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-fetch@3.0.1/node_modules/d3-fetch/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/022-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-force",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force",
+      "sectionId": "023",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-force@3.0.0/node_modules/d3-force/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/023-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-format",
+      "version": "3.1.2",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format",
+      "sectionId": "024",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-scale"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-format@3.1.2/node_modules/d3-format/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/024-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-geo",
+      "version": "3.1.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-geo@3.1.1/node_modules/d3-geo",
+      "sectionId": "025",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-geo@3.1.1/node_modules/d3-geo/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-geo@3.1.1/node_modules/d3-geo/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/025-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-hierarchy",
+      "version": "3.1.2",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy",
+      "sectionId": "026",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-hierarchy@3.1.2/node_modules/d3-hierarchy/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/026-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-interpolate",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate",
+      "sectionId": "027",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-brush",
+        "d3-scale-chromatic",
+        "d3-scale",
+        "d3-zoom"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-interpolate@3.0.1/node_modules/d3-interpolate/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/027-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-path",
+      "version": "3.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path",
+      "sectionId": "028",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-chord",
+        "d3-shape"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/028-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-polygon",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-polygon@3.0.1/node_modules/d3-polygon",
+      "sectionId": "029",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-polygon@3.0.1/node_modules/d3-polygon/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-polygon@3.0.1/node_modules/d3-polygon/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/029-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-quadtree",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-quadtree@3.0.1/node_modules/d3-quadtree",
+      "sectionId": "030",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-quadtree@3.0.1/node_modules/d3-quadtree/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-force"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-quadtree@3.0.1/node_modules/d3-quadtree/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/030-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-random",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-random@3.0.1/node_modules/d3-random",
+      "sectionId": "031",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-random@3.0.1/node_modules/d3-random/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-random@3.0.1/node_modules/d3-random/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/031-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-scale",
+      "version": "4.0.2",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale",
+      "sectionId": "032",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale@4.0.2/node_modules/d3-scale/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/032-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-scale-chromatic",
+      "version": "3.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic",
+      "sectionId": "033",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-scale-chromatic@3.1.0/node_modules/d3-scale-chromatic/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/033-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-selection",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection",
+      "sectionId": "034",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-brush",
+        "d3-drag",
+        "d3-transition",
+        "d3-zoom"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-selection@3.0.0/node_modules/d3-selection/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/034-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-shape",
+      "version": "3.2.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape",
+      "sectionId": "035",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/035-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-time",
+      "version": "3.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time",
+      "sectionId": "036",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-scale",
+        "d3-time-format"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time@3.1.0/node_modules/d3-time/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/036-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-time-format",
+      "version": "4.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format",
+      "sectionId": "037",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-scale"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-time-format@4.1.0/node_modules/d3-time-format/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/037-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-timer",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer",
+      "sectionId": "038",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-force",
+        "d3-transition"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-timer@3.0.1/node_modules/d3-timer/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/038-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-transition",
+      "version": "3.0.1",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition",
+      "sectionId": "039",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/package.json"
+      },
+      "includedBy": [
+        "d3",
+        "d3-brush",
+        "d3-zoom"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-transition@3.0.1_d3-selection@3.0.0/node_modules/d3-transition/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/039-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "d3-zoom",
+      "version": "3.0.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom",
+      "sectionId": "040",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/package.json"
+      },
+      "includedBy": [
+        "d3"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/d3-zoom@3.0.0/node_modules/d3-zoom/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/040-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "internmap",
+      "version": "2.0.3",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/internmap@2.0.3/node_modules/internmap",
+      "sectionId": "041",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/internmap@2.0.3/node_modules/internmap/package.json"
+      },
+      "includedBy": [
+        "d3-array"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/internmap@2.0.3/node_modules/internmap/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/041-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "delaunator",
+      "version": "5.1.0",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/delaunator@5.1.0/node_modules/delaunator",
+      "sectionId": "042",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/delaunator@5.1.0/node_modules/delaunator/package.json"
+      },
+      "includedBy": [
+        "d3-delaunay"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/delaunator@5.1.0/node_modules/delaunator/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/042-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "robust-predicates",
+      "version": "3.0.3",
+      "license": "Unlicense",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/robust-predicates@3.0.3/node_modules/robust-predicates",
+      "sectionId": "043",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/robust-predicates@3.0.3/node_modules/robust-predicates/package.json"
+      },
+      "includedBy": [
+        "delaunator"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/robust-predicates@3.0.3/node_modules/robust-predicates/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/043-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "lie",
+      "version": "3.3.0",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/lie@3.3.0/node_modules/lie",
+      "sectionId": "044",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/lie@3.3.0/node_modules/lie/package.json"
+      },
+      "includedBy": [
+        "jszip"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/lie@3.3.0/node_modules/lie/license.md",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/044-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "immediate",
+      "version": "3.0.6",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/immediate@3.0.6/node_modules/immediate",
+      "sectionId": "045",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/immediate@3.0.6/node_modules/immediate/package.json"
+      },
+      "includedBy": [
+        "lie"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/immediate@3.0.6/node_modules/immediate/LICENSE.txt",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/045-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "pako",
+      "version": "1.0.11",
+      "license": "(MIT AND Zlib)",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/pako@1.0.11/node_modules/pako",
+      "sectionId": "046",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/pako@1.0.11/node_modules/pako/package.json"
+      },
+      "includedBy": [
+        "jszip"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/pako@1.0.11/node_modules/pako/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/046-0.txt"
+        },
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/pako@1.0.11/node_modules/pako/lib/zlib/README",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/046-1.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "readable-stream",
+      "version": "2.3.8",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/readable-stream@2.3.8/node_modules/readable-stream",
+      "sectionId": "047",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/readable-stream@2.3.8/node_modules/readable-stream/package.json"
+      },
+      "includedBy": [
+        "jszip"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/readable-stream@2.3.8/node_modules/readable-stream/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/047-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "setimmediate",
+      "version": "1.0.5",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/setimmediate@1.0.5/node_modules/setimmediate",
+      "sectionId": "048",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/setimmediate@1.0.5/node_modules/setimmediate/package.json"
+      },
+      "includedBy": [
+        "jszip"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/setimmediate@1.0.5/node_modules/setimmediate/LICENSE.txt",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/048-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "core-util-is",
+      "version": "1.0.3",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/core-util-is@1.0.3/node_modules/core-util-is",
+      "sectionId": "049",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/core-util-is@1.0.3/node_modules/core-util-is/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/core-util-is@1.0.3/node_modules/core-util-is/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/049-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "inherits",
+      "version": "2.0.4",
+      "license": "ISC",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/inherits@2.0.4/node_modules/inherits",
+      "sectionId": "050",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/inherits@2.0.4/node_modules/inherits/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/inherits@2.0.4/node_modules/inherits/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/050-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "isarray",
+      "version": "1.0.0",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/isarray@1.0.0/node_modules/isarray",
+      "sectionId": "051",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/isarray@1.0.0/node_modules/isarray/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/isarray@1.0.0/node_modules/isarray/README.md",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/051-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "process-nextick-args",
+      "version": "2.0.1",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/process-nextick-args@2.0.1/node_modules/process-nextick-args",
+      "sectionId": "052",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/process-nextick-args@2.0.1/node_modules/process-nextick-args/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/process-nextick-args@2.0.1/node_modules/process-nextick-args/license.md",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/052-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "safe-buffer",
+      "version": "5.1.2",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/safe-buffer@5.1.2/node_modules/safe-buffer",
+      "sectionId": "053",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/safe-buffer@5.1.2/node_modules/safe-buffer/package.json"
+      },
+      "includedBy": [
+        "readable-stream",
+        "string_decoder"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/safe-buffer@5.1.2/node_modules/safe-buffer/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/053-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "string_decoder",
+      "version": "1.1.1",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/string_decoder@1.1.1/node_modules/string_decoder",
+      "sectionId": "054",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/string_decoder@1.1.1/node_modules/string_decoder/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/string_decoder@1.1.1/node_modules/string_decoder/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/054-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "util-deprecate",
+      "version": "1.0.2",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate",
+      "sectionId": "055",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/package.json"
+      },
+      "includedBy": [
+        "readable-stream"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/util-deprecate@1.0.2/node_modules/util-deprecate/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/055-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected",
+      "selectionNote": "Conservative JSZip declared runtime closure retained despite its browser mapping to prebundled dist/jszip.min.js; no assertion that every installed dependency/version survives that prebundle or tree shaking."
+    },
+    {
+      "name": "entities",
+      "version": "8.1.0",
+      "license": "BSD-2-Clause",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/entities@8.1.0/node_modules/entities",
+      "sectionId": "056",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/entities@8.1.0/node_modules/entities/package.json"
+      },
+      "includedBy": [
+        "markdown-it"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/entities@8.1.0/node_modules/entities/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/056-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "linkify-it",
+      "version": "6.1.0",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/linkify-it@6.1.0/node_modules/linkify-it",
+      "sectionId": "057",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/linkify-it@6.1.0/node_modules/linkify-it/package.json"
+      },
+      "includedBy": [
+        "markdown-it"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/linkify-it@6.1.0/node_modules/linkify-it/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/057-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "mdurl",
+      "version": "2.1.0",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl",
+      "sectionId": "058",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/package.json"
+      },
+      "includedBy": [
+        "markdown-it"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/mdurl@2.1.0/node_modules/mdurl/LICENSE",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/058-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "punycode.js",
+      "version": "2.3.1",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/punycode.js@2.3.1/node_modules/punycode.js",
+      "sectionId": "059",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/punycode.js@2.3.1/node_modules/punycode.js/package.json"
+      },
+      "includedBy": [
+        "markdown-it"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/punycode.js@2.3.1/node_modules/punycode.js/LICENSE-MIT.txt",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/059-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "uc.micro",
+      "version": "3.0.0",
+      "license": "MIT",
+      "role": "runtime-transitive",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/uc.micro@3.0.0/node_modules/uc.micro",
+      "sectionId": "060",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/uc.micro@3.0.0/node_modules/uc.micro/package.json"
+      },
+      "includedBy": [
+        "markdown-it",
+        "linkify-it"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/uc.micro@3.0.0/node_modules/uc.micro/LICENSE.txt",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/060-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-package-notice-files-collected"
+    },
+    {
+      "name": "object-assign",
+      "version": "4.1.1",
+      "license": "MIT",
+      "role": "embedded-plotly-local-candidate",
+      "packagePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/object-assign@4.1.1/node_modules/object-assign",
+      "sectionId": "061",
+      "metadataProvenance": {
+        "inventory": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-runtime-licenses.json",
+        "lockfile": "E:/projects/ShinkaEvolve/shinka/research/webui/app/pnpm-lock.yaml",
+        "installedPackageMetadata": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/object-assign@4.1.1/node_modules/object-assign/package.json"
+      },
+      "includedBy": [
+        "Plotly embedded comment; installed notice candidate, embedded version unknown"
+      ],
+      "notices": [
+        {
+          "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/.pnpm/object-assign@4.1.1/node_modules/object-assign/license",
+          "selection": "entire actual installed file, copied without rewriting",
+          "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/061-0.txt"
+        }
+      ],
+      "noticeStatus": "full-installed-candidate-text-collected-embedded-version-unverified"
+    }
+  ],
+  "excludedResolvedPackages": [
+    {
+      "name": "argparse",
+      "version": "3.0.3",
+      "reason": "Declared markdown-it CLI dependency, not imported by selected dist/markdown-it.mjs. Actual ESM external imports are mdurl, uc.micro, entities, linkify-it and punycode.js; full-file grep found no argparse."
+    },
+    {
+      "name": "commander",
+      "version": "7.2.0",
+      "reason": "d3-dsv CLI dependency; src/index.js exports only dsv/csv/tsv/autoType and src tree has no commander import."
+    },
+    {
+      "name": "iconv-lite",
+      "version": "0.6.3",
+      "reason": "d3-dsv CLI dependency; no import from selected src export tree."
+    },
+    {
+      "name": "rw",
+      "version": "1.3.3",
+      "reason": "d3-dsv CLI dependency; no import from selected src export tree."
+    },
+    {
+      "name": "safer-buffer",
+      "version": "2.1.2",
+      "reason": "Only reached through excluded iconv-lite, not part of selected runtime closure."
+    }
+  ],
+  "outOfScope": "Other application roots (React/Carbon/Astro etc.), build tooling (Vite/TypeScript/Rollup and their dependencies), unrelated installed versions such as d3 v1/v2 lineage and d3-cloud/d3-sankey. These are not covered by this analysis-only notice file.",
+  "embeddedPlotlyComponents": [
+    {
+      "name": "native-promise-only",
+      "version": "0.8.1",
+      "license": "MIT",
+      "sourceLines": "3831-3835",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "polybooljs",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3837-3842",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "ieee754",
+      "version": null,
+      "license": "BSD-3-Clause",
+      "sourceLines": "3810,3844-3845",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "buffer",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3804-3809,3847-3853",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "assert",
+      "version": null,
+      "license": "MIT (comment on comparisons.js only; package-wide license not established)",
+      "sourceLines": "3858-3864",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "maplibre-gl",
+      "version": "4.7.1",
+      "license": "BSD-3-Clause",
+      "sourceLines": "3873-3877",
+      "versionEvidence": "Embedded license link points to v4.7.1; no separate installed metadata available.",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "pad-left",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3817-3822",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "repeat-string",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3823-3828",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "mapbox-gl",
+      "version": "1.13.4",
+      "license": null,
+      "sourceLines": "2713,2718,3214",
+      "versionEvidence": "Embedded module version string 1.13.4 plus Mapbox GL error/CSS strings.",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": null,
+      "description": "Determine if an object is a Buffer",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3811-3816",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "safe-buffer",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3855-3856",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js",
+      "status": "embedded-version-unverified-local-candidate-supplied",
+      "localCandidate": "safe-buffer@5.1.2",
+      "note": "Full actual installed 5.1.2 text included as JSZip transitive; embedded Plotly version cannot be confirmed from the preserved comment."
+    },
+    {
+      "name": "object-assign",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3866-3871",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js",
+      "status": "embedded-version-unverified-local-candidate-supplied",
+      "localCandidate": "object-assign@4.1.1",
+      "note": "Full actual installed 4.1.1 text included conservatively; embedded Plotly version cannot be confirmed from the preserved comment."
+    }
+  ],
+  "missingNotices": [
+    {
+      "name": "native-promise-only",
+      "version": "0.8.1",
+      "license": "MIT",
+      "sourceLines": "3831-3835",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "polybooljs",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3837-3842",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "ieee754",
+      "version": null,
+      "license": "BSD-3-Clause",
+      "sourceLines": "3810,3844-3845",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "buffer",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3804-3809,3847-3853",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "assert",
+      "version": null,
+      "license": "MIT (comment on comparisons.js only; package-wide license not established)",
+      "sourceLines": "3858-3864",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "maplibre-gl",
+      "version": "4.7.1",
+      "license": "BSD-3-Clause",
+      "sourceLines": "3873-3877",
+      "versionEvidence": "Embedded license link points to v4.7.1; no separate installed metadata available.",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "pad-left",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3817-3822",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "repeat-string",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3823-3828",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": "mapbox-gl",
+      "version": "1.13.4",
+      "license": null,
+      "sourceLines": "2713,2718,3214",
+      "versionEvidence": "Embedded module version string 1.13.4 plus Mapbox GL error/CSS strings.",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    },
+    {
+      "name": null,
+      "description": "Determine if an object is a Buffer",
+      "version": null,
+      "license": "MIT",
+      "sourceLines": "3811-3816",
+      "status": "full-local-license-text-unavailable",
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js"
+    }
+  ],
+  "localSearchEvidence": "Installed inventory has none of maplibre-gl,mapbox-gl,native-promise-only,polybooljs,ieee754,buffer,assert,pad-left,repeat-string; glob E:/projects/**/node_modules/{these names}/{LICENSE*,license*,COPYING*,NOTICE*}, hidden=true, gitignore=false returned no matches. No external sources downloaded.",
+  "licenseConditionsToReview": [
+    {
+      "packages": [
+        "dompurify@3.4.17"
+      ],
+      "expression": "(MPL-2.0 OR Apache-2.0)",
+      "handling": "Both actual license texts and original dual-license attribution retained; no option elected."
+    },
+    {
+      "packages": [
+        "jszip@3.10.2"
+      ],
+      "expression": "(MIT OR GPL-3.0-or-later)",
+      "handling": "Entire installed dual-license document retained, including complete GPLv3 text; no option elected."
+    },
+    {
+      "packages": [
+        "pako@1.0.11"
+      ],
+      "expression": "(MIT AND Zlib)",
+      "handling": "Actual root MIT and actual zlib folder README with copyright, acknowledgment and all conditions retained together."
+    },
+    {
+      "packages": [
+        "@fontsource-variable/inter@5.3.0",
+        "@fontsource/ibm-plex-mono@5.3.0"
+      ],
+      "expression": "OFL-1.1",
+      "handling": "Actual full notices retained. Text permits bundling/embedding/sale with software, but prohibits selling the fonts by themselves; reserved font names, redistribution licensing, and notice conditions remain. This is not a noncommercial-only license, but the standalone-font-sale restriction must be assessed against any absolute no-commercial-restrictions policy."
+    }
+  ],
+  "restrictiveLicenseAssessment": {
+    "noncommercialOnlyLicenseIdentified": false,
+    "mandatoryCopyleftChoiceMade": false,
+    "unknownEmbeddedLicense": [
+      "mapbox-gl@1.13.4"
+    ],
+    "noCommercialRestrictionCertification": false,
+    "releaseReviewBlockers": [
+      "Missing full local license texts and unresolved versions for Plotly embedded components.",
+      "OFL standalone-font-sale restriction must be reviewed if the policy prohibits every commercial condition, rather than noncommercial-only licensing."
+    ]
+  },
+  "collectionEvidence": {
+    "wholeSourceFileCopyCommands": 65,
+    "successfulCopies": 65,
+    "method": "One cmd copy /b invocation per selected notice source; 64 collected command results all exit_code 0, initial Chart command exit_code 0.",
+    "verification": "No tests, UI, build, install or legal certification. Only read/search evidence and staging operation results.",
+    "aggregation": "Binary concatenation of introduction, 65 headed whole-source-file sections and two excerpt sections using one cmd copy /b invocation.",
+    "aggregationExitCode": 0,
+    "aggregatedSections": 68,
+    "sourceCopyExitCodes": {
+      "successful": 65,
+      "failed": 0
+    }
+  },
+  "toolLimitations": [
+    "write agent://Main returned Peer messaging is unavailable in this session; reporting via final handoff.",
+    "write xd://report_issue failed to resolve internal path."
+  ],
+  "supplementalNoticeExcerpts": [
+    {
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/plotly.js-dist-min/plotly.min.js",
+      "ranges": [
+        "1-6",
+        "3804-3878"
+      ],
+      "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/998-plotly-preserved-comments.txt"
+    },
+    {
+      "sourcePath": "E:/projects/ShinkaEvolve/shinka/research/webui/app/node_modules/jszip/dist/jszip.min.js",
+      "ranges": [
+        "1-11"
+      ],
+      "stagedSection": "C:/Users/Administrator/AppData/Local/Temp/shinka-analysis-notices-20261019-076d3229-43fd-4cec-821e-f401955de2d9/parts/999-jszip-distribution-header.txt"
+    }
+  ]
+}

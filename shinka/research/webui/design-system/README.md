@@ -36,7 +36,7 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 
 - Read-only: no control writes research state, and never a confirm or lockbox button. Controls only change the theme, refresh the displayed files or navigate between the workspace, a direction and the shared library.
 - Validation evidence only after a verdict; lockbox figures only after confirmation.
-- Every best score has the noise line beside it. Failed trials are counted and said, never plotted as 0.
+- Every research evidence best score has its direction-wide noise benchmark beside it. The unified generic analysis shows original `combined_score` for diagnosis, explicitly refers research interpretation back to the direction view, and never invents a Sharpe null model or maps trial-order noise onto generation/cost axes. Failed evaluations stay in counts/resources but never become a valid zero-score frontier.
 - The evaluator, data split and out-of-sample metrics are never reachable from this page.
 
 ## Using the package

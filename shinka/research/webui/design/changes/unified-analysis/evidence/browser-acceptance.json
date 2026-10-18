@@ -1,0 +1,970 @@
+{
+  "schema": "shinka.unified-analysis.browser-acceptance.v1",
+  "recordedAt": "2026-10-18T21:54:26.806Z",
+  "sourceRevision": "b31db504f9ca9616b5d4c8ca523cdcfdab26d8ab",
+  "baseRevision": "899cdb8f5ce74830ed906ebcd0db70598fe208d3",
+  "scope": "Readonly local browser acceptance; controlled saved fixtures are not research evidence. No provider or candidate execution.",
+  "capabilities": {
+    "views": [
+      {
+        "id": "tree-view",
+        "svg": 1,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "meta-prompt-view",
+        "svg": 4,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "table-view",
+        "svg": 0,
+        "plots": 0,
+        "rows": 6,
+        "canvas": 0
+      },
+      {
+        "id": "metrics-view",
+        "svg": 48,
+        "plots": 4,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "embeddings-view",
+        "svg": 3,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "clusters-view",
+        "svg": 23,
+        "plots": 2,
+        "rows": 0,
+        "canvas": 1
+      },
+      {
+        "id": "islands-view",
+        "svg": 3,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "model-posteriors-view",
+        "svg": 2,
+        "plots": 0,
+        "rows": 2,
+        "canvas": 0
+      },
+      {
+        "id": "best-path-view",
+        "svg": 1,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "cost-view",
+        "svg": 1,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "maps-view",
+        "svg": 1,
+        "plots": 0,
+        "rows": 0,
+        "canvas": 0
+      },
+      {
+        "id": "battle-view",
+        "svg": 2,
+        "plots": 0,
+        "rows": 2,
+        "canvas": 0
+      },
+      {
+        "id": "diversity-view",
+        "svg": 2,
+        "plots": 0,
+        "rows": 3,
+        "canvas": 0
+      }
+    ],
+    "right": [
+      {
+        "id": "agent-info",
+        "text": "元信息\n                正在读取程序指标。\n\n                \n                    \n                        概览\n                        总代数: 3\n                        正确: 100% (6/6)\n                        总成本: $0.35\n                        平均每程序成本: $0.06\n                    \n                    \n                    \n                        最佳方案\n                        最佳得分: 0.80\n                        名称: Fixture fixture-a2\n                        代数: 2\n                        岛屿: 0\n                    \n     ",
+        "plots": 0,
+        "canvas": 5
+      },
+      {
+        "id": "pareto-front",
+        "text": "Y 轴:\n                            Combined score复杂度Metadata Compute timePublic: toy_feature_xPublic: toy_feature_yPublic: quality_score\n                            \n                                Higher is better\n                                Lower is better\n                            \n                        \n                        \n                            X 轴:\n                            Combined score复杂度Metadata Compute timePublic: toy_feature_xPublic: toy_feature_yPublic: quality_sco",
+        "plots": 1,
+        "canvas": 0
+      },
+      {
+        "id": "meta-analysis",
+        "text": "Meta Update:\n                            \n                            6\n                        \n\n                        🔄 Refresh\n                        📄 Download PDF\n                    \n                    \n                    \n                    \n                        Individual Programs\n                        Global Insights\n                        Meta Recommendations\n                    \n                    \n                    \n                    \n                        Scratc",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "node-details",
+        "text": "Selected Node Details\n                \n                    \n                    \n                        General\n                        语言: python\n                        岛屿: 0\n                        Timestamp: 2026-10-19 08:05:08\n                        正确: Yes\n                        Children: 0\n                        复杂度: 3.5\n        \n                    \n                        Performance Score\n                        Combined Score: 0.80\n                    \n                    \n       ",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "agent-code",
+        "text": "复制\n                        下载\n                    \n                    \n                \n                    123456789101112\n                    # CONTROLLED ANALYSIS UI FIXTURE - NOT REAL SCIENCE\n# Saved artifact only; not executed.\nFIXTURE_ID = 'fixture-a2'\n# EVOLVE-BLOCK-START\ndef fixture_score(values):\n    offset = 0.8\n    feature_0 = 5\n    feature_1 = 6\n    feature_2 = 7\n    return sum(values) + offset\n# EVOLVE-BLOCK-END",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "code-diff",
+        "text": "Compare to:\n                        \n                            父节点\n                            Initial\n                        \n                        仅显示变更\n                    \n                    --- a/main.py+++ b/main.py@@ -1,9 +1,11 @@ # CONTROLLED ANALYSIS UI FIXTURE - NOT REAL SCIENCE # Saved artifact only; not executed.-FIXTURE_ID = 'fixture-a1'+FIXTURE_ID = 'fixture-a2' # EVOLVE-BLOCK-START def fixture_score(values):-    offset = 0.5-    feature_0 = 3+    offset = 0.8+    feature_0 =",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "log-output",
+        "text": "STDOUTFIXTURE_STDOUT fixture-a2📊 Plots & Visualizations\n                            📈 controlled_fixture.png",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "llm-result",
+        "text": "模型fixture/model-alphacontent\n                        \n                            Expand to view\n                            \n                                FIXTURE_LLM_CONTENT fixture-a2\n                            \n                        \n                    model_posteriors{\n  \"fixture/model-alpha\": 0.6,\n  \"fixture/model-beta\": 0.4\n}promptFIXTURE_LLM_PROMPT: deterministic toy program onlyinput_tokens105output_tokens25",
+        "plots": 0,
+        "canvas": 0
+      },
+      {
+        "id": "analysis",
+        "text": "程序正确率\n                            00.511.52020406080100OverallDiffInit\n                        \n                        \n                            Program Improvement Rate [P vs. C]\n                            11.52020406080100OverallDiff\n                        \n                        \n                            各代代码行数\n                            No code bloat data available.\n                        \n                        \n                            变异幅度 vs 改进\n                           ",
+        "plots": 11,
+        "canvas": 0
+      },
+      {
+        "id": "throughput",
+        "text": "Throughput Summary\n                            No pool-based runtime data available.\n                        \n                        \n                            Generation Runtime Timeline\n                            \n                            No throughput data available.\n                        \n                        \n                            Worker Occupancy Over Time\n                            No throughput data available.\n                        \n                        \n         ",
+        "plots": 0,
+        "canvas": 0
+      }
+    ],
+    "errors": [],
+    "selection": {
+      "selected": "fixture-a2",
+      "db": "runs/fixture-rich/programs.sqlite",
+      "epoch": 1
+    }
+  },
+  "boundaries": {
+    "nestedBefore": "http://127.0.0.1:8769/?view=runs&analysis=%2Fviz_tree.html%3Fdb_path%3Druns%252Ffixture-rich%252Fprograms.sqlite%26left_tab%3Ddiversity-view%26right_tab%3Dmeta-analysis%26meta_section%3Dglobal-insights%26selected_node%3Dfixture-a2",
+    "nestedAfter": {
+      "selected": "fixture-a2",
+      "right": "meta-analysis",
+      "section": "global-insights",
+      "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=diversity-view&right_tab=meta-analysis&meta_section=global-insights&selected_node=fixture-a2"
+    },
+    "throughput": {
+      "programs": [
+        {
+          "id": "fixture-throughput-final-0",
+          "score": 0
+        },
+        {
+          "id": "fixture-throughput-final-1",
+          "score": -1
+        }
+      ],
+      "text": "\n                \n                    \n                        Wall-Clock Span\n                        16.0s\n                    \n                    \n                        Completed Jobs\n                        2\n                    \n                    \n                        Eval Full Occupancy\n                        76.9%\n                    \n                    \n                        Eval Utilization\n                        76.9%\n                    \n                    \n                        Eval Idle\n                        23.1%\n                    \n                    \n                        Completions / Min\n                        7.50\n                    \n                \n            ",
+      "plots": 5,
+      "tables": 6
+    },
+    "zeroWinner": {
+      "selected": "fixture-throughput-final-0",
+      "score": 0,
+      "occupied": 1
+    },
+    "failedTree": {
+      "nodes": 2,
+      "winners": 0,
+      "best": null
+    },
+    "failedPath": {
+      "text": "无法确定最佳节点。",
+      "flow": 0
+    },
+    "modelCosts": {
+      "initial": [
+        [
+          "model-missing",
+          "2",
+          "50.0%",
+          "0.5000",
+          "—"
+        ],
+        [
+          "model-recorded",
+          "2",
+          "50.0%",
+          "0.2500",
+          "$0.1600"
+        ],
+        [
+          "model-zero",
+          "1",
+          "100.0%",
+          "0.2500",
+          "$0.0000"
+        ]
+      ],
+      "descending": [
+        [
+          "model-recorded",
+          "2",
+          "50.0%",
+          "0.2500",
+          "$0.1600"
+        ],
+        [
+          "model-zero",
+          "1",
+          "100.0%",
+          "0.2500",
+          "$0.0000"
+        ],
+        [
+          "model-missing",
+          "2",
+          "50.0%",
+          "0.5000",
+          "—"
+        ]
+      ],
+      "ascending": [
+        [
+          "model-zero",
+          "1",
+          "100.0%",
+          "0.2500",
+          "$0.0000"
+        ],
+        [
+          "model-recorded",
+          "2",
+          "50.0%",
+          "0.2500",
+          "$0.1600"
+        ],
+        [
+          "model-missing",
+          "2",
+          "50.0%",
+          "0.5000",
+          "—"
+        ]
+      ],
+      "plots": {
+        "heatmap": [
+          {
+            "z": [
+              [
+                null,
+                null
+              ],
+              [
+                0.08,
+                null
+              ],
+              [
+                null,
+                0
+              ]
+            ],
+            "text": [
+              [
+                "—",
+                "—<br>(2 P)"
+              ],
+              [
+                "$0.080<br>(2 P)",
+                "—"
+              ],
+              [
+                "—",
+                "$0.000<br>(1 P)"
+              ]
+            ],
+            "hover": [
+              [
+                "model-missing / diff<br>No data",
+                "model-missing / full<br>Avg cost: —<br>n=2"
+              ],
+              [
+                "model-recorded / diff<br>Avg cost: $0.0800<br>n=2",
+                "model-recorded / full<br>No data"
+              ],
+              [
+                "model-zero / diff<br>No data",
+                "model-zero / full<br>Avg cost: $0.0000<br>n=1"
+              ]
+            ]
+          }
+        ],
+        "curves": [
+          {
+            "name": "Overall",
+            "x": [
+              0,
+              1,
+              2
+            ],
+            "y": [
+              null,
+              null,
+              null
+            ],
+            "connectgaps": false
+          },
+          {
+            "name": "model-recorded / diff",
+            "x": [
+              0,
+              1,
+              2
+            ],
+            "y": [
+              0.115,
+              0.115,
+              0.08
+            ],
+            "connectgaps": false
+          },
+          {
+            "name": "model-zero / full",
+            "x": [
+              0,
+              1,
+              2
+            ],
+            "y": [
+              null,
+              0,
+              0
+            ],
+            "connectgaps": false
+          },
+          {
+            "name": "model-missing / full",
+            "x": [
+              0,
+              1,
+              2
+            ],
+            "y": [
+              null,
+              null,
+              null
+            ],
+            "connectgaps": false
+          }
+        ],
+        "counts": [
+          {
+            "generation": 0,
+            "apiCost": 0.2,
+            "embedCost": null,
+            "noveltyCost": 0.004,
+            "metaCost": 0.006,
+            "totalCost": null,
+            "maxScore": 0.3,
+            "count": 2,
+            "avgCost": null,
+            "cumulativeCost": null
+          },
+          {
+            "generation": 1,
+            "apiCost": 0.2,
+            "embedCost": 0,
+            "noveltyCost": 0,
+            "metaCost": 0,
+            "totalCost": 0.2,
+            "maxScore": 0.4,
+            "count": 2,
+            "avgCost": 0.1,
+            "cumulativeCost": null
+          },
+          {
+            "generation": 2,
+            "apiCost": 0.04,
+            "embedCost": 0.004,
+            "noveltyCost": 0,
+            "metaCost": 0.001,
+            "totalCost": 0.045,
+            "maxScore": 0.15,
+            "count": 1,
+            "avgCost": 0.045,
+            "cumulativeCost": null
+          }
+        ]
+      },
+      "errors": []
+    },
+    "emptySelected": {
+      "populated": {
+        "selected": "fixture-live-transition",
+        "code": true
+      },
+      "empty": {
+        "selected": null,
+        "raw": 0,
+        "code": "复制\n                        下载\n                    \n                    请选择程序以查看详情。",
+        "summary": "",
+        "notices": [
+          "该运行尚无程序记录。可以返回运行列表，或等待结果自动刷新。",
+          "还没有可分析的程序指标。"
+        ],
+        "status": "还没有程序；运行产生结果后会自动刷新。",
+        "controls": true
+      }
+    },
+    "pdf": {
+      "status": 500,
+      "type": "text/html;charset=utf-8",
+      "hasRequiredConverterHint": true,
+      "isPdfPayload": false
+    }
+  },
+  "runOwnership": {
+    "before": {
+      "held": 2,
+      "db": "runs/fixture-rich/programs.sqlite",
+      "epoch": 2
+    },
+    "afterB": {
+      "db": "runs/fixture-negative/programs.sqlite",
+      "ids": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ],
+      "status": "已载入 3 个程序 · 03:52:10"
+    },
+    "afterA": {
+      "db": "runs/fixture-negative/programs.sqlite",
+      "ids": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ],
+      "status": "已载入 3 个程序 · 03:52:10",
+      "busy": false
+    }
+  },
+  "deferredOwnership": {
+    "deferred": {
+      "db": "runs/fixture-negative/programs.sqlite",
+      "ids": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ],
+      "cost": "成本概览API 总成本$0.06嵌入总成本$0.01成本概览$0.10平均每程序成本$0.03成本 vs 分数趋势12233$0.000$0.020$0.040$0.060$0.080$0.100−0.800−0.600−0.400−0.200Cumulative Cost ($)Best ScoreCostBest Score模型成本效率$/Δscore — lower is more efficientmodel-alpha$/Δscore: $0.08"
+    },
+    "embedding": {
+      "db": "runs/fixture-negative/programs.sqlite",
+      "ids": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ],
+      "cachedForB": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ]
+    },
+    "failedSwitch": {
+      "db": "runs/no-such-run/programs.sqlite",
+      "raw": 0,
+      "tree": 0,
+      "selected": null,
+      "masked": true,
+      "notice": "运行读取失败，请使用刷新重试。",
+      "code": "请选择程序以查看详情。"
+    }
+  },
+  "detailOwnership": {
+    "cachedSelection": {
+      "selected": "fixture-a2",
+      "currentCodePresent": true,
+      "parentDiffPresent": true
+    },
+    "before": {
+      "held": 2,
+      "selected": "fixture-b1"
+    },
+    "after": {
+      "selected": "fixture-b1",
+      "codeCorrect": true,
+      "initialCode": null,
+      "mode": "parent",
+      "plots": [
+        {
+          "src": "http://127.0.0.1:8769/plot_file/runs%2Ffixture-rich%2Fgen_1%2Fresults%2Fplots%2Fcontrolled_fixture.png",
+          "loaded": true
+        }
+      ]
+    }
+  },
+  "ordinaryJourney": {
+    "restored": {
+      "q": "fixture",
+      "sort": "score",
+      "selected": [
+        "runs/fixture-failed-scores/programs.sqlite",
+        "runs/fixture-negative/programs.sqlite"
+      ]
+    },
+    "error": null,
+    "comparison": {
+      "url": "http://127.0.0.1:8769/?view=runs&analysis=%2Fcompare.html%3Fselection%3D%255B%257B%2522path%2522%253A%2522runs%252Ffixture-negative%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-negative%2522%257D%252C%257B%2522path%2522%253A%2522runs%252Ffixture-failed-scores%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-failed-scores%2522%257D%255D&compare=%5B%7B%22path%22%3A%22runs%2Ffixture-negative%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-negative%22%7D%2C%7B%22path%22%3A%22runs%2Ffixture-failed-scores%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-failed-scores%22%7D%5D",
+      "text": " fixture-negative\t-0.10\t2\t3\t0.10\t→\n fixture-failed-scores\t-0.10\t2\t3\t1.50\t→"
+    },
+    "analysis": {
+      "db": "runs/fixture-negative/programs.sqlite",
+      "ids": [
+        "fixture-neg0",
+        "fixture-neg1",
+        "fixture-neg2"
+      ],
+      "best": -0.1
+    },
+    "back": {
+      "url": "http://127.0.0.1:8769/?view=runs&analysis=%2Fcompare.html%3Fselection%3D%255B%257B%2522path%2522%253A%2522runs%252Ffixture-negative%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-negative%2522%257D%252C%257B%2522path%2522%253A%2522runs%252Ffixture-failed-scores%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-failed-scores%2522%257D%255D&compare=%5B%7B%22path%22%3A%22runs%2Ffixture-negative%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-negative%22%7D%2C%7B%22path%22%3A%22runs%2Ffixture-failed-scores%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-failed-scores%22%7D%5D",
+      "text": " fixture-negative\t-0.10\t2\t3\t0.10\t→\n fixture-failed-scores\t-0.10\t2\t3\t1.50\t→"
+    },
+    "sameComparison": true
+  },
+  "comparisonHistory": {
+    "a": " fixture-negative\t-0.10\t2\t3\t0.10\t→\n fixture-failed-scores\t-0.10\t2\t3\t1.50\t→",
+    "b": " fixture-all-failed\t—\t1\t2\t0.75\t→\n fixture-null\t—\t1\t2\t0.05\t→",
+    "backB": " fixture-all-failed\t—\t1\t2\t0.75\t→\n fixture-null\t—\t1\t2\t0.05\t→",
+    "outer": "http://127.0.0.1:8769/?view=runs&analysis=%2Fcompare.html%3Fselection%3D%255B%257B%2522path%2522%253A%2522runs%252Ffixture-all-failed%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-all-failed%2522%257D%252C%257B%2522path%2522%253A%2522runs%252Ffixture-null%252Fprograms.sqlite%2522%252C%2522label%2522%253A%2522fixture-null%2522%257D%255D&compare=%5B%7B%22path%22%3A%22runs%2Ffixture-all-failed%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-all-failed%22%7D%2C%7B%22path%22%3A%22runs%2Ffixture-null%2Fprograms.sqlite%22%2C%22label%22%3A%22fixture-null%22%7D%5D"
+  },
+  "savedBrowserRegressions": {
+    "prompt": {
+      "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=fixture-a2",
+      "selected": "fixture-a2",
+      "leftTab": "tree-view",
+      "rightTab": "agent-code",
+      "highlighted": [
+        "程序 fixture-a2，代数 2，得分 0.8"
+      ]
+    },
+    "path": {
+      "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=fixture-a0",
+      "selected": "fixture-a0",
+      "leftTab": "tree-view",
+      "rightTab": "agent-code",
+      "highlighted": [
+        "程序 fixture-a0，代数 0，得分 0.2"
+      ]
+    }
+  },
+  "ownerPreview": {
+    "analysis": {
+      "url": "http://127.0.0.1:8768/viz_tree.html?db_path=workspace%2Fbtc-hourly-momentum%2Fexperiments%2Fh001%2Fe01%2Fresults%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7",
+      "selected": "377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7",
+      "highlighted": [
+        "377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7"
+      ],
+      "right": "agent-code",
+      "code12And20": true
+    },
+    "returned": "http://127.0.0.1:8768/?direction=btc-hourly-momentum&hypothesis=h001",
+    "landing": "http://127.0.0.1:8768/"
+  },
+  "zip": {
+    "size": 1862,
+    "files": [
+      "1_gen2_Fixture_fixture-a2.py",
+      "2_gen1_Fixture_fixture-a1.py",
+      "README.txt"
+    ],
+    "programs": [
+      "fixture-a2",
+      "fixture-a1"
+    ],
+    "readme": "Top 2 Performing Programs\nGenerated on: 2026-10-18T21:15:27.468Z\nDatabase: runs/fixture-rich/programs.sqlite\n\nRank\tGeneration\tScore\tName\tType\tLanguage\tAPI_Cost\tComplexity\tModel\tID\tParent_ID\tDescription\tFilename\n1\t2\t0.800000\tFixture fixture-a2\tdiff\tpython\t$0.0500\t3.500\tfixture/model-alpha\tfixture-a2...\tfixture-a1...\tControlled deterministic variation fixture-a2\t1_gen2_Fixture_fixture-a2.py\n2\t1\t0.500000\tFixture fixture-a1\tdiff\tpython\t$0.0300\t2.500\tfixture/model-beta\tfixture-a1...\tfixture-a0...\tControlled deterministic variation fixture-a1\t2_gen1_Fixture_fixture-a1.py\n",
+    "method": "Actual export action, generated Blob decoded with JSZip; no candidate execution or filesystem-save claim"
+  },
+  "responsive": {
+    "files": [
+      {
+        "file": "desktop-path.png",
+        "width": 1440,
+        "outer": {
+          "client": 1440,
+          "scroll": 1440
+        },
+        "frame": {
+          "client": 1376,
+          "scroll": 1376,
+          "selected": "fixture-a2",
+          "right": "agent-code",
+          "epoch": 1,
+          "pathNodes": 3,
+          "code": true
+        }
+      },
+      {
+        "file": "tablet-path.png",
+        "width": 1024,
+        "outer": {
+          "client": 1024,
+          "scroll": 1024
+        },
+        "frame": {
+          "client": 960,
+          "scroll": 960,
+          "selected": "fixture-a2",
+          "right": "agent-code",
+          "epoch": 1,
+          "pathNodes": 3,
+          "code": true
+        }
+      },
+      {
+        "file": "mobile-path.png",
+        "width": 390,
+        "outer": {
+          "client": 390,
+          "scroll": 390
+        },
+        "frame": {
+          "client": 358,
+          "scroll": 358,
+          "selected": "fixture-a2",
+          "right": "agent-code",
+          "epoch": 1,
+          "pathNodes": 3,
+          "code": true
+        }
+      },
+      {
+        "file": "light-path.png",
+        "theme": "light"
+      },
+      {
+        "file": "zoom-200.png",
+        "method": "CSS zoom 2 proxy, not native browser zoom",
+        "frame": {
+          "client": 656,
+          "scroll": 656,
+          "selected": "fixture-a2",
+          "right": "agent-code"
+        }
+      }
+    ],
+    "pageErrors": [],
+    "networkErrors": []
+  },
+  "contrast": {
+    "pathAndCode": {
+      "dark": {
+        "samples": 130,
+        "min": 5.65,
+        "failures": []
+      },
+      "light": {
+        "samples": 130,
+        "min": 4.51,
+        "failures": []
+      }
+    },
+    "visibleTextAcrossLightViews": {
+      "light": {
+        "tree-view": {
+          "samples": 66,
+          "min": 4.85,
+          "failures": []
+        },
+        "meta-prompt-view": {
+          "samples": 67,
+          "min": 4.85,
+          "failures": []
+        },
+        "table-view": {
+          "samples": 134,
+          "min": 4.85,
+          "failures": []
+        },
+        "metrics-view": {
+          "samples": 107,
+          "min": 4.85,
+          "failures": []
+        },
+        "embeddings-view": {
+          "samples": 87,
+          "min": 4.85,
+          "failures": []
+        },
+        "clusters-view": {
+          "samples": 66,
+          "min": 4.85,
+          "failures": []
+        },
+        "islands-view": {
+          "samples": 103,
+          "min": 4.85,
+          "failures": []
+        },
+        "model-posteriors-view": {
+          "samples": 86,
+          "min": 4.85,
+          "failures": []
+        },
+        "best-path-view": {
+          "samples": 140,
+          "min": 4.51,
+          "failures": []
+        },
+        "cost-view": {
+          "samples": 89,
+          "min": 4.79,
+          "failures": []
+        },
+        "maps-view": {
+          "samples": 85,
+          "min": 4.85,
+          "failures": []
+        },
+        "battle-view": {
+          "samples": 85,
+          "min": 4.85,
+          "failures": []
+        },
+        "diversity-view": {
+          "samples": 113,
+          "min": 4.85,
+          "failures": []
+        }
+      }
+    },
+    "scope": "Measured visible HTML/SVG leaf text; not a complete WCAG certification or chart/cross-browser audit."
+  },
+  "runtime": {
+    "networkErrors": [],
+    "pageErrors": [],
+    "coldSettledMs": 959,
+    "resources": {
+      "domReadyMs": 182.60000002384186,
+      "resources": [
+        {
+          "name": "http://127.0.0.1:8769/analysis/runtime.css",
+          "bytes": 434552,
+          "transfer": 434852
+        },
+        {
+          "name": "http://127.0.0.1:8769/analysis/runtime.iife.js",
+          "bytes": 5557617,
+          "transfer": 5557917
+        },
+        {
+          "name": "http://127.0.0.1:8769/analysis/i18n_en.json",
+          "bytes": 5791,
+          "transfer": 6091
+        },
+        {
+          "name": "http://127.0.0.1:8769/analysis/i18n_zh.json",
+          "bytes": 5501,
+          "transfer": 5801
+        },
+        {
+          "name": "http://127.0.0.1:8769/list_databases",
+          "bytes": 2213,
+          "transfer": 2513
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_programs_summary?db_path=runs%2Ffixture-rich%2Fprograms.sqlite",
+          "bytes": 12203,
+          "transfer": 12503
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_system_prompts?db_path=runs%2Ffixture-rich%2Fprograms.sqlite",
+          "bytes": 1491,
+          "transfer": 1791
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_meta_files?db_path=runs%2Ffixture-rich%2Fprograms.sqlite",
+          "bytes": 416,
+          "transfer": 716
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_program_details?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&id=fixture-a2",
+          "bytes": 2825,
+          "transfer": 3125
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_plots?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&generation=2&program_id=fixture-a2",
+          "bytes": 144,
+          "transfer": 444
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_program_details?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&id=fixture-a0",
+          "bytes": 2694,
+          "transfer": 2994
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_program_details?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&id=fixture-a1",
+          "bytes": 2748,
+          "transfer": 3048
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_program_details?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&id=fixture-a2",
+          "bytes": 2825,
+          "transfer": 3125
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_meta_content?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&processed_count=6",
+          "bytes": 694,
+          "transfer": 994
+        },
+        {
+          "name": "http://127.0.0.1:8769/plot_file/runs%2Ffixture-rich%2Fgen_2%2Fresults%2Fplots%2Fcontrolled_fixture.png",
+          "bytes": 601,
+          "transfer": 901
+        },
+        {
+          "name": "http://127.0.0.1:8769/get_meta_content?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&processed_count=2",
+          "bytes": 267,
+          "transfer": 567
+        }
+      ],
+      "font": "\"Inter Variable\", \"PingFang SC\", \"Noto Sans SC\", sans-serif"
+    },
+    "english": {
+      "lang": "en",
+      "tabs": [
+        "Tree",
+        "PromptEvo",
+        "Programs",
+        "Metrics",
+        "Embed",
+        "Clusters",
+        "Islands",
+        "Ensembling",
+        "Path",
+        "Cost",
+        "MAPs",
+        "Battle",
+        "Diversity"
+      ],
+      "copy": "Copy"
+    },
+    "keyboard": {
+      "home": {
+        "active": "tree-view",
+        "aria": "true"
+      },
+      "end": {
+        "active": "diversity-view",
+        "aria": "true"
+      }
+    },
+    "reduced": {
+      "media": true,
+      "transitions": "0s",
+      "selected": "fixture-a2"
+    },
+    "zoom200": {
+      "inner": 648,
+      "scroll": 641,
+      "selected": "fixture-a2",
+      "code": true
+    },
+    "scope": "Local Chrome cold-resource and CSS zoom proxy measurements; separate nativeZoom record verifies actual browser page zoom."
+  },
+  "acceptance": {
+    "technical": "Verified paths in this receipt",
+    "owner": "pending",
+    "awards": "benchmark only, no award or certification claim",
+    "pdfSuccess": "unverified; converter unavailable, actual clear HTTP500 observed",
+    "nativeZoom": "Verified native Chrome Page zoom 200%, CSS zoom1, DPR1→2, innerWidth1440→720, then restored100%; native viewport code image inspected."
+  },
+  "nativeZoom": {
+    "method": "Native Chrome Page zoom 200% via task-owned settings control; viewport captures avoid fullPage zoom clipping",
+    "errors": [],
+    "before": {
+      "innerWidth": 1440,
+      "devicePixelRatio": 1,
+      "cssZoom": "1"
+    },
+    "control": {
+      "prior": "1",
+      "selected": "2"
+    },
+    "after": {
+      "innerWidth": 720,
+      "devicePixelRatio": 2,
+      "cssZoom": "1",
+      "client": 712,
+      "scroll": 712,
+      "scrollHeight": 1734
+    },
+    "frame": {
+      "client": 680,
+      "scroll": 680,
+      "selected": "fixture-a2",
+      "right": "agent-code",
+      "pathNodes": 3,
+      "code": true
+    },
+    "codeViewport": {
+      "scrollY": 1185.5,
+      "innerHeight": 500,
+      "innerWidth": 720,
+      "devicePixelRatio": 2,
+      "frameCodeRect": {
+        "x": 36,
+        "y": 946.9921875,
+        "width": 608.5,
+        "height": 250.34375,
+        "top": 946.9921875,
+        "right": 644.5,
+        "bottom": 1197.3359375,
+        "left": 36
+      }
+    },
+    "screenshots": [
+      "native-zoom-200.png",
+      "native-zoom-200-code.png"
+    ],
+    "restoredControl": "1",
+    "restoredPage": {
+      "innerWidth": 1440,
+      "devicePixelRatio": 1,
+      "cssZoom": "1"
+    }
+  },
+  "copyFeedback": {
+    "before": {
+      "label": "复制",
+      "live": "polite"
+    },
+    "success": "已复制",
+    "reset": "复制",
+    "operationEmoji": []
+  }
+}

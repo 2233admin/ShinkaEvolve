@@ -18,7 +18,7 @@ from shinka.database.prompt_dbase import (
     SystemPromptConfig,
     SystemPromptDatabase,
 )
-from shinka.research import ui
+from shinka.research import analysis
 
 
 @contextmanager
@@ -26,7 +26,7 @@ def _tree_server(experiments: Path) -> Iterator[str]:
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
         partial(
-            ui._TreeHandler,
+            analysis.AnalysisHandler,
             search_root=str(experiments.resolve()),
             show_private=False,
         ),
@@ -44,6 +44,8 @@ def _tree_server(experiments: Path) -> Iterator[str]:
 
 
 def _get(base: str, endpoint: str, **query: str) -> tuple[int, str]:
+    if "db_path" in query:
+        query["db_path"] = f"workspace/{query['db_path']}"
     url = f"{base}/{endpoint}?{urllib.parse.urlencode(query)}"
     try:
         response = urllib.request.urlopen(url, timeout=10)

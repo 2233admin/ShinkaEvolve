@@ -6,6 +6,13 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Added
 
+- Added a unified read-only Research workspace with independent ordinary runs,
+  comparison links and the fork's redesigned full experiment analysis workbench.
+  Research links retain direction/hypothesis context, while analysis URLs retain
+  tabs, selected programs and comparison selections across refresh and history.
+  The restored renderer uses local pinned dependencies, shared dark/light tokens,
+  keyboard navigation and protected same-origin data access.
+
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.
@@ -36,6 +43,10 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Removed the automatic Claude Code Review pull-request workflow.
 
 ### Fixed
+
+- Fixed restored analysis frontiers admitting failed zero-valued scores, stale
+  program details after rapid selection, lost selected-program links, and absent
+  cost/diversity measurements being presented as measured zero values.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block

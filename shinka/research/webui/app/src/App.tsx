@@ -1,10 +1,12 @@
 import { useEffect, useLayoutEffect, useState } from 'react'
-import { Breadcrumb, BreadcrumbItem, Button, InlineNotification, Tab, TabList, TabPanel, TabPanels, Tabs, Tag, Theme } from '@carbon/react'
+import { Breadcrumb, BreadcrumbItem, Button, InlineNotification, Theme } from '@carbon/react'
+import { AnalysisWorkspace } from './AnalysisWorkspace'
 import { LibraryTab } from './LibraryTab'
 import { ResearchTab } from './ResearchTab'
 import { Term } from './Term'
 import { TopBar } from './TopBar'
 import { WorkspaceTable } from './WorkspaceTable'
+import { WorkspaceNav, type WorkspaceView } from './WorkspaceNav'
 import type { Snapshot, WorkspaceSnapshot } from './types'
 
 const THEME_KEY = 'shinka-theme'
@@ -24,8 +26,11 @@ export default function App() {
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<string | null>(null)
-  const [directionId] = useState(() => new URLSearchParams(window.location.search).get('direction'))
+  const params = new URLSearchParams(window.location.search)
+  const [selected, setSelected] = useState<string | null>(() => params.get('hypothesis'))
+  const [directionId] = useState(() => params.get('direction'))
+  const requestedView = params.get('view')
+  const view: WorkspaceView = requestedView === 'runs' || requestedView === 'library' ? requestedView : 'research'
   const [refreshVersion, setRefreshVersion] = useState(0)
 
   // layout effect：先于子组件读取主题色值的 passive effect 生效。
@@ -67,20 +72,34 @@ export default function App() {
   const lib = snap?.library ?? workspace?.library ?? null
   const pending = lib?.pending.length ?? 0
   const current = snap?.hypotheses.find((h) => h.id === selected) ?? snap?.hypotheses[0] ?? null
+  const researchParams = new URLSearchParams()
+  if (directionId !== null) researchParams.set('direction', directionId)
+  if (selected !== null) researchParams.set('hypothesis', selected)
+  const researchUrl = `/?${researchParams}`
+  function selectHypothesis(id: string) {
+    setSelected(id)
+    const url = new URL(window.location.href)
+    url.searchParams.set('hypothesis', id)
+    window.history.replaceState(null, '', url)
+  }
 
   return (
     <Theme theme={light ? 'white' : 'g100'}>
       <TopBar snap={snap} light={light} onTheme={setLight} />
-      <main className="page">
+      <main className={`page${view === 'runs' ? ' analysis-page' : ''}`}>
+        <WorkspaceNav view={view} pending={pending} />
         {directionId !== null && (
           <Breadcrumb noTrailingSlash>
             <BreadcrumbItem href="/">工作区</BreadcrumbItem>
-            <BreadcrumbItem isCurrentPage>研究方向</BreadcrumbItem>
+            {view === 'runs'
+              ? <BreadcrumbItem href={researchUrl}>{`返回研究 · ${snap?.direction ?? directionId}${selected ? ` · ${selected}` : ''}`}</BreadcrumbItem>
+              : <BreadcrumbItem isCurrentPage>研究方向</BreadcrumbItem>}
+            {view === 'runs' && <BreadcrumbItem isCurrentPage>实验分析</BreadcrumbItem>}
           </Breadcrumb>
         )}
         <header className="page-head">
           <div className="page-head-row">
-            <h1>{directionId !== null
+            <h1>{view === 'runs' ? '运行与分析' : view === 'library' ? '共享资料库' : directionId !== null
               ? snap?.direction ?? (loading ? '载入中…' : '研究方向')
               : workspace ? `工作区 · ${workspace.name}` : loading ? '载入中…' : '工作区'}</h1>
             <Button kind="tertiary" size="sm" onClick={() => setRefreshVersion((v) => v + 1)} disabled={loading}>
@@ -88,7 +107,9 @@ export default function App() {
             </Button>
           </div>
           <p className="muted">
-            {directionId === null
+            {view === 'runs'
+              ? <>浏览运行、比较结果并检查完整实验分析。研究由对话主导；网页只读，私有指标不公开。</>
+              : view === 'library' ? <>所有研究方向共享同一份资料库。</> : directionId === null
               ? <>选择研究方向查看假设与结论。<Term k="trials">试验数</Term>按方向累计；
                 <Term k="sealed">封存段</Term>状态按方向展示。同一工作区共用一个资料库，研究操作仍通过 CLI 执行。</>
               : <>每个假设在<Term k="insample">样本内</Term>进化，再由质疑者在<Term k="validation">验证段</Term>检验；
@@ -106,7 +127,7 @@ export default function App() {
           />
         )}
 
-        {snap && snap.hypotheses.length === 0 && (
+        {view === 'research' && snap && snap.hypotheses.length === 0 && (
           <InlineNotification
             kind="info"
             lowContrast
@@ -116,33 +137,13 @@ export default function App() {
           />
         )}
 
-        {(snap || workspace) && (
-          <Tabs>
-            <TabList aria-label="内容" contained={false}>
-              <Tab>{directionId === null ? '工作区' : '研究'}</Tab>
-              <Tab>
-                <span className="tab-label">
-                  资料库
-                  {pending > 0 && (
-                    <Tag size="sm" type="gray" title={`${pending} 份资料待整理`}>
-                      {pending}
-                    </Tag>
-                  )}
-                </span>
-              </Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                {workspace
-                  ? <WorkspaceTable directions={workspace.directions} />
-                  : current && snap && <ResearchTab snap={snap} current={current} light={light} onSelect={setSelected} />}
-              </TabPanel>
-              <TabPanel>
-                <LibraryTab lib={lib} />
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        )}
+        {view === 'runs'
+          ? <AnalysisWorkspace key={refreshVersion} light={light} />
+          : view === 'library'
+            ? <LibraryTab lib={lib} />
+            : workspace
+              ? <WorkspaceTable directions={workspace.directions} />
+              : current && snap && <ResearchTab snap={snap} current={current} light={light} onSelect={selectHypothesis} />}
       </main>
     </Theme>
   )

@@ -10,19 +10,17 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import threading
 import urllib.parse
 import webbrowser
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PureWindowsPath
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import numpy as np
 
-from shinka.webui import visualization
-
+from .analysis import ANALYSIS_PATHS, AnalysisHandler, confined as _confined
 from . import library, rundb
 from .notebook import (
     NOTEBOOK_FILENAME,
@@ -39,15 +37,6 @@ HIDDEN = "（验证段结果，出结论后显示）"
 
 def _iso(ts: float) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).isoformat(timespec="seconds")
-
-
-def _confined(authority: Path, path: Path) -> Path:
-    target = path.resolve()
-    try:
-        target.relative_to(authority.resolve())
-    except ValueError:
-        raise PermissionError("Outside research read scope") from None
-    return target
 
 
 def _results(root: Path, hid: str, eid: str) -> Path:
@@ -71,8 +60,18 @@ def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
         "spend_usd": rundb.total_cost(rd),
         "first_trial": _iso(times[0]) if times else None,
         "last_trial": _iso(times[-1]) if times else None,
-        # Path for the upstream evolution tree, relative to <direction>/experiments.
-        "tree_db": db.relative_to(_confined(root, root / "experiments")).as_posix()
+        "analysis_url": "/?"
+        + urllib.parse.urlencode(
+            {
+                "view": "runs",
+                "direction": root.name,
+                "hypothesis": h.id,
+                "analysis": "/viz_tree.html?"
+                + urllib.parse.urlencode(
+                    {"db_path": f"workspace/{db.relative_to(root.parent).as_posix()}"}
+                ),
+            }
+        )
         if db.exists()
         else None,
     }
@@ -174,9 +173,7 @@ def _library(workspace: Path) -> Optional[Dict[str, Any]]:
     }
 
 
-def snapshot(
-    root: Path, events: int = 50, tree_url: Optional[str] = None
-) -> Dict[str, Any]:
+def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
     root = Path(root).resolve()
     _confined(root, root / NOTEBOOK_FILENAME)
     nb = Notebook.load(root)
@@ -215,7 +212,6 @@ def snapshot(
         "probes": sum(e.n_probed for h in nb.hypotheses for e in h.experiments),
         "events": _events(root, nb, events),
         "library": _library(root.parent),
-        "tree_url": tree_url,
     }
 
 
@@ -302,86 +298,17 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
     }
 
 
-class _TreeHandler(visualization.DatabaseRequestHandler):
-    """Upstream's evolution-tree handler, confined to <direction>/experiments:
-    every requested database or plot file must resolve inside it, and no
-    cross-origin access (upstream answers ``Access-Control-Allow-Origin: *``,
-    which would let any web page read the programs)."""
-
-    def do_GET(self) -> None:
-        url = urllib.parse.urlparse(self.path)
-        query = urllib.parse.parse_qs(url.query)
-        scope = Path(self.search_root)
-        try:
-            for path in query.get("db_path", []):
-                db = Path(self._get_actual_db_path(path))
-                if url.path in {
-                    "/get_meta_files",
-                    "/get_meta_content",
-                    "/download_meta_pdf",
-                }:
-                    meta = _confined(scope, db.parent / "meta")
-                    if url.path != "/get_meta_files":
-                        counts = query.get(
-                            "processed_count", query.get("generation", [])
-                        )
-                        for count in counts:
-                            target = _confined(scope, meta / f"meta_{count}.txt")
-                            if not target.exists():
-                                _confined(scope, db.parent / f"meta_{count}.txt")
-                elif url.path == "/get_plots":
-                    for generation in query.get("generation", []):
-                        _confined(
-                            scope, db.parent / f"gen_{generation}" / "results" / "plots"
-                        )
-            if url.path.startswith("/plot_file/"):
-                _confined(
-                    scope,
-                    scope / urllib.parse.unquote(url.path[len("/plot_file/") :]),
-                )
-            super().do_GET()
-        except PermissionError:
-            self.send_error(403, "Outside this direction's experiments")
-
-    def _get_actual_db_path(self, db_path: str) -> str:
-        scope = Path(self.search_root)
-        db = _confined(scope, scope / db_path)
-        _confined(scope, db.with_name(rundb.PROMPT_DB_FILENAME))
-        return str(db)
-
-    def _read_failure_json(self, failure_json_path):
-        if failure_json_path:
-            scope = Path(self.search_root)
-            # Upstream also enumerates the lexical parent to infer a language.
-            _confined(scope, (scope / failure_json_path).parent)
-            _confined(scope, scope / failure_json_path)
-        return super()._read_failure_json(failure_json_path)
-
-    def _resolve_failed_node_code_path(self, details, failure_payload):
-        path = super()._resolve_failed_node_code_path(details, failure_payload)
-        return _confined(Path(self.search_root), path) if path is not None else None
-
-    def handle_get_programs(self, db_path: str):
-        # Upstream's process-wide cache keys only by db_path. Make that key
-        # direction-specific while keeping the browser's relative links.
-        super().handle_get_programs(self._get_actual_db_path(db_path))
-
-    def send_header(self, keyword: str, value: str) -> None:
-        if keyword.lower() != "access-control-allow-origin":
-            super().send_header(keyword, value)
-
-
-class _Handler(SimpleHTTPRequestHandler):
+class _Handler(AnalysisHandler):
     def __init__(
         self,
         *args,
         root: Path,
-        tree_for: Optional[Callable[[Path], str]] = None,
         **kwargs,
     ):
         self.workspace_root = Path(root).resolve()
-        self.tree_for = tree_for
-        super().__init__(*args, directory=str(DIST), **kwargs)
+        super().__init__(
+            *args, search_root=str(self.workspace_root), directory=str(DIST), **kwargs
+        )
 
     def _json(self, payload: Dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()
@@ -394,8 +321,11 @@ class _Handler(SimpleHTTPRequestHandler):
 
     def do_GET(self) -> None:
         url = urllib.parse.urlparse(self.path)
-        if url.path not in {"/api/workspace", "/api/snapshot"}:
+        if url.path in ANALYSIS_PATHS or url.path.startswith("/plot_file/"):
             super().do_GET()
+            return
+        if url.path not in {"/api/workspace", "/api/snapshot"}:
+            SimpleHTTPRequestHandler.do_GET(self)
             return
         try:
             if url.path == "/api/workspace":
@@ -413,12 +343,6 @@ class _Handler(SimpleHTTPRequestHandler):
                     self.send_error(404, "Unknown direction")
                     return
                 payload = snapshot(root)
-                if self.tree_for and any(
-                    e["tree_db"]
-                    for h in payload["hypotheses"]
-                    for e in h["experiments"]
-                ):
-                    payload["tree_url"] = self.tree_for(root)
             self._json(payload)
         except (OSError, ValueError, sqlite3.Error) as error:
             self.send_error(
@@ -426,44 +350,17 @@ class _Handler(SimpleHTTPRequestHandler):
             )
 
 
-def serve(root: Path, port: int, open_browser: bool) -> None:
+def serve(
+    root: Path, port: int, open_browser: bool, runs_root: Optional[Path] = None
+) -> None:
     root = _workspace_root(root)
     if not (DIST / "index.html").exists():
         raise SystemExit(
             f"UI not built: run `pnpm install`, then `pnpm build` "
             f"in {DIST.parent / 'app'}"
         )
-    trees: Dict[Path, ThreadingHTTPServer] = {}
-    tree_lock = threading.Lock()
-    stopping = False
-
-    def tree_for(direction: Path) -> str:
-        with tree_lock:
-            if stopping:
-                raise OSError("Research UI is stopping")
-            tree = trees.get(direction)
-            if tree is None:
-                tree = ThreadingHTTPServer(
-                    ("127.0.0.1", 0),
-                    partial(
-                        _TreeHandler,
-                        search_root=str(
-                            _confined(direction, direction / "experiments")
-                        ),
-                        show_private=False,
-                        directory=str(Path(visualization.__file__).parent),
-                    ),
-                )
-                try:
-                    threading.Thread(target=tree.serve_forever, daemon=True).start()
-                except BaseException:
-                    tree.server_close()
-                    raise
-                trees[direction] = tree
-            return f"http://127.0.0.1:{tree.server_address[1]}/viz_tree.html"
-
     server = ThreadingHTTPServer(
-        ("127.0.0.1", port), partial(_Handler, root=root, tree_for=tree_for)
+        ("127.0.0.1", port), partial(_Handler, root=root, runs_root=runs_root)
     )
     try:
         url = f"http://127.0.0.1:{server.server_address[1]}/"
@@ -475,9 +372,3 @@ def serve(root: Path, port: int, open_browser: bool) -> None:
         pass
     finally:
         server.server_close()
-        with tree_lock:
-            stopping = True
-            opened = list(trees.values())
-        for tree in opened:
-            tree.shutdown()
-            tree.server_close()

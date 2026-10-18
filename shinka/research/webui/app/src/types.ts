@@ -28,7 +28,7 @@ export interface Experiment {
   spend_usd: number
   first_trial: string | null
   last_trial: string | null
-  tree_db: string | null
+  analysis_url: string | null
   skeptic?: Evidence | null
 }
 
@@ -94,7 +94,6 @@ export interface Snapshot {
   // 试探（probe）不留程序记录，不画点，但计入噪声线的试验数。
   probes: number
   events: SnapshotEvent[]
-  tree_url: string | null
   library: Library | null
 }
 
