@@ -17,6 +17,7 @@ import pytest
 from shinka.database import DatabaseConfig, Program, ProgramDatabase
 from shinka.research import ui
 from shinka.research.notebook import Experiment, Notebook, experiment_dir
+from shinka.webui import visualization
 
 
 def _write_program_database(path: Path, name: str, score: float) -> Program:
@@ -517,23 +518,47 @@ def test_run_reads_report_prompt_database_errors_and_recover(
         )
 
 
-def test_pdf_export_never_disguises_text_when_converter_is_unavailable(
-    workspace, monkeypatch
+@pytest.mark.parametrize("identifier", ["processed_count", "generation"])
+@pytest.mark.parametrize("meta_folder", ["meta", ""])
+def test_research_pdf_export_never_enters_unisolated_conversion(
+    workspace, monkeypatch, identifier: str, meta_folder: str
 ):
     root, expected = workspace
     relative = next(iter(expected))
-    meta = (root / relative).parent / "meta"
-    meta.mkdir()
-    (meta / "meta_1.txt").write_text(
-        "# Saved research notes\nPDF conversion boundary.\n", encoding="utf-8"
+    meta = (root / relative).parent / meta_folder
+    meta.mkdir(exist_ok=True)
+    content = (
+        "# PDF_ISOLATION_CANARY\n"
+        "![resource](http://127.0.0.1:9/never-loaded)\n"
+        '<img src="file:///forbidden-resource">\n'
     )
-    monkeypatch.setenv("PATH", "")
+    (meta / "meta_1.txt").write_text(content, encoding="utf-8")
+    conversion_calls = []
+
+    def forbidden_conversion(*args, **kwargs):
+        conversion_calls.append(True)
+        raise AssertionError("Unisolated conversion must not be entered")
+
+    monkeypatch.setattr(
+        visualization.DatabaseRequestHandler, "_generate_pdf", forbidden_conversion
+    )
+    monkeypatch.setattr(visualization.subprocess, "run", forbidden_conversion)
+    query = {"db_path": f"workspace/{relative}", identifier: "1"}
     with _workspace_server(root) as base:
-        status, body = _get(
-            base,
-            "download_meta_pdf",
-            db_path=f"workspace/{relative}",
-            processed_count="1",
+        request = urllib.request.Request(
+            f"{base}/download_meta_pdf?{urllib.parse.urlencode(query)}"
         )
-    assert status == 500
-    assert b"PDF export requires wkhtmltopdf or pandoc" in body
+        try:
+            response = urllib.request.urlopen(request, timeout=10)
+        except urllib.error.HTTPError as error:
+            response = error
+        with response:
+            assert response.status == 501
+            assert response.headers.get_content_type() == "application/json"
+            assert response.headers.get("Content-Disposition") is None
+            body = response.read()
+        assert "error" in json.loads(body)
+        assert b"PDF_ISOLATION_CANARY" not in body
+        assert conversion_calls == []
+        notes = _json(base, "get_meta_content", **query)
+        assert notes["content"] == content

@@ -166,5 +166,7 @@
   "div_generation": "Generation",
   "code_copy": "Copy",
   "code_copied": "Copied",
-  "code_download": "Download"
+  "code_download": "Download",
+  "pdf_export_disabled": "PDF export unavailable",
+  "pdf_export_note": "Server-side PDF export is disabled until conversion isolates local files and network resources. Installing a converter alone does not enable it. Meta notes and program ZIP exports remain available."
 }

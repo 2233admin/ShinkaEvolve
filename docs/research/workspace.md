@@ -55,7 +55,7 @@ React 保留研究导航与原方向返回入口，分析文档保留自身 DOM�
 
 通用分析显示原始 `combined_score`；不同评估器的分数未必同量纲，不能直接作研究结论。研究方向页继续展示全方向试验数及对应噪声基准，通用代数/费用图不套用其横轴或给普通任务虚构 Sharpe 校正。Tree、Path、比较、Cost、Battle 和 Diversity 的有效分数统计排除评估失败的有限占位分数；失败仍计入程序与已记录资源。缺失费用、少于两个得分的样本标准差和少于两个嵌入的距离保持缺失，不能伪装成免费或测得零多样性；明确记录的零成本继续显示为零，混有未知成本的累计值不重新变成已知。
 
-程序 ZIP 导出在浏览器本地生成。草稿的 PDF 导出仍使用既有服务端转换器，需要 `wkhtmltopdf`，或带 PDF 引擎的 `pandoc`；未满足依赖时返回明确的 500 错误，不能把正文文本以 `.pdf` 和 PDF MIME 类型下载。本机已验证缺少转换器的错误路径，未安装额外转换器，也未把 PDF 成功生成列为通过项。
+程序 ZIP 导出在浏览器本地生成。研究统一界面的服务端 PDF 导出当前停用；合法请求返回 501 JSON，前端禁用按钮并显示原因，不进入上游转换器，也不将正文文本冒充 PDF。仅安装 `wkhtmltopdf`、`pandoc` 或 PDF 引擎不能安全启用：现有转换路径没有经验证的本地文件与网络资源隔离，必须先提供并验证受限转换实现。草稿阅读和程序 ZIP 导出不受影响；独立上游查看器未改，本次交付不声称完整 PDF 能力对等。
 
 ## 验收与触达资产
 
@@ -67,7 +67,7 @@ React 保留研究导航与原方向返回入口，分析文档保留自身 DOM�
 
 实现者负责技术验证与证据；所有者视觉验收独立记录，不能由测试结果自动授予。验收夹具必须通过正常存储或研究接口按对应模型建立并标为夹具，不得称为 AU-5090 真实研究；普通运行夹具不需要伪造研究方向。
 
-`tools/browser-automation/unified-analysis.mjs` 提供可复用、只读的 Puppeteer 回归入口：`verifyPromptProgramSelection(page, options)` 覆盖提示节点的键盘选择、代码与缩放重绘后的树高亮；`verifyPathDeepLink(page, options)` 覆盖 Path 直接链接、刷新、选择及切回树的身份一致性。调用方提供已授权运行的路径、实际提示标签、程序 ID 和代码标记，不依赖临时目录或全局浏览器状态。
+`shinka/research/webui/browser-automation/unified-analysis.mjs` 提供可复用、只读的 Puppeteer 回归入口：`verifyPromptProgramSelection(page, options)` 覆盖提示节点的键盘选择、代码与缩放重绘后的树高亮；`verifyPathDeepLink(page, options)` 覆盖 Path 直接链接、刷新、选择及切回树的身份一致性。调用方提供已授权运行的路径、实际提示标签、程序 ID 和代码标记，不依赖临时目录或全局浏览器状态。
 
 方向页保留既有假设正文和结论台账，不增加独立 `REPORT.md` 阅读器。工作区原始验收见 [`research-workspace/qa.md`](../../shinka/research/webui/design/changes/research-workspace/qa.md)，本次完整分析、源码恢复与品质迭代见 [`unified-analysis/qa.md`](../../shinka/research/webui/design/changes/unified-analysis/qa.md)。
 

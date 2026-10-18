@@ -2492,8 +2492,9 @@
                         </div>
 
                         <button id="refresh-meta-btn" title="Refresh meta files">Refresh</button>
-                        <button id="download-pdf-btn" title="Download as PDF file">Download PDF</button>
+                        <button id="download-pdf-btn" disabled aria-describedby="pdf-export-note" data-i18n="pdf_export_disabled">PDF export unavailable</button>
                     </div>
+                    <p id="pdf-export-note" data-i18n="pdf_export_note">Server-side PDF export is disabled until conversion isolates local files and network resources. Installing a converter alone does not enable it. Meta notes and program ZIP exports remain available.</p>
                     
                     <!-- Sub-tabs for different sections -->
                     <div id="meta-sub-tabs" style="display: flex; gap: 10px; margin-bottom: 15px; border-bottom: 2px solid #e0e0e0;">
@@ -3104,12 +3105,6 @@
                 });
             }
             
-            const downloadPdfBtn = document.getElementById('download-pdf-btn');
-            if (downloadPdfBtn) {
-                downloadPdfBtn.addEventListener('click', function() {
-                    downloadMetaAsPDF();
-                });
-            }
 
             // Initialize meta sub-tab functionality
             const metaSubTabs = document.querySelectorAll('.meta-sub-tab');
@@ -3135,67 +3130,6 @@
         }
 
         
-        // Function to download meta content as PDF using backend conversion
-        function downloadMetaAsPDF() {
-            if (!window.currentDbPath) {
-                alert('Please select a database first.');
-                return;
-            }
-            
-            // Get the current meta update identifier
-            const currentGen = document.getElementById('generation-value').textContent;
-            
-            console.log('[DEBUG] Starting PDF download process...');
-            
-            // Use the downloadMetaPdf function which calls the backend endpoint
-            downloadMetaPdf(window.currentDbPath, currentGen);
-        }
-        
-        // Function to download text content as a formatted text file
-        function generateSimplePDFFromText(rawText, filename, dbName, generation, downloadBtn, originalText) {
-            try {
-                console.log('[DEBUG] Creating downloadable text file from content');
-                console.log('[DEBUG] Raw text length:', rawText.length);
-                console.log('[DEBUG] First 200 chars:', rawText.substring(0, 200));
-                
-                // Add header to the content
-                const header = `Meta Analysis - Update ${generation}
-Database: ${dbName}
-${'='.repeat(80)}
-`;
-                
-                // Combine header and content
-                const fullContent = header + rawText;
-                
-                // Create a blob with the text content
-                const blob = new Blob([fullContent], { type: 'text/plain;charset=utf-8' });
-                
-                // Create download link
-                const url = window.URL.createObjectURL(blob);
-                const link = document.createElement('a');
-                link.href = url;
-                link.download = filename.replace('.pdf', '.txt'); // Change extension to .txt
-                
-                // Trigger download
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-                
-                // Clean up URL
-                window.URL.revokeObjectURL(url);
-                
-                // Reset button state
-                downloadBtn.textContent = originalText;
-                downloadBtn.disabled = false;
-                console.log('[DEBUG] Text file download triggered successfully');
-                    
-            } catch (error) {
-                console.error('Text file generation failed:', error);
-                alert('Failed to generate text file. Please try again.');
-                downloadBtn.textContent = originalText;
-                downloadBtn.disabled = false;
-            }
-        }
 
         
         // Function to load available meta files for a database
@@ -3682,12 +3616,6 @@ ${'='.repeat(80)}
             }
         }
         
-        // Function to download meta content as PDF
-        function downloadMetaPdf(dbPath, generation) {
-            console.log(`Downloading meta PDF for DB: ${dbPath}, Update: ${generation}`);
-            const url = `/download_meta_pdf?db_path=${encodeURIComponent(dbPath)}&processed_count=${generation}`;
-            window.open(url, '_blank');
-        }
         
         // Function to load meta content specifically for diff comparison (without displaying)
         function loadMetaContentForDiff(generation, onComplete) {

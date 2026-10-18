@@ -166,5 +166,7 @@
   "div_generation": "代数",
   "code_copy": "复制",
   "code_copied": "已复制",
-  "code_download": "下载"
+  "code_download": "下载",
+  "pdf_export_disabled": "PDF 导出暂不可用",
+  "pdf_export_note": "服务端 PDF 导出已停用，需先验证转换器对本地文件与网络资源的隔离。仅安装转换器不会启用此功能。草稿阅读和程序 ZIP 导出不受影响。"
 }

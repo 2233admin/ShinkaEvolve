@@ -253,9 +253,9 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
             del row["_date"]
         self.send_json_response(rows)
 
-    def _send_read_error(self, message: str) -> None:
+    def _send_read_error(self, message: str, *, status: int = 500) -> None:
         payload = json.dumps({"error": message}).encode("utf-8")
-        self.send_response(500)
+        self.send_response(status)
         self.send_header("Content-Type", "application/json; charset=utf-8")
         self.send_header("Content-Length", str(len(payload)))
         self.end_headers()
@@ -308,13 +308,11 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
         finally:
             self._stats_costs = None
 
-    def _generate_pdf(self, content: str, generation: str) -> bytes:
-        pdf = super()._generate_pdf(content, generation)
-        if pdf is None:
-            raise RuntimeError(
-                "PDF export requires wkhtmltopdf or pandoc with a PDF engine"
-            )
-        return pdf
+    def handle_download_meta_pdf(self, db_path: str, processed_count: str):
+        self._send_read_error(
+            "Server-side PDF export is disabled pending isolated, resource-safe conversion",
+            status=501,
+        )
 
     def send_json_response(self, data):
         costs = getattr(self, "_stats_costs", None)

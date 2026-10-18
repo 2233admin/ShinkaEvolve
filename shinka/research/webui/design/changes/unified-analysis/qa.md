@@ -21,7 +21,7 @@
 - [x] 键盘主路径、提示对话框、页签 Arrow/Home/End、程序选择及比较已操作回读；文字对比度抽查通过。检查范围不等于完整 WCAG 合规认证。
 - [x] 加载、空库、无匹配、读取错误、越权拒绝和恢复均有真实反馈；未知数值不伪装为零，科学未定不改成成功。
 - [x] 资源为本地打包；已记录冷加载、包体和页面/网络错误。完整 Plotly 带来的包体代价明确保留，不通过漏装能力缩小资源量。
-- [x] 当前路径授权、程序库身份、跨目录/别名、派生文件与私有字段过滤通过真实 HTTP 回归；转换器缺失不会再返回假 PDF。
+- [x] 当前路径授权、程序库身份、跨目录/别名、派生文件与私有字段过滤通过真实 HTTP 回归；研究服务明确拒绝未隔离的 PDF 转换，前端说明该能力例外。
 
 ## 已观察的问题与修正
 
@@ -35,7 +35,8 @@
 |选择与重绘|提示→程序链接留下 pending 选择；树重绘丢高亮，Path→树可能保留旧高亮。|移除延后选择定时器；同步选择当前树并复用高亮逻辑，重建/哈希跳过/不切页签的选择均重放视觉状态。两个保存的浏览器回归均通过。|
 |直接链接|Path 直接进入时树尚未创建，D3 空选择的 `datum()` 抛错，中断代码页签恢复。|空选择先判断 `empty()`；Path→刷新→选择 a0→树后，URL、代码与唯一高亮均为 a0。|
 |主题与可读性|旧浅色 Path、Cost、Ensembling、Battle、Diversity 标签出现 1.16–4.40 的文字对比度，提示标题保留紫色背景。|局部旧样式切到同一套 token；最终 Path/代码深色最低 5.65、浅色最低 4.51；13 个主视图抽查 1228 个可见叶文字实例，无低于 4.5 的样本。|
-|错误真实性|损坏提示库可能断开统计响应或伪装成 `[]`；无转换器时下载正文却标成 PDF。|已有提示库损坏/缺表明确返回 500，删除损坏库后同服务恢复；PDF 缺依赖先观察到 200 假文件，HTTP 回归先红后绿，最终明确返回 500 与依赖提示。|
+|错误真实性|损坏提示库可能断开统计响应或伪装成 `[]`；无转换器时下载正文却标成 PDF。|已有提示库损坏/缺表明确返回 500，删除损坏库后同服务恢复；首次 PDF 修复从假文件改为缺依赖 500，该历史观察保留但已被下项安全边界取代。|
+|PDF 安全收口|合法 meta 路径不能约束转换器随后读取的本地文件与网络资源；仅缺依赖不等于安全。|研究处理器直接返回 501 JSON，不进入继承的转换路径。两种参数名×两种 meta 位置的 4 个真实 HTTP 用例先红后绿；转换器与子进程哨兵均未被调用，meta 正文仍可读取。双语禁用说明、390px 换行、两种别名的实际 501 和 1862B ZIP Blob 均经浏览器确认；上游独立查看器不改。|
 |导出|浏览器 ZIP 路径未实际执行。|点击真实导出，输入 2，解码实际生成的 1862B Blob，得到 a2/a1 的完整代码及 README；没有执行候选代码，也不把 Blob 验证说成文件落盘验收。|
 |检查口径复核|CSS 缩放代理不能替代原生 200%，其原截图也没有拍到代码；复制成功/复位仍有旧 emoji 文案。|保留原标准并补测 Chrome 原生 Page zoom=2，另拍可见代码的视口截图；源按钮和成功/复位文案改为双语纯文字，实际观察“复制→已复制→复制”，操作按钮 emoji 列表为空。|
 
@@ -77,7 +78,7 @@
 - **真实研究：**`btc-hourly-momentum/h001/e01` → 分析 → 选择 `377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7` → 代码 → 刷新 → 返回 `/?direction=btc-hourly-momentum&hypothesis=h001`。重新启动的所有者预览 `http://127.0.0.1:8768/` 再次通过；代码仍为 `pct_change(12)`、`ewm(span=20)`，树唯一高亮和详情 ID 一致。只读取历史产物，没有重新运行研究或打开封存段。
 - **普通运行：**键盘检索 `fixture`、按 `score` 排序、勾选 negative/failed-scores → 刷新仍保留检索/排序/两项选择 → 比较 → 进入 negative（最高有效分 -0.10）→ 浏览器后退。后退后的比较 URL 与两行数据完全相同；两组不同比较选择的原生历史也分别保留。
 - **空库恢复：**正常保存一条惰性程序，选中并显示代码后删除夹具记录，再点击刷新；最终选中为 null、原始数据为 0、摘要为空、详情回到选择提示，两个空态与刷新控件保留，不停留在“正在读取”状态。
-- **可复用回归：**`tools/browser-automation/unified-analysis.mjs` 的 `verifyPromptProgramSelection` 与 `verifyPathDeepLink` 在最终构建上执行通过；前者 resize 后仍选中并高亮 a2，后者直接链接/刷新/Path 选择/树切换后选中并高亮 a0。调用参数取自已授权保存的运行，不执行候选。
+- **可复用回归：**`shinka/research/webui/browser-automation/unified-analysis.mjs` 的 `verifyPromptProgramSelection` 与 `verifyPathDeepLink` 在最终构建上执行通过；前者 resize 后仍选中并高亮 a2，后者直接链接/刷新/Path 选择/树切换后选中并高亮 a0。脚本迁入研究代码边界后已从新路径重新导入并跑通两项，不保留旧路径兼容层。调用参数取自已授权保存的运行，不执行候选。
 
 结构化浏览器记录为 [`evidence/browser-acceptance.json`](evidence/browser-acceptance.json)，包含能力、交互、乱序、数值、导出、对比度与所有者预览的实际返回值。它是实现者的运行记录，不冒充独立视觉评审或原生管线认证。
 
@@ -85,24 +86,26 @@
 
 |检查|实际结果|
 |---|---|
-|原生 Windows `pytest -q tests/research`|105 passed，57.19s；包含 Windows junction 和新 PDF 错误回归。|
-|独立 WSL 全量 `pytest -q -m 'not requires_secrets'`|1014 passed、1 skipped、1 deselected、5 warnings，90.67s；跳过项是仅 Windows 的 junction 回归。|
+|原生 Windows `pytest -q tests/research`|108 passed，59.67s；包含 Windows junction 和 4 个不进入 PDF 转换器的 HTTP 回归。|
+|独立 WSL 全量 `pytest -q -m 'not requires_secrets'`|1017 passed、1 skipped、1 deselected、5 warnings，90.19s；跳过项是仅 Windows 的 junction 回归。|
 |独立 Ruff check / format --check|两条命令 exit 0；`All checks passed!` / `26 files already formatted`。|
-|前端 `pnpm run build`|TypeScript、主前端与分析构建 exit 0；后续仅分析源的最终构建另以 `pnpm exec vite build --config vite.analysis.config.ts` exit 0 确认。|
+|前端 `pnpm run build`|整合时 TypeScript、主前端与分析构建 exit 0；安全收口后以 `pnpm exec vite build --config vite.analysis.config.ts` 重建分析资产，exit 0，15.16s。|
 |`node --test src/analysis/actions.test.mjs`|3 passed；有限操作语法、完整拒绝可执行后缀、同源图像行为。|
-|Standards / Spec|两轴多轮评审已执行；迟到响应归属、未知成本、读取错误、树高亮的有效发现均修正并由实际路径复验。最后选择审查无 Standards 发现，唯一 Spec 高亮发现已用保存的浏览器回归关闭。|
+|Standards / Spec|整合的有效发现已修正并经实际路径复验。安全收口另由两名独立审查者检查处理器拒绝、路径校验先后、相邻能力和研究代码边界；两轴均无可操作发现。审查不冒充运行证明。|
 |本地运行资源|冷加载稳定 959ms，分析文档 DOMContentLoaded 182.6ms；记录的资源均来自 127.0.0.1，无页面/资源错误。这是本机 Chrome 测量，不是公网性能保证。|
-|Git whitespace|完整 `git diff --cached --check` exit 1，恢复的历史 HTML 含行尾空白；没有记为通过。排除恢复源目录后的 authored adapter/runtime/docs/tests 检查 exit 0。没有为消除样式警告而批量重写历史脚本字符串或许可文本。|
+|Git whitespace|整合提交 `bd7e353` 的完整 staged 检查曾 exit 1，恢复的历史 HTML 有行尾空白；排除恢复源目录后的检查 exit 0。安全更正的完整 `git diff --check bd7e353` exit 0，不反推历史整合检查已通过，也不批量改写脚本字符串或许可文本。|
 
-最终独立后端证据保存在 `\\wsl.localhost\archlinux\tmp\shinka-final-pdf-release-20261019-7d3c\evidence\`，含 exact command、JUnit、导入来源、前后哈希和日志。29 个后端源码/测试/配置文件在各门禁前后保持一致；五个警告均来自未改的 bandit persistence 数值运算。原生 JUnit 为 `E:/projects/ShinkaEvolve-runs/ui-final-native-pdf-f467/pytest.xml`。首次原生外置 basetemp 的父目录未创建造成 setup 错误，修正目录和工作目录后才得到上述 105 passed；没有把环境失败算成产品回归或通过。
+安全收口后的独立后端证据保存在 `\\wsl.localhost\archlinux\tmp\shinka-pdf-isolation-gate-20261019-YS2pRrIL\stable-snapshot\`，含 exact argv、环境、JUnit、前后清单和完整日志；研究集为 107 passed、1 skipped，53.57s。最终四个门禁 exit 0，选定的 1506 个文件在门禁期间内容与成员保持一致；首次门禁期间 QA/截图仍变动，因此保留首轮证据并完整重跑，以稳定快照一轮为准。随后只更新交付记录，不改变下列已验代码哈希。五个警告来自未改的 bandit persistence 数值运算。原生 JUnit 为 `E:/projects/ShinkaEvolve-runs/ui-pdf-isolation-native.xml`。
+
+整合提交的旧后端证据仍保存在 `\\wsl.localhost\archlinux\tmp\shinka-final-pdf-release-20261019-7d3c\evidence\`；旧 500 PDF 观察及其门禁是历史记录，不代替本次 501 拒绝契约的证据。结构化浏览器记录的 `safetyCorrection` 保存双语提示、真实请求、ZIP 解码、迁移后回归和重启后的 8768 实际候选检查。
 
 最终关键 SHA-256：
 
 ```text
 shinka/research/analysis.py
-cf33eee0c6635c88d0bc5e74fa506758b575bf164943e12fa855386aa03ea0c2
+96691fb75c78d91924448a9281751faa0c221485bb595ac8dd3538ad49202cf7
 tests/research/test_workspace_analysis.py
-efe251be8623f4d2c6b97f53707528c7db8e5a4ad20d92a9c36a3c708d153deb
+1b13d9fa0574d21b308b569e9f480b84078ebf91a2b4d276476c742319d0cadd
 ```
 
 ## 最终画面与适用限制
@@ -115,10 +118,11 @@ efe251be8623f4d2c6b97f53707528c7db8e5a4ad20d92a9c36a3c708d153deb
 |[浅色](evidence/light-path.png)|同一填充状态的 Technical Paper 主题。|
 |[200% 代理](evidence/zoom-200.png)|仅证明 CSS 代理下已填充 Path 和保留的选择；代码状态由结构化记录确认，原图不作为可见代码证据。|
 |[原生 200%](evidence/native-zoom-200.png)、[原生 200% 代码](evidence/native-zoom-200-code.png)|Chrome 的真实页面缩放设置；第二张视口截图实际显示 a2 的完整代码。100%→200%→100% 的控制值、DPR、宽度与恢复均留有记录。|
+|[PDF 停用说明](evidence/pdf-disabled-mobile.png)|390px 的实际草稿页面；禁用按钮旁的中文说明完整换行可见，草稿正文仍在。|
 
 - **实际成本：**分析 runtime JS 约 5.56MB（gzip 约 1.74MB），包含原功能需要的完整 Plotly 等本地依赖。该资源取舍与测得本机时间并列保留，不声称轻量或公网性能已通过。
 - **无障碍范围：**测过键盘主路径、可见焦点、页签、提示对话框、减少动态效果和可见文字对比度；未进行全平台读屏、所有图表对象、Safari/Firefox 或完整 WCAG 认证。
-- **导出范围：**ZIP 真实生成并解码通过；本机无 PDF 转换器，PDF 成功生成未验证。当前明确返回依赖错误，不再给正文文件贴 PDF 标签；未自动安装 `wkhtmltopdf`、`pandoc` 或 PDF 引擎。
+- **导出范围：**ZIP 真实生成并解码通过；研究统一界面的服务端 PDF 导出当前停用，合法请求返回 501 JSON。仅安装 `wkhtmltopdf`、`pandoc` 或 PDF 引擎不能安全启用；必须先验证转换实现对本地文件和网络资源的限制。旧 500 依赖错误仅为历史观察，不是当前契约，也没有被当作资源隔离证明。本次不声称完整 PDF 能力对等，草稿阅读与程序 ZIP 不受影响；未安装转换器或执行实际转换。
 - **许可：**构建随附 `/analysis/THIRD_PARTY_NOTICES.txt`；原归属、完整许可和 Plotly 内嵌组件补充清单保存在 `analysis/licenses/`。`native-promise-only` 的历史发布物只含作者 MIT 链接，补充文本明确保留来源年代限制，不冒充完整法律审计。
 - **工具门禁：**文件绑定的静态 interaction audit 不能替代本 HTTP/API 应用的实际浏览器验收；旧 Sentrux 包装器要求的 PowerShell 7.2 不在本机，不记为通过。原 mentor 的 live 消息入口不可用，已保留其建议并用具备具体结果的独立 mentor debrief 复核交付边界；KB registry 不可用，没有虚构同步成功。
 - **所有者与奖项：**本文件记录技术完成；所有者视觉验收仍未签署。Awwwards/Webby/FWA 是自检参考与品质目标，不存在本项目自授的“获奖分数”或获奖保证。

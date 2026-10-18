@@ -439,6 +439,13 @@
       }
     },
     "pdf": {
+      "status": 501,
+      "type": "application/json; charset=utf-8",
+      "attachment": null,
+      "disabled": true,
+      "reason": "Server-side PDF export is disabled pending isolated, resource-safe conversion"
+    },
+    "pdfBeforeSafetyCorrection": {
       "status": 500,
       "type": "text/html;charset=utf-8",
       "hasRequiredConverterHint": true,
@@ -900,7 +907,7 @@
     "technical": "Verified paths in this receipt",
     "owner": "pending",
     "awards": "benchmark only, no award or certification claim",
-    "pdfSuccess": "unverified; converter unavailable, actual clear HTTP500 observed",
+    "pdfSuccess": "disabled in the research UI pending verified resource-safe conversion; converter installation alone cannot enable it; no successful conversion claimed",
     "nativeZoom": "Verified native Chrome Page zoom 200%, CSS zoom1, DPR1→2, innerWidth1440→720, then restored100%; native viewport code image inspected."
   },
   "nativeZoom": {
@@ -966,5 +973,151 @@
     "success": "已复制",
     "reset": "复制",
     "operationEmoji": []
+  },
+  "safetyCorrection": {
+    "recordedAt": "2026-10-18T22:21:15.326Z",
+    "baseRevision": "bd7e353",
+    "scope": "Research-only PDF handler denial; upstream standalone viewer unchanged; no actual converter, private-resource or network exploit probes",
+    "http": {
+      "pdf": [
+        {
+          "alias": "processed_count",
+          "status": 501,
+          "type": "application/json; charset=utf-8",
+          "attachment": null,
+          "body": {
+            "error": "Server-side PDF export is disabled pending isolated, resource-safe conversion"
+          }
+        },
+        {
+          "alias": "generation",
+          "status": 501,
+          "type": "application/json; charset=utf-8",
+          "attachment": null,
+          "body": {
+            "error": "Server-side PDF export is disabled pending isolated, resource-safe conversion"
+          }
+        }
+      ],
+      "metaStatus": 200,
+      "meta": {
+        "processed_count": 6,
+        "generation": 6,
+        "filename": "meta_6.txt",
+        "content": "# INDIVIDUAL PROGRAM SUMMARIES\n\nCONTROLLED ANALYSIS UI FIXTURE — NOT REAL SCIENCE. FIXTURE_META_PROCESSED_6.\n\nProgram Name: Fixture fixture-a2\nImplementation: Saved inert artifact with offset 0.8; the acceptance check never executes it.\nPerformance: Controlled combined_score 0.80; not a scientific finding.\nFeedback: FIXTURE_INDIVIDUAL_SUMMARY_6.\n\n# GLOBAL INSIGHTS SCRATCHPAD\n\nFIXTURE_GLOBAL_INSIGHTS_6. This controlled record verifies the original nested Meta navigation.\n\n# META RECOMMENDATIONS\n\nFIXTURE_META_RECOMMENDATION_6. Preserve run identity and compare only compatible evaluators.\n"
+      }
+    },
+    "ui": {
+      "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=tree-view&right_tab=meta-analysis&meta_section=individual-programs&selected_node=fixture-a2",
+      "buttonDisabled": true,
+      "buttonText": "PDF 导出暂不可用",
+      "describedBy": "pdf-export-note",
+      "note": "服务端 PDF 导出已停用，需先验证转换器对本地文件与网络资源的隔离。仅安装转换器不会启用此功能。草稿阅读和程序 ZIP 导出不受影响。",
+      "noteVisible": true,
+      "meta": "\n                    \n                        Scratchpad - Update 6\n                        File: meta_6.txt\n                    \n                    CONTROLLED ANALYSIS UI FIXTURE — NOT REAL SCIENCE. FIXTURE_META_PROCESSED_6.Program Name: Fixture fixture-a2Implementation: Saved inert artifact with offset 0.8; the acceptance check never executes it.性能: Controlled combined_score 0.80; not a scientific finding.Feedback: FIXTURE_INDIVIDUAL_SUMMARY_6.\n                ",
+      "zipDisabled": false,
+      "rootWidth": 1361,
+      "rootScrollWidth": 1361
+    },
+    "english": {
+      "button": "PDF export unavailable",
+      "disabled": true,
+      "note": "Server-side PDF export is disabled until conversion isolates local files and network resources. Installing a converter alone does not enable it. Meta notes and program ZIP exports remain available.",
+      "noteVisible": true
+    },
+    "mobile": {
+      "note": "服务端 PDF 导出已停用，需先验证转换器对本地文件与网络资源的隔离。仅安装转换器不会启用此功能。草稿阅读和程序 ZIP 导出不受影响。",
+      "rect": {
+        "x": 36,
+        "y": 1004.734375,
+        "width": 256,
+        "height": 89.5625,
+        "top": 1004.734375,
+        "right": 292,
+        "bottom": 1094.296875,
+        "left": 36
+      },
+      "width": 343,
+      "scrollWidth": 343
+    },
+    "zip": {
+      "bytes": 1862,
+      "name": "top_2_programs.zip",
+      "files": [
+        {
+          "name": "1_gen2_Fixture_fixture-a2.py",
+          "content": "# Rank: 1\n# Generation: 2\n# Score: 0.800000\n# Name: Fixture fixture-a2\n# ID: fixture-a2\n# Parent ID: fixture-a1\n# Type: diff\n# Description: Controlled deterministic variation fixture-a2\n\n# CONTROLLED ANALYSIS UI FIXTURE - NOT REAL SCIENCE\n# Saved artifact only; not executed.\nFIXTURE_ID = 'fixture-a2'\n# EVOLVE-BLOCK-START\ndef fixture_score(values):\n    offset = 0.8\n    feature_0 = 5\n    feature_1 = 6\n    feature_2 = 7\n    return sum(values) + offset\n# EVOLVE-BLOCK-END\n"
+        },
+        {
+          "name": "2_gen1_Fixture_fixture-a1.py",
+          "content": "# Rank: 2\n# Generation: 1\n# Score: 0.500000\n# Name: Fixture fixture-a1\n# ID: fixture-a1\n# Parent ID: fixture-a0\n# Type: diff\n# Description: Controlled deterministic variation fixture-a1\n\n# CONTROLLED ANALYSIS UI FIXTURE - NOT REAL SCIENCE\n# Saved artifact only; not executed.\nFIXTURE_ID = 'fixture-a1'\n# EVOLVE-BLOCK-START\ndef fixture_score(values):\n    offset = 0.5\n    feature_0 = 3\n    return sum(values) + offset\n# EVOLVE-BLOCK-END\n"
+        },
+        {
+          "name": "README.txt",
+          "content": "Top 2 Performing Programs\nGenerated on: 2026-10-18T22:18:25.022Z\nDatabase: runs/fixture-rich/programs.sqlite\n\nRank\tGeneration\tScore\tName\tType\tLanguage\tAPI_Cost\tComplexity\tModel\tID\tParent_ID\tDescription\tFilename\n1\t2\t0.800000\tFixture fixture-a2\tdiff\tpython\t$0.0500\t3.500\tfixture/model-alpha\tfixture-a2...\tfixture-a1...\tControlled deterministic variation fixture-a2\t1_gen2_Fixture_fixture-a2.py\n2\t1\t0.500000\tFixture fixture-a1\tdiff\tpython\t$0.0300\t2.500\tfixture/model-beta\tfixture-a1...\tfixture-a0...\tControlled deterministic variation fixture-a1\t2_gen1_Fixture_fixture-a1.py\n"
+        }
+      ]
+    },
+    "zipVerificationBoundary": "Actual local ZIP Blob generated by export action and decoded; browser save was intercepted; no claim of filesystem download",
+    "relocatedRegressions": {
+      "module": "shinka/research/webui/browser-automation/unified-analysis.mjs",
+      "prompt": {
+        "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=fixture-a2",
+        "selected": "fixture-a2",
+        "leftTab": "tree-view",
+        "rightTab": "agent-code",
+        "highlighted": [
+          "程序 fixture-a2，代数 2，得分 0.8"
+        ]
+      },
+      "path": {
+        "url": "http://127.0.0.1:8769/viz_tree.html?db_path=runs%2Ffixture-rich%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=fixture-a0",
+        "selected": "fixture-a0",
+        "leftTab": "tree-view",
+        "rightTab": "agent-code",
+        "highlighted": [
+          "程序 fixture-a0，代数 0，得分 0.2"
+        ]
+      }
+    },
+    "correctedOwnerPreview": {
+      "origin": "http://127.0.0.1:8768/",
+      "workspace": {
+        "status": 200,
+        "body": {
+          "name": "workspace",
+          "directions": [
+            {
+              "id": "btc-hourly-momentum",
+              "direction": "BTC/USD hourly momentum usability run",
+              "created": "2026-10-17T21:55:23+00:00",
+              "hypotheses": 1,
+              "trials": 3,
+              "spend_usd": 0,
+              "budget_usd": null,
+              "lockbox_opened": false,
+              "error": null
+            }
+          ],
+          "library": {
+            "index": "# Library index\n\nCatalog of wiki pages, maintained by the researcher agent. One line per page:\n`- [[page-name]] (concept | paper | finding): one-sentence summary`.\n",
+            "log": "# Library log\n\n",
+            "pending": [],
+            "pages": []
+          }
+        }
+      },
+      "state": {
+        "url": "http://127.0.0.1:8768/viz_tree.html?db_path=workspace%2Fbtc-hourly-momentum%2Fexperiments%2Fh001%2Fe01%2Fresults%2Fprograms.sqlite&left_tab=tree-view&right_tab=agent-code&meta_section=individual-programs&selected_node=377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7",
+        "code": "\n                    \n                        复制\n                        下载\n                    \n                    \n                \n                    1234567891011121314151617181920212223242526272829303132333435363738394041\n                    \"\"\"Seed strategy for the example research direction.\n\n`run_experiment` is called by the frozen evaluator; only the EVOLVE-BLOCK is\nmutated.\n\"\"\"\n\nimport numpy as np\nimport pandas as pd\n\n\n# EVOLVE-BLOCK-START\ndef generate_positions(bars: pd.DataFrame) -> pd.Series:\n    \"\"\"\n    Smooth momentum: calculates the return over 12 bars and applies an EMA\n    filter before generating a binary position signal.\n    \"\"\"\n    \n    # 1. Calculate the initial momentum return (shorter lookback for responsiveness)\n    # Using 12 bars instead of 20.\n    momentum_return = bars[\"close\"].pct_change(12)\n\n    # 2. Apply Exponential Moving Average (EMA) smoothing to the momentum return.\n    # This filters out high-frequency noise while preserving the trend's direction.\n    # Using span=20 for smoothing.\n    smoothed_momentum = momentum_return.ewm(span=20, adjust=False).mean()\n\n    # 3. Generate the position: Long (+1) if smoothed momentum is positive, \n    # short (-1) if negative, and flat (0) otherwise.\n    # We fill the initial NaN values with 0.0.\n    positions = np.sign(smoothed_momentum).fillna(0.0)\n    \n    return pd.Series(positions, index=bars.index, dtype=float)\n\n\n# EVOLVE-BLOCK-END\n\n\ndef run_experiment(bars: pd.DataFrame) -> pd.Series:\n    positions = generate_positions(bars)\n    return pd.Series(positions, index=bars.index, dtype=float).clip(-1.0, 1.0)\n\n                \n            \n                ",
+        "selected": "377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7",
+        "disabled": true,
+        "pdfStatus": 501,
+        "pdfType": "application/json; charset=utf-8",
+        "pdf": {
+          "error": "Server-side PDF export is disabled pending isolated, resource-safe conversion"
+        }
+      }
+    }
   }
 }
