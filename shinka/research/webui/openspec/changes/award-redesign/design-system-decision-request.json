@@ -1,0 +1,8 @@
+{
+  "schema": "design-pipeline.design-system-decision-request.v1",
+  "version": "1",
+  "mode": "custom",
+  "customId": "shinka-research-instrument",
+  "frontendStackDecisionPath": "openspec/changes/award-redesign/frontend-stack-decision.json",
+  "capabilityInventoryPath": "openspec/changes/award-redesign/design-capability-inventory.json"
+}

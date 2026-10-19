@@ -1,0 +1,100 @@
+{
+  "blockers": [],
+  "capabilities": [
+    "2D scatter and density contours over embeddings",
+    "client-side ZIP export",
+    "code-split 3D scatter for embedding clusters, projected on Canvas 2D with pointer and keyboard rotation, and the same points available through the 2D view and an accessible table",
+    "dark and light themes with CJK-first typography",
+    "design-workflow",
+    "friction-logging",
+    "hierarchical lineage tree layout",
+    "keyboard-accessible tables, tabs, dialogs, tooltips and menus (behaviour from Carbon React)",
+    "sanitised markdown rendering of untrusted LLM output",
+    "syntax-highlighted code and unified diff viewer",
+    "token-bound SVG charts with linked selection across views"
+  ],
+  "evidence": [
+    "registry:2026-08-14",
+    "mengto:83a47fee32f0b6349bff1fede99257a5ef03dc93",
+    "tool:design-pipeline/core@bundled",
+    "tool:design-pipeline/feedback-loop@bundled",
+    "tool:MengTo/skills@83a47fee32f0b6349bff1fede99257a5ef03dc93",
+    "tool:wevm/frog@702c4eadefe175a208290a99c36e7f4ac1390e53"
+  ],
+  "framework": "react",
+  "primaryRoute": {
+    "capabilities": [
+      "design-workflow"
+    ],
+    "id": "design-pipeline/core",
+    "mode": "project-owned",
+    "source": "bundled",
+    "status": "ready"
+  },
+  "recommendedSkills": [],
+  "registryHash": "78567f3452701e27dbed2c87a67305af3187dae3c478078a316c8a8ef86deb99",
+  "reviews": [
+    "wevm/frog is review"
+  ],
+  "schema": "design-pipeline.frontend-stack-decision.v1",
+  "selected": {
+    "styling": {
+      "id": "none",
+      "label": "None"
+    },
+    "uiLibrary": {
+      "id": "none",
+      "label": "None",
+      "license": "project",
+      "source": "project-owned"
+    }
+  },
+  "status": "ready",
+  "toolRoutes": [
+    {
+      "capabilities": [
+        "design-workflow"
+      ],
+      "id": "design-pipeline/core",
+      "mode": "project-owned",
+      "source": "bundled",
+      "status": "ready"
+    },
+    {
+      "capabilities": [
+        "friction-logging"
+      ],
+      "id": "design-pipeline/feedback-loop",
+      "mode": "project-owned",
+      "source": "bundled",
+      "status": "ready"
+    },
+    {
+      "capabilities": [
+        "design-workflow"
+      ],
+      "id": "MengTo/skills",
+      "license": "MIT",
+      "mode": "bundled-index",
+      "revision": "83a47fee32f0b6349bff1fede99257a5ef03dc93",
+      "source": "https://github.com/MengTo/skills",
+      "status": "ready"
+    },
+    {
+      "capabilities": [
+        "friction-logging"
+      ],
+      "fallback": "design-pipeline/feedback-loop",
+      "id": "wevm/frog",
+      "license": "MIT",
+      "mode": "governed-candidate",
+      "requirements": [
+        "Node.js 22+",
+        "explicit GitHub repository and workflow permission"
+      ],
+      "revision": "702c4eadefe175a208290a99c36e7f4ac1390e53",
+      "source": "https://github.com/wevm/frog",
+      "status": "review"
+    }
+  ]
+}

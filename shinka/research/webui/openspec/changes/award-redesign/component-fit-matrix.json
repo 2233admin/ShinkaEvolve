@@ -1,0 +1,2746 @@
+{
+  "capabilities": [
+    "aria.control-semantics",
+    "data.filtering",
+    "data.grid",
+    "data.sorting",
+    "disclosure.toggle",
+    "focus.management",
+    "keyboard.navigation",
+    "overlay.dialog",
+    "selection.multiple",
+    "selection.single",
+    "state.empty",
+    "state.error",
+    "state.loading"
+  ],
+  "catalogHash": "20c5db820c21bb62c984628275ea81cf0e4b3ce2ef432bd9ebbd469070b8ed0a",
+  "constraints": [
+    "direction-lock.v1 must be hash-valid before component fit",
+    "fit is evaluated per capability; no global best library is selected",
+    "foundation candidates require one coherent system selection",
+    "reference-only sources never become direct project dependencies",
+    "review dimensions cannot be promoted without evidence"
+  ],
+  "decisions": [
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "aria.control-semantics",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "data.filtering",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "data.grid",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "data.sorting",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "disclosure.toggle",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "focus.management",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "keyboard.navigation",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "overlay.dialog",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "selection.multiple",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "selection.single",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "state.empty",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "state.error",
+      "reason": "project-owned component passes the fit gates"
+    },
+    {
+      "action": "reuse",
+      "blockers": [],
+      "candidate": "provider:project-dom",
+      "capability": "state.loading",
+      "reason": "project-owned component passes the fit gates"
+    }
+  ],
+  "directionLock": {
+    "directionId": "dark-instrument",
+    "directionLockHash": "fcfd7d37034b4d1ea34292f04b7137bf7b2d4adecdfd848b8c9db6614571eab2",
+    "previewArtifactSha256": "3e1f0d46b5462d79573cbf1dd0c6ce38ff62588774cf13a554e43f0d2b93e375"
+  },
+  "foundation": {
+    "blocker": null,
+    "candidates": [],
+    "coherence": "requires-selection",
+    "selected": null
+  },
+  "framework": "react",
+  "matrixHash": "e29dfd43f8884689d83dddb62a88d25716ae0239f7fc2816407e635c5c054153",
+  "platform": "web",
+  "projectHash": "00070f6a1fd3332c284a60a19ad819d598d084e00fdd6024672a79f958deb215",
+  "providerHash": "50e0282ea76f0f09ed41421e322ee8a059060746c0bfdb7210e8b71a601cebad",
+  "rows": [
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "aria.control-semantics",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "aria.control-semantics",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "data.filtering",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "data.filtering",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "data.grid",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "data.grid",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "data.sorting",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "data.sorting",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "disclosure.toggle",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "disclosure.toggle",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "focus.management",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "focus.management",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "keyboard.navigation",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "keyboard.navigation",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "overlay.dialog",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "overlay.dialog",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "selection.multiple",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "selection.multiple",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "disclosure.toggle",
+            "focus.management",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:ark-ui",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Ark UI",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/chakra-ui/ark",
+          "sourceId": "chakra-ui/ark",
+          "sourceUrl": "https://github.com/chakra-ui/ark",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "provider accessibility behavior requires verification",
+              "status": "review"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider does not target the requested framework",
+              "status": "fail"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is not ready",
+              "status": "review"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "review",
+          "fallback": null,
+          "id": "provider:vuetify0",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "Vuetify0",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/vuetifyjs/0",
+          "sourceId": "vuetifyjs/0",
+          "sourceUrl": "https://github.com/vuetifyjs/0",
+          "status": "blocked"
+        }
+      ],
+      "capability": "selection.single",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "selection.single",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        }
+      ],
+      "capability": "state.empty",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "state.empty",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        }
+      ],
+      "capability": "state.error",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "state.error",
+        "reason": "project-owned component passes the fit gates"
+      }
+    },
+    {
+      "candidates": [
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source license is declared",
+              "status": "pass"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "project-owned components render every visible style from the project's tokens",
+              "status": "pass"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:project-dom",
+          "license": "project-owned",
+          "mode": "project-owned",
+          "name": "Project-owned DOM implementation",
+          "requiresLicense": false,
+          "role": "project-owned",
+          "source": "project-owned",
+          "sourceId": "project-components",
+          "sourceUrl": "project-owned",
+          "status": "ready"
+        },
+        {
+          "capabilities": [
+            "aria.control-semantics",
+            "data.filtering",
+            "data.grid",
+            "data.pagination",
+            "data.sorting",
+            "disclosure.toggle",
+            "focus.management",
+            "form.submission",
+            "form.validation",
+            "keyboard.navigation",
+            "overlay.dialog",
+            "selection.multiple",
+            "selection.single",
+            "state.disabled",
+            "state.empty",
+            "state.error",
+            "state.loading"
+          ],
+          "dimensions": {
+            "accessibility": {
+              "reason": "ready provider declares accessibility capabilities",
+              "status": "pass"
+            },
+            "behavior": {
+              "reason": "catalog declares the requested capability",
+              "status": "pass"
+            },
+            "framework": {
+              "reason": "provider declares framework compatibility",
+              "status": "pass"
+            },
+            "license": {
+              "reason": "source has no license declaration",
+              "status": "fail"
+            },
+            "provenance": {
+              "reason": "provider registry entry is ready",
+              "status": "pass"
+            },
+            "visualFit": {
+              "reason": "visual fit requires comparison against the locked direction",
+              "status": "review"
+            }
+          },
+          "evidenceStatus": "ready",
+          "fallback": null,
+          "id": "provider:react-aria",
+          "license": null,
+          "mode": "project-pinned-adapter",
+          "name": "React Aria",
+          "requiresLicense": false,
+          "role": "provider",
+          "source": "https://github.com/adobe/react-spectrum",
+          "sourceId": "adobe/react-spectrum",
+          "sourceUrl": "https://github.com/adobe/react-spectrum",
+          "status": "blocked"
+        }
+      ],
+      "capability": "state.loading",
+      "decision": {
+        "action": "reuse",
+        "blockers": [],
+        "candidate": "provider:project-dom",
+        "capability": "state.loading",
+        "reason": "project-owned component passes the fit gates"
+      }
+    }
+  ],
+  "schema": "design-pipeline.component-fit-matrix.v1",
+  "status": "ready",
+  "version": 1
+}

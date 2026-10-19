@@ -1,0 +1,45 @@
+{
+  "constraints": {
+    "absorbedFromResearchPaper": [
+      "island-lane lineage chart: x = generation, one lane per island, sharing the generation axis and scrubber with Progress",
+      "Progress as small multiples with labelled, shared axes",
+      "data-sentence headline on the home page, generated from live data"
+    ],
+    "base": "dark-instrument: three-pane shell (nav rail, content, activity or persistent inspector), dense sortable direction table, glyph status, one signal colour",
+    "behaviourDependency": "@carbon/react 1.118, already pinned in app/package.json, is not in the governed catalog or provider registry; the owner's 2026-10-19 decision keeps it inside project-owned components for interaction and accessibility behaviour only, so it is recorded here and not as a fit-matrix candidate. Astro UXDS is removed.",
+    "charts": "SVG/D3 with token-bound colours; 3D clusters on a code-split Canvas 2D projection, no WebGL engine",
+    "colour": "graphite neutrals plus one signal orange; no decorative gradients, glass or meaningless icons",
+    "contrast": "body text at least 4.5:1, large text and graphics at least 3:1, in both themes",
+    "evidence": "best record and noise bar share one scale across all directions",
+    "language": "zh/en toggle on every surface; Sharpe, DSR and PBO stay English abbreviations; default language zh pending owner confirmation",
+    "motion": "static posture: no entrance animation, state changes instant under reduced motion",
+    "numbers": "tabular right-aligned figures; scores and Sharpe 2 decimals, DSR 3, money $0.00, time YYYY-MM-DD HH:MM UTC, missing value —",
+    "offline": "fonts and libraries bundled locally; no CDN",
+    "selectionReceipt": "selectionReceiptHash is the SHA-256 of the canonical JSON of direction-preview.json#/decision, the owner's 2026-10-19 selection; previewArtifactSha256 is the SHA-256 of direction-preview.json. The comparison was re-bound to brief.md after the factual trial-range correction (brief.md:42-43, direction trials 0-5,000); the owner's decision, the rendered previews and their hashes are unchanged",
+    "status": "text plus shape, never colour alone; fixed product words 待跑, 已选, 运行中, 待判定, 成立, 否定, 未定, 已确认, 未确认, 放弃",
+    "themes": "default dark; light theme delivered too, user-switchable and remembered"
+  },
+  "directionId": "dark-instrument",
+  "directionLockHash": "fcfd7d37034b4d1ea34292f04b7137bf7b2d4adecdfd848b8c9db6614571eab2",
+  "previewArtifactSha256": "3e1f0d46b5462d79573cbf1dd0c6ce38ff62588774cf13a554e43f0d2b93e375",
+  "schema": "design-pipeline.direction-lock.v1",
+  "selectionReceiptHash": "a129b1cdcaf9820b1dd53082832987d1720705e7f3e5d1318b2df11ad8a17d13",
+  "status": "locked",
+  "visualFit": {
+    "provider:project-dom": {
+      "reason": "project-owned components render every visible style from the project's tokens",
+      "status": "pass"
+    }
+  },
+  "visualKeywords": [
+    "data sentence",
+    "glyph status",
+    "graphite",
+    "hairline rules",
+    "island lanes",
+    "signal orange",
+    "small multiples",
+    "tabular figures",
+    "three-pane shell"
+  ]
+}
