@@ -1,0 +1,98 @@
+{
+  "schema": "design-pipeline.direction-preview.v1",
+  "changeId": "award-redesign",
+  "applicability": {
+    "status": "required",
+    "reason": "visual-redesign"
+  },
+  "comparison": {
+    "brief": {
+      "path": "brief.md",
+      "sha256": "26335c78ec3b111c6c4e4364815071b4e5451a4e0670d8d69ff21addb121a375"
+    },
+    "index": {
+      "path": "direction-previews/index.html",
+      "sha256": "16f2f6418de8c39b1a0db223783a5cb2465d94f7ebd3fc666e5ba198c833e368"
+    },
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "contentFixtureSha256": "26a2af283fcff7a952aa69d5fb2260d36635669afac59471a604ce5a956d9086",
+    "stateCoverage": [
+      "workspace-four-directions",
+      "direction-active-with-running-hypothesis",
+      "direction-concluded-lockbox-opened",
+      "direction-new-no-trials",
+      "direction-over-budget",
+      "evaluation-failures-visible",
+      "lineage-320-programs-best-path",
+      "program-inspector-code",
+      "mobile-390-home"
+    ]
+  },
+  "directions": [
+    {
+      "id": "dark-instrument",
+      "name": "A · 暗场仪器",
+      "thesis": "研究进程是一台精密仪器：一屏读完全部方向的状态与证据，键盘直达任何程序。",
+      "signature": "证据刻度：每个方向把最佳记录和噪声线画在同一把刻度上，越过噪声线的一段与谱系里的最佳祖先链用同一种信号橙。",
+      "axes": {
+        "luminance": "dark (neutral graphite #0a0a0b)",
+        "typeFamily": "neo-grotesk variable UI sans + plex mono figures",
+        "color": "graphite neutrals + one signal orange; status by glyph shape",
+        "layout": "three-pane app shell: nav rail, content, activity or inspector",
+        "density": "dense",
+        "era": "contemporary product software (2020s)",
+        "material": "layered dark planes with hairline rules"
+      },
+      "screenshot": {
+        "path": "direction-previews/dark-instrument.png",
+        "sha256": "b1500336f80c5dffe0b0679b2ff2181f096cc61c78b40c8dc0f8b2a2098501ee"
+      }
+    },
+    {
+      "id": "research-paper",
+      "name": "B · 研究报告",
+      "thesis": "每个方向是一篇可核验的研究报告：标题句直接陈述现状，图在前，数字跟着图走。",
+      "signature": "数据句标题：首页第一句话由实时数据生成，彩色下划线把“已确认”“超预算”连到下面对应的小图。",
+      "axes": {
+        "luminance": "light (paper white #ffffff)",
+        "typeFamily": "humanist sans reading text + monospace figures and kickers",
+        "color": "white ground with observable-style categorical status palette",
+        "layout": "editorial column with small multiples and a sidenote column",
+        "density": "airy, reading-first",
+        "era": "contemporary data journalism and computational notebooks",
+        "material": "flat paper with hairline figure rules"
+      },
+      "screenshot": {
+        "path": "direction-previews/research-paper.png",
+        "sha256": "6974c59d9d288c4505ef3bf80532fcbf59aafc271d50f326aad4a4445cda7c8b"
+      }
+    },
+    {
+      "id": "fitness-atlas",
+      "name": "C · 适应度地形",
+      "thesis": "进化是在适应度地形上的勘探：每个方向是一幅图幅，程序是测点，最佳谱系是登顶路线。",
+      "signature": "等值地形：只在有效得分测点覆盖的范围内插值画等高线，有效得分不足的已勘测区画成珊瑚色斜线，不借用远处得分；金色路线标出最佳程序的祖先链，空方向显示为“未勘测”图幅。",
+      "axes": {
+        "luminance": "dark (deep navy #0b1622)",
+        "typeFamily": "condensed DIN-style grotesk with letter-spaced map labels",
+        "color": "hypsometric teal ramp + gold route + coral failures",
+        "layout": "full-bleed map sheets with floating legend and panels",
+        "density": "balanced",
+        "era": "survey cartography and nautical charts (20th century)",
+        "material": "engraved print with double-rule sheet frames"
+      },
+      "screenshot": {
+        "path": "direction-previews/fitness-atlas.png",
+        "sha256": "ae8aea3202848dbafc9f110c35999dff7dd39833d16b1935b498ed185b169fc2"
+      }
+    }
+  ],
+  "decision": {
+    "status": "selected",
+    "selectedDirectionId": "dark-instrument",
+    "rationale": "Owner choice 2026-10-19: A (dark instrument) as the base, absorbing three parts of B: island-lane lineage chart, progress small multiples with labelled axes, and the data-sentence headline on the home page. Default theme dark (light theme also delivered); full-site zh/en language toggle; directions and all runs as separate pages in one shell; the remaining 17 capability decisions as recommended (owner-decisions.md). Reviewed on index.html sha256 16f2f6418de8c39b1a0db223783a5cb2465d94f7ebd3fc666e5ba198c833e368."
+  }
+}

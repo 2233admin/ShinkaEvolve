@@ -1,0 +1,54 @@
+{
+  "admission": "inert",
+  "deliverableForm": "ui-motion",
+  "jobId": "product-design",
+  "kernel": [
+    "foundation",
+    "toolchain"
+  ],
+  "next": [
+    {
+      "action": "check",
+      "command": "foundation",
+      "required": true,
+      "role": "kernel"
+    },
+    {
+      "action": "resolve",
+      "command": "toolchain",
+      "required": true,
+      "role": "kernel"
+    },
+    {
+      "action": "route",
+      "command": "prism",
+      "required": true,
+      "role": "primary"
+    },
+    {
+      "action": "search",
+      "command": "design-system",
+      "required": false,
+      "role": "secondary"
+    }
+  ],
+  "planSha256": "5ede4f9234849a4716224391cd58a85a836be773ac7185c544a5a217abb51389",
+  "primaryKnowledge": {
+    "action": "route",
+    "admission": "inert",
+    "command": "prism",
+    "id": "prism"
+  },
+  "query": "Native redesign of a read-only research workbench web app (React 19 + Vite): research-direction overview home, direction and hypothesis research report with verdict evidence, shared library, ordinary runs list and multi-run compare, and experiment analysis reorganised into linked data-visualisation surfaces (lineage tree, progress small multiples, solution-space embeddings incl. 3D, contest) with a persistent program inspector showing code and diffs; dark and light themes, Chinese-first CJK typography, desktop-first and fully readable on phones; award-level visual and interaction craft",
+  "registrySha256": "4d6777bb48904bf174163b4fc0d24b8f367332664a78d07908c6f634c57757e8",
+  "routeSha256": "d4d1841864e21d6b34e8aa16d524dc728d48018905eb91485297fd037f88f08c",
+  "schema": "design-pipeline.job-plan.v1",
+  "secondaries": [
+    {
+      "action": "search",
+      "admission": "reference-only",
+      "command": "design-system",
+      "id": "astryx"
+    }
+  ]
+}
