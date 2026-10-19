@@ -442,14 +442,30 @@
         }
 
         async function fetchResultData(item) {
-            const response = await fetch(`/get_programs_summary?db_path=${encodeURIComponent(item.path)}`);
-            if (!response.ok) {
+            const query = `db_path=${encodeURIComponent(item.path)}`;
+            const [programsResponse, statsResponse] = await Promise.all([
+                fetch(`/get_programs_summary?${query}`),
+                fetch(`/get_database_stats?${query}`),
+            ]);
+            if (!programsResponse.ok || !statsResponse.ok) {
                 throw new Error(`Failed to fetch data for ${item.label}`);
             }
-            const programs = await response.json();
+            const programs = await programsResponse.json();
+            const stats = await statsResponse.json();
+            // Prompt evolution is part of every total (OD-9); its charges sit in prompts.sqlite.
+            let prompts = [];
+            if (stats.has_prompt_evo) {
+                const promptsResponse = await fetch(`/get_system_prompts?${query}`);
+                if (!promptsResponse.ok) {
+                    throw new Error(`Failed to fetch data for ${item.label}`);
+                }
+                prompts = await promptsResponse.json();
+            }
             resultsData[item.path] = {
                 label: item.label,
-                programs: programs
+                programs: programs,
+                stats: stats,
+                prompts: prompts
             };
         }
 
@@ -479,8 +495,10 @@
                 const maxGen = programs.reduce((max, p) => Math.max(max, p.generation || 0), 0);
                 const scores = programs.filter(p => p.correct && Number.isFinite(p.combined_score)).map(p => p.combined_score);
                 const bestScore = scores.length ? Math.max(...scores) : null;
-                const costs = programs.map(getProgramCost);
-                const totalCost = costs.every(Number.isFinite) ? costs.reduce((sum, cost) => sum + cost, 0) : null;
+                // The run statistics carry the run's total under one rule: programs plus prompt evolution.
+                const stats = data.stats || {};
+                const totalCost = Number.isFinite(stats.total_cost) && Number.isFinite(stats.prompt_evo_cost)
+                    ? stats.total_cost + stats.prompt_evo_cost : null;
                 
                 const row = document.createElement('tr');
                 row.innerHTML = `
@@ -504,10 +522,20 @@
             });
         }
 
+        // Costs follow rundb.run_cost, the rule of the run list and the budget: an absent or null field is a
+        // recorded zero (the runner writes a field only for the steps that ran), a present value must be an
+        // amount, island copies repeat their source's metadata and are not charges, and an unpriced headless
+        // call has no known API cost.
+        function recordedCost(value) {
+            return value === undefined || value === null ? 0 : Number.isFinite(value) && value >= 0 ? value : null;
+        }
         function getProgramCost(p) {
-            const values = ['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost'].map(key => p.metadata?.[key]);
-            return values.every(value => Number.isFinite(value) && value >= 0)
-                ? values.reduce((sum, value) => sum + value, 0) : null;
+            const md = p.metadata || {};
+            if (md._is_island_copy || md._spawned_island) return 0;
+            const model = String(md.model_name || md.model || md.llm_result?.model_name || md.llm_result?.model || '');
+            if (model.startsWith('headless/') && (md.headless_pricing_unknown === true || md.headless_pricing_unknown === 1)) return null;
+            const values = ['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost'].map(key => recordedCost(md[key]));
+            return values.includes(null) ? null : values.reduce((sum, value) => sum + value, 0);
         }
 
         function updateChart() {
@@ -532,9 +560,8 @@
                 const series = idx;
                 const programs = data.programs || [];
                 
-                // Sort programs by generation, then by timestamp for cost ordering
+                // Sort programs by generation for the generation chart
                 const sortedByGen = [...programs].sort((a, b) => (a.generation || 0) - (b.generation || 0));
-                const sortedByTimestamp = [...programs].sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
                 
                 // === Chart 1: By Generation ===
                 const genData = {};
@@ -585,22 +612,27 @@
                 });
 
                 // === Chart 2: By Cost ===
+                // Programs and prompt versions charge in timestamp order, so the curve ends at the run's total.
+                const charges = [
+                    ...programs.map(p => ({ time: p.timestamp || 0, cost: getProgramCost(p), program: p })),
+                    ...(data.prompts || []).map(prompt => ({ time: prompt.timestamp || 0, cost: recordedCost(prompt.metadata?.llm?.cost), program: null })),
+                ].sort((a, b) => a.time - b.time);
                 let runningCost = 0;
                 let runningBest = null;
                 let runningPrograms = 0;
                 let runningCorrect = 0;
-                
+                let value = null;
+
                 const pointsCost = [];
-                sortedByTimestamp.forEach(p => {
-                    const cost = getProgramCost(p);
+                charges.forEach(({ cost, program: p }) => {
                     runningCost = runningCost === null || cost === null ? null : runningCost + cost;
+                    if (!p) return;
                     runningPrograms += 1;
                     if (p.correct) runningCorrect += 1;
                     if (p.correct && Number.isFinite(p.combined_score)) {
                         runningBest = runningBest === null ? p.combined_score : Math.max(runningBest, p.combined_score);
                     }
-                    
-                    let value;
+
                     switch (metric) {
                         case 'best_score': value = runningBest; break;
                         case 'program_count': value = runningPrograms; break;
@@ -609,6 +641,10 @@
                     }
                     pointsCost.push({ x: runningCost, y: value });
                 });
+                // A prompt charged after the last program still moves the curve's end to the run's total.
+                if (pointsCost.length && pointsCost[pointsCost.length - 1].x !== runningCost) {
+                    pointsCost.push({ x: runningCost, y: value });
+                }
 
                 // Downsample if too many points (for performance)
                 const maxPoints = 200;

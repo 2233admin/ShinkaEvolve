@@ -30,7 +30,7 @@
 
 ### Requirement: 运行费用只有一个口径
 
-运行费用 SHALL 在预算检查、研究工作区接口、方向快照与运行统计（`/get_database_stats`）中按同一规则计算（`rundb.run_cost`）：只计非岛副本的程序（`_is_island_copy`、`_spawned_island` 都不为真），加上 `prompts.sqlite` 中提示词进化的 `llm.cost`。程序的 `api_costs`、`embed_cost`、`novelty_cost`、`meta_cost` 缺失或为 null 时按记录的 0 计，因为运行器只为执行过的步骤写费用；出现的值 MUST 是有限且不小于 0 的数，否则费用未知；元数据不是合法 JSON、或 headless 模型带 `headless_pricing_unknown` 时同样未知，后者的 `api_costs` 不计入金额（与 `dbase.py` 遥测一致）。已知的部分照常求和，未知只让该部分成为下限；`/get_database_stats` 对未知的部分返回 `null`。设有预算的方向在花费未知时 MUST 拒绝开始新运行，因为下限不能证明预算仍有余量。
+运行费用 SHALL 在预算检查、研究工作区接口、方向快照、运行统计（`/get_database_stats`）与浏览器中的分析页和比较页按同一规则计算（`rundb.run_cost`，分析页逐程序镜像同一规则）：只计非岛副本的程序（`_is_island_copy`、`_spawned_island` 都不为真），加上 `prompts.sqlite` 中提示词进化的 `llm.cost`，任何合计都含提示词进化。程序的 `api_costs`、`embed_cost`、`novelty_cost`、`meta_cost` 缺失或为 null 时按记录的 0 计，因为运行器只为执行过的步骤写费用；出现的值 MUST 是有限且不小于 0 的数，否则费用未知；元数据不是合法 JSON、或 headless 模型带 `headless_pricing_unknown` 时同样未知，后者的 `api_costs` 不计入金额（与 `dbase.py` 遥测一致）。已知的部分照常求和，未知只让该部分成为下限；`/get_database_stats` 对未知的部分返回 `null`。设有预算的方向在花费未知时 MUST 拒绝开始新运行，因为下限不能证明预算仍有余量。
 
 #### Scenario: 真实运行没有元分析费用字段
 
@@ -61,6 +61,11 @@
 
 - **WHEN** 设有预算的方向已记录的花费低于预算，但有一个运行的费用未知
 - **THEN** `shinka_research run` 以“direction budget cannot be checked”退出，不启动运行
+
+#### Scenario: 运行列表、分析页与比较页同一合计
+
+- **WHEN** 打开同一运行的运行列表行、分析页成本页签与比较页图例
+- **THEN** 三处显示同一合计（程序加提示词进化），逐程序计价与 `rundb.run_cost` 一致
 
 ### Requirement: 多运行比较
 

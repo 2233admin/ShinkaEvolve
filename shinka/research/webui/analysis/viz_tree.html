@@ -5526,6 +5526,23 @@ console.error("[DEBUG] Error in processData:", error);
             function sumRecorded(values) {
                 return values.every(v => v !== null) ? values.reduce((sum, value) => sum + value, 0) : null;
             }
+            // Costs follow rundb.run_cost, the rule of the run list and the budget: an absent or null field
+            // is a recorded zero (the runner writes a field only for the steps that ran), a present value
+            // must be an amount, island copies repeat their source's metadata and are not charges, and an
+            // unpriced headless call has no known API cost. Measurements such as compute_time stay strict.
+            function recordedCost(value) {
+                return value === undefined || value === null ? 0 : recordedNumber(value);
+            }
+            function costField(program, key) {
+                const md = program.metadata || {};
+                if (md._is_island_copy || md._spawned_island) return 0;
+                const model = String(md.model_name || md.model || md.llm_result?.model_name || md.llm_result?.model || '');
+                if (key === 'api_costs' && model.startsWith('headless/') && (md.headless_pricing_unknown === true || md.headless_pricing_unknown === 1)) return null;
+                return recordedCost(md[key]);
+            }
+            function programCost(program) {
+                return sumRecorded(['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost'].map(key => costField(program, key)));
+            }
         // Update the Meta Info tab with global data
         function updateMetaInfoTab(data) {
             console.log("[DEBUG] Updating Meta Info tab with data");
@@ -5595,11 +5612,11 @@ console.error("[DEBUG] Error in processData:", error);
             }
 
             // Calculate total costs
-            const totalApiCostNum = sumRecorded(data.map(d => recordedNumber(d.metadata?.api_costs)));
-            const totalEmbedCostNum = sumRecorded(data.map(d => recordedNumber(d.metadata?.embed_cost)));
-            const totalNoveltyCostNum = sumRecorded(data.map(d => recordedNumber(d.metadata?.novelty_cost)));
-            const totalMetaCostNum = sumRecorded(data.map(d => recordedNumber(d.metadata?.meta_cost)));
-            const totalPromptCostNum = sumRecorded((window.metaPromptData || []).map(prompt => recordedNumber(prompt.metadata?.llm?.cost)));
+            const totalApiCostNum = sumRecorded(data.map(d => costField(d, 'api_costs')));
+            const totalEmbedCostNum = sumRecorded(data.map(d => costField(d, 'embed_cost')));
+            const totalNoveltyCostNum = sumRecorded(data.map(d => costField(d, 'novelty_cost')));
+            const totalMetaCostNum = sumRecorded(data.map(d => costField(d, 'meta_cost')));
+            const totalPromptCostNum = sumRecorded((window.metaPromptData || []).map(prompt => recordedCost(prompt.metadata?.llm?.cost)));
             const totalCombinedCost = sumRecorded([totalApiCostNum, totalEmbedCostNum, totalNoveltyCostNum, totalMetaCostNum, totalPromptCostNum]);
 
             // Calculate cumulative minimum and maximum scores for each generation
@@ -5671,7 +5688,7 @@ console.error("[DEBUG] Error in processData:", error);
                 window.metaPromptData.forEach(prompt => {
                     const progGen = prompt.program_generation || 0;
                     // Extract cost from metadata.llm.cost
-                    const promptCost = recordedNumber(prompt.metadata?.llm?.cost);
+                    const promptCost = recordedCost(prompt.metadata?.llm?.cost);
                     if (!Object.hasOwn(promptCostsByGen, progGen)) promptCostsByGen[progGen] = 0;
                     promptCostsByGen[progGen] = sumRecorded([promptCostsByGen[progGen], promptCost]);
                 });
@@ -5680,10 +5697,10 @@ console.error("[DEBUG] Error in processData:", error);
             
             generations.forEach(genId => {
                 const genData = data.filter(d => d.generation === genId);
-                const genCost = sumRecorded(genData.map(d => recordedNumber(d.metadata?.api_costs)));
-                const genEmbedCost = sumRecorded(genData.map(d => recordedNumber(d.metadata?.embed_cost)));
-                const genNoveltyCost = sumRecorded(genData.map(d => recordedNumber(d.metadata?.novelty_cost)));
-                const genMetaCost = sumRecorded(genData.map(d => recordedNumber(d.metadata?.meta_cost)));
+                const genCost = sumRecorded(genData.map(d => costField(d, 'api_costs')));
+                const genEmbedCost = sumRecorded(genData.map(d => costField(d, 'embed_cost')));
+                const genNoveltyCost = sumRecorded(genData.map(d => costField(d, 'novelty_cost')));
+                const genMetaCost = sumRecorded(genData.map(d => costField(d, 'meta_cost')));
                 const genPromptCost = Object.hasOwn(promptCostsByGen, genId) ? promptCostsByGen[genId] : 0;
                 const genRuntime = sumRecorded(genData.map(d => recordedNumber(d.metadata?.compute_time)));
                 generationCosts.push({ x: genId, y: genCost });
@@ -11401,11 +11418,7 @@ console.error("[DEBUG] Error in processData:", error);
                 const m = program.metadata?.model_name || program.metadata?.llm_result?.model ||
                           program.metadata?.model || program.model_name || program.model;
                 if (!m || !models.includes(m)) return;
-                const api = recordedNumber(program.metadata?.api_costs);
-                const emb = recordedNumber(program.metadata?.embed_cost);
-                const nov = recordedNumber(program.metadata?.novelty_cost);
-                const met = recordedNumber(program.metadata?.meta_cost);
-                const tc = sumRecorded([api, emb, nov, met]);
+                const tc = programCost(program);
                 if (!modelCostStats[m]) modelCostStats[m] = { totalCost: 0, count: 0, correct: 0 };
                 modelCostStats[m].totalCost = sumRecorded([modelCostStats[m].totalCost, tc]);
                 modelCostStats[m].count++;
@@ -11760,10 +11773,6 @@ console.error("[DEBUG] Error in processData:", error);
                 var base = m.indexOf('@') >= 0 ? m.split('@')[0] : m;
                 return base.split('/').pop();
             }
-            function programCost(p) {
-                const md = p.metadata || {};
-                return sumRecorded(['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost'].map(key => recordedNumber(md[key])));
-            }
             function fmtCost(value) { return value === null ? '—' : '$' + value.toFixed(2); }
 
             if (!data || data.length === 0) {
@@ -11771,9 +11780,11 @@ console.error("[DEBUG] Error in processData:", error);
                 return;
             }
 
-            var totalApi = sumRecorded(data.map(p => recordedNumber(p.metadata?.api_costs)));
-            var totalEmbed = sumRecorded(data.map(p => recordedNumber(p.metadata?.embed_cost)));
-            var totalAll = sumRecorded(data.map(programCost));
+            var totalApi = sumRecorded(data.map(p => costField(p, 'api_costs')));
+            var totalEmbed = sumRecorded(data.map(p => costField(p, 'embed_cost')));
+            // Every total includes prompt evolution (OD-9), as the run list does.
+            var prompts = window.metaPromptData || [];
+            var totalAll = sumRecorded([sumRecorded(data.map(programCost)), sumRecorded(prompts.map(prompt => recordedCost(prompt.metadata?.llm?.cost)))]);
             var avgPerProgram = totalAll === null ? null : totalAll / data.length;
             var zeroCostMode = totalAll === 0;
             var totalCompute = sumRecorded(data.map(p => recordedNumber(p.metadata?.compute_time)));
@@ -11836,17 +11847,25 @@ console.error("[DEBUG] Error in processData:", error);
                 var innerW = svgW - mg.left - mg.right;
                 var innerH = svgH - mg.top - mg.bottom;
 
-                var cumCost = 0, runningBest = null;
-                var series = sorted.map(function(p, i) {
-                    if (zeroCostMode) {
-                        cumCost += recordedNumber(p.metadata?.compute_time);
-                    } else {
-                        cumCost += programCost(p);
-                    }
+                // Programs and, when the resource is money, prompt versions charge in time order, so the
+                // curve ends at the run's total.
+                var events = sorted.map(function(p) { return { time: p.timestamp || p.generation || 0, program: p }; });
+                if (!zeroCostMode) {
+                    prompts.forEach(function(prompt) { events.push({ time: prompt.timestamp || prompt.program_generation || 0, prompt: prompt }); });
+                    events.sort(function(a, b) { return a.time - b.time; });
+                }
+                var cumCost = 0, runningBest = null, count = 0, series = [];
+                events.forEach(function(e) {
+                    if (e.prompt) { cumCost += recordedCost(e.prompt.metadata?.llm?.cost); return; }
+                    var p = e.program;
+                    cumCost += zeroCostMode ? recordedNumber(p.metadata?.compute_time) : programCost(p);
                     var sc = p.combined_score;
                     if (p.correct && Number.isFinite(sc) && (runningBest === null || sc > runningBest)) runningBest = sc;
-                    return { idx: i + 1, cost: cumCost, score: runningBest };
-                }).filter(function(d) { return d.score !== null; });
+                    count += 1;
+                    series.push({ idx: count, cost: cumCost, score: runningBest });
+                });
+                if (series.length && series[series.length - 1].cost !== cumCost) series.push({ idx: count, cost: cumCost, score: runningBest });
+                series = series.filter(function(d) { return d.score !== null; });
 
                 if (series.length < 2) {
                     lineWrap.innerHTML = '<p style="text-align:center;padding:30px;color:#999">' + t('cost_no_data') + '</p>';
@@ -13665,7 +13684,8 @@ console.error("[DEBUG] Error in processData:", error);
                 
                 // Collect additional metadata
                 const patchType = program.metadata.patch_type || 'N/A';
-                const apiCost = recordedNumber(program.metadata.api_costs) === null ? 'N/A' : `$${program.metadata.api_costs.toFixed(4)}`;
+                const apiCostValue = costField(program, 'api_costs');
+                const apiCost = apiCostValue === null ? 'N/A' : `$${apiCostValue.toFixed(4)}`;
                 const complexity = program.complexity ? program.complexity.toFixed(3) : 'N/A';
                 const model = program.metadata.model_name || 'N/A';
                 const programId = program.id.substring(0, 12) + '...'; // Truncate for readability
@@ -14500,10 +14520,10 @@ console.error("[DEBUG] Error in processData:", error);
             const modelPatchGenMap = new Map(); // model||patch -> gen -> { total, count }
 
             data.forEach(node => {
-                const apiCost = recordedNumber(node.metadata?.api_costs);
-                const embedCost = recordedNumber(node.metadata?.embed_cost);
-                const noveltyCost = recordedNumber(node.metadata?.novelty_cost);
-                const metaCost = recordedNumber(node.metadata?.meta_cost);
+                const apiCost = costField(node, 'api_costs');
+                const embedCost = costField(node, 'embed_cost');
+                const noveltyCost = costField(node, 'novelty_cost');
+                const metaCost = costField(node, 'meta_cost');
                 const totalCost = sumRecorded([apiCost, embedCost, noveltyCost, metaCost]);
                 const modelName = node.metadata?.model_name ||
                                   node.metadata?.llm_result?.model ||
