@@ -73,6 +73,8 @@
 |Analysis|11 个 Plotly 图。|
 |Throughput|主夹具如实提示无池数据；另用真实 `pool_slots` 保存夹具显示 5 个图、6 行数据、16 秒窗口和 2 个任务。|
 
+**2026-10-19 更正：**上表 Metrics、Clusters、Pareto 和 Analysis 四行只统计了 Plotly 图表容器的数量，不是渲染证明。2026-10-19 在桌面视口的 Chrome 中打开同一 6 程序主夹具，Metrics 页等待 4 秒后两个可见图表区域仍为空白（[`evidence/metrics-blank-20261019.png`](evidence/metrics-blank-20261019.png)），所以“Metrics｜4 个 Plotly 图”不成立；Clusters、Pareto、Analysis 的计数同样未经渲染证实，本记录不再作为这些图已经画出的证据。这四类视图在 `openspec/changes/award-redesign` 中以原生 SVG/D3 重做，并逐图实拍验收。
+
 ## 两条用户路径与状态证据
 
 - **真实研究：**`btc-hourly-momentum/h001/e01` → 分析 → 选择 `377f7b78-d44c-4bb7-9cce-ad55f9a1ffb7` → 代码 → 刷新 → 返回 `/?direction=btc-hourly-momentum&hypothesis=h001`。重新启动的所有者预览 `http://127.0.0.1:8768/` 再次通过；代码仍为 `pct_change(12)`、`ewm(span=20)`，树唯一高亮和详情 ID 一致。只读取历史产物，没有重新运行研究或打开封存段。
