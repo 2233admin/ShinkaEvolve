@@ -57,20 +57,24 @@ def _function(source: str, name: str) -> str:
     raise AssertionError(f"{name} has no closing brace")
 
 
-def _page_prices(page: str) -> list:
+def _run(page: str, names: tuple, *lines: str):
+    """Evaluate the page's own functions in node and return the printed JSON."""
     source = (ANALYSIS / page).read_text(encoding="utf-8")
-    names = PAGES[page]
-    script = "\n".join(
-        [
-            *(_function(source, name) for name in names),
-            f"const cases = {json.dumps(CASES)};",
-            f"console.log(JSON.stringify(cases.map(m => {names[-1]}({{ metadata: m }}))));",
-        ]
-    )
+    script = "\n".join([*(_function(source, name) for name in names), *lines])
     completed = subprocess.run(
         ["node", "-e", script], capture_output=True, text=True, check=True
     )
     return json.loads(completed.stdout)
+
+
+def _page_prices(page: str) -> list:
+    names = PAGES[page]
+    return _run(
+        page,
+        names,
+        f"const cases = {json.dumps(CASES)};",
+        f"console.log(JSON.stringify(cases.map(m => {names[-1]}({{ metadata: m }}))));",
+    )
 
 
 def _server_price(results: Path, metadata: dict) -> float | None:
@@ -90,3 +94,42 @@ def test_analysis_pages_price_programs_like_run_cost(tmp_path: Path, page: str) 
         assert (got is None) == (want is None), metadata
         if want is not None:
             assert got == pytest.approx(want), metadata
+
+
+@pytest.mark.parametrize(
+    ("window", "expected"),
+    [
+        # The server answers [] for a run without prompts.sqlite: a recorded zero.
+        ({"metaPromptData": None, "metaPromptFailed": False}, 0.0),
+        (
+            {
+                "metaPromptData": [
+                    {"metadata": {"llm": {"cost": 0.25}}},
+                    {"metadata": None},
+                ],
+                "metaPromptFailed": False,
+            },
+            0.25,
+        ),
+        (
+            {
+                "metaPromptData": [{"metadata": {"llm": {"cost": "n/a"}}}],
+                "metaPromptFailed": False,
+            },
+            None,
+        ),
+        # A failed read is unknown, although no prompt is loaded.
+        ({"metaPromptData": None, "metaPromptFailed": True}, None),
+    ],
+)
+def test_analysis_prompt_total_stays_unknown_after_a_failed_read(
+    window: dict, expected: float | None
+) -> None:
+    names = ("recordedNumber", "sumRecorded", "recordedCost", "promptCostTotal")
+    got = _run(
+        "viz_tree.html",
+        names,
+        f"globalThis.window = {json.dumps(window)};",
+        "console.log(JSON.stringify(promptCostTotal()));",
+    )
+    assert got == (None if expected is None else pytest.approx(expected))

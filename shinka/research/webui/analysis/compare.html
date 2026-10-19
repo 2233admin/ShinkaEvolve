@@ -613,9 +613,11 @@
 
                 // === Chart 2: By Cost ===
                 // Programs and prompt versions charge in timestamp order, so the curve ends at the run's total.
+                // One clock for both kinds: Unix time when every program and prompt has one, else generation.
+                const byTime = programs.every(p => Number.isFinite(p.timestamp)) && (data.prompts || []).every(prompt => Number.isFinite(prompt.timestamp));
                 const charges = [
-                    ...programs.map(p => ({ time: p.timestamp || 0, cost: getProgramCost(p), program: p })),
-                    ...(data.prompts || []).map(prompt => ({ time: prompt.timestamp || 0, cost: recordedCost(prompt.metadata?.llm?.cost), program: null })),
+                    ...programs.map(p => ({ time: byTime ? p.timestamp : (p.generation || 0), cost: getProgramCost(p), program: p })),
+                    ...(data.prompts || []).map(prompt => ({ time: byTime ? (prompt.timestamp || 0) : (prompt.program_generation || 0), cost: recordedCost(prompt.metadata?.llm?.cost), program: null })),
                 ].sort((a, b) => a.time - b.time);
                 let runningCost = 0;
                 let runningBest = null;

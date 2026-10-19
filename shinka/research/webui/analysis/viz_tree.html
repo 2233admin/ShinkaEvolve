@@ -4133,14 +4133,22 @@
                 
                 const data = await programResponse.json();
                 let prompts = [];
-                if (promptResponse && promptResponse.ok) {
+                let promptsFailed = !(promptResponse && promptResponse.ok);
+                if (!promptsFailed) {
                     try {
                         prompts = await promptResponse.json();
                     } catch (e) {
+                        promptsFailed = true;
                         console.log("[DEBUG] Silent refresh: Failed to parse prompts JSON:", e);
                     }
                 }
                 if (!isCurrentRun(dbPath, version)) return;
+                // A refresh that reads the prompts replaces them and settles their cost; a failed read
+                // keeps the last prompts and their state together.
+                if (!promptsFailed) {
+                    window.metaPromptData = prompts.length > 0 ? prompts : null;
+                    window.metaPromptFailed = false;
+                }
                 
                 if (!data || data.length === 0) {
                     processData([]);
@@ -4149,9 +4157,6 @@
                 
                 console.log("[DEBUG] Auto-refresh: Processing", data.length, "programs,", prompts.length, "prompts");
                 window.rawDbData = data;
-                if (prompts.length > 0) {
-                    window.metaPromptData = prompts;
-                }
                 
                 // Update the scan status with new program count and timestamp
                 const scanStatus = document.getElementById("scan-status");
@@ -4246,6 +4251,7 @@
                 
                 console.log("[DEBUG] Auto-refresh: Meta-prompt data changed, updating tree");
                 window.metaPromptData = prompts;
+                window.metaPromptFailed = false;
                 window.metaPromptBestId = newBestId;  // Track best prompt ID
                 
                 // Store currently selected prompt
@@ -4359,6 +4365,7 @@
                 metaPromptDetails.innerHTML = '<p style="color: #888; font-size: 13px; text-align: center; margin-top: 30px;">Select a prompt node to view details</p>';
             }
             window.metaPromptData = null;
+            window.metaPromptFailed = true; // unknown until the new run's prompts are read
             window.selectedPromptId = null;
             // Don't clear the model-posteriors-container completely, just the chart content
             const modelPosteriorsChart = document.getElementById("model-posteriors-chart");
@@ -4390,19 +4397,22 @@
                 fetch(`/get_system_prompts?db_path=${encodeURIComponent(dbPath)}`).then(r => {
                     if (!r.ok) {
                         console.log("[DEBUG] Prompts request failed (HTTP " + r.status + "), continuing without prompts");
-                        return [];
+                        return null;
                     }
                     return r.json().catch(e => {
                         console.log("[DEBUG] Failed to parse prompts JSON:", e);
-                        return [];
+                        return null;
                     });
                 }).catch(e => {
                     console.log("[DEBUG] Prompts fetch failed:", e);
-                    return [];
-                }) // If prompts fail, continue with empty array
+                    return null;
+                }) // If prompts fail, continue without them; null marks the failed read
             ])
                 .then(([data, prompts]) => {
                     if (!isCurrentRun(dbPath, version)) return;
+                    // An unread prompt list leaves prompt costs unknown, never zero (OD-9).
+                    window.metaPromptFailed = prompts === null;
+                    prompts = prompts || [];
                     console.log("[DEBUG] Summary data received:", data.length, "programs,", prompts.length, "prompts");
                     
                     if (!data || data.length === 0) {
@@ -5543,6 +5553,12 @@ console.error("[DEBUG] Error in processData:", error);
             function programCost(program) {
                 return sumRecorded(['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost'].map(key => costField(program, key)));
             }
+            // Prompt evolution is part of every total (OD-9). A failed prompt read leaves it unknown; a run
+            // without prompts.sqlite gets an empty list from the server, a recorded zero.
+            function promptCostTotal() {
+                if (window.metaPromptFailed) return null;
+                return sumRecorded((window.metaPromptData || []).map(prompt => recordedCost(prompt.metadata?.llm?.cost)));
+            }
         // Update the Meta Info tab with global data
         function updateMetaInfoTab(data) {
             console.log("[DEBUG] Updating Meta Info tab with data");
@@ -5616,7 +5632,7 @@ console.error("[DEBUG] Error in processData:", error);
             const totalEmbedCostNum = sumRecorded(data.map(d => costField(d, 'embed_cost')));
             const totalNoveltyCostNum = sumRecorded(data.map(d => costField(d, 'novelty_cost')));
             const totalMetaCostNum = sumRecorded(data.map(d => costField(d, 'meta_cost')));
-            const totalPromptCostNum = sumRecorded((window.metaPromptData || []).map(prompt => recordedCost(prompt.metadata?.llm?.cost)));
+            const totalPromptCostNum = promptCostTotal();
             const totalCombinedCost = sumRecorded([totalApiCostNum, totalEmbedCostNum, totalNoveltyCostNum, totalMetaCostNum, totalPromptCostNum]);
 
             // Calculate cumulative minimum and maximum scores for each generation
@@ -5701,7 +5717,7 @@ console.error("[DEBUG] Error in processData:", error);
                 const genEmbedCost = sumRecorded(genData.map(d => costField(d, 'embed_cost')));
                 const genNoveltyCost = sumRecorded(genData.map(d => costField(d, 'novelty_cost')));
                 const genMetaCost = sumRecorded(genData.map(d => costField(d, 'meta_cost')));
-                const genPromptCost = Object.hasOwn(promptCostsByGen, genId) ? promptCostsByGen[genId] : 0;
+                const genPromptCost = window.metaPromptFailed ? null : Object.hasOwn(promptCostsByGen, genId) ? promptCostsByGen[genId] : 0;
                 const genRuntime = sumRecorded(genData.map(d => recordedNumber(d.metadata?.compute_time)));
                 generationCosts.push({ x: genId, y: genCost });
                 generationEmbedCosts.push({ x: genId, y: genEmbedCost });
@@ -11784,7 +11800,7 @@ console.error("[DEBUG] Error in processData:", error);
             var totalEmbed = sumRecorded(data.map(p => costField(p, 'embed_cost')));
             // Every total includes prompt evolution (OD-9), as the run list does.
             var prompts = window.metaPromptData || [];
-            var totalAll = sumRecorded([sumRecorded(data.map(programCost)), sumRecorded(prompts.map(prompt => recordedCost(prompt.metadata?.llm?.cost)))]);
+            var totalAll = sumRecorded([sumRecorded(data.map(programCost)), promptCostTotal()]);
             var avgPerProgram = totalAll === null ? null : totalAll / data.length;
             var zeroCostMode = totalAll === 0;
             var totalCompute = sumRecorded(data.map(p => recordedNumber(p.metadata?.compute_time)));
@@ -11849,9 +11865,11 @@ console.error("[DEBUG] Error in processData:", error);
 
                 // Programs and, when the resource is money, prompt versions charge in time order, so the
                 // curve ends at the run's total.
-                var events = sorted.map(function(p) { return { time: p.timestamp || p.generation || 0, program: p }; });
+                // One clock for both kinds: Unix time when every program and prompt has one, else generation.
+                var byTime = sorted.every(function(p) { return Number.isFinite(p.timestamp); }) && prompts.every(function(prompt) { return Number.isFinite(prompt.timestamp); });
+                var events = sorted.map(function(p) { return { time: byTime ? p.timestamp : (p.generation || 0), program: p }; });
                 if (!zeroCostMode) {
-                    prompts.forEach(function(prompt) { events.push({ time: prompt.timestamp || prompt.program_generation || 0, prompt: prompt }); });
+                    prompts.forEach(function(prompt) { events.push({ time: byTime ? (prompt.timestamp || 0) : (prompt.program_generation || 0), prompt: prompt }); });
                     events.sort(function(a, b) { return a.time - b.time; });
                 }
                 var cumCost = 0, runningBest = null, count = 0, series = [];
@@ -17583,6 +17601,7 @@ console.error("[DEBUG] Error in processData:", error);
         
         // Store meta-prompt data globally
         window.metaPromptData = null;
+        window.metaPromptFailed = true; // unknown until the run's prompts are read
         window.selectedPromptId = null;
 
         async function loadAndRenderMetaPrompts() {
@@ -17610,6 +17629,7 @@ console.error("[DEBUG] Error in processData:", error);
                 const prompts = await response.json();
                 if (!isCurrentRun(dbPath, version)) return;
                 window.metaPromptData = prompts;
+                window.metaPromptFailed = false;
                 
                 // Debug: log first prompt to see all available fields
                 if (prompts && prompts.length > 0) {
