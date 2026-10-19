@@ -9,7 +9,8 @@
   - 范围：`openspec/changes/award-redesign/hifi/**`，不改 `app/src`。
   - 检查：逐帧截图实看；脚本检查外层横向溢出、文字截断、SVG 文字越界与 SVG 文字重叠（HTML 文字重叠靠逐帧实看）；按 token 计算正文与图形对比度。
   - 失败返回：修正 `hifi/build.mjs` 后重建并重拍全部帧。
-- [ ] 1.2 所有者评审高保真样稿并确认默认语言；评审绑定样稿文件哈希。
+- [x] 1.2 所有者评审高保真样稿；评审绑定样稿文件哈希。2026-10-20 视觉通过（`hifi/index.html` sha256 `55a03eb7…`），并要求原有功能一项不删（`owner-decisions.md` › 高保真评审）。
+- [ ] 1.3 所有者确认默认语言；确认前实现按中文。
 
 ## 2. 基础
 
@@ -46,7 +47,7 @@
 
 ## 7. 删除与收尾
 
-- [ ] 7.1 按能力组删除旧入口与代码（旧 iframe 工作台、`/viz_tree.html`、`/analysis/*`、`vite.analysis.config.ts`、Astro、Plotly、Chart.js 与 Carbon Charts），每组在对照通过后删除，不保留兼容跳转。
+- [ ] 7.1 按能力组删除旧入口与代码（旧 iframe 工作台、`/viz_tree.html`、`/analysis/*`、`vite.analysis.config.ts`、Astro、Plotly、Chart.js 与 Carbon Charts）。每组只在能力对照表逐行实测通过后删除，不保留兼容跳转；任何一行复现不了，该组旧实现保留并报告所有者（所有者 2026-10-20：原有功能一项不删）。
 - [ ] 7.2 改写根目录 `DESIGN.md`、`MOTION.md` 与 `design-system/`（含深浅主题的 token、组件状态与图表族预览页），更新 `docs/research/workspace.md`。
 - [ ] 7.3 验收：1920/1440/1024/390 宽 × 深浅 × 中英截图实看；axe 无严重问题；控制台零错误；本机测量 LCP、INP 与包体；3D 代码块未进入首屏请求；`pytest -q tests/research` 与仓库门禁。
 - [ ] 7.4 恢复管线 `state.json` 的所有者交付与评审委派，运行管线交付门禁；所有者验收绑定最终版本。
