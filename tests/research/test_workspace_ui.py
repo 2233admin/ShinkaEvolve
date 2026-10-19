@@ -87,8 +87,9 @@ def _shared_library(workspace: Path) -> dict:
     }
 
 
-def _one_trial(results: Path) -> None:
-    """Persist one evaluated program with a known $0.75 cost, plus private data."""
+def _one_trial(results: Path, metadata: dict | None = None) -> None:
+    """Persist one evaluated program, by default with a known $0.75 cost, plus
+    private data."""
     results.mkdir(parents=True)
     with sqlite3.connect(results / "programs.sqlite") as connection:
         connection.execute(
@@ -106,9 +107,47 @@ def _one_trial(results: Path) -> None:
                 1,
                 0.5,
                 json.dumps({HELD_OUT: 987.654}),
-                json.dumps({"api_costs": 0.5, "embed_cost": 0.25}),
+                json.dumps(metadata or {"api_costs": 0.5, "embed_cost": 0.25}),
             ),
         )
+
+
+def test_unpriced_runs_make_direction_spend_a_lower_bound(tmp_path: Path) -> None:
+    workspace = tmp_path / "fixture-workspace"
+    root = workspace / "alpha"
+    notebook = _direction(root, "Alpha fixture", "Alpha-only hypothesis body.")
+    for eid in ("e01", "e02"):
+        notebook.hypotheses[0].experiments.append(
+            Experiment(
+                id=eid,
+                created=CREATED,
+                evaluator_hash="fixture-evaluator-hash",
+                data_path="fixture-dev.csv",
+                data_hash="fixture-data-hash",
+                n_evaluated=1,
+            )
+        )
+    notebook.save(root)
+    _one_trial(experiment_dir(root, "h001", "e01") / "results")
+    # A headless call without pricing: its api_costs is not an amount.
+    _one_trial(
+        experiment_dir(root, "h001", "e02") / "results",
+        {
+            "model_name": "headless/agent",
+            "headless_pricing_unknown": True,
+            "api_costs": 12.0,
+            "embed_cost": 0.25,
+        },
+    )
+
+    with _server(workspace) as base:
+        (row,) = _get(base, "/api/workspace")["directions"]
+        snapshot = _get(base, _snapshot_path("alpha"))
+    assert row["spend_usd"] == snapshot["spend_usd"] == pytest.approx(1.0)
+    assert row["unknown_cost_runs"] == snapshot["unknown_cost_runs"] == 1
+    experiments = snapshot["hypotheses"][0]["experiments"]
+    assert [e["spend_known"] for e in experiments] == [True, False]
+    assert [e["spend_usd"] for e in experiments] == pytest.approx([0.75, 0.25])
 
 
 def test_workspace_summaries_and_selection_isolate_directions_and_errors(

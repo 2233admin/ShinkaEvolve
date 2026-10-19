@@ -39,7 +39,7 @@ The output goes through the same storage code a real run uses: `Notebook`,
 | `d1-momentum-regimes` | Active. Four hypotheses: supported, refuted, inconclusive (two experiments) and running. The running experiment's database is still growing, so the notebook does not count its trials yet. Budget $80, partly spent. Lockbox sealed. Probes recorded. Events span 8 to 18 October. |
 | `d2-overnight-gap` | Concluded. One hypothesis confirmed on the lockbox and one refuted. Lockbox opened; `CONFIRMATION.md` written. |
 | `d3-volume-shock` | New. One proposed hypothesis, with no data, no experiments and no events (empty states). |
-| `d4-short-reversal` | Over budget: spend is about twice the $8 budget. One hypothesis is challenged but has no verdict yet. The other has a `run-failed` experiment (`h002/e01`, unknown cost, see below) in which the evaluator fails on about 75% of programs from generation 15 on. |
+| `d4-short-reversal` | Over budget: spend is about twice the $8 budget. One hypothesis is challenged but has no verdict yet. The other has a `run-failed` experiment (`h002/e01`) in which the evaluator fails on about 75% of programs from generation 15 on. |
 | `library/` | Nine wiki pages (concept, paper, finding), an index, a log, two compiled raw sources and one pending link. The paper pages are fictional. |
 
 Every experiment that has trials gets `results/programs.sqlite` with 150–320 programs,
@@ -83,30 +83,26 @@ Five runs from three tasks, with no research association:
 | `circle_packing_demo/run_20261015_141500` | Large: 500 programs, 40 generations, 4 islands, 12 prompts. |
 | `bin_packing_demo/run_20261013_101000` | Empty database: schema only, no programs. |
 | `bin_packing_demo/run_20261016_200000` | Medium: 180 programs. |
-| `quant_signal_demo/run_20261017_083000` | Medium: 220 programs. Unknown cost (see below). |
+| `quant_signal_demo/run_20261017_083000` | Medium: 220 programs. Unknown cost: one of its models is an unpriced headless agent (see below). |
 
 ## Costs
 
-Every program carries four numeric cost fields: `metadata.api_costs`,
-`metadata.embed_cost`, `metadata.novelty_cost` and `metadata.meta_cost`. A step that did
-not run records a known `0.0`: seeds have no API cost, programs without novelty checks
-have no novelty cost, and `meta_cost` stays `0.0` except on the best program at each
-meta update, which is charged for that update. Prompt records carry
-`metadata.llm.cost`. `/get_database_stats` therefore returns a numeric `total_cost` for
-every database (`0` for the empty one), plus `prompt_evo_cost`.
+Program costs are written the way the runner writes them: `metadata.api_costs`,
+`metadata.embed_cost` and `metadata.novelty_cost` on every program (seeds have no API
+cost, programs without novelty checks have no novelty cost), and `metadata.meta_cost` only
+on the program each meta update charged. Prompt records carry `metadata.llm.cost`.
 
-Two databases keep the unknown-cost state testable. They use `RunSpec(cost_unknown=True)`:
+`rundb.run_cost` counts an absent field as a recorded zero, as the runner's budget total
+does, so every research direction and every ordinary run has a known cost except one:
 
-- `runs/quant_signal_demo/run_20261017_083000`
-- `workspace/d4-short-reversal/experiments/h002/e01`
+- `runs/quant_signal_demo/run_20261017_083000` (`RunSpec(cost_unknown=True)`)
 
-In these two, as in real runs whose pricing is unknown, `meta_cost` exists only on the
-programs the meta summarizer charged, and `embed_cost` is missing on about 3% of
-programs. `/get_database_stats` returns `total_cost: null` for them.
-
-The notebook spend (`rundb.total_cost`) adds up the recorded program costs and the prompt
-costs, counting missing fields as zero. It therefore equals the sum of the recorded costs
-for every direction, including `d4-short-reversal`.
+Its first model is `headless/demo-agent`, a headless CLI agent with no price list. Its
+programs carry `headless_pricing_unknown: true` and `api_costs: 0.0`, which core telemetry
+treats as pricing-unknown. `/get_database_stats` therefore returns `total_cost: null` for
+that run, the runs list shows its cost as unknown, and the runs total becomes a lower bound.
+Research experiments cannot use headless models (`shinka_research run` refuses them), so no
+direction has an unknown spend.
 
 ## Determinism
 
@@ -127,9 +123,6 @@ normalised. Even then, `evaluator_hash` still differs between them.
 
 ## Known limits
 
-- Real runs set `meta_cost` only on the programs where the meta summarizer ran. The
-  demo writes an explicit `0.0` instead, except in the two unknown-cost databases
-  above.
 - Plot titles are ASCII (`DEMO - synthetic, not real research`), because matplotlib's
   default fonts cannot render the Chinese label.
 - The figures for skeptic, verdict and lockbox come from a fixed plan. The labels are

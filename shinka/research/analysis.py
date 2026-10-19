@@ -16,24 +16,6 @@ from shinka.webui import visualization
 from . import rundb
 
 
-def _recorded_cost(db: Path, table: str, fields: tuple[str, ...]) -> float | None:
-    """Unknown pricing is not evidence of a free run."""
-    valid = " AND ".join(
-        f"json_type(metadata, '$.{field}') IN ('integer', 'real')"
-        f" AND json_extract(metadata, '$.{field}') >= 0"
-        for field in fields
-    )
-    amount = " + ".join(f"json_extract(metadata, '$.{field}')" for field in fields)
-    uri = f"file:{urllib.parse.quote(str(db), safe='')}?mode=ro"
-    with closing(sqlite3.connect(uri, uri=True)) as conn:
-        row = conn.execute(
-            f"SELECT CASE WHEN COUNT(*) = COUNT(cost) THEN COALESCE(SUM(cost), 0) END "
-            f"FROM (SELECT CASE WHEN json_valid(metadata) THEN CASE WHEN {valid} "
-            f"THEN {amount} END END AS cost FROM {table})"
-        ).fetchone()
-    return row[0]
-
-
 WEBUI = Path(__file__).parent / "webui" / "dist" / "analysis"
 ANALYSIS_PATHS = {
     "/analysis/index.html",
@@ -288,21 +270,18 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
 
     def handle_get_database_stats(self, db_path: str):
         db = Path(self._get_actual_db_path(db_path))
-        prompt_db = confined(db.parent, db.with_name(rundb.PROMPT_DB_FILENAME))
+        # The prompt database must stay inside the run directory it belongs to.
+        confined(db.parent, db.with_name(rundb.PROMPT_DB_FILENAME))
         try:
-            self._stats_costs = (
-                _recorded_cost(
-                    db,
-                    "programs",
-                    ("api_costs", "embed_cost", "novelty_cost", "meta_cost"),
-                ),
-                _recorded_cost(prompt_db, "system_prompts", ("llm.cost",))
-                if prompt_db.exists()
-                else 0.0,
-            )
+            cost = rundb.run_cost(db.parent, db.name)
         except (OSError, sqlite3.Error):
             self._send_read_error("Unable to read run statistics")
             return
+        # Unpriced or malformed entries leave a total unknown, never zero.
+        self._stats_costs = (
+            cost.programs_usd if cost.programs_known else None,
+            cost.prompts_usd if cost.prompts_known else None,
+        )
         try:
             return super().handle_get_database_stats(db_path)
         finally:

@@ -200,7 +200,7 @@ def test_populated_results_with_literal_uri_characters_are_read_only(
 
     # $2.00 of evaluated program costs plus $0.75 of prompt evolution costs.
     # Administrative copies have deliberately larger scores and costs.
-    assert rundb.total_cost(results) == 2.75
+    assert rundb.run_cost(results) == rundb.RunCost(2.0, True, 0.75, True)
     assert rundb.count_evaluated(results) == 2
     assert rundb.trials(results) == [(100.0, 0, None), (200.0, 1, 1.25)]
     assert rundb.best_program(results) == (
@@ -218,11 +218,13 @@ def test_populated_results_with_literal_uri_characters_are_read_only(
         assert row["error"] is None
         assert row["trials"] == 2
         assert row["spend_usd"] == 2.75
+        assert row["unknown_cost_runs"] == 0
 
         query = urllib.parse.urlencode({"direction": direction_id})
         selected = _get(base, "/api/snapshot?" + query)
         assert selected["direction"] == "Literal URI results"
         assert selected["spend_usd"] == 2.75
+        assert selected["unknown_cost_runs"] == 0
         assert selected["trials"] == 2
         assert len(selected["hypotheses"]) == 1
         selected_hypothesis = selected["hypotheses"][0]
@@ -236,6 +238,7 @@ def test_populated_results_with_literal_uri_characters_are_read_only(
         assert selected_experiment["id"] == experiment.id
         assert selected_experiment["best_is_score"] == 1.25
         assert selected_experiment["spend_usd"] == 2.75
+        assert selected_experiment["spend_known"] is True
         assert [point["score"] for point in selected["trial_points"]] == [None, 1.25]
 
     # Attempt an actual write through the research program reader, rather than
@@ -251,4 +254,4 @@ def test_populated_results_with_literal_uri_characters_are_read_only(
         "def candidate():\n    return 42\n",
         1.25,
     )
-    assert rundb.total_cost(results) == 2.75
+    assert rundb.run_cost(results).recorded_usd == 2.75

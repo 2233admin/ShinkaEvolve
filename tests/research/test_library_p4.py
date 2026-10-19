@@ -6,7 +6,7 @@ import pytest
 
 from shinka.research import cli, library
 from shinka.research.notebook import RESULTS_LOG, Notebook
-from shinka.research.rundb import total_cost
+from shinka.research.rundb import RunCost, run_cost
 
 
 def _init(ws: Path, example_dir: Path, *extra: str) -> Path:
@@ -74,10 +74,11 @@ def _fake_results(results: Path, costs: list) -> None:
         conn.execute("INSERT INTO programs VALUES ('c', '', 9.0, 1, ?)", (copy,))
 
 
-def test_total_cost_excludes_copies(tmp_path: Path) -> None:
+def test_run_cost_excludes_copies(tmp_path: Path) -> None:
     _fake_results(tmp_path / "r", [0.5, 0.25])
-    assert total_cost(tmp_path / "r") == pytest.approx(0.77)
-    assert total_cost(tmp_path / "missing") == 0.0
+    # Absent fields are recorded zeros, as the runner totals them.
+    assert run_cost(tmp_path / "r") == pytest.approx(RunCost(0.77, True, 0.0, True))
+    assert run_cost(tmp_path / "missing") == RunCost(0.0, True, 0.0, True)
     # prompt-evolution charges live in prompts.sqlite
     with sqlite3.connect(tmp_path / "r" / "prompts.sqlite") as conn:
         conn.execute("CREATE TABLE system_prompts (id TEXT, metadata TEXT)")
@@ -86,7 +87,8 @@ def test_total_cost_excludes_copies(tmp_path: Path) -> None:
             (json.dumps({"llm": {"cost": 0.2}}),),
         )
         conn.execute("INSERT INTO system_prompts VALUES ('t', NULL)")
-    assert total_cost(tmp_path / "r") == pytest.approx(0.97)
+    assert run_cost(tmp_path / "r").recorded_usd == pytest.approx(0.97)
+    assert run_cost(tmp_path / "r").known
 
 
 def test_budget_stops_runs(tmp_path: Path, example_dir: Path, bars_csv: Path) -> None:
@@ -98,6 +100,20 @@ def test_budget_stops_runs(tmp_path: Path, example_dir: Path, bars_csv: Path) ->
     )  # fmt: skip
     _fake_results(root / "experiments/h001/e01/results", [0.6, 0.6])
     with pytest.raises(SystemExit, match="budget exhausted"):
+        cli.main(["run", str(root), "h001"])
+
+
+def test_budget_refuses_runs_when_spend_is_unknown(
+    tmp_path: Path, example_dir: Path, bars_csv: Path
+) -> None:
+    root = _init(tmp_path, example_dir, "--budget-usd", "1.0")
+    cli.main(
+        ["scaffold", str(root), "h001", "--initial", str(example_dir / "initial.py"),
+         "--data", str(bars_csv)]
+    )  # fmt: skip
+    # $0.10 recorded, far under budget, but one cost is not an amount.
+    _fake_results(root / "experiments/h001/e01/results", [0.1, "n/a"])
+    with pytest.raises(SystemExit, match="budget cannot be checked"):
         cli.main(["run", str(root), "h001"])
 
 

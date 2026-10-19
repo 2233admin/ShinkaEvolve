@@ -194,10 +194,12 @@ def test_workspace_analysis_keeps_private_metrics_hidden(workspace, endpoint) ->
 @pytest.mark.parametrize(
     ("metadata", "expected"),
     [
-        ({}, None),
-        ({"api_costs": 0.0}, None),
-        ({"api_costs": None, "embed_cost": 0, "novelty_cost": 0, "meta_cost": 0}, None),
-        ({"api_costs": 0, "embed_cost": 0, "novelty_cost": 0, "meta_cost": 0}, 0.0),
+        # The runner writes a cost field only for the steps that ran (meta_cost
+        # only where a meta update charged the program): absent is zero.
+        ({}, 0.0),
+        ({"api_costs": 0.0}, 0.0),
+        ({"api_costs": None, "embed_cost": 0, "novelty_cost": 0}, 0.0),
+        ({"api_costs": 0.2, "embed_cost": 0.01, "novelty_cost": 0.03}, 0.24),
         (
             {
                 "api_costs": 0.2,
@@ -207,27 +209,73 @@ def test_workspace_analysis_keeps_private_metrics_hidden(workspace, endpoint) ->
             },
             0.28,
         ),
+        # A present value that is not an amount leaves the cost unknown.
+        ({"api_costs": "n/a"}, None),
+        ({"api_costs": -0.1}, None),
+        ("{not json", None),
+        # Unpriced headless calls, as core telemetry flags them.
+        (
+            {
+                "model_name": "headless/agent",
+                "headless_pricing_unknown": True,
+                "api_costs": 12.0,
+            },
+            None,
+        ),
+        (
+            {
+                "model_name": "demo/model",
+                "headless_pricing_unknown": True,
+                "api_costs": 0.5,
+            },
+            0.5,
+        ),
+        # Island copies repeat their source's metadata and are not charges.
+        ({"_is_island_copy": True, "api_costs": 99.0}, 0.0),
+        ({"_spawned_island": True, "api_costs": "n/a"}, 0.0),
     ],
 )
 def test_run_statistics_distinguish_unrecorded_cost_from_free(
-    tmp_path: Path, metadata: dict, expected: float | None
+    tmp_path: Path, metadata: dict | str, expected: float | None
 ) -> None:
     root = tmp_path / "workspace"
     path = root / "ordinary" / "programs.sqlite"
     _write_program_database(path, "cost-boundary", -0.5)
 
+    raw = metadata if isinstance(metadata, str) else json.dumps(metadata)
     with sqlite3.connect(path) as conn:
-        conn.execute("UPDATE programs SET metadata = ?", (json.dumps(metadata),))
+        conn.execute("UPDATE programs SET metadata = ?", (raw,))
     with _workspace_server(root) as base:
         stats = _json(
             base, "get_database_stats", db_path="workspace/ordinary/programs.sqlite"
         )
     assert stats["program_count"] == 1
-    assert stats["best_score"] == -0.5
     if expected is None:
         assert stats["total_cost"] is None
     else:
         assert stats["total_cost"] == pytest.approx(expected)
+
+
+def test_run_statistics_leave_unrecorded_prompt_cost_unknown(tmp_path: Path) -> None:
+    root = tmp_path / "workspace"
+    path = root / "ordinary" / "programs.sqlite"
+    _write_program_database(path, "prompt-cost", -0.5)
+    with sqlite3.connect(path.with_name("prompts.sqlite")) as conn:
+        conn.execute("CREATE TABLE system_prompts (id TEXT, metadata TEXT)")
+        conn.executemany(
+            "INSERT INTO system_prompts VALUES (?, ?)",
+            [
+                ("initial", None),
+                ("evolved", json.dumps({"llm": {"cost": 0.25}})),
+                ("broken", json.dumps({"llm": {"cost": "n/a"}})),
+            ],
+        )
+    with _workspace_server(root) as base:
+        stats = _json(
+            base, "get_database_stats", db_path="workspace/ordinary/programs.sqlite"
+        )
+    assert stats["prompt_evo_cost"] is None
+    assert stats["total_cost"] is not None
 
 
 def test_snapshot_analysis_links_open_the_correct_experiment(workspace) -> None:

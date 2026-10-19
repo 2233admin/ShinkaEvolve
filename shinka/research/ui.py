@@ -51,13 +51,15 @@ def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
     rd = _results(root, h.id, e.id)
     times = [t for t, _, _ in rundb.trials(rd)]
     db = rd / rundb.DB_FILENAME
+    cost = rundb.run_cost(rd)
     out: Dict[str, Any] = {
         "id": e.id,
         "created": e.created,
         "n_evaluated": e.n_evaluated,
         "n_probed": e.n_probed,
         "best_is_score": rundb.best_score(rd),
-        "spend_usd": rundb.total_cost(rd),
+        "spend_usd": cost.recorded_usd,
+        "spend_known": cost.known,
         "first_trial": _iso(times[0]) if times else None,
         "last_trial": _iso(times[-1]) if times else None,
         "analysis_url": "/?"
@@ -198,6 +200,9 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
         "created": nb.created,
         "budget_usd": nb.budget_usd,
         "spend_usd": sum(e["spend_usd"] for h in hyps for e in h["experiments"]),
+        "unknown_cost_runs": sum(
+            not e["spend_known"] for h in hyps for e in h["experiments"]
+        ),
         "trials": nb.total_trials,
         "lockbox": None
         if data is None
@@ -266,6 +271,11 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
         try:
             direction = _direction_root(root, child.name)
             nb = Notebook.load(direction)
+            costs = [
+                rundb.run_cost(_results(direction, h.id, e.id))
+                for h in nb.hypotheses
+                for e in h.experiments
+            ]
             directions.append(
                 {
                     "id": child.name,
@@ -273,11 +283,8 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                     "created": nb.created,
                     "hypotheses": len(nb.hypotheses),
                     "trials": nb.total_trials,
-                    "spend_usd": sum(
-                        rundb.total_cost(_results(direction, h.id, e.id))
-                        for h in nb.hypotheses
-                        for e in h.experiments
-                    ),
+                    "spend_usd": sum(c.recorded_usd for c in costs),
+                    "unknown_cost_runs": sum(not c.known for c in costs),
                     "budget_usd": nb.budget_usd,
                     "lockbox_opened": nb.data.opened if nb.data else None,
                     "error": None,

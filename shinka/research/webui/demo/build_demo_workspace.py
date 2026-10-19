@@ -32,7 +32,7 @@ import sys
 import tempfile
 import time
 import uuid
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime, timezone
 from functools import partial
 from pathlib import Path
@@ -416,6 +416,10 @@ MODELS = (
     Model("demo/model-basalt", 0.55, 0.7, 0.011, (14.0, 38.0)),
     Model("demo/model-cirrus", 1.2, 1.6, 0.075, (50.0, 120.0)),
 )
+# A headless CLI agent with no price list. Core telemetry leaves its api_costs
+# out and counts its programs as pricing-unknown (shinka/database/dbase.py), so
+# a run that uses it has an unknown cost.
+UNPRICED_MODEL = "headless/demo-agent"
 PATCH_WEIGHTS = {"diff": 0.52, "full": 0.2, "cross": 0.14, "fix": 0.14}
 
 
@@ -441,8 +445,9 @@ class RunSpec:
     meta: bool = True
     plots: bool = True
     workers: Tuple[int, int, int] = (4, 3, 2)
-    # Leave some cost fields missing, as real runs do when a step's pricing is
-    # unknown, so the UI's unknown-cost state stays testable.
+    # The run's first model is the unpriced headless agent, so the run's cost is
+    # unknown and the UI's unknown-cost state stays testable. Ordinary runs only:
+    # `shinka_research run` refuses headless models for research experiments.
     cost_unknown: bool = False
 
 
@@ -583,12 +588,12 @@ def unified_diff(old: str, new: str) -> str:
     )
 
 
-def posterior(stats: Dict[str, List[int]]) -> Dict[str, float]:
-    rates = [(stats[m.name][0] + 1) / (stats[m.name][1] + 2) for m in MODELS]
+def posterior(stats: Dict[str, List[int]], models) -> Dict[str, float]:
+    rates = [(stats[m.name][0] + 1) / (stats[m.name][1] + 2) for m in models]
     weights = [math.exp(4.0 * r) for r in rates]
     total = sum(weights)
     return {
-        m.name: round(0.1 / 3 + 0.9 * w / total, 4) for m, w in zip(MODELS, weights)
+        m.name: round(0.1 / 3 + 0.9 * w / total, 4) for m, w in zip(models, weights)
     }
 
 
@@ -605,7 +610,12 @@ class Simulator:
         self.by_id: Dict[str, Record] = {}
         self.island_now: Dict[str, int] = {}
         self.events: List[Tuple[str, Any]] = []
-        self.model_stats = {m.name: [0, 0] for m in MODELS}
+        self.models = (
+            (replace(MODELS[0], name=UNPRICED_MODEL), *MODELS[1:])
+            if spec.cost_unknown
+            else MODELS
+        )
+        self.model_stats = {m.name: [0, 0] for m in self.models}
         self.posteriors: Dict[int, Dict[str, float]] = {}
         self.prompts: List[PromptRecord] = []
         self.pending: List[Tuple[float, int, Record]] = []
@@ -805,9 +815,11 @@ class Simulator:
                 patch, desc = "init", "initial program from the experiment seed"
             else:
                 if generation not in self.posteriors:
-                    self.posteriors[generation] = posterior(self.model_stats)
+                    self.posteriors[generation] = posterior(
+                        self.model_stats, self.models
+                    )
                 post = self.posteriors[generation]
-                model = rng.choices(MODELS, [post[m.name] for m in MODELS])[0]
+                model = rng.choices(self.models, [post[m.name] for m in self.models])[0]
                 patch = rng.choices(list(PATCH_WEIGHTS), list(PATCH_WEIGHTS.values()))[
                     0
                 ]
@@ -980,12 +992,15 @@ class Simulator:
         tokens_in = rng.randint(3500, 9000)
         tokens_out = rng.randint(400, 2600)
         api = 0.0 if model is None else round(model.cost * rng.uniform(0.6, 1.5), 5)
+        unpriced = model is not None and model.name == UNPRICED_MODEL
+        if unpriced:
+            api = 0.0  # a headless agent reports no price
         checks = 0 if model is None else rng.choice([0, 0, 1, 1, 2])
         thought = (
             f"## {LABEL}\n\nSynthetic reasoning note (no model was called). "
             f"Plan: {desc}; keep the evaluator contract and the EVOLVE-BLOCK intact."
         )
-        embed_missing = rng.random() < 0.03
+        rng.random()  # one draw per program keeps the seeded sequence unchanged
         embed_cost = round(rng.uniform(0.00002, 0.00008), 7)
         meta: Dict[str, Any] = {
             "demo_label": LABEL,
@@ -1004,19 +1019,15 @@ class Simulator:
             "system_prompt_id": rec.prompt_id,
             "embed_cost": embed_cost,
             "novelty_cost": round(checks * rng.uniform(0.001, 0.004), 6),
-            # Known zero until the meta summarizer charges this program.
-            "meta_cost": 0.0,
+            # meta_cost appears only where a meta update charged the program
+            # (meta()), as the runner writes it.
             "stdout_log": stdout,
             "stderr_log": stderr,
             "compute_time": round(eval_dur, 3),
             "thought": thought,
         }
-        if self.spec.cost_unknown:
-            # Real runs without pricing: meta_cost exists only where the meta
-            # summarizer ran, and some embedding calls have no recorded cost.
-            del meta["meta_cost"]
-            if embed_missing:
-                del meta["embed_cost"]
+        if unpriced:
+            meta["headless_pricing_unknown"] = True
         if model is not None:
             meta["model_name"] = model.name
             meta["llm_result"] = QueryResult(
@@ -1612,6 +1623,7 @@ def build_direction(
         exp.n_probed = ep.probes
         nb.save(root)
         best = rundb.best_score(results)
+        cost = rundb.run_cost(results)
         append_log(
             root,
             hid,
@@ -1619,7 +1631,7 @@ def build_direction(
             "run-failed" if ep.run_failed else "run",
             f"{exp.n_evaluated} new programs, {exp.n_evaluated} total, best IS "
             f"score {'n/a' if best is None else f'{best:.3f}'}, "
-            f"spend ${rundb.total_cost(results):.2f}",
+            f"spend {'' if cost.known else '>='}${cost.recorded_usd:.2f}",
         )
 
     def skeptic(hid: str, sp: SkepticPlan) -> None:
@@ -2007,7 +2019,6 @@ DIRECTIONS = (
                             "2026-10-15 11:30",
                             fail_from=15,
                             fail_spike=0.75,
-                            cost_unknown=True,
                         ),
                         run_failed=True,
                     ),

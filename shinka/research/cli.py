@@ -10,7 +10,7 @@ import subprocess
 import tempfile
 import sys
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from shinka.research import library
 from shinka.research.notebook import (
@@ -22,7 +22,7 @@ from shinka.research.notebook import (
     experiment_dir,
 )
 from shinka.research.quant import QuantConfig, run_quant_eval
-from shinka.research.rundb import best_score, count_evaluated, total_cost
+from shinka.research.rundb import best_score, count_evaluated, run_cost
 from shinka.research.skeptic import (
     Thresholds,
     challenge,
@@ -129,13 +129,15 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     print(task_dir)
 
 
-def direction_spend(root: Path, nb: Notebook) -> float:
-    """LLM spend (USD) across every experiment of the direction."""
-    return sum(
-        total_cost(experiment_dir(root, h.id, e.id) / "results")
+def direction_spend(root: Path, nb: Notebook) -> Tuple[float, bool]:
+    """Recorded LLM spend (USD) across every experiment of the direction and
+    whether all of it is priced; unpriced calls make it a lower bound."""
+    costs = [
+        run_cost(experiment_dir(root, h.id, e.id) / "results")
         for h in nb.hypotheses
         for e in h.experiments
-    )
+    ]
+    return sum(c.recorded_usd for c in costs), all(c.known for c in costs)
 
 
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
@@ -150,10 +152,17 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     verify_experiment(root, nb, hyp.id, exp)
     if nb.budget_usd is not None:
-        spent = direction_spend(root, nb)
+        spent, known = direction_spend(root, nb)
         if spent >= nb.budget_usd:
             sys.exit(
-                f"direction budget exhausted: ${spent:.2f} of ${nb.budget_usd:.2f}"
+                f"direction budget exhausted: {'' if known else '>='}${spent:.2f} "
+                f"of ${nb.budget_usd:.2f}"
+            )
+        # A lower bound cannot show that the budget still has room.
+        if not known:
+            sys.exit(
+                "direction budget cannot be checked: some runs have an unknown cost "
+                f"(recorded ${spent:.2f} of ${nb.budget_usd:.2f})"
             )
     exp_dir = experiment_dir(root, hyp.id, exp.id)
     results_dir = exp_dir / "results"
@@ -184,12 +193,13 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
             hyp.status, hyp.verdict = previous_status, previous_verdict
         nb.save(root)
         best = best_score(results_dir)
+        cost = run_cost(results_dir)
         append_log(
             root, hyp.id, exp.id, "run" if code == 0 else "run-failed",
             f"{exp.n_evaluated - evaluated_before} new programs, "
             f"{exp.n_evaluated} total, best IS score "
             f"{'n/a' if best is None else f'{best:.3f}'}, "
-            f"spend ${total_cost(results_dir):.2f}",
+            f"spend {'' if cost.known else '>='}${cost.recorded_usd:.2f}",
         )  # fmt: skip
     if code:
         sys.exit(code)
@@ -372,11 +382,11 @@ def cmd_brief(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     lib = library.library_root(root)
-    spent = direction_spend(root, nb)
+    spent, known = direction_spend(root, nb)
     budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
     out = [f"# Brief: {nb.direction}", ""]
     out.append(f"- Trials so far: {nb.total_trials} (raise the bar for 'supported')")
-    out.append(f"- LLM spend: ${spent:.2f}{budget}")
+    out.append(f"- LLM spend: {'' if known else '>='}${spent:.2f}{budget}")
     if nb.data:
         state = "OPENED" if nb.data.opened else "sealed"
         out.append(f"- Lockbox: {state} (from {nb.data.lockbox_start})")

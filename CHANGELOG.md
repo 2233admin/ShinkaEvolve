@@ -47,6 +47,14 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Fixed restored analysis frontiers admitting failed zero-valued scores, stale
   program details after rapid selection, lost selected-program links, and absent
   cost/diversity measurements being presented as measured zero values.
+- Fixed Research run statistics reporting every real run's cost as unknown:
+  `meta_cost` is written only on programs a meta update charged, and the
+  statistics demanded all four cost fields on every program. The research
+  budget, workspace, direction snapshot and run statistics now share one rule
+  (`rundb.run_cost`): non-copy programs, absent fields as zero, unpriced headless
+  calls and malformed values as unknown. Island copies no longer double count
+  in run statistics, read-only connections close after failed reads, and a
+  budgeted direction with unknown spend refuses new runs.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block
