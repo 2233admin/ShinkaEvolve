@@ -56,8 +56,7 @@ const T = {
     models: '按模型', model: '模型', success: '成功率', mean: '平均', diagnostics: '诊断 · 11 张分析小图', expand: '展开', feedback: '评估反馈', reasoning: '模型思路',
     density: '密度等高线', clusters: '聚类', cluster: (k) => `簇 ${k}`, d2: '二维', d3: '三维', leaderboard: '排行榜', pareto: '帕累托前沿', paretoAxis: '费用（对数）', frontier: '前沿', rank: '名次', program: '程序',
     duel: '模型对战', duelNote: '每格是行模型的有效程序严格胜过列模型有效程序的比例，平局不算胜；下方小字为比较对数，失败程序不参与。', duelDist: '有效得分分布（按中位数排序）', diversity: '分布',
-    posterior: (range) => (range ? `后验（第 ${range} 代）` : '后验'), posteriorAria: (m, a, b) => `${m} 的后验从 ${a} 变为 ${b}`, posteriorNA: '此运行没有记录模型后验（model_posteriors），该列显示 —。',
-    posteriorNote: (hi, even) => `后验为每代程序记录的模型后验均值，各行共用 0–${hi} 刻度，虚线为均分 ${even}。`,
+    posteriorPanel: '模型后验（每代均值）', evenSplit: (v) => `均分 ${v}`, posteriorLatest: '最新后验', posteriorNA: '此运行没有记录模型后验（model_posteriors）：不画后验小图，“最新后验”列显示 —。',
     modelsEnsemble: '按模型与集成', posteriorMean: '平均后验', ensembleNote: '平均后验为各代后验均值的平均，竖线为均分；按代轨迹见“进展”。',
     back: '返回', pullUp: '上拉查看完整标签页',
     statesTitle: '空与错误状态', statesNote: '每个状态取自演示数据或服务端真实返回的格式；状态都用形状加文字表达。',
@@ -105,8 +104,7 @@ const T = {
     models: 'By model', model: 'Model', success: 'Success', mean: 'Mean', diagnostics: 'Diagnostics · 11 analysis plots', expand: 'Expand', feedback: 'Feedback', reasoning: 'Model reasoning',
     density: 'Density contours', clusters: 'Clusters', cluster: (k) => `C${k}`, d2: '2D', d3: '3D', leaderboard: 'Leaderboard', pareto: 'Pareto front', paretoAxis: 'Cost (log)', frontier: 'Front', rank: '#', program: 'Program',
     duel: 'Model battle', duelNote: 'Each cell is the share of pairs in which a valid program of the row model scores strictly higher than one of the column model; ties are not wins. The small figure is the number of pairs; failed programs take no part.', duelDist: 'Valid score distribution (by median)', diversity: 'Distribution',
-    posterior: (range) => (range ? `Posterior (gens ${range})` : 'Posterior'), posteriorAria: (m, a, b) => `${m} posterior moved from ${a} to ${b}`, posteriorNA: 'This run records no model posteriors (model_posteriors); the column shows —.',
-    posteriorNote: (hi, even) => `Posterior is the per-generation mean of the model posteriors the programs recorded; rows share a 0–${hi} scale; the dashed line is an even split (${even}).`,
+    posteriorPanel: 'Model posteriors (per-generation mean)', evenSplit: (v) => `Even split ${v}`, posteriorLatest: 'Latest posterior', posteriorNA: 'This run records no model posteriors (model_posteriors): no posterior panel, and the latest-posterior column shows —.',
     modelsEnsemble: 'By model and ensemble', posteriorMean: 'Posterior', ensembleNote: 'Posterior is the average of the per-generation means; the tick marks an even split. The per-generation trajectory is in Progress.',
     back: 'Back', pullUp: 'Pull up for all tabs',
     statesTitle: 'Empty and error states', statesNote: 'Each state uses demo data or the server’s real response format; every state has a shape and a word.',
@@ -703,20 +701,17 @@ function progressView(c, { w }) {
       return rect
     }).join('')
   }
-  // Model posteriors per generation on one shared scale (L08-Q1/Q2, OD-4); the dashed line is an even split.
+  // Model posteriors per generation on the shared generation axis (L08-Q1, OD-4): one line per model, styled and
+  // named like the other panel legends, the even split dashed; the latest values sit in the table.
   const Q = A.posteriors
-  const px = d3.scaleLinear(Q.length ? [Q[0][0], Q.at(-1)[0]] : [0, 1], [2, 146])
-  const py = d3.scaleLinear([0, d3.max(Q, (q) => d3.max(Object.values(q[1]))) ?? 1], [22, 2]).nice()
+  const postModels = Q.length ? Object.keys(Q[0][1]) : []
   const has = (q, model) => q[1][model] !== undefined && q[1][model] !== null
-  const spark = (s) => {
-    const own = Q.filter((q) => has(q, s.model))
-    if (!own.length) return '<span class="faint">—</span>'
-    const [g, v] = [own.at(-1)[0], own.at(-1)[1][s.model]]
-    return `<span class="spark"><svg width="148" height="24" viewBox="0 0 148 24" role="img" aria-label="${esc(c.t('posteriorAria')(s.model, num(own[0][1][s.model]), num(v)))}"><line x1="0" x2="148" y1="${py(EVEN)}" y2="${py(EVEN)}" stroke="var(--stroke)" stroke-dasharray="3 3"/>
-      <path d="${d3.line().defined((q) => has(q, s.model)).x((q) => px(q[0])).y((q) => py(q[1][s.model]))(Q)}" fill="none" stroke="var(--text)" stroke-width="1.3"/><circle cx="${px(g)}" cy="${py(v)}" r="2.4" fill="var(--text)"/></svg><b class="mono">${num(v)}</b></span>`
-  }
+  const postStyles = [['var(--text)', 1.6, 'ln'], ['var(--muted)', 1.4, 'ln is-muted'], ['var(--stroke)', 1.2, 'ln is-thin']]
+  const posteriorLegend = `${postModels.map((model, k) => `<span><i class="${postStyles[k % 3][2]}"></i>${esc(shortModel(model))}</span>`).join('')}<span><i class="ln is-dash"></i>${c.t('evenSplit')(num(EVEN))}</span>`
+  const posteriorLines = (y) => `<line x1="${m.l}" x2="${w - m.r}" y1="${y(EVEN)}" y2="${y(EVEN)}" stroke="var(--muted)" stroke-dasharray="4 3"/>
+    ${postModels.map((model, k) => `<path d="${d3.line().defined((q) => has(q, model)).x((q) => x(q[0])).y((q) => y(q[1][model]))(Q)}" fill="none" stroke="${postStyles[k % 3][0]}" stroke-width="${postStyles[k % 3][1]}"/>`).join('')}`
   return `<div class="progress">
-    ${panel(c.t('cumBest'), `<span><i class="ln"></i>${c.t('cumBest')}</span><span><i class="ln is-dash"></i>${c.t('noise')}</span><span><i class="ln is-thin"></i>${c.t('median')}</span><span><i class="dot"></i>${c.t('perGenBest')}</span>`, 136, scoreDomain, (y) => `
+    ${panel(c.t('cumBest'), `<span><i class="ln"></i>${c.t('cumBest')}</span><span><i class="ln is-dash"></i>${c.t('noise')}</span><span><i class="ln is-thin"></i>${c.t('median')}</span><span><i class="dot"></i>${c.t('perGenBest')}</span>`, 116, scoreDomain, (y) => `
       <path d="${d3.line().x((p) => x(p.generation)).y((p) => y(p.median)).defined((p) => p.median !== null)(P)}" fill="none" stroke="var(--stroke)" stroke-width="1"/>
       <path d="${d3.line().curve(d3.curveMonotoneX).x((n) => x(n[0])).y((n) => y(n[1]))(noise)}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="4 3"/>
       ${P.filter((p) => p.best !== null).map((p) => `<circle cx="${x(p.generation)}" cy="${y(p.best)}" r="2.2" fill="var(--muted)"/>`).join('')}
@@ -726,14 +721,15 @@ function progressView(c, { w }) {
       <text x="${x(maxGen) + 12}" y="${y(lastBest) + 4}" class="lbl">${c.t('record')} ${num(lastBest)}</text><text x="${x(maxGen) + 12}" y="${(y(lastBest) + y(lastNoise)) / 2 + 4}" class="lbl sig">${c.t('clears')} ${delta(lastBest, lastNoise)}</text><text x="${x(maxGen) + 12}" y="${y(lastNoise) + 4}" class="lbl muted">${c.t('noise')} ${num(lastNoise)}</text>
       <circle cx="${x(best.generation)}" cy="${y(best.score)}" r="8.5" fill="none" stroke="var(--text)" stroke-width="1.5"/>
       <text x="${x(best.generation) - 14}" y="${y(best.score) - 10}" text-anchor="end" class="lbl halo">${c.t('best')} ${num(best.score)} · ${c.t('gen')(best.generation)}</text>`)}
-    ${panel(c.t('costSplit'), `<span><i class="sw" style="background:var(--muted)"></i>${c.t('modelCost')}</span><span><i class="sw" style="background:var(--stroke)"></i>${c.t('costMeta')}</span><span><i class="sw" style="background:var(--text)"></i>${c.t('costPrompt')}</span>`, 72, [0, costMax], (y) => P.map((p) => stack(y, p)).join(''), (v) => money(v))}
+    ${panel(c.t('costSplit'), `<span><i class="sw" style="background:var(--muted)"></i>${c.t('modelCost')}</span><span><i class="sw" style="background:var(--stroke)"></i>${c.t('costMeta')}</span><span><i class="sw" style="background:var(--text)"></i>${c.t('costPrompt')}</span>`, 60, [0, costMax], (y) => P.map((p) => stack(y, p)).join(''), (v) => money(v))}
     ${panel(c.t('failures'), `<span>${ICON.cross.replace('currentColor', 'var(--signalG)')}${c.lang === 'zh' ? '每个 × 一个失败程序' : 'one × per failed program'}</span>`, 56, [0, Math.max(3, d3.max(P, (p) => p.failed))], (y) => P.map((p) => d3.range(p.failed).map((k) => `<path d="M${x(p.generation) - 3},${y(k + 0.5) - 3}l6,6m0,-6l-6,6" stroke="var(--signalG)" stroke-width="1.3"/>`).join('')).join(''), (v) => int(v))}
     ${panel(c.t('throughput'), '', 50, [0, d3.max(P, (p) => p.programs)], (y) => P.map((p) => `<rect x="${x(p.generation) - bw / 2}" y="${y(p.programs)}" width="${bw}" height="${y(0) - y(p.programs)}" fill="var(--stroke)"/>`).join(''), (v) => int(v))}
+    ${Q.length ? panel(c.t('posteriorPanel'), posteriorLegend, 56, [0, d3.max(Q, (q) => d3.max(Object.values(q[1])))], posteriorLines) : ''}
     ${scrubber(c, x, w)}
     <section class="models"><h3>${c.t('models')}</h3><div class="mtable" role="table">
-      <div class="mrow prow3 mhead" role="row"><span>${c.t('model')}</span><span class="num">${c.t('programs')}</span><span class="num">${c.t('success')}</span><span class="num">${c.t('best')}</span><span class="num">${c.t('mean')}</span><span class="num">${c.t('cost')}</span><span>${c.t('posterior')(Q.length ? `${Q[0][0]}–${Q.at(-1)[0]}` : '')}</span></div>
-      ${A.modelStats.map((s) => `<div class="mrow prow3" role="row"><span class="mono">${esc(s.model)}</span><span class="num mono">${int(s.programs)}</span><span class="num mono">${pct(s.success, 1)}</span><span class="num mono">${s.best === best.score ? '<i class="leadmark" aria-hidden="true">◆</i>' : ''}${num(s.best)}</span><span class="num mono">${num(s.mean)}</span><span class="num mono">${money(s.cost)}</span>${spark(s)}</div>`).join('')}</div>
-      ${Q.length ? `<p class="faint small mnote">${c.t('posteriorNote')(num(py.domain()[1]), num(EVEN))}</p>` : `<p class="na mnote">${glyph('empty', c.t('posteriorNA'))}<span class="muted small">${c.t('posteriorNA')}</span></p>`}</section>
+      <div class="mrow prow3 mhead" role="row"><span>${c.t('model')}</span><span class="num">${c.t('programs')}</span><span class="num">${c.t('success')}</span><span class="num">${c.t('best')}</span><span class="num">${c.t('mean')}</span><span class="num">${c.t('cost')}</span><span class="num">${c.t('posteriorLatest')}</span></div>
+      ${A.modelStats.map((s) => `<div class="mrow prow3" role="row"><span class="mono">${esc(s.model)}</span><span class="num mono">${int(s.programs)}</span><span class="num mono">${pct(s.success, 1)}</span><span class="num mono">${s.best === best.score ? '<i class="leadmark" aria-hidden="true">◆</i>' : ''}${num(s.best)}</span><span class="num mono">${num(s.mean)}</span><span class="num mono">${money(s.cost)}</span><span class="num mono">${num(s.posteriorLatest)}</span></div>`).join('')}</div>
+      ${Q.length ? '' : `<p class="na mnote">${glyph('empty', c.t('posteriorNA'))}<span class="muted small">${c.t('posteriorNA')}</span></p>`}</section>
     <div class="disclosure">${ICON.chevron}<b>${c.t('diagnostics')}</b><span class="faint">${c.t('expand')}</span></div></div>`
 }
 function spaceView(c, { w, h }) {
@@ -980,6 +976,7 @@ const CSS = `
 .f .shead{display:flex;justify-content:space-between;align-items:baseline;gap:16px}
 .f .legend{display:flex;gap:14px;align-items:center;font-size:12px;color:var(--muted);white-space:nowrap} .f .legend span{display:inline-flex;gap:6px;align-items:center}
 .f .legend i{display:inline-block} .f .legend .ln{width:16px;border-top:1.6px solid var(--text)} .f .legend .ln.is-dash{border-top:1.4px dashed var(--muted)} .f .legend .ln.is-signal{border-top:2px solid var(--signalG)} .f .legend .ln.is-contour{border-top:1px solid var(--stroke)}
+.f .legend .ln.is-muted{border-top:1.4px solid var(--muted)}
 .f .legend .dot{width:6px;height:6px;border-radius:50%;background:var(--muted)} .f .legend .dot.is-hollow{background:none;border:1px solid var(--stroke)} .f .legend .sw{width:10px;height:10px}
 .f .ramp{display:inline-flex} .f .ramp i{width:14px;height:10px}
 .f .chart{display:block;overflow:visible} .f .lbl{font:500 11.5px PlexMono,monospace;fill:var(--text)} .f .lbl.sig{fill:var(--signal)} .f .lbl.muted{fill:var(--muted)}
@@ -1037,11 +1034,11 @@ const CSS = `
 .f .axis.is-strong{fill:var(--text);font-weight:500}
 .f .metrics{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line)} .f .metrics div{display:grid;gap:2px;padding:8px 12px;border-bottom:1px solid var(--line)} .f .metrics div:nth-child(odd){border-right:1px solid var(--line)} .f .metrics div:nth-last-child(-n+2){border-bottom:0} .f .metrics span{font-size:11px} .f .metrics b{font-weight:500;font-size:15px}
 .f .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;font-size:12.5px} .f .kv b{font-weight:500;overflow-wrap:anywhere}
-.f .progress{padding:4px 0 0;overflow:hidden;flex:1} .f .pm{border-bottom:1px solid var(--line)} .f .pmhead{display:flex;justify-content:space-between;align-items:center;padding:10px 28px 0 20px} .f .pmhead b{font-size:13px;font-weight:500}
-.f .models{padding:14px 28px 0 20px} .f .mtable{border-top:1px solid var(--line)} .f .mrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px;column-gap:14px;align-items:center;min-height:32px;border-bottom:1px solid var(--line);padding:0 4px;font-size:12.5px}
-.f .mrow.prow3{grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px 196px} .f .spark{display:flex;gap:8px;align-items:center} .f .spark svg{flex:none} .f .spark b{font-weight:500}
+.f .progress{padding:4px 0 0;overflow:hidden;flex:1} .f .pm{border-bottom:1px solid var(--line)} .f .pmhead{display:flex;justify-content:space-between;align-items:center;padding:7px 28px 0 20px} .f .pmhead b{font-size:13px;font-weight:500}
+.f .models{padding:8px 28px 0 20px} .f .mtable{border-top:1px solid var(--line)} .f .mrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px;column-gap:14px;align-items:center;min-height:32px;border-bottom:1px solid var(--line);padding:0 4px;font-size:12.5px}
+.f .mrow.prow3{grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px 80px}
 .f .mhead,.f .chead2{min-height:28px;color:var(--faint);font-size:12px} .f .mrow.is-selected{background:var(--selected)}
-.f .disclosure{display:flex;gap:8px;align-items:center;margin:14px 28px 0 20px;padding:10px 12px;border:1px solid var(--line2);border-radius:6px;color:var(--muted)} .f .disclosure b{font-weight:500;color:var(--text)} .f .disclosure .faint{margin-left:auto}
+.f .disclosure{display:flex;gap:8px;align-items:center;margin:10px 28px 0 20px;padding:10px 12px;border:1px solid var(--line2);border-radius:6px;color:var(--muted)} .f .disclosure b{font-weight:500;color:var(--text)} .f .disclosure .faint{margin-left:auto}
 .f .spacewrap{flex:1;display:flex;min-height:0} .f .sideinfo{width:320px;flex:none;border-left:1px solid var(--line);padding:18px 20px;display:grid;gap:10px;align-content:start}
 .f .sideinfo .mrow{grid-template-columns:minmax(0,1fr) 56px 52px 44px} .f .sideinfo h3 + .kv{margin-top:-2px}
 .f .contest{padding:16px 20px;display:grid;gap:18px;align-content:start;overflow:hidden;flex:1} .f .sechead{display:flex;gap:14px;align-items:baseline} .f .sechead .btn{margin-left:auto} .f .sechead .small{display:inline-flex;gap:6px;align-items:center}

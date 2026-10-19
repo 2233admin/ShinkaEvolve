@@ -3,11 +3,11 @@
   "change": "award-redesign",
   "data": "demo-20261019 · DEMO · 演示数据，非真实研究",
   "sources": {
-    "build.mjs": "0eb9899b05b3c503081844fc5be35734ecd7b3215535c62e81b27fe7c5de01db",
+    "build.mjs": "4a1ab02e0f20453291d35b3abe5ad9052e633b000ac8bbe8043264f4f7f8355e",
     "extract.mjs": "8a37a48f48401adbf2c9b2d2d16a5b493c7b15fd030c0d50bf287807664054f7",
     "manifest.mjs": "4a0dc152cb43dfbc6cb17b73154003c42369e0de1edaf583cf5f009a5cddfe91",
     "fixture.json": "bf8a72e7d2ea53315f1cf717b567396d894d742f27eef2959648b2dee3a81450",
-    "index.html": "53bcd39cdf65361d13d58154b2d30d1c6d7964bba385dd8d4e51621fe70dfa7b"
+    "index.html": "55a03eb7ace6b627e34c6fd25baf55a3cc29a4a15547f696730b226d3a0caa4a"
   },
   "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
   "frames": [
@@ -196,7 +196,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/progress.png",
-      "sha256": "7b036161d3cb7dd57d4bbbfdaf875e6b1c0fc37a8abb33ad209321957a3196c7",
+      "sha256": "365e21cc9a165d112aa821c5a4d7d8494aa3f0dc7a90dc4dc3d3e9ef6d7fdb3c",
       "passed": true,
       "checks": {
         "overflowX": false,
