@@ -12,7 +12,10 @@ async function get(path) {
 }
 const query = (params) => new URLSearchParams(params).toString()
 const round = (value, digits = 4) => (value === null || value === undefined || !Number.isFinite(value) ? null : Number(value.toFixed(digits)))
-const DEMO_TAG = /DEMO\s*·\s*演示数据，非真实研究\s*[—–:·-]?\s*/g
+// The demo generator tags every text as "DEMO · 演示数据，非真实研究", sometimes in brackets
+// ("[DEMO · …] evaluating") or followed by punctuation ("DEMO · …. In-sample"); frames show the
+// demo label once in their own chrome, so the tag and its wrapper are removed from the content.
+const DEMO_TAG = /\[?DEMO\s*·\s*演示数据，非真实研究\]?\s*[—–:：·.。,，-]?\s*/g
 const clean = (text) => String(text ?? '').replace(DEMO_TAG, '').trim()
 const COSTS = ['api_costs', 'embed_cost', 'novelty_cost', 'meta_cost']
 // A program's cost is unknown when it records none of the cost fields; a recorded zero stays zero.
@@ -175,6 +178,29 @@ const analysis = {
   },
   failedExample: (() => { const p = full.find((x) => !x.correct); return p ? { id: p.id, name: clean(p.metadata?.patch_name ?? p.id.slice(0, 8)), generation: p.generation, island: p.island_idx, stderr: clean(p.metadata?.stderr_log ?? ''), feedback: clean(p.text_feedback ?? '') } : null })(),
 }
+
+// ---------- prompt evolution and meta-analysis of the same run (OD-3), read-only HTTP ----------
+// Meta updates are numbered by processed programs; each is placed on the generation axis at the
+// generation of that program in evaluation order. File paths from the server stay out.
+const evaluationOrder = [...full].sort((a, b) => a.generation - b.generation || (a.timestamp ?? 0) - (b.timestamp ?? 0))
+const metaFiles = await get('/get_meta_files?' + query({ db_path: target.path }))
+const metaUpdates = metaFiles.map((m) => ({ processed: m.processed_count, file: m.filename, generation: evaluationOrder[Math.min(m.processed_count, evaluationOrder.length) - 1]?.generation ?? null }))
+const metaSection = (text, heading) => {
+  const lines = text.split('\n')
+  const start = lines.findIndex((line) => line.trim() === `# ${heading}`)
+  if (start === -1) return []
+  const out = []
+  for (const line of lines.slice(start + 1)) { if (/^# /.test(line)) break; if (line.trim()) out.push(clean(line)) }
+  return out
+}
+const latestMeta = metaUpdates.length ? await get('/get_meta_content?' + query({ db_path: target.path, processed_count: metaUpdates.at(-1).processed })) : null
+analysis.meta = {
+  updates: metaUpdates,
+  latest: latestMeta ? { processed: latestMeta.processed_count, file: latestMeta.filename, insights: metaSection(latestMeta.content, 'GLOBAL INSIGHTS SCRATCHPAD'), recommendations: metaSection(latestMeta.content, 'META RECOMMENDATIONS'), chars: latestMeta.content.length } : null,
+}
+const prompts = await get('/get_system_prompts?' + query({ db_path: target.path }))
+const promptName = new Map(prompts.map((p) => [p.id, clean(p.name)]))
+analysis.prompts = prompts.map((p) => ({ name: clean(p.name), generation: p.program_generation, parent: p.parent_id ? promptName.get(p.parent_id) ?? null : null, patchType: clean(p.patch_type), description: clean(p.description), programs: p.program_count, correct: p.correct_program_count, fitness: round(p.fitness) })).sort((a, b) => a.generation - b.generation)
 
 const fixture = { schema: 'shinka-research.hifi-fixture.v1', source: 'demo-20261019 · DEMO · 演示数据，非真实研究', workspace: { name: workspace.name, library: workspace.library ? { pages: workspace.library.pages?.length ?? null, pending: workspace.library.pending?.length ?? null } : null }, directions, events, report, runs, analysis }
 writeFileSync(new URL('./fixture.json', import.meta.url), JSON.stringify(fixture) + '\n')

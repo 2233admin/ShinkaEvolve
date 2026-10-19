@@ -1,0 +1,296 @@
+{
+  "schema": "shinka-research.hifi-review-manifest.v1",
+  "change": "award-redesign",
+  "data": "demo-20261019 · DEMO · 演示数据，非真实研究",
+  "sources": {
+    "build.mjs": "1d400ecbd9d4110d674e2573aae8535bc6082e900828e5473378d373bf9daf57",
+    "extract.mjs": "0696b94f16d995aee563ff78724a529044cc9e688730d139c584858268f5adab",
+    "manifest.mjs": "4a0dc152cb43dfbc6cb17b73154003c42369e0de1edaf583cf5f009a5cddfe91",
+    "fixture.json": "7bb964235091c0f16903961b529e45c13a2eaa31d30d627f46dc9ec7069bf75c",
+    "index.html": "401f5686dd883d350aca207c1ed6a7d20e1250ef3ce969b3c2ce4c23a74b03b7"
+  },
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "frames": [
+    {
+      "id": "home-dark-zh",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/home-dark-zh.png",
+      "sha256": "ee3ca5a08f82b23b39b85b32ac08b8bbb546e5f2b756b4aaa0d76364446dbb5a",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 10,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "home-light-zh",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/home-light-zh.png",
+      "sha256": "b0cc6b51783d6836c80f89c4988284f1ae3fb926c3496285d3867ce2f288e164",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 10,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.61
+      }
+    },
+    {
+      "id": "home-dark-en",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/home-dark-en.png",
+      "sha256": "e552070f882eb055165d01ae1ccc748c7850f720d8ec75501ee98a08cf39e938",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 10,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "home-1024",
+      "width": 1024,
+      "height": 768,
+      "png": "captures/home-1024.png",
+      "sha256": "a727c77b7120fcb20bf67ffdd59e04a3fe7ca4faf19156ec63a12a86f2790059",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "report",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/report.png",
+      "sha256": "9f2a3199214caeda0324a4ae6657b02bb9b5bf5554eae41c4f431157c7a86789",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 1,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.96
+      }
+    },
+    {
+      "id": "runs",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/runs.png",
+      "sha256": "627b27473851a681a4a61220291e1c8a4d2f489032a32eeeff4747df6f85cbfc",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 1,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "compare",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/compare.png",
+      "sha256": "da691467fee8849f8d1bb7f64db8bb36104b6ed582bd4ba39ea4efecf6de425a",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 1,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.96
+      }
+    },
+    {
+      "id": "lineage",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/lineage.png",
+      "sha256": "3c861f44c9b1943d163f2c41a7bf99cc77349b9a012882217fc2cfe3ab4ad4cb",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "progress",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/progress.png",
+      "sha256": "1dc5acd4842a3c66b0ce44cc2770d61934bf1ca2fdc775ae57f1d1bd6deaab50",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 1,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "space",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/space.png",
+      "sha256": "7ac7bf8769a45095586d3f253b967d2feaacc2dbb66ab36b5b54dc3c7b793eaa",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "contest",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/contest.png",
+      "sha256": "d4c0d3bb26b98385ff92e91bdc06334a8850461ce5634cf68c62967f301c6d33",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "phone-home",
+      "width": 390,
+      "height": 844,
+      "png": "captures/phone-home.png",
+      "sha256": "c61d81fe342d9ed6ce202751ff327a1ab6f9be6c452860be60ac661cebe46b4d",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.78
+      }
+    },
+    {
+      "id": "phone-analysis",
+      "width": 390,
+      "height": 844,
+      "png": "captures/phone-analysis.png",
+      "sha256": "b7a353b13eaf1d51f090fa5031335daba1c983ec95948ade77bbaee42d8d7c9b",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 1,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "states",
+      "width": 1440,
+      "height": 900,
+      "png": "captures/states.png",
+      "sha256": "04db77fd5060c941b6ada14c8fa5b04703cdc4d61c1d1a902771c58dbbfe5eb5",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    }
+  ],
+  "allPassed": true
+}
