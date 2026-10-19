@@ -54,7 +54,7 @@ All notable changes to `shinka-evolve` are documented in this file.
   cost tab and compare page now share one rule (`rundb.run_cost`): non-copy
   programs, absent fields as zero, unpriced headless calls and malformed values
   as unknown, prompt evolution in every total. Island copies no longer double
-  count, read-only connections close after failed reads, and a budgeted
+  count cost, read-only connections close after failed reads, and a budgeted
   direction with unknown spend refuses new runs.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
