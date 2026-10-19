@@ -3,11 +3,11 @@
   "change": "award-redesign",
   "data": "demo-20261019 · DEMO · 演示数据，非真实研究",
   "sources": {
-    "build.mjs": "37b0d1102183c847315b15ed87b18c09108d26f7fff29bb72c0f8e7f601885d9",
-    "extract.mjs": "d123ab0e510c4996fde2272fe4ab8a854c8fc6d1f6bbbfd4ddc9df76c99a34f5",
+    "build.mjs": "0eb9899b05b3c503081844fc5be35734ecd7b3215535c62e81b27fe7c5de01db",
+    "extract.mjs": "8a37a48f48401adbf2c9b2d2d16a5b493c7b15fd030c0d50bf287807664054f7",
     "manifest.mjs": "4a0dc152cb43dfbc6cb17b73154003c42369e0de1edaf583cf5f009a5cddfe91",
-    "fixture.json": "1457c8066f75954d09e31b3701ed815cb8b93e3de9403befe00cb1bebed51e08",
-    "index.html": "16ffc5b899238a9e053c43e966bc7536fe157937b0feec1aa36b2e4cbf581373"
+    "fixture.json": "bf8a72e7d2ea53315f1cf717b567396d894d742f27eef2959648b2dee3a81450",
+    "index.html": "53bcd39cdf65361d13d58154b2d30d1c6d7964bba385dd8d4e51621fe70dfa7b"
   },
   "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
   "frames": [
@@ -196,7 +196,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/progress.png",
-      "sha256": "32bdebdcbf8ebbef8caa0e2227dd8b11cbc43ef57b4ecf72b8bc3ca23d4aa071",
+      "sha256": "7b036161d3cb7dd57d4bbbfdaf875e6b1c0fc37a8abb33ad209321957a3196c7",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -236,7 +236,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/contest.png",
-      "sha256": "b1ba88dcd13e5015d35dfb81859c25425a737709e2d0ca60f81c811a31f4adb6",
+      "sha256": "531c8b708b296189ad3d239fbf4190774ca7c635f217d8e9fe1512d08e0178f3",
       "passed": true,
       "checks": {
         "overflowX": false,

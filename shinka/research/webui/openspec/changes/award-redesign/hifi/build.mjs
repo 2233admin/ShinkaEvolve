@@ -55,8 +55,10 @@ const T = {
     cumBest: '累计最佳', median: '中位数', perGenBest: '本代最佳', costSplit: '费用（模型调用、元分析、提示词进化分开）', modelCost: '模型调用', costMeta: '元分析', costPrompt: '提示词进化', failures: '评估失败', throughput: '吞吐（程序 / 代）',
     models: '按模型', model: '模型', success: '成功率', mean: '平均', diagnostics: '诊断 · 11 张分析小图', expand: '展开', feedback: '评估反馈', reasoning: '模型思路',
     density: '密度等高线', clusters: '聚类', cluster: (k) => `簇 ${k}`, d2: '二维', d3: '三维', leaderboard: '排行榜', pareto: '帕累托前沿', paretoAxis: '费用（对数）', frontier: '前沿', rank: '名次', program: '程序',
-    duel: '模型对战', duelNote: '每格是行模型的有效程序严格胜过列模型有效程序的比例，平局不算胜；下方小字为比较对数，失败程序不参与。', duelDist: '有效得分分布（按中位数排序）', ensemble: '集成', ensembleNA: '此演示数据不可用：演示运行没有集成结果。', diversity: '分布',
-    posterior: '模型后验', posteriorNA: '此演示数据不可用：演示运行没有记录 model_posteriors；上表是按程序计算的成功率与得分，不是后验。',
+    duel: '模型对战', duelNote: '每格是行模型的有效程序严格胜过列模型有效程序的比例，平局不算胜；下方小字为比较对数，失败程序不参与。', duelDist: '有效得分分布（按中位数排序）', diversity: '分布',
+    posterior: (range) => (range ? `后验（第 ${range} 代）` : '后验'), posteriorAria: (m, a, b) => `${m} 的后验从 ${a} 变为 ${b}`, posteriorNA: '此运行没有记录模型后验（model_posteriors），该列显示 —。',
+    posteriorNote: (hi, even) => `后验为每代程序记录的模型后验均值，各行共用 0–${hi} 刻度，虚线为均分 ${even}。`,
+    modelsEnsemble: '按模型与集成', posteriorMean: '平均后验', ensembleNote: '平均后验为各代后验均值的平均，竖线为均分；按代轨迹见“进展”。',
     back: '返回', pullUp: '上拉查看完整标签页',
     statesTitle: '空与错误状态', statesNote: '每个状态取自演示数据或服务端真实返回的格式；状态都用形状加文字表达。',
     emptyWorkspace: '还没有研究方向', emptyWorkspaceHint: '在终端创建第一个方向，刷新后出现在这里：', unreadable: '研究记录无法读取（OSError）', unreadableHint: '其余方向照常显示；修复后刷新即可。',
@@ -102,8 +104,10 @@ const T = {
     cumBest: 'Cumulative best', median: 'Median', perGenBest: 'Generation best', costSplit: 'Cost (model calls, meta-analysis and prompt evolution apart)', modelCost: 'Model calls', costMeta: 'Meta-analysis', costPrompt: 'Prompt evolution', failures: 'Failed evaluations', throughput: 'Throughput (programs / gen)',
     models: 'By model', model: 'Model', success: 'Success', mean: 'Mean', diagnostics: 'Diagnostics · 11 analysis plots', expand: 'Expand', feedback: 'Feedback', reasoning: 'Model reasoning',
     density: 'Density contours', clusters: 'Clusters', cluster: (k) => `C${k}`, d2: '2D', d3: '3D', leaderboard: 'Leaderboard', pareto: 'Pareto front', paretoAxis: 'Cost (log)', frontier: 'Front', rank: '#', program: 'Program',
-    duel: 'Model battle', duelNote: 'Each cell is the share of pairs in which a valid program of the row model scores strictly higher than one of the column model; ties are not wins. The small figure is the number of pairs; failed programs take no part.', duelDist: 'Valid score distribution (by median)', ensemble: 'Ensemble', ensembleNA: 'Not available in this demo data: the demo runs have no ensemble results.', diversity: 'Distribution',
-    posterior: 'Model posteriors', posteriorNA: 'Not available in this demo data: the demo runs record no model_posteriors; the table above gives per-program success and scores, not posteriors.',
+    duel: 'Model battle', duelNote: 'Each cell is the share of pairs in which a valid program of the row model scores strictly higher than one of the column model; ties are not wins. The small figure is the number of pairs; failed programs take no part.', duelDist: 'Valid score distribution (by median)', diversity: 'Distribution',
+    posterior: (range) => (range ? `Posterior (gens ${range})` : 'Posterior'), posteriorAria: (m, a, b) => `${m} posterior moved from ${a} to ${b}`, posteriorNA: 'This run records no model posteriors (model_posteriors); the column shows —.',
+    posteriorNote: (hi, even) => `Posterior is the per-generation mean of the model posteriors the programs recorded; rows share a 0–${hi} scale; the dashed line is an even split (${even}).`,
+    modelsEnsemble: 'By model and ensemble', posteriorMean: 'Posterior', ensembleNote: 'Posterior is the average of the per-generation means; the tick marks an even split. The per-generation trajectory is in Progress.',
     back: 'Back', pullUp: 'Pull up for all tabs',
     statesTitle: 'Empty and error states', statesNote: 'Each state uses demo data or the server’s real response format; every state has a shape and a word.',
     emptyWorkspace: 'No research directions yet', emptyWorkspaceHint: 'Create the first direction in a terminal; it appears here after a refresh:', unreadable: 'Research record unreadable (OSError)', unreadableHint: 'Other directions still show; refresh after fixing it.',
@@ -178,6 +182,8 @@ const scored = rows.filter((r) => r[2] !== null)
 const scoreExtent = d3.extent(scored, (r) => r[2])
 const maxGen = d3.max(rows, (r) => r[3])
 const best = A.best
+// Posteriors sum to 1 over the models of the posterior maps; an even split marks the bandit's neutral point.
+const EVEN = A.posteriors.length ? 1 / Object.keys(A.posteriors[0][1]).length : null
 const shortModel = (m) => m.replace(/^demo\//, '')
 
 // ======================= glyphs =======================
@@ -697,8 +703,20 @@ function progressView(c, { w }) {
       return rect
     }).join('')
   }
+  // Model posteriors per generation on one shared scale (L08-Q1/Q2, OD-4); the dashed line is an even split.
+  const Q = A.posteriors
+  const px = d3.scaleLinear(Q.length ? [Q[0][0], Q.at(-1)[0]] : [0, 1], [2, 146])
+  const py = d3.scaleLinear([0, d3.max(Q, (q) => d3.max(Object.values(q[1]))) ?? 1], [22, 2]).nice()
+  const has = (q, model) => q[1][model] !== undefined && q[1][model] !== null
+  const spark = (s) => {
+    const own = Q.filter((q) => has(q, s.model))
+    if (!own.length) return '<span class="faint">—</span>'
+    const [g, v] = [own.at(-1)[0], own.at(-1)[1][s.model]]
+    return `<span class="spark"><svg width="148" height="24" viewBox="0 0 148 24" role="img" aria-label="${esc(c.t('posteriorAria')(s.model, num(own[0][1][s.model]), num(v)))}"><line x1="0" x2="148" y1="${py(EVEN)}" y2="${py(EVEN)}" stroke="var(--stroke)" stroke-dasharray="3 3"/>
+      <path d="${d3.line().defined((q) => has(q, s.model)).x((q) => px(q[0])).y((q) => py(q[1][s.model]))(Q)}" fill="none" stroke="var(--text)" stroke-width="1.3"/><circle cx="${px(g)}" cy="${py(v)}" r="2.4" fill="var(--text)"/></svg><b class="mono">${num(v)}</b></span>`
+  }
   return `<div class="progress">
-    ${panel(c.t('cumBest'), `<span><i class="ln"></i>${c.t('cumBest')}</span><span><i class="ln is-dash"></i>${c.t('noise')}</span><span><i class="ln is-thin"></i>${c.t('median')}</span><span><i class="dot"></i>${c.t('perGenBest')}</span>`, 150, scoreDomain, (y) => `
+    ${panel(c.t('cumBest'), `<span><i class="ln"></i>${c.t('cumBest')}</span><span><i class="ln is-dash"></i>${c.t('noise')}</span><span><i class="ln is-thin"></i>${c.t('median')}</span><span><i class="dot"></i>${c.t('perGenBest')}</span>`, 136, scoreDomain, (y) => `
       <path d="${d3.line().x((p) => x(p.generation)).y((p) => y(p.median)).defined((p) => p.median !== null)(P)}" fill="none" stroke="var(--stroke)" stroke-width="1"/>
       <path d="${d3.line().curve(d3.curveMonotoneX).x((n) => x(n[0])).y((n) => y(n[1]))(noise)}" fill="none" stroke="var(--muted)" stroke-width="1.4" stroke-dasharray="4 3"/>
       ${P.filter((p) => p.best !== null).map((p) => `<circle cx="${x(p.generation)}" cy="${y(p.best)}" r="2.2" fill="var(--muted)"/>`).join('')}
@@ -708,13 +726,14 @@ function progressView(c, { w }) {
       <text x="${x(maxGen) + 12}" y="${y(lastBest) + 4}" class="lbl">${c.t('record')} ${num(lastBest)}</text><text x="${x(maxGen) + 12}" y="${(y(lastBest) + y(lastNoise)) / 2 + 4}" class="lbl sig">${c.t('clears')} ${delta(lastBest, lastNoise)}</text><text x="${x(maxGen) + 12}" y="${y(lastNoise) + 4}" class="lbl muted">${c.t('noise')} ${num(lastNoise)}</text>
       <circle cx="${x(best.generation)}" cy="${y(best.score)}" r="8.5" fill="none" stroke="var(--text)" stroke-width="1.5"/>
       <text x="${x(best.generation) - 14}" y="${y(best.score) - 10}" text-anchor="end" class="lbl halo">${c.t('best')} ${num(best.score)} · ${c.t('gen')(best.generation)}</text>`)}
-    ${panel(c.t('costSplit'), `<span><i class="sw" style="background:var(--muted)"></i>${c.t('modelCost')}</span><span><i class="sw" style="background:var(--stroke)"></i>${c.t('costMeta')}</span><span><i class="sw" style="background:var(--text)"></i>${c.t('costPrompt')}</span>`, 84, [0, costMax], (y) => P.map((p) => stack(y, p)).join(''), (v) => money(v))}
-    ${panel(c.t('failures'), `<span>${ICON.cross.replace('currentColor', 'var(--signalG)')}${c.lang === 'zh' ? '每个 × 一个失败程序' : 'one × per failed program'}</span>`, 64, [0, Math.max(3, d3.max(P, (p) => p.failed))], (y) => P.map((p) => d3.range(p.failed).map((k) => `<path d="M${x(p.generation) - 3},${y(k + 0.5) - 3}l6,6m0,-6l-6,6" stroke="var(--signalG)" stroke-width="1.3"/>`).join('')).join(''), (v) => int(v))}
-    ${panel(c.t('throughput'), '', 60, [0, d3.max(P, (p) => p.programs)], (y) => P.map((p) => `<rect x="${x(p.generation) - bw / 2}" y="${y(p.programs)}" width="${bw}" height="${y(0) - y(p.programs)}" fill="var(--stroke)"/>`).join(''), (v) => int(v))}
+    ${panel(c.t('costSplit'), `<span><i class="sw" style="background:var(--muted)"></i>${c.t('modelCost')}</span><span><i class="sw" style="background:var(--stroke)"></i>${c.t('costMeta')}</span><span><i class="sw" style="background:var(--text)"></i>${c.t('costPrompt')}</span>`, 72, [0, costMax], (y) => P.map((p) => stack(y, p)).join(''), (v) => money(v))}
+    ${panel(c.t('failures'), `<span>${ICON.cross.replace('currentColor', 'var(--signalG)')}${c.lang === 'zh' ? '每个 × 一个失败程序' : 'one × per failed program'}</span>`, 56, [0, Math.max(3, d3.max(P, (p) => p.failed))], (y) => P.map((p) => d3.range(p.failed).map((k) => `<path d="M${x(p.generation) - 3},${y(k + 0.5) - 3}l6,6m0,-6l-6,6" stroke="var(--signalG)" stroke-width="1.3"/>`).join('')).join(''), (v) => int(v))}
+    ${panel(c.t('throughput'), '', 50, [0, d3.max(P, (p) => p.programs)], (y) => P.map((p) => `<rect x="${x(p.generation) - bw / 2}" y="${y(p.programs)}" width="${bw}" height="${y(0) - y(p.programs)}" fill="var(--stroke)"/>`).join(''), (v) => int(v))}
     ${scrubber(c, x, w)}
-    <section class="models"><h3>${c.t('models')}</h3><div class="mtable" role="table"><div class="mrow mhead" role="row"><span>${c.t('model')}</span><span class="num">${c.t('programs')}</span><span class="num">${c.t('success')}</span><span class="num">${c.t('best')}</span><span class="num">${c.t('mean')}</span><span class="num">${c.t('cost')}</span></div>
-      ${A.modelStats.map((s) => `<div class="mrow" role="row"><span class="mono">${esc(s.model)}</span><span class="num mono">${int(s.programs)}</span><span class="num mono">${pct(s.success, 1)}</span><span class="num mono">${s.best === best.score ? '<i class="leadmark" aria-hidden="true">◆</i>' : ''}${num(s.best)}</span><span class="num mono">${num(s.mean)}</span><span class="num mono">${money(s.cost)}</span></div>`).join('')}</div>
-      <p class="na">${glyph('empty', c.t('posteriorNA'))}<span class="muted small"><b>${c.t('posterior')}</b> · ${c.t('posteriorNA')}</span></p></section>
+    <section class="models"><h3>${c.t('models')}</h3><div class="mtable" role="table">
+      <div class="mrow prow3 mhead" role="row"><span>${c.t('model')}</span><span class="num">${c.t('programs')}</span><span class="num">${c.t('success')}</span><span class="num">${c.t('best')}</span><span class="num">${c.t('mean')}</span><span class="num">${c.t('cost')}</span><span>${c.t('posterior')(Q.length ? `${Q[0][0]}–${Q.at(-1)[0]}` : '')}</span></div>
+      ${A.modelStats.map((s) => `<div class="mrow prow3" role="row"><span class="mono">${esc(s.model)}</span><span class="num mono">${int(s.programs)}</span><span class="num mono">${pct(s.success, 1)}</span><span class="num mono">${s.best === best.score ? '<i class="leadmark" aria-hidden="true">◆</i>' : ''}${num(s.best)}</span><span class="num mono">${num(s.mean)}</span><span class="num mono">${money(s.cost)}</span>${spark(s)}</div>`).join('')}</div>
+      ${Q.length ? `<p class="faint small mnote">${c.t('posteriorNote')(num(py.domain()[1]), num(EVEN))}</p>` : `<p class="na mnote">${glyph('empty', c.t('posteriorNA'))}<span class="muted small">${c.t('posteriorNA')}</span></p>`}</section>
     <div class="disclosure">${ICON.chevron}<b>${c.t('diagnostics')}</b><span class="faint">${c.t('expand')}</span></div></div>`
 }
 function spaceView(c, { w, h }) {
@@ -813,10 +832,11 @@ function contestView(c, { w }) {
       <path d="${d3.line().curve(d3.curveStepAfter).x((p) => x(p.cost)).y((p) => y(p.s))(front)}" fill="none" stroke="var(--text)" stroke-width="1.6"/>
       ${front.map((p) => `<circle cx="${x(p.cost).toFixed(1)}" cy="${y(p.s).toFixed(1)}" r="3.2" fill="${p.i === A.bestIndex ? 'var(--signalG)' : 'var(--text)'}"/>`).join('')}
       <line x1="${m.l}" x2="${pw - m.r}" y1="${ph - m.b + 2}" y2="${ph - m.b + 2}" stroke="var(--stroke)"/><text x="${pw - m.r}" y="${ph - 2}" text-anchor="end" class="axis-title">${c.t('paretoAxis')}</text></svg></section>
-    <section><h3>${c.t('models')}</h3>${A.modelStats.map((s) => `<div class="mbar"><div class="mbtop"><b class="mono">${esc(shortModel(s.model))}</b><span class="faint">${c.t('programsN')(int(s.programs))}</span></div>
-      <div class="mbline"><span class="faint">${c.t('cost')}</span><svg width="120" height="8" viewBox="0 0 120 8" aria-hidden="true"><rect y="3" width="120" height="2" fill="var(--line2)"/><rect y="2" width="${(s.cost / maxCost) * 120}" height="4" fill="var(--muted)"/></svg><b class="mono">${money(s.cost)}</b></div>
-      <div class="mbline"><span class="faint">${c.t('success')}</span><svg width="120" height="8" viewBox="0 0 120 8" aria-hidden="true"><rect y="3" width="120" height="2" fill="var(--line2)"/><rect y="2" width="${s.success * 120}" height="4" fill="var(--muted)"/></svg><b class="mono">${pct(s.success, 1)}</b></div>
-      <div class="mbline"><span class="faint">${c.t('best')}</span><span></span><b class="mono">${s.best === best.score ? '<i class="leadmark" aria-hidden="true">◆</i>' : ''}${num(s.best)}</b></div></div>`).join('')}</section>
+    <section><h3>${c.t('modelsEnsemble')}</h3>${A.modelStats.map((s) => `<div class="mbar"><div class="mbtop"><b class="mono">${esc(shortModel(s.model))}</b><span class="faint">${c.t('programsN')(int(s.programs))}</span></div>
+      <div class="mbline"><span class="faint">${c.t('cost')}</span>${s.cost === null ? '<span></span>' : `<svg width="120" height="8" viewBox="0 0 120 8" aria-hidden="true"><rect y="3" width="120" height="2" fill="var(--line2)"/><rect y="2" width="${(s.cost / maxCost) * 120}" height="4" fill="var(--muted)"/></svg>`}<b class="mono">${money(s.cost)}</b></div>
+      <div class="mbline"><span class="faint">${c.t('success')}</span>${s.success === null ? '<span></span>' : `<svg width="120" height="8" viewBox="0 0 120 8" aria-hidden="true"><rect y="3" width="120" height="2" fill="var(--line2)"/><rect y="2" width="${s.success * 120}" height="4" fill="var(--muted)"/></svg>`}<b class="mono">${pct(s.success, 1)}</b></div>
+      <div class="mbline"><span class="faint">${c.t('posteriorMean')}</span>${s.posteriorMean === null ? '<span></span>' : `<svg width="120" height="8" viewBox="0 0 120 8" aria-hidden="true"><rect y="3" width="120" height="2" fill="var(--line2)"/><rect y="2" width="${s.posteriorMean * 120}" height="4" fill="var(--muted)"/><rect x="${120 * EVEN}" width="1" height="8" fill="var(--faint)"/></svg>`}<b class="mono">${num(s.posteriorMean)}</b></div></div>`).join('')}
+      <p class="faint small mnote">${c.t('ensembleNote')}</p></section>
     <section><h3>${c.t('duel')}</h3><p class="faint small">${c.t('duelDist')}</p>${(() => {
       const dist = modelScores().map((m) => ({ ...m, q: [d3.quantile(m.scores, 0), d3.quantile(m.scores, 0.25), d3.quantile(m.scores, 0.5), d3.quantile(m.scores, 0.75), d3.quantile(m.scores, 1)] })).sort((a, b) => b.q[2] - a.q[2])
       const bw = 268, bx = d3.scaleLinear(scoreExtent, [92, bw - 8]).nice()
@@ -826,8 +846,7 @@ function contestView(c, { w }) {
     })()}
       <div class="duel" role="table"><div class="drow2" role="row"><span></span>${A.modelStats.map((s, k) => `<span class="num mono faint" title="${esc(s.model)}">${'ABC'[k]}</span>`).join('')}</div>
       ${A.modelStats.map((s, a) => `<div class="drow2" role="row"><span class="mono faint dname"><b>${'ABC'[a]}</b>${trunc(shortModel(s.model))}</span>${D[a].map((cell) => (cell === null ? '<span class="num faint">—</span>' : `<span class="num"><b class="mono">${pct(cell.rate)}</b><i class="mono faint">${int(cell.n)}</i></span>`)).join('')}</div>`).join('')}</div>
-      <p class="faint small">${c.t('duelNote')}</p>
-      <h3 class="gap">${c.t('ensemble')}</h3><p class="na">${glyph('empty', c.t('ensembleNA'))}<span class="muted small">${c.t('ensembleNA')}</span></p></section></div></div>`
+      <p class="faint small">${c.t('duelNote')}</p></section></div></div>`
 }
 
 // ======================= phone =======================
@@ -1020,6 +1039,7 @@ const CSS = `
 .f .kv{display:grid;grid-template-columns:auto minmax(0,1fr);gap:4px 16px;font-size:12.5px} .f .kv b{font-weight:500;overflow-wrap:anywhere}
 .f .progress{padding:4px 0 0;overflow:hidden;flex:1} .f .pm{border-bottom:1px solid var(--line)} .f .pmhead{display:flex;justify-content:space-between;align-items:center;padding:10px 28px 0 20px} .f .pmhead b{font-size:13px;font-weight:500}
 .f .models{padding:14px 28px 0 20px} .f .mtable{border-top:1px solid var(--line)} .f .mrow{display:grid;grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px;column-gap:14px;align-items:center;min-height:32px;border-bottom:1px solid var(--line);padding:0 4px;font-size:12.5px}
+.f .mrow.prow3{grid-template-columns:minmax(0,1fr) 80px 80px 70px 70px 80px 196px} .f .spark{display:flex;gap:8px;align-items:center} .f .spark svg{flex:none} .f .spark b{font-weight:500}
 .f .mhead,.f .chead2{min-height:28px;color:var(--faint);font-size:12px} .f .mrow.is-selected{background:var(--selected)}
 .f .disclosure{display:flex;gap:8px;align-items:center;margin:14px 28px 0 20px;padding:10px 12px;border:1px solid var(--line2);border-radius:6px;color:var(--muted)} .f .disclosure b{font-weight:500;color:var(--text)} .f .disclosure .faint{margin-left:auto}
 .f .spacewrap{flex:1;display:flex;min-height:0} .f .sideinfo{width:320px;flex:none;border-left:1px solid var(--line);padding:18px 20px;display:grid;gap:10px;align-content:start}
@@ -1028,11 +1048,11 @@ const CSS = `
 .f .mrow.lbrow{grid-template-columns:28px minmax(0,1fr) 72px 40px 36px 104px 56px 60px 56px}
 .f .cgrid{display:grid;grid-template-columns:292px minmax(0,1fr) 268px;gap:28px}
 .f .mbar{display:grid;gap:4px;padding:8px 0;border-bottom:1px solid var(--line)} .f .mbtop{display:flex;justify-content:space-between;align-items:baseline;font-size:12.5px} .f .mbtop b{font-weight:500}
-.f .mbline{display:grid;grid-template-columns:48px 120px minmax(0,1fr);gap:10px;align-items:center;font-size:12px} .f .mbline b{font-weight:500;text-align:right}
+.f .mbline{display:grid;grid-template-columns:56px 120px minmax(0,1fr);gap:10px;align-items:center;font-size:12px} .f .mbline b{font-weight:500;text-align:right}
 .f .duel{border-top:1px solid var(--line);margin-bottom:8px} .f .drow2{display:grid;grid-template-columns:104px repeat(3,minmax(0,1fr));column-gap:8px;align-items:center;min-height:34px;border-bottom:1px solid var(--line);font-size:12px}
 .f .dname{display:flex;gap:6px;min-width:0} .f .dname b{font-weight:500;color:var(--muted)}
 .f .drow2 .num{display:grid;justify-items:end;line-height:15px} .f .drow2 b{font-weight:500} .f .drow2 i{font-style:normal;font-size:10.5px}
-.f .contest h3.gap{margin-top:16px} .f .na{display:flex;gap:8px;align-items:flex-start} .f .na .glyph{margin-top:2px;color:var(--faint)} .f .na b{font-weight:500;color:var(--text)} .f .models .na{margin-top:10px}
+.f .na{display:flex;gap:8px;align-items:flex-start} .f .na .glyph{margin-top:2px;color:var(--faint)} .f .mnote{margin-top:10px}
 .f .phone{height:100%;display:flex;flex-direction:column;background:var(--bg);position:relative}
 .f .ptop{height:52px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px;border-bottom:1px solid var(--line);white-space:nowrap;min-width:0} .f .ptop b{font-weight:600} .f .ptop .trunc{font-size:12px}
 .f .psearch,.f .psettings{display:grid;place-items:center;min-width:40px;height:40px;padding:0 8px;border:1px solid var(--stroke);border-radius:6px;color:var(--muted);font-size:12.5px} .f .psearch{margin-left:auto} .f .pback{display:grid;place-items:center;width:40px;height:40px;margin-left:-10px;flex:none}

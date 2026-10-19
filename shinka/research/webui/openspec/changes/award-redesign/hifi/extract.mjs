@@ -203,13 +203,29 @@ const progress = generations.map((generation) => {
     promptCost: promptCostAt(targetPrompts, generation) === null ? null : round(promptCostAt(targetPrompts, generation), 5),
   }
 })
-const models = [...new Set(full.map((p) => p.metadata?.model_name).filter(Boolean))].sort()
+// Model posteriors read as the original Ensembling view reads them (viz_tree.html:11358-11460): programs with a
+// non-empty llm_result.model_posteriors, or metadata.model_posteriors when no program has one; the models are
+// every key of those maps; each generation averages its programs; a model's average is the mean of its
+// per-generation means and its latest value the last of them. OD-4: trajectory in Progress, average in Contest.
+const nonEmpty = (map) => Boolean(map) && typeof map === 'object' && Object.keys(map).length > 0
+const fromResult = full.filter((p) => nonEmpty(p.metadata?.llm_result?.model_posteriors))
+const withPosteriors = fromResult.length ? fromResult : full.filter((p) => nonEmpty(p.metadata?.model_posteriors))
+const posteriorOf = (p) => p.metadata?.llm_result?.model_posteriors || p.metadata?.model_posteriors || {}
+const mean = (values) => (values.length ? values.reduce((a, b) => a + b, 0) / values.length : null)
+const posteriorModels = [...new Set(withPosteriors.flatMap((p) => Object.keys(posteriorOf(p))))].sort()
+const posteriorMeans = [...new Set(withPosteriors.map((p) => p.generation))].sort((a, b) => a - b).map((generation) => {
+  const group = withPosteriors.filter((p) => p.generation === generation)
+  return [generation, Object.fromEntries(posteriorModels.map((m) => [m, mean(group.map((p) => posteriorOf(p)[m]).filter((v) => v !== undefined && v !== null))]))]
+})
+const posteriors = posteriorMeans.map(([generation, means]) => [generation, Object.fromEntries(posteriorModels.map((m) => [clean(m), round(means[m])]))])
+const models = [...new Set([...full.map((p) => p.metadata?.model_name).filter(Boolean), ...posteriorModels])].sort()
 const modelStats = models.map((model) => {
   const group = full.filter((p) => p.metadata?.model_name === model)
   const valid = group.map(score).filter((v) => v !== null)
   const costs = group.map(programCost)
-  return { model: clean(model), programs: group.length, success: round(valid.length / group.length, 3), best: valid.length ? round(Math.max(...valid)) : null, mean: valid.length ? round(valid.reduce((a, b) => a + b, 0) / valid.length) : null, cost: costs.every((c) => c !== null) ? round(costs.reduce((a, b) => a + b, 0), 4) : null }
-})
+  const posts = posteriorMeans.map(([, means]) => means[model] ?? null).filter((v) => v !== null)
+  return { model: clean(model), programs: group.length, success: group.length ? round(valid.length / group.length, 3) : null, best: valid.length ? round(Math.max(...valid)) : null, mean: valid.length ? round(valid.reduce((a, b) => a + b, 0) / valid.length) : null, cost: group.length && costs.every((c) => c !== null) ? round(costs.reduce((a, b) => a + b, 0), 4) : null, posteriorMean: round(mean(posts)), posteriorLatest: round(posts.at(-1) ?? null) }
+}).filter((s) => s.programs > 0 || s.posteriorMean > 0)
 const best = full[bestIndex]
 const parent = best.parent_id ? full[index.get(best.parent_id)] : null
 const metricKeys = Object.keys(best.public_metrics ?? {}).filter((k) => typeof best.public_metrics[k] === 'number').slice(0, 8)
@@ -217,7 +233,7 @@ const analysis = {
   run: target.name,
   direction: 'd1-momentum-regimes', hypothesis: 'h001', experiment: 'e01',
   stats: { programs: full.length, failed: full.filter((p) => !p.correct).length, generations: generations.length, islands: new Set(full.map((p) => p.island_idx)).size, models: models.length },
-  rows, bestIndex, path, progress, modelStats, metricKeys,
+  rows, bestIndex, path, progress, modelStats, metricKeys, posteriors,
   metrics: full.map((p) => (p.correct ? metricKeys.map((k) => round(p.public_metrics?.[k] ?? null)) : null)),
   best: {
     id: best.id, name: clean(best.metadata?.patch_name ?? best.id.slice(0, 8)), generation: best.generation, island: best.island_idx,
