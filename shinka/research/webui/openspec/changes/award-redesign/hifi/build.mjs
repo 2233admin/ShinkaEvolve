@@ -180,8 +180,10 @@ const scored = rows.filter((r) => r[2] !== null)
 const scoreExtent = d3.extent(scored, (r) => r[2])
 const maxGen = d3.max(rows, (r) => r[3])
 const best = A.best
-// Posteriors sum to 1 over the models of the posterior maps; an even split marks the bandit's neutral point.
-const EVEN = A.posteriors.length ? 1 / Object.keys(A.posteriors[0][1]).length : null
+// Posterior models are the keys with a recorded value in any generation; posteriors sum to 1 over them, so an even
+// split marks the bandit's neutral point.
+const POST_MODELS = [...new Set(A.posteriors.flatMap(([, means]) => Object.keys(means).filter((m) => means[m] !== null)))].sort()
+const EVEN = POST_MODELS.length ? 1 / POST_MODELS.length : null
 const shortModel = (m) => m.replace(/^demo\//, '')
 
 // ======================= glyphs =======================
@@ -704,7 +706,7 @@ function progressView(c, { w }) {
   // Model posteriors per generation on the shared generation axis (L08-Q1, OD-4): one line per model, styled and
   // named like the other panel legends, the even split dashed; the latest values sit in the table.
   const Q = A.posteriors
-  const postModels = Q.length ? Object.keys(Q[0][1]) : []
+  const postModels = POST_MODELS
   const has = (q, model) => q[1][model] !== undefined && q[1][model] !== null
   const postStyles = [['var(--text)', 1.6, 'ln'], ['var(--muted)', 1.4, 'ln is-muted'], ['var(--stroke)', 1.2, 'ln is-thin']]
   const posteriorLegend = `${postModels.map((model, k) => `<span><i class="${postStyles[k % 3][2]}"></i>${esc(shortModel(model))}</span>`).join('')}<span><i class="ln is-dash"></i>${c.t('evenSplit')(num(EVEN))}</span>`

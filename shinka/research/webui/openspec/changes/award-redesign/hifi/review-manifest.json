@@ -3,7 +3,7 @@
   "change": "award-redesign",
   "data": "demo-20261019 · DEMO · 演示数据，非真实研究",
   "sources": {
-    "build.mjs": "4a1ab02e0f20453291d35b3abe5ad9052e633b000ac8bbe8043264f4f7f8355e",
+    "build.mjs": "0c4c0e927172a15987d0b699802e7018a930c400f28cc0a39c22de5d230a29de",
     "extract.mjs": "8a37a48f48401adbf2c9b2d2d16a5b493c7b15fd030c0d50bf287807664054f7",
     "manifest.mjs": "4a0dc152cb43dfbc6cb17b73154003c42369e0de1edaf583cf5f009a5cddfe91",
     "fixture.json": "bf8a72e7d2ea53315f1cf717b567396d894d742f27eef2959648b2dee3a81450",
