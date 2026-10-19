@@ -3,11 +3,11 @@
   "change": "award-redesign",
   "data": "demo-20261019 · DEMO · 演示数据，非真实研究",
   "sources": {
-    "build.mjs": "1d400ecbd9d4110d674e2573aae8535bc6082e900828e5473378d373bf9daf57",
-    "extract.mjs": "0696b94f16d995aee563ff78724a529044cc9e688730d139c584858268f5adab",
+    "build.mjs": "37b0d1102183c847315b15ed87b18c09108d26f7fff29bb72c0f8e7f601885d9",
+    "extract.mjs": "d123ab0e510c4996fde2272fe4ab8a854c8fc6d1f6bbbfd4ddc9df76c99a34f5",
     "manifest.mjs": "4a0dc152cb43dfbc6cb17b73154003c42369e0de1edaf583cf5f009a5cddfe91",
-    "fixture.json": "7bb964235091c0f16903961b529e45c13a2eaa31d30d627f46dc9ec7069bf75c",
-    "index.html": "401f5686dd883d350aca207c1ed6a7d20e1250ef3ce969b3c2ce4c23a74b03b7"
+    "fixture.json": "1457c8066f75954d09e31b3701ed815cb8b93e3de9403befe00cb1bebed51e08",
+    "index.html": "16ffc5b899238a9e053c43e966bc7536fe157937b0feec1aa36b2e4cbf581373"
   },
   "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
   "frames": [
@@ -16,12 +16,12 @@
       "width": 1440,
       "height": 900,
       "png": "captures/home-dark-zh.png",
-      "sha256": "ee3ca5a08f82b23b39b85b32ac08b8bbb546e5f2b756b4aaa0d76364446dbb5a",
+      "sha256": "38dce019974683ebe96a084c8c6af6363b85e95744493dae83adcce67b160551",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 10,
+        "allowedTrunc": 15,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
@@ -36,12 +36,12 @@
       "width": 1440,
       "height": 900,
       "png": "captures/home-light-zh.png",
-      "sha256": "b0cc6b51783d6836c80f89c4988284f1ae3fb926c3496285d3867ce2f288e164",
+      "sha256": "3baec65c906d914801b0b0e19c34330c3109caf5d989c8781091807b71f0af37",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 10,
+        "allowedTrunc": 15,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
@@ -56,12 +56,12 @@
       "width": 1440,
       "height": 900,
       "png": "captures/home-dark-en.png",
-      "sha256": "e552070f882eb055165d01ae1ccc748c7850f720d8ec75501ee98a08cf39e938",
+      "sha256": "e4b061a43bf928122bb8d3b56e635dc62a35895ed4a3955c364b1f2cd1884c56",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 10,
+        "allowedTrunc": 15,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
@@ -74,9 +74,9 @@
     {
       "id": "home-1024",
       "width": 1024,
-      "height": 768,
+      "height": 1400,
       "png": "captures/home-1024.png",
-      "sha256": "a727c77b7120fcb20bf67ffdd59e04a3fe7ca4faf19156ec63a12a86f2790059",
+      "sha256": "6171e2cf25864d52da37310cc7b979bb78eec559c90395a568e30fb463b70cc8",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -92,36 +92,56 @@
       }
     },
     {
-      "id": "report",
+      "id": "home-20",
       "width": 1440,
       "height": 900,
-      "png": "captures/report.png",
-      "sha256": "9f2a3199214caeda0324a4ae6657b02bb9b5bf5554eae41c4f431157c7a86789",
+      "png": "captures/home-20.png",
+      "sha256": "e0813d392477d7dbde0e9d95c6007fd4a7bf61b6691e1c081275cfa9efdfc116",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 1,
+        "allowedTrunc": 31,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
         "svgOut": [],
         "overlaps": [],
         "lowContrast": [],
-        "minTextContrast": 4.96
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "report",
+      "width": 1440,
+      "height": 1560,
+      "png": "captures/report.png",
+      "sha256": "3ad311038e5ec7181336950b3cfcd4170a57bf1417edccfd475da11991993451",
+      "passed": true,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 4,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
       }
     },
     {
       "id": "runs",
       "width": 1440,
-      "height": 900,
+      "height": 1060,
       "png": "captures/runs.png",
-      "sha256": "627b27473851a681a4a61220291e1c8a4d2f489032a32eeeff4747df6f85cbfc",
+      "sha256": "13584719cd7c5095b2cea6ce827dec32e415e927f6b4b603eb153285673928be",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 1,
+        "allowedTrunc": 4,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
@@ -134,14 +154,14 @@
     {
       "id": "compare",
       "width": 1440,
-      "height": 900,
+      "height": 960,
       "png": "captures/compare.png",
-      "sha256": "da691467fee8849f8d1bb7f64db8bb36104b6ed582bd4ba39ea4efecf6de425a",
+      "sha256": "10a95c2ab862b4993fdb78bb94162fc5e67c17b861dad982087f345d9462990b",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 1,
+        "allowedTrunc": 9,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
@@ -156,19 +176,19 @@
       "width": 1440,
       "height": 900,
       "png": "captures/lineage.png",
-      "sha256": "3c861f44c9b1943d163f2c41a7bf99cc77349b9a012882217fc2cfe3ab4ad4cb",
+      "sha256": "e5a6166ef30445c1e6114483daece5ecb34c8621e15a180e960f8188829fb1f8",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 0,
+        "allowedTrunc": 8,
         "badTrunc": [],
         "scrollX": 0,
         "badScroll": [],
         "svgOut": [],
         "overlaps": [],
         "lowContrast": [],
-        "minTextContrast": 5.64
+        "minTextContrast": 5.27
       }
     },
     {
@@ -176,7 +196,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/progress.png",
-      "sha256": "1dc5acd4842a3c66b0ce44cc2770d61934bf1ca2fdc775ae57f1d1bd6deaab50",
+      "sha256": "32bdebdcbf8ebbef8caa0e2227dd8b11cbc43ef57b4ecf72b8bc3ca23d4aa071",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -196,7 +216,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/space.png",
-      "sha256": "7ac7bf8769a45095586d3f253b967d2feaacc2dbb66ab36b5b54dc3c7b793eaa",
+      "sha256": "e58220fa5f064d2d2f0a9053fef6698207b727dc97faeeccbc69f6654efc0343",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -216,7 +236,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/contest.png",
-      "sha256": "d4c0d3bb26b98385ff92e91bdc06334a8850461ce5634cf68c62967f301c6d33",
+      "sha256": "b1ba88dcd13e5015d35dfb81859c25425a737709e2d0ca60f81c811a31f4adb6",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -236,7 +256,7 @@
       "width": 390,
       "height": 844,
       "png": "captures/phone-home.png",
-      "sha256": "c61d81fe342d9ed6ce202751ff327a1ab6f9be6c452860be60ac661cebe46b4d",
+      "sha256": "d09b1e139a31641896a51326118fbec62d5eb6f2ec3eb4003856eed976e147b6",
       "passed": true,
       "checks": {
         "overflowX": false,
@@ -256,12 +276,12 @@
       "width": 390,
       "height": 844,
       "png": "captures/phone-analysis.png",
-      "sha256": "b7a353b13eaf1d51f090fa5031335daba1c983ec95948ade77bbaee42d8d7c9b",
+      "sha256": "2c1b0af6d15de67e9d070f81cb7dc4c42fd494019db3793a00668ed92b704388",
       "passed": true,
       "checks": {
         "overflowX": false,
         "clipped": [],
-        "allowedTrunc": 0,
+        "allowedTrunc": 1,
         "badTrunc": [],
         "scrollX": 1,
         "badScroll": [],
@@ -276,7 +296,7 @@
       "width": 1440,
       "height": 900,
       "png": "captures/states.png",
-      "sha256": "04db77fd5060c941b6ada14c8fa5b04703cdc4d61c1d1a902771c58dbbfe5eb5",
+      "sha256": "5fe28ad20d7adf2de4c5e9393bce1614d18f53582860b79262dbb57f45fc58db",
       "passed": true,
       "checks": {
         "overflowX": false,

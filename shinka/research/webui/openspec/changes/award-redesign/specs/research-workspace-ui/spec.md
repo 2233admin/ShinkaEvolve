@@ -6,7 +6,7 @@
 
 ### Requirement: 首页列出全部研究方向及其状态与证据
 
-首页 SHALL 列出工作区直接子目录中的每个有效研究方向，并为每个方向同时显示：标题与目录 ID、假设状态分布、试验数、当前最佳样本内记录与当时的噪声线、花费与预算、封存段状态、最近活动时间。无法读取的方向 MUST 显示为不可进入的错误条目，不得伪造零花费、零试验或封存状态。首页 MUST NOT 为取得这些字段逐方向请求 `/api/snapshot`。
+首页 SHALL 列出工作区直接子目录中的每个有效研究方向，并为每个方向同时显示：标题与目录 ID、假设状态分布、试验数（notebook 计数，含试探，是 DSR 的依据）、已评估程序数与其中评估失败的程序数、当前最佳样本内记录与当时的噪声线、花费与预算、封存段状态、最近活动时间。花费包含费用未知的运行时 MUST 以 `≥` 标为下限并注明费用未知的运行数。无法读取的方向 MUST 显示为不可进入的错误条目，不得伪造零花费、零试验或封存状态。首页 MUST NOT 为取得这些字段逐方向请求 `/api/snapshot`。
 
 #### Scenario: 演示工作区的四种方向状态
 
@@ -26,17 +26,23 @@
 
 ### Requirement: 工作区接口提供方向证据摘要
 
-`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读 `evidence` 字段：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`failed_trials`（评估失败的试验数）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
+`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读字段 `unknown_cost_runs`（整数，方向内费用未知的实验运行数，口径见 `run-analysis-ui` › 运行费用只有一个口径）与 `evidence`：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`evaluated_programs`（方向各运行库中非岛副本的已评估程序数，即快照 `trial_points` 的条数）、`failed_programs`（其中评估失败的程序数，即快照中分数为空的点）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。`spend_usd` 保持为已记录费用之和，`unknown_cost_runs` 大于 0 时它是下限；`trials` 仍是 notebook 的试验数，与已评估程序数分开。`/api/snapshot` 的方向同样带 `unknown_cost_runs`，每个实验带 `spend_known`。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
 
 #### Scenario: 与方向页数字一致
 
 - **WHEN** 请求 `/api/workspace` 与同一方向的 `/api/snapshot`
-- **THEN** `best_score` 等于快照中有效分数的最大值，`noise_bar` 等于快照 `trial_points` 最后一点的 `bar`，`failed_trials` 等于快照中分数为空的试验数
+- **THEN** `best_score` 等于快照中有效分数的最大值，`noise_bar` 等于快照 `trial_points` 最后一点的 `bar`，`evaluated_programs` 等于 `trial_points` 的条数，`failed_programs` 等于其中分数为空的条数，两处的 `unknown_cost_runs` 相等
 
 #### Scenario: 无试验方向
 
 - **WHEN** 方向只有提出的假设、没有任何试验
-- **THEN** `best_score`、`noise_bar` 与 `last_activity` 为 `null`，`failed_trials` 为 0
+- **THEN** `best_score`、`noise_bar` 与 `last_activity` 为 `null`，`evaluated_programs`、`failed_programs` 与 `unknown_cost_runs` 为 0，`spend_usd` 为 0
+
+#### Scenario: 费用未知的运行使花费成为下限
+
+- **WHEN** 方向的一个实验运行含没有价目的 headless 调用
+- **THEN** 两个接口的 `unknown_cost_runs` 为 1，快照中该实验的 `spend_known` 为 false，`spend_usd` 是其余已记录费用之和
+- **AND** 首页的该方向花费显示为 `≥` 下限，并注明 1 个运行费用未知
 
 ### Requirement: 方向研究报告按论证顺序呈现
 

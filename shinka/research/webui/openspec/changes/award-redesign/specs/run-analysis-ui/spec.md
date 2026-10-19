@@ -25,8 +25,42 @@
 
 #### Scenario: 费用未知
 
-- **WHEN** 某运行有程序缺少费用字段
-- **THEN** 该运行的总费用显示为未知，汇总不把它当作零
+- **WHEN** 某运行含一个没有价目的 headless 调用
+- **THEN** 该运行的总费用显示为“—”，含它的合计以 `≥` 标为下限，不把它当作零
+
+### Requirement: 运行费用只有一个口径
+
+运行费用 SHALL 在预算检查、研究工作区接口、方向快照与运行统计（`/get_database_stats`）中按同一规则计算（`rundb.run_cost`）：只计非岛副本的程序（`_is_island_copy`、`_spawned_island` 都不为真），加上 `prompts.sqlite` 中提示词进化的 `llm.cost`。程序的 `api_costs`、`embed_cost`、`novelty_cost`、`meta_cost` 缺失或为 null 时按记录的 0 计，因为运行器只为执行过的步骤写费用；出现的值 MUST 是有限且不小于 0 的数，否则费用未知；元数据不是合法 JSON、或 headless 模型带 `headless_pricing_unknown` 时同样未知，后者的 `api_costs` 不计入金额（与 `dbase.py` 遥测一致）。已知的部分照常求和，未知只让该部分成为下限；`/get_database_stats` 对未知的部分返回 `null`。设有预算的方向在花费未知时 MUST 拒绝开始新运行，因为下限不能证明预算仍有余量。
+
+#### Scenario: 真实运行没有元分析费用字段
+
+- **WHEN** 程序只写了 `api_costs`、`embed_cost` 与 `novelty_cost`
+- **THEN** 运行费用为三者之和且为已知
+
+#### Scenario: 不是金额的费用值
+
+- **WHEN** 某程序的 `api_costs` 为字符串或负数，或元数据不是合法 JSON
+- **THEN** `/get_database_stats` 的 `total_cost` 为 `null`
+
+#### Scenario: 没有价目的 headless 调用
+
+- **WHEN** 某程序的模型为 `headless/…` 且 `headless_pricing_unknown` 为真
+- **THEN** 该程序的 `api_costs` 不计入，运行费用为未知
+
+#### Scenario: 岛副本不重复计费
+
+- **WHEN** 运行中有带 `_is_island_copy` 或 `_spawned_island` 的副本
+- **THEN** 副本的费用字段不计入，也不影响费用是否已知
+
+#### Scenario: 提示词费用未知
+
+- **WHEN** 某条 system prompt 的 `llm.cost` 是字符串
+- **THEN** `prompt_evo_cost` 为 `null`，程序部分的 `total_cost` 不受影响
+
+#### Scenario: 预算遇到未知费用
+
+- **WHEN** 设有预算的方向已记录的花费低于预算，但有一个运行的费用未知
+- **THEN** `shinka_research run` 以“direction budget cannot be checked”退出，不启动运行
 
 ### Requirement: 多运行比较
 
