@@ -136,23 +136,31 @@ def read_text(path: Path, attempts: int = 100) -> str:
     return Path(path).read_text()
 
 
-# Work that adds trials (a run, a probe) registers here for its duration, so
-# confirm can refuse to freeze the direction's trial count while any is still
-# under way. An entry names its processes (the command and any child doing the
-# work) by pid and start time, which survive neither a crash nor pid reuse, so
-# an entry whose processes are all gone is simply ignored.
+# A run registers here for its duration: confirm refuses to freeze the
+# direction's trial count while one is still adding trials, a second run of the
+# same experiment is refused, and the run's end is recorded from its entry. An
+# entry names its processes (the command, a detached supervisor, the
+# shinka_run child) by pid and start time, which survive neither a crash nor
+# pid reuse, so an entry whose processes are all gone belongs to a run that
+# ended unobserved.
 
 
-def _work(root: Path) -> List[Dict[str, Any]]:
+def work_entries(root: Path) -> List[Dict[str, Any]]:
     path = Path(root) / WORK_FILENAME
     return json.loads(read_text(path)) if path.exists() else []
 
 
-def register_work(root: Path, hid: str, eid: str) -> str:
-    """Record that this process is adding trials to an experiment; returns the
-    entry's id. Take the direction's lock around it together with the checks
-    that allowed the work, so confirm sees both or neither."""
+def _save_work(root: Path, entries: List[Dict[str, Any]]) -> None:
+    atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(entries))
+
+
+def register_work(root: Path, hid: str, eid: str, **details: Any) -> str:
+    """Record that this process is adding trials to an experiment, with what its
+    end needs (``details``); returns the entry's id. Take the direction's lock
+    around it together with the checks that allowed the work, so others see
+    both or neither."""
     entry = {
+        **details,
         "id": uuid.uuid4().hex,
         "hypothesis": hid,
         "experiment": eid,
@@ -160,39 +168,81 @@ def register_work(root: Path, hid: str, eid: str) -> str:
         "created": psutil.Process().create_time(),
     }
     with file_lock(lock_path(root)):
-        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(_work(root) + [entry]))
+        _save_work(root, work_entries(root) + [entry])
     return entry["id"]
 
 
-def finish_work(root: Path, work_id: str) -> None:
+def record_exit(root: Path, work_id: str, code: int) -> None:
+    """Keep the work's exit code with it the moment it is known, so whoever
+    records the end reports what happened even if the waiter dies first."""
     with file_lock(lock_path(root)):
-        rest = [e for e in _work(root) if e["id"] != work_id]
-        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(rest))
+        entries = work_entries(root)
+        for entry in entries:
+            if entry["id"] == work_id:
+                entry["exit_code"] = code
+        _save_work(root, entries)
+
+
+def hand_over(root: Path, work_id: str, pid: int, replacing: int | None = None) -> None:
+    """Make ``pid`` the process that owns the work: a detached run's supervisor
+    takes over from the command that started it, which may live on (an agent
+    service) long after the run ends. With ``replacing``, only while that
+    process still owns it, so the command's hand-over never undoes the
+    supervisor's own."""
+    try:
+        created = psutil.Process(pid).create_time()
+    except psutil.Error:
+        created = 0.0  # it has already ended; the entry then reads as ended too
+    with file_lock(lock_path(root)):
+        entries = work_entries(root)
+        for entry in entries:
+            if entry["id"] == work_id and replacing in (None, entry["pid"]):
+                entry["pid"], entry["created"] = pid, created
+        _save_work(root, entries)
 
 
 def attach_worker(root: Path, work_id: str, pid: int) -> None:
-    """Add a child process doing the work: it may go on adding trials after the
-    command that registered the work is gone."""
+    """Add a process doing the work: it may go on adding trials after the
+    command that registered the work is gone. On Windows it is usually a
+    launcher (a console script's .exe, a venv's python.exe) with the
+    interpreter behind it; a launcher waits for that interpreter and takes it
+    down when killed, so the launcher's pid stands for both."""
     try:
         worker = {"pid": pid, "created": psutil.Process(pid).create_time()}
     except psutil.Error:
         return  # it has already ended
     with file_lock(lock_path(root)):
-        entries = _work(root)
+        entries = work_entries(root)
         for entry in entries:
             if entry["id"] == work_id:
                 entry["workers"] = entry.get("workers", []) + [worker]
-        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(entries))
+        _save_work(root, entries)
 
 
-def live_work(root: Path) -> List[Dict[str, Any]]:
-    """Registered work with a process still alive."""
+def alive(entry: Dict[str, Any]) -> bool:
+    """Whether any process of a work entry is still running."""
 
-    def alive(process: Dict[str, Any]) -> bool:
+    def running(process: Dict[str, Any]) -> bool:
         try:
             started = psutil.Process(process["pid"]).create_time()
         except psutil.Error:
             return False
         return abs(started - process["created"]) < 1.0
 
-    return [e for e in _work(root) if any(alive(p) for p in [e, *e.get("workers", [])])]
+    return any(running(p) for p in [entry, *entry.get("workers", [])])
+
+
+def live_work(root: Path) -> List[Dict[str, Any]]:
+    """Registered work with a process still alive."""
+    return [e for e in work_entries(root) if alive(e)]
+
+
+def find_work(root: Path, work_id: str) -> Dict[str, Any] | None:
+    return next((e for e in work_entries(root) if e["id"] == work_id), None)
+
+
+def drop_work(root: Path, work_id: str) -> None:
+    """Remove a work entry; the last step of recording the work's end, so a
+    crash before it leaves the entry for the next attempt."""
+    with file_lock(lock_path(root)):
+        _save_work(root, [e for e in work_entries(root) if e["id"] != work_id])

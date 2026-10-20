@@ -120,6 +120,12 @@ shinka_research run <dir> <hid> --num-generations 40 -- \
 ```
 Choose models from `shinka_models`. Between stages inspect progress with
 `shinka-inspect` (public metrics only); stop early on a clear plateau.
+Add `--detach` to keep a run going after the window closes: it returns at
+once, the output goes to `<dir>/experiments/<hid>/<eid>/run.log`, and the run
+records its own end. `shinka_research watch <dir>` (a direction or a whole
+workspace) records the end of a run whose processes vanished without doing
+so; it prints nothing when there is nothing new. One experiment runs once at
+a time; different experiments can run side by side.
 
 ### 5. Ablate (stage 4)
 Remove one component of the best program at a time and score each variant:

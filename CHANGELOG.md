@@ -72,6 +72,15 @@ All notable changes to `shinka-evolve` are documented in this file.
   tasks keep their score curves, leaderboards and best apart by task, since
   scores from different evaluators do not compare. The metric and the selection
   live in the URL, and the page follows automatic refresh and its pause.
+- Added background research runs: `shinka_research run --detach` returns at
+  once and keeps the run going after its window closes (no console, a session
+  or process group of its own, output in the experiment's `run.log`), and
+  `shinka_research watch <direction-or-workspace>` records the end of a run
+  whose processes vanished without doing so. A run's end is recorded exactly
+  once, by whichever of the waiting command, the background supervisor or
+  `watch` gets there first; one experiment runs once at a time, overlapping
+  runs of a hypothesis share the status they restore, and only when none of
+  them added a program.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

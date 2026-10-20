@@ -6,6 +6,7 @@ import argparse
 import contextlib
 import io
 import json
+import os
 import subprocess
 import tempfile
 import sys
@@ -24,7 +25,7 @@ from shinka.research.notebook import (
     experiment_dir,
 )
 from shinka.research.quant import QuantConfig, run_quant_eval
-from shinka.research.rundb import best_score, count_evaluated, run_cost
+from shinka.research.rundb import count_evaluated, run_cost
 from shinka.research.skeptic import (
     Thresholds,
     challenge,
@@ -41,13 +42,21 @@ from shinka.research.scaffold import (
     scaffold_experiment,
     verify_experiment,
 )
+from shinka.research.runs import (
+    RUN_LOG,
+    detached,
+    finish_run,
+    hypothesis_evaluated,
+    watch,
+)
 from shinka.research.state import (
     atomic_write_text,
     attach_worker,
     file_lock,
-    finish_work,
+    hand_over,
     live_work,
     lock_path,
+    record_exit,
     register_work,
 )
 
@@ -163,6 +172,11 @@ def direction_spend(root: Path, nb: Notebook) -> Tuple[float, bool]:
     return sum(c.recorded_usd for c in costs), all(c.known for c in costs)
 
 
+# The evolution command a run starts; the lease keeps the full command, so a
+# detached supervisor runs exactly what was checked here.
+SHINKA_RUN = ["shinka_run"]
+
+
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     if any("headless/" in a for a in extra):
         # Headless CLI agents work inside results_dir, which holds private
@@ -170,10 +184,22 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         sys.exit(
             "headless/* mutation models are not allowed: they can read OOS metrics"
         )
-    root = Path(args.dir)
+    root = Path(args.dir).resolve()
+    # A run that ended unobserved is recorded first, so its leftover running
+    # mark does not pass for this run's earlier status.
+    for line in watch(root):
+        print(line)
     with Notebook.edit(root) as nb:
         _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+        if any(
+            (w["hypothesis"], w["experiment"]) == (hyp.id, exp.id)
+            for w in live_work(root)
+        ):
+            sys.exit(
+                f"{hyp.id}/{exp.id} already has a run in progress; two runs would "
+                "write the same programs.sqlite"
+            )
         verify_experiment(root, nb, hyp.id, exp)
         if nb.budget_usd is not None:
             spent, known = direction_spend(root, nb)
@@ -190,21 +216,59 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                 )
         exp_dir = experiment_dir(root, hyp.id, exp.id)
         results_dir = exp_dir / "results"
-        previous_status, previous_verdict = hyp.status, hyp.verdict
-        evaluated_before = count_evaluated(results_dir)
+        cmd = [
+            *SHINKA_RUN,
+            "--task-dir", str(exp_dir / "task"),
+            "--results_dir", str(results_dir),
+            "--num_generations", str(args.num_generations),
+            "--config-fname", SHINKA_CONFIG_FILENAME,
+            *extra,
+        ]  # fmt: skip
+        # The lease, with the checks that allowed it: confirm cannot freeze the
+        # trial count while this run adds trials, a second run of this
+        # experiment is refused, and the run's end is recorded from it. A run
+        # joining another live run of the hypothesis shares its baseline, so the
+        # hypothesis goes back to the status it had before any of them.
+        joined = next((w for w in live_work(root) if w["hypothesis"] == hyp.id), None)
+        baseline = (
+            {k: joined[k] for k in ("previous_status", "previous_verdict", "before")}
+            if joined
+            else {
+                "previous_status": hyp.status.value,
+                "previous_verdict": hyp.verdict.model_dump(mode="json")
+                if hyp.verdict
+                else None,
+                "before": hypothesis_evaluated(root, hyp),
+            }
+        )
+        work = register_work(
+            root,
+            hyp.id,
+            exp.id,
+            cmd=cmd,
+            evaluated_before=count_evaluated(results_dir),
+            **baseline,
+        )
         hyp.status, hyp.verdict = Status.running, None
-        # With the checks that allowed it, so confirm cannot freeze the trial
-        # count while this run is adding trials.
-        work = register_work(root, hyp.id, exp.id)
 
-    cmd = [
-        "shinka_run",
-        "--task-dir", str(exp_dir / "task"),
-        "--results_dir", str(results_dir),
-        "--num_generations", str(args.num_generations),
-        "--config-fname", SHINKA_CONFIG_FILENAME,
-        *extra,
-    ]  # fmt: skip
+    if args.detach:
+        try:
+            supervisor = subprocess.Popen(
+                [sys.executable, "-m", "shinka.research.runs", str(root), work],
+                **detached(),
+            )
+        except BaseException:
+            finish_run(root, work, 1)
+            raise
+        # The supervisor owns the run from here; this command may live on. If
+        # the supervisor took over first, its own hand-over stands.
+        hand_over(root, work, supervisor.pid, replacing=os.getpid())
+        print(
+            f"{hyp.id}/{exp.id} is running in the background (pid {supervisor.pid}); "
+            f"its output goes to {exp_dir / RUN_LOG}, and `shinka_research watch "
+            f"{root}` records its end if nothing else does"
+        )
+        return
     print("$ " + " ".join(cmd), flush=True)
     code = 1
     try:
@@ -214,31 +278,13 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
             try:
                 attach_worker(root, work, proc.pid)
                 code = proc.wait()
+                record_exit(root, work, code)
             except BaseException:
                 proc.kill()
                 raise
     finally:
         # Always record what was evaluated, even on Ctrl-C, so trials are counted.
-        try:
-            with Notebook.edit(root) as nb:
-                hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
-                exp.n_evaluated = count_evaluated(results_dir)
-                # Undo the running mark only while it is still there: another
-                # command may have moved the hypothesis on during the run.
-                unchanged = hyp.status is Status.running
-                if code and exp.n_evaluated == evaluated_before and unchanged:
-                    hyp.status, hyp.verdict = previous_status, previous_verdict
-        finally:
-            finish_work(root, work)
-        best = best_score(results_dir)
-        cost = run_cost(results_dir)
-        append_log(
-            root, hyp.id, exp.id, "run" if code == 0 else "run-failed",
-            f"{exp.n_evaluated - evaluated_before} new programs, "
-            f"{exp.n_evaluated} total, best IS score "
-            f"{'n/a' if best is None else f'{best:.3f}'}, "
-            f"spend {'' if cost.known else '>='}${cost.recorded_usd:.2f}",
-        )  # fmt: skip
+        finish_run(root, work, code)
     if code:
         sys.exit(code)
 
@@ -641,6 +687,19 @@ def cmd_status(args: argparse.Namespace) -> None:
         print(line)
 
 
+def cmd_watch(args: argparse.Namespace) -> None:
+    """Prints one line per run whose end it recorded, and nothing otherwise."""
+    path = Path(args.dir).resolve()
+    if Notebook.path(path).exists():
+        roots, named = [path], False
+    else:
+        roots = [d for d in sorted(path.iterdir()) if Notebook.path(d).exists()]
+        named = True
+    for root in roots:
+        for line in watch(root):
+            print(f"{root.name}: {line}" if named else line)
+
+
 def cmd_ui(args: argparse.Namespace) -> None:
     from shinka.research import ui
 
@@ -711,6 +770,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("hid")
     s.add_argument("--eid")
     s.add_argument("--num-generations", type=int, default=20)
+    s.add_argument(
+        "--detach",
+        action="store_true",
+        help="Keep running after this window closes; `watch` records an end "
+        "nothing else saw",
+    )
     s.set_defaults(func=cmd_run, takes_extra=True)
 
     s = sub.add_parser(
@@ -777,6 +842,14 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="Show the notebook")
     s.add_argument("dir")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser(
+        "watch",
+        help="Record the end of runs whose processes are all gone "
+        "(a direction, or every direction of a workspace)",
+    )
+    s.add_argument("dir")
+    s.set_defaults(func=cmd_watch)
 
     s = sub.add_parser("ui", help="Read-only research UI in the browser")
     s.add_argument(
