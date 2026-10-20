@@ -26,6 +26,8 @@ export interface Experiment {
   n_probed: number
   best_is_score: number | null
   spend_usd: number
+  /** False when a call had no price; spend_usd then omits it. */
+  spend_known: boolean
   first_trial: string | null
   last_trial: string | null
   analysis_url: string | null
@@ -67,6 +69,8 @@ export interface TrialPoint {
   hypothesis: string
   experiment: string
   generation: number
+  /** Id of the evaluated program in its experiment's run database. */
+  program: string
   score: number | null
   record: boolean
   bar: number
@@ -89,6 +93,8 @@ export interface Snapshot {
   created: string
   budget_usd: number | null
   spend_usd: number
+  /** Runs whose cost is not an amount; above 0, spend_usd is a lower bound. */
+  unknown_cost_runs: number
   trials: number
   lockbox: { opened: boolean; start: string; n_total: number; n_dev: number } | null
   hypotheses: Hypothesis[]
@@ -99,6 +105,16 @@ export interface Snapshot {
   library: Library | null
 }
 
+/** The overview's evidence, the same numbers the direction page derives from trial_points. */
+export interface DirectionEvidence {
+  hypothesis_status: Partial<Record<Status, number>>
+  best_score: number | null
+  noise_bar: number | null
+  evaluated_programs: number
+  failed_programs: number
+  last_activity: string | null
+}
+
 export interface DirectionSummary {
   id: string
   direction: string
@@ -106,8 +122,10 @@ export interface DirectionSummary {
   hypotheses: number
   trials: number
   spend_usd: number
+  unknown_cost_runs: number
   budget_usd: number | null
   lockbox_opened: boolean | null
+  evidence: DirectionEvidence
   error: null
 }
 

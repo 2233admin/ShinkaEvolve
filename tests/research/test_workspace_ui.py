@@ -87,9 +87,9 @@ def _shared_library(workspace: Path) -> dict:
     }
 
 
-def _one_trial(results: Path, metadata: dict | None = None) -> None:
-    """Persist one evaluated program, by default with a known $0.75 cost, plus
-    private data."""
+def _programs(results: Path, *rows: tuple) -> None:
+    """Persist evaluated programs, each (id, timestamp, correct, score,
+    metadata), plus private data."""
     results.mkdir(parents=True)
     with sqlite3.connect(results / "programs.sqlite") as connection:
         connection.execute(
@@ -97,19 +97,114 @@ def _one_trial(results: Path, metadata: dict | None = None) -> None:
             "generation INTEGER, correct INTEGER, combined_score REAL, "
             "private_metrics TEXT, metadata TEXT)"
         )
-        connection.execute(
+        connection.executemany(
             "INSERT INTO programs VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            (
-                "fixture-program",
-                "# fixture candidate",
-                100.0,
-                0,
-                1,
-                0.5,
-                json.dumps({HELD_OUT: 987.654}),
-                json.dumps(metadata or {"api_costs": 0.5, "embed_cost": 0.25}),
-            ),
+            [
+                (
+                    pid,
+                    "# fixture candidate",
+                    timestamp,
+                    0,
+                    correct,
+                    score,
+                    json.dumps({HELD_OUT: 987.654}),
+                    json.dumps(metadata),
+                )
+                for pid, timestamp, correct, score, metadata in rows
+            ],
         )
+
+
+def _one_trial(results: Path, metadata: dict | None = None) -> None:
+    """Persist one evaluated program, by default with a known $0.75 cost, plus
+    private data."""
+    _programs(
+        results,
+        (
+            "fixture-program",
+            100.0,
+            1,
+            0.5,
+            metadata or {"api_costs": 0.5, "embed_cost": 0.25},
+        ),
+    )
+
+
+def _experiment(eid: str) -> Experiment:
+    return Experiment(
+        id=eid,
+        created=CREATED,
+        evaluator_hash="fixture-evaluator-hash",
+        data_path="fixture-dev.csv",
+        data_hash="fixture-data-hash",
+        n_evaluated=2,
+        n_probed=1,
+    )
+
+
+def test_overview_evidence_and_trial_programs_match_the_direction_page(
+    tmp_path: Path,
+) -> None:
+    workspace = tmp_path / "fixture-workspace"
+    root = workspace / "alpha"
+    notebook = _direction(root, "Alpha fixture", "Tested.", "Refuted.", "Proposed.")
+    notebook.hypotheses[0].experiments += [_experiment("e01"), _experiment("e02")]
+    notebook.hypotheses[0].status = Status.selected
+    notebook.hypotheses[1].status = Status.refuted
+    notebook.save(root)
+    cost = {"api_costs": 0.5, "embed_cost": 0.25}
+    # The best score is not the latest point and one program failed, so best,
+    # bar and counts each come from a different place in the trial series.
+    _programs(
+        experiment_dir(root, "h001", "e01") / "results",
+        ("p1", 100.0, 1, 0.5, cost),
+        ("p2", 300.0, 0, None, cost),
+    )
+    _programs(
+        experiment_dir(root, "h001", "e02") / "results",
+        ("p3", 200.0, 1, 0.9, cost),
+        ("p4", 400.0, 1, 0.1, cost),
+    )
+    append_log(root, "h001", "e02", "run", "fixture run finished")
+    _direction(workspace / "beta", "Beta fixture", "Untested.")
+
+    with _server(workspace) as base:
+        rows = {row["id"]: row for row in _get(base, "/api/workspace")["directions"]}
+        alpha = _get(base, _snapshot_path("alpha"))
+        beta = _get(base, _snapshot_path("beta"))
+    points = alpha["trial_points"]
+    events = alpha["events"]
+    assert rows["alpha"]["evidence"] == {
+        "hypothesis_status": {"selected": 1, "refuted": 1, "proposed": 1},
+        "best_score": max(p["score"] for p in points if p["score"] is not None),
+        "noise_bar": points[-1]["bar"],
+        "evaluated_programs": len(points),
+        "failed_programs": sum(p["score"] is None for p in points),
+        # The log line is written now, long after the 1970 fixture trials.
+        "last_activity": events[0]["time"],
+    }
+    assert rows["alpha"]["evidence"]["best_score"] == 0.9
+    assert rows["alpha"]["evidence"]["evaluated_programs"] == 4
+    assert rows["alpha"]["evidence"]["failed_programs"] == 1
+    # Each point opens its own program, in time order across both runs.
+    assert [(p["experiment"], p["program"]) for p in points] == [
+        ("e01", "p1"),
+        ("e02", "p3"),
+        ("e01", "p2"),
+        ("e02", "p4"),
+    ]
+    assert HELD_OUT not in json.dumps(alpha)
+    assert rows["beta"]["evidence"] == {
+        "hypothesis_status": {"proposed": 1},
+        "best_score": None,
+        "noise_bar": None,
+        "evaluated_programs": 0,
+        "failed_programs": 0,
+        "last_activity": None,
+    }
+    assert rows["beta"]["spend_usd"] == beta["spend_usd"] == 0
+    assert rows["beta"]["unknown_cost_runs"] == beta["unknown_cost_runs"] == 0
+    assert beta["trial_points"] == []
 
 
 def test_unpriced_runs_make_direction_spend_a_lower_bound(tmp_path: Path) -> None:

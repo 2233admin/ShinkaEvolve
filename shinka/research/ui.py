@@ -12,6 +12,7 @@ import json
 import sqlite3
 import urllib.parse
 import webbrowser
+from collections import Counter
 from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -48,7 +49,7 @@ def _results(root: Path, hid: str, eid: str) -> Path:
 
 def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
     rd = _results(root, h.id, e.id)
-    times = [t for t, _, _ in rundb.trials(rd)]
+    times = [t for t, *_ in rundb.trials(rd)]
     db = rd / rundb.DB_FILENAME
     cost = rundb.run_cost(rd)
     out: Dict[str, Any] = {
@@ -123,12 +124,12 @@ def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
     for h in nb.hypotheses:
         for e in h.experiments:
             rd = _results(root, h.id, e.id)
-            rows += [(t, g, s, h.id, e.id) for t, g, s in rundb.trials(rd)]
+            rows += [(t, g, s, pid, h.id, e.id) for t, g, s, pid in rundb.trials(rd)]
     rows.sort(key=lambda r: r[0])
     scores = np.array([r[2] for r in rows if r[2] is not None])
     var = float(scores.var(ddof=1)) if len(scores) > 1 else 0.0
     out, best = [], float("-inf")
-    for n, (t, g, s, hid, eid) in enumerate(rows, start=1):
+    for n, (t, g, s, pid, hid, eid) in enumerate(rows, start=1):
         record = s is not None and s > best
         best = s if record else best
         out.append(
@@ -138,6 +139,7 @@ def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
                 "hypothesis": hid,
                 "experiment": eid,
                 "generation": g,
+                "program": pid,
                 "score": s,
                 "record": record,
                 "bar": expected_max_sharpe(n + probes, var),
@@ -256,6 +258,25 @@ def _direction_root(workspace: Path, direction: str) -> Path:
     return canonical
 
 
+def _evidence(root: Path, nb: Notebook) -> Dict[str, Any]:
+    """The overview's per-direction evidence, computed exactly as the direction
+    snapshot does so both pages show the same numbers; no held-out figures."""
+    points = _trials(root, nb)
+    scores = [p["score"] for p in points if p["score"] is not None]
+    # Trial and log times are both UTC isoformat(timespec="seconds"), so text
+    # order is time order.
+    times = [points[-1]["time"]] if points else []
+    times += [e["time"] for e in _events(root, nb, 1) if e["time"]]
+    return {
+        "hypothesis_status": dict(Counter(h.status.value for h in nb.hypotheses)),
+        "best_score": max(scores) if scores else None,
+        "noise_bar": points[-1]["bar"] if points else None,
+        "evaluated_programs": len(points),
+        "failed_programs": len(points) - len(scores),
+        "last_activity": max(times, default=None),
+    }
+
+
 def workspace_snapshot(root: Path) -> Dict[str, Any]:
     root = _workspace_root(root)
     directions = []
@@ -287,13 +308,18 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                     "unknown_cost_runs": sum(not c.known for c in costs),
                     "budget_usd": nb.budget_usd,
                     "lockbox_opened": nb.data.opened if nb.data else None,
+                    "evidence": _evidence(direction, nb),
                     "error": None,
                 }
             )
         except (OSError, ValueError, sqlite3.Error) as error:
             # The kind of failure only; the page words it in the reader's language.
             directions.append(
-                {"id": child.name, "direction": child.name, "error": type(error).__name__}
+                {
+                    "id": child.name,
+                    "direction": child.name,
+                    "error": type(error).__name__,
+                }
             )
     return {
         "name": root.name,

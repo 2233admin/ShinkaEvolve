@@ -14,9 +14,13 @@ All notable changes to `shinka-evolve` are documented in this file.
   keyboard navigation and protected same-origin data access.
 - Added Chinese and English to the Research workbench: one copy table for every
   React screen, a 中/EN switch remembered across reloads and kept in step with
-  the restored analysis pages, and withheld skeptic/verdict notes worded by the
-  page (`/api/snapshot` events now carry `withheld` with a `null` note).
-
+  the restored analysis pages, and withheld skeptic/verdict notes and unreadable
+  directions worded by the page (`/api/snapshot` events now carry `withheld`
+  with a `null` note; `/api/workspace` returns the error kind, not a sentence).
+- Added per-direction evidence to `/api/workspace` (hypothesis status counts,
+  best in-sample score, noise bar, evaluated and failed programs, last
+  activity), computed exactly as the direction page computes it, and the
+  program id on every `/api/snapshot` trial point.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

@@ -65,19 +65,19 @@ def correct_scores(results_dir: Path) -> List[float]:
     return [float(s) for (s,) in rows if s is not None]
 
 
-def trials(results_dir: Path) -> List[Tuple[float, int, Optional[float]]]:
-    """(timestamp, generation, in-sample score or None if incorrect) of every
-    evaluated program, oldest first."""
+def trials(results_dir: Path) -> List[Tuple[float, int, Optional[float], str]]:
+    """(timestamp, generation, in-sample score or None if incorrect, program id)
+    of every evaluated program, oldest first."""
     if not (Path(results_dir) / DB_FILENAME).exists():
         return []
     rows = _query(
         results_dir,
-        "SELECT timestamp, generation, correct, combined_score FROM programs "
+        "SELECT timestamp, generation, correct, combined_score, id FROM programs "
         f"WHERE {_NOT_COPY} ORDER BY timestamp",
     )
     return [
-        (float(t), int(g), float(s) if ok and s is not None else None)
-        for t, g, ok, s in rows
+        (float(t), int(g), float(s) if ok and s is not None else None, str(pid))
+        for t, g, ok, s, pid in rows
     ]
 
 

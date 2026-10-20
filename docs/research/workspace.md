@@ -20,8 +20,8 @@
 
 | 入口 | 输出或行为 |
 | --- | --- |
-| `GET /api/workspace` | `{name, directions, library}`；摘要只读 Notebook、既有费用聚合和共享库，不调用全量方向 snapshot |
-| `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤；必须恰有一个非空方向参数 |
+| `GET /api/workspace` | `{name, directions, library}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志末行和共享库，证据数字与方向快照同一算法；不返回假设正文、事件说明或验证段、封存段数字 |
+| `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数 |
 | `/?direction=<id>&hypothesis=<hid>` | 对应方向及所选假设；刷新和返回保留身份 |
 | `/`、`/?view=runs`、`/?view=library` | 研究方向首页、独立全部运行、共享资料库 |
 | `/?view=runs&analysis=<encoded-relative-url>` | 同源分析文档；研究入口另带原方向及假设作为返回上下文 |
@@ -29,7 +29,7 @@
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物 |
 
-成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/budget_usd/lockbox_opened/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分。错误条目只有 `id/direction/error`。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
+成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/unknown_cost_runs/budget_usd/lockbox_opened/evidence/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分，`unknown_cost_runs>0` 时 `spend_usd` 是下限。`evidence` 含 `hypothesis_status/best_score/noise_bar/evaluated_programs/failed_programs/last_activity`，与同一方向快照的 `trial_points` 计算一致；没有试验时分数、噪声线与最近活动为 `null`。错误条目只有 `id/direction/error`，`error` 是失败类别（如 `ValueError`），页面按读者语言措辞。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
 
 ID 是一个真实目录名，不限 ASCII。服务端只解码查询一次，拒绝斜杠、反斜杠、点路径、绝对路径及驱动器形式，并校验规范路径仍是工作区的直接子目录。中文、空格、`+`、`%`、`#`、`&` 等合法名字可以往返；未知或越界 ID 返回 404，缺失、空值、重复参数返回 400，存在但无法读取的数据返回明确的 500 错误。
 

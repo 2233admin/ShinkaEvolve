@@ -178,14 +178,17 @@ def _local_denial(base: str, *, summary_reads_target: bool) -> None:
     if summary_reads_target:
         assert set(rows["alpha"]) == {"id", "direction", "error"}
         assert rows["alpha"]["error"]
-    # Body/events are not summary inputs: do not require a full snapshot there.
+    # The hypothesis body is not a summary input: do not require a full
+    # snapshot there.
     assert rows["beta"]["error"] is None
     assert rows["beta"]["direction"] == "Sibling fixture"
     assert rows["beta"]["hypotheses"] == 1
     assert rows["beta"]["trials"] == 2
     assert rows["beta"]["spend_usd"] == pytest.approx(2.25)
     assert SECRET not in summary_response[1]
-    assert str(SIBLING_SCORE) not in summary_response[1]
+    # The sibling's own row shows its in-sample best; the selected row must not.
+    assert rows["beta"]["evidence"]["best_score"] == SIBLING_SCORE
+    assert str(SIBLING_SCORE) not in json.dumps(rows["alpha"])
     _healthy_sibling(sibling)
 
 
@@ -237,19 +240,19 @@ def test_library_raw_hashing_cannot_follow_a_target_outside_library(
 
 
 @pytest.mark.parametrize(
-    "relative_path",
-    ["hypotheses/h001.md", "results.tsv"],
+    ("relative_path", "summary_reads_target"),
+    [("hypotheses/h001.md", False), ("results.tsv", True)],
     ids=["hypothesis-body", "events-log"],
 )
 def test_direction_text_leaf_cannot_read_a_sibling_direction(
-    workspace: Path, relative_path: str
+    workspace: Path, relative_path: str, summary_reads_target: bool
 ) -> None:
     selected = workspace / "alpha" / relative_path
     selected.unlink()
     _symlink(selected, workspace / "beta" / relative_path)
 
     with _server(workspace) as base:
-        _local_denial(base, summary_reads_target=False)
+        _local_denial(base, summary_reads_target=summary_reads_target)
 
 
 def test_experiments_root_cannot_relocate_into_a_sibling_direction(

@@ -22,8 +22,8 @@
 ## 3. 只读接口
 
 - [x] 3.0 一个运行费用口径（OD-9，`run-analysis-ui` › 运行费用只有一个口径）：`rundb.run_cost` 取代 `rundb.total_cost` 与 `analysis._recorded_cost`，预算检查、`brief`、`/api/workspace`、`/api/snapshot` 与 `/get_database_stats` 共用；恢复的分析页（成本、元信息、集成、谱系提示与导出）与比较页逐程序镜像同一规则，合计含提示词进化；设有预算的方向花费未知时拒绝新运行；`/api/workspace` 与 `/api/snapshot` 的方向加 `unknown_cost_runs`，实验加 `spend_known`；演示数据按真实写法生成费用字段，只有一个普通运行用没有价目的 headless 调用保留未知费用。检查：`tests/research` 的费用边界与 HTTP 回归测试（缺失字段、非金额值、非法 JSON、headless 定价未知、岛副本、提示词费用、预算遇到未知费用），两页逐程序计价与 `rundb.run_cost` 一致（node 执行页面函数）；浏览器实测同一运行在运行统计、分析页成本页签与比较页图例都是 $12.95。
-- [ ] 3.1 `/api/workspace` 方向 `evidence` 摘要（`evaluated_programs`、`failed_programs` 等），与 `/api/snapshot` 数字一致；HTTP 回归测试。
-- [ ] 3.2 `/api/snapshot` `trial_points` 增加程序编号；HTTP 回归测试；验证段与封存段数字仍按规则隐藏。
+- [x] 3.1 `/api/workspace` 方向 `evidence` 摘要（`evaluated_programs`、`failed_programs` 等），与 `/api/snapshot` 数字一致；HTTP 回归测试。检查：`tests/research/test_workspace_ui.py` 的证据测试（最佳分数不在最后一点、含一个失败程序、无试验方向全为空值与 0）；演示服务器四个方向的 `evidence` 与各自快照一致（d1 1130 个程序、87 个失败、最佳 1.10207）。
+- [x] 3.2 `/api/snapshot` `trial_points` 增加程序编号；HTTP 回归测试；验证段与封存段数字仍按规则隐藏。检查：同一测试断言两个运行交错时每点的实验与程序编号，私有指标不进入快照；`test_ui_file_scope.py` 改为允许兄弟方向在自己的行里显示样本内最佳，但所选方向的行不得含兄弟数字。
 
 ## 4. 研究页
 

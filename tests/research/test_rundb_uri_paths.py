@@ -202,7 +202,10 @@ def test_populated_results_with_literal_uri_characters_are_read_only(
     # Administrative copies have deliberately larger scores and costs.
     assert rundb.run_cost(results) == rundb.RunCost(2.0, True, 0.75, True)
     assert rundb.count_evaluated(results) == 2
-    assert rundb.trials(results) == [(100.0, 0, None), (200.0, 1, 1.25)]
+    assert rundb.trials(results) == [
+        (100.0, 0, None, "incorrect-program"),
+        (200.0, 1, 1.25, "chosen-program"),
+    ]
     assert rundb.best_program(results) == (
         "chosen-program",
         "def candidate():\n    return 42\n",
