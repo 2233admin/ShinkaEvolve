@@ -180,13 +180,6 @@ class Notebook(BaseModel):
                 return h
         raise KeyError(f"Unknown hypothesis {hid!r}")
 
-    @property
-    def total_trials(self) -> int:
-        """Variants evaluated across the whole direction (for DSR)."""
-        return sum(
-            e.n_evaluated + e.n_probed for h in self.hypotheses for e in h.experiments
-        )
-
     # ---- mutations -------------------------------------------------------
 
     def add_hypothesis(self, root: Path, title: str, body: str) -> Hypothesis:

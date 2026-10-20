@@ -147,7 +147,8 @@ All notable changes to `shinka-evolve` are documented in this file.
   running experiment showed fewer trials than evaluated programs. Workspace and
   direction snapshots now count evaluated programs in the run databases, as the
   skeptic counts trials for the DSR, and build every count, best score and trial
-  point of one response from a single read of each run.
+  point of one response from a single read of each run. `shinka_research brief`
+  and `status`, which the research agent reads each round, count the same way.
 - Fixed concurrent `shinka_research` commands discarding each other's notebook
   changes: a probe, skeptic or run that finished after another command saved
   wrote back its stale copy of the whole notebook, and two first events could

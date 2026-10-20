@@ -578,7 +578,8 @@ def cmd_brief(args: argparse.Namespace) -> None:
     spent, known = direction_spend(root, nb)
     budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
     out = [f"# Brief: {nb.direction}", ""]
-    out.append(f"- Trials so far: {nb.total_trials} (raise the bar for 'supported')")
+    trials = _trial_count(root, nb)
+    out.append(f"- Trials so far: {trials} (raise the bar for 'supported')")
     out.append(f"- LLM spend: {'' if known else '>='}${spent:.2f}{budget}")
     if nb.data:
         out.append(f"- Lockbox: {_lockbox(nb.data)} (from {nb.data.lockbox_start})")
@@ -606,17 +607,34 @@ def cmd_brief(args: argparse.Namespace) -> None:
     print("\n".join(out))
 
 
+def _evaluated(root: Path, hid: str, eid: str) -> int:
+    return count_evaluated(experiment_dir(root, hid, eid) / "results")
+
+
+def _trial_count(root: Path, nb: Notebook) -> int:
+    """Every evaluated program in the run databases plus every probe, as the
+    skeptic counts trials for the DSR; a run in progress counts as it goes,
+    while the notebook's copy is written only once it returns."""
+    return sum(
+        _evaluated(root, h.id, e.id) + e.n_probed
+        for h in nb.hypotheses
+        for e in h.experiments
+    )
+
+
 def cmd_status(args: argparse.Namespace) -> None:
-    nb = Notebook.load(Path(args.dir))
+    root = Path(args.dir)
+    nb = Notebook.load(root)
     print(f"Direction: {nb.direction}")
-    print(f"Total trials: {nb.total_trials}")
+    print(f"Total trials: {_trial_count(root, nb)}")
     if nb.data:
         print(
             f"Lockbox: {_lockbox(nb.data)} (from {nb.data.lockbox_start}, "
             f"{nb.data.n_total - nb.data.n_dev} of {nb.data.n_total} bars)"
         )
     for h in nb.hypotheses:
-        exps = ", ".join(f"{e.id}({e.n_evaluated})" for e in h.experiments) or "-"
+        counts = [f"{e.id}({_evaluated(root, h.id, e.id)})" for e in h.experiments]
+        exps = ", ".join(counts) or "-"
         line = f"{h.id}  {h.status.value:<12} {h.title}  [{exps}]"
         if h.verdict:
             line += f"\n      verdict: {h.verdict.reason}"
