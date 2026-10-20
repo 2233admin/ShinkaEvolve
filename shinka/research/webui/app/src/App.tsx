@@ -2,16 +2,27 @@ import { useEffect, useState } from 'react'
 import { Breadcrumb, BreadcrumbItem, Button, InlineNotification, Theme } from '@carbon/react'
 import { AnalysisWorkspace } from './AnalysisWorkspace'
 import { useTheme } from './design/theme'
+import { LangProvider, Rich, useCopy, useLangState, type Lang } from './i18n/lang'
 import { LibraryTab } from './LibraryTab'
 import { ResearchTab } from './ResearchTab'
-import { Term } from './Term'
+import { PARTS } from './Term'
 import { TopBar } from './TopBar'
 import { WorkspaceTable } from './WorkspaceTable'
 import { WorkspaceNav, type WorkspaceView } from './WorkspaceNav'
 import type { Snapshot, WorkspaceSnapshot } from './types'
 
 export default function App() {
+  const [lang, setLang] = useLangState()
+  return (
+    <LangProvider value={lang}>
+      <Workspace onLang={setLang} />
+    </LangProvider>
+  )
+}
+
+function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   const [theme, setTheme] = useTheme()
+  const { t } = useCopy()
   const light = theme === 'light'
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null)
@@ -65,55 +76,59 @@ export default function App() {
 
   return (
     <Theme theme={light ? 'white' : 'g100'}>
-      <TopBar snap={snap} light={light} onTheme={(next) => setTheme(next ? 'light' : 'dark')} />
+      <TopBar snap={snap} light={light} onTheme={(next) => setTheme(next ? 'light' : 'dark')} onLang={onLang} />
       <main className={`page${view === 'runs' ? ' analysis-page' : ''}`}>
         <WorkspaceNav view={view} pending={pending} />
         {directionId !== null && (
-          <Breadcrumb noTrailingSlash>
-            <BreadcrumbItem href="/">工作区</BreadcrumbItem>
+          <Breadcrumb noTrailingSlash aria-label={t('crumb.label')}>
+            <BreadcrumbItem href="/">{t('crumb.workspace')}</BreadcrumbItem>
             {view === 'runs'
-              ? <BreadcrumbItem href={researchUrl}>{`返回研究 · ${snap?.direction ?? directionId}${selected ? ` · ${selected}` : ''}`}</BreadcrumbItem>
-              : <BreadcrumbItem isCurrentPage>研究方向</BreadcrumbItem>}
-            {view === 'runs' && <BreadcrumbItem isCurrentPage>实验分析</BreadcrumbItem>}
+              ? <BreadcrumbItem href={researchUrl}>{t('crumb.back', { where: `${snap?.direction ?? directionId}${selected ? ` · ${selected}` : ''}` })}</BreadcrumbItem>
+              : <BreadcrumbItem isCurrentPage>{t('crumb.direction')}</BreadcrumbItem>}
+            {view === 'runs' && <BreadcrumbItem isCurrentPage>{t('crumb.analysis')}</BreadcrumbItem>}
           </Breadcrumb>
         )}
         <header className="page-head">
           <div className="page-head-row">
-            <h1>{view === 'runs' ? '运行与分析' : view === 'library' ? '共享资料库' : directionId !== null
-              ? snap?.direction ?? (loading ? '载入中…' : '研究方向')
-              : workspace ? `工作区 · ${workspace.name}` : loading ? '载入中…' : '工作区'}</h1>
+            <h1>
+              {view === 'runs' ? t('head.runs') : view === 'library' ? t('head.library') : directionId !== null
+                ? (snap ? <span translate="no">{snap.direction}</span> : loading ? t('state.loading') : t('head.direction'))
+                : workspace
+                  ? <Rich k="head.workspaceNamed" vars={{ name: workspace.name }} parts={{ name: (s) => <span translate="no">{s}</span> }} />
+                  : loading ? t('state.loading') : t('head.workspace')}
+            </h1>
             <Button kind="tertiary" size="sm" onClick={() => setRefreshVersion((v) => v + 1)} disabled={loading}>
-              刷新
+              {t('action.refresh')}
             </Button>
           </div>
           <p className="muted">
             {view === 'runs'
-              ? <>浏览运行、比较结果并检查完整实验分析。研究由对话主导；网页只读，私有指标不公开。</>
-              : view === 'library' ? <>所有研究方向共享同一份资料库。</> : directionId === null
-              ? <>选择研究方向查看假设与结论。<Term k="trials">试验数</Term>按方向累计；
-                <Term k="sealed">封存段</Term>状态按方向展示。同一工作区共用一个资料库，研究操作仍通过 CLI 执行。</>
-              : <>每个假设在<Term k="insample">样本内</Term>进化，再由质疑者在<Term k="validation">验证段</Term>检验；
-                <Term k="validation">验证段</Term>结果只在出结论后显示，<Term k="sealed">封存段</Term>只在最终确认时打开一次。</>}
+              ? t('lede.runs')
+              : view === 'library' ? t('lede.library') : directionId === null
+              ? <Rich k="lede.workspace" parts={PARTS} />
+              : <Rich k="lede.direction" parts={PARTS} />}
           </p>
         </header>
 
         {error && (
           <InlineNotification
             kind="error"
+            statusIconDescription={t('icon.error')}
             lowContrast
             hideCloseButton
-            title="读取失败："
-            subtitle={`${error}。确认 shinka_research ui 还在运行，然后点刷新。`}
+            title={t('error.read')}
+            subtitle={t('error.readHint', { error })}
           />
         )}
 
         {view === 'research' && snap && snap.hypotheses.length === 0 && (
           <InlineNotification
             kind="info"
+            statusIconDescription={t('icon.info')}
             lowContrast
             hideCloseButton
-            title="还没有假设："
-            subtitle="用 shinka_research hypothesis add 添加第一个假设。"
+            title={t('empty.hypotheses')}
+            subtitle={t('empty.hypothesesHint')}
           />
         )}
 

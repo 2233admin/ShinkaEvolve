@@ -55,7 +55,9 @@ export interface SnapshotEvent {
   hypothesis: string
   experiment: string
   event: string
-  note: string
+  /** null while `withheld`: skeptic and verdict notes quote validation figures until the verdict. */
+  note: string | null
+  withheld: boolean
 }
 
 // 整个方向按时间排的每一次试验；score 为空 = 程序失败，record = 到这一次为止的新最好，bar = 此刻的噪声线。

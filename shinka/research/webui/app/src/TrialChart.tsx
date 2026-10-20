@@ -1,21 +1,23 @@
 import { useEffect, useMemo, useRef } from 'react'
 import { ComboChart } from '@carbon/charts-react'
 import '@carbon/charts-react/styles.css'
-import { Term } from './Term'
+import { Rich, useCopy } from './i18n/lang'
+import { PARTS } from './Term'
 import { mix, useTokens } from './tokens'
 import type { TrialPoint } from './types'
-
-const G = {
-  selected: '所选假设',
-  other: '其他假设',
-  record: '新纪录',
-  frontier: '前沿',
-  noise: '噪声线',
-} as const
 
 type Props = { points: TrialPoint[]; probes: number; selected: string; light: boolean }
 
 export function TrialChart({ points, probes, selected, light }: Props) {
+  const { t } = useCopy()
+  // Carbon Charts names each dataset by its label, so the legend follows the language.
+  const G = useMemo(() => ({
+    selected: t('chart.selected'),
+    other: t('chart.other'),
+    record: t('chart.record'),
+    frontier: t('chart.frontier'),
+    noise: t('chart.noise'),
+  }), [t])
   const tk = useTokens(light)
   const box = useRef<HTMLDivElement>(null)
   const failed = points.filter((p) => p.score === null).length
@@ -38,7 +40,7 @@ export function TrialChart({ points, probes, selected, light }: Props) {
     const last = points[points.length - 1]
     if (best !== null && last) rows.push({ group: G.frontier, n: last.n, score: best })
     return rows
-  }, [points, selected])
+  }, [points, selected, G])
 
   const options = useMemo(() => {
     if (!tk) return null
@@ -51,8 +53,8 @@ export function TrialChart({ points, probes, selected, light }: Props) {
       points: { radius: 3, fillOpacity: 1, enabled: true },
       grid: { x: { enabled: false } },
       axes: {
-        bottom: { mapsTo: 'n', scaleType: 'linear', title: '试验序号' },
-        left: { mapsTo: 'score', scaleType: 'linear', title: '样本内分数' },
+        bottom: { mapsTo: 'n', scaleType: 'linear', title: t('chart.axisTrial') },
+        left: { mapsTo: 'score', scaleType: 'linear', title: t('chart.axisScore') },
       },
       color: {
         scale: {
@@ -68,7 +70,7 @@ export function TrialChart({ points, probes, selected, light }: Props) {
         { type: 'line', options: { points: { enabled: false } }, correspondingDatasets: [G.frontier, G.noise] },
       ],
     }
-  }, [tk, light])
+  }, [tk, light, G, t])
 
   // Carbon 的线没有虚线选项：认出噪声线（唯一用强调色描边的线）后在 DOM 上加 dasharray。
   useEffect(() => {
@@ -92,8 +94,9 @@ export function TrialChart({ points, probes, selected, light }: Props) {
   return (
     <div className="trial-chart" ref={box}>
       <p className="chart-note">
-        {points.length} 次试验，其中 {failed} 次程序失败（未画出）。{probes > 0 && `另有 ${probes} 次试探没有分数记录，不画点，但已计入噪声线。`}横轴是整个方向的试验顺序，纵轴是
-        <Term k="insample">样本内</Term>分数；虚线是<Term k="noise">噪声线</Term>，线下的分数和碰运气分不开。
+        {t('chart.note', { n: points.length, failed })}
+        {probes > 0 && t('chart.noteProbes', { probes })}
+        <Rich k="chart.noteAxes" parts={PARTS} />
       </p>
       {options && <ComboChart data={data as never} options={options as never} />}
     </div>

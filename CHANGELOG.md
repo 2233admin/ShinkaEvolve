@@ -12,6 +12,10 @@ All notable changes to `shinka-evolve` are documented in this file.
   tabs, selected programs and comparison selections across refresh and history.
   The restored renderer uses local pinned dependencies, shared dark/light tokens,
   keyboard navigation and protected same-origin data access.
+- Added Chinese and English to the Research workbench: one copy table for every
+  React screen, a 中/EN switch remembered across reloads and kept in step with
+  the restored analysis pages, and withheld skeptic/verdict notes worded by the
+  page (`/api/snapshot` events now carry `withheld` with a `null` note).
 
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and

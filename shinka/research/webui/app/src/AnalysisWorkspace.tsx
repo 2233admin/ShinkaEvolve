@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { InlineNotification } from '@carbon/react'
+import type { CopyKey } from './i18n/copy'
+import { Rich, useCopy, type Lang } from './i18n/lang'
+import { PARTS } from './Term'
 
 const PAGES: Record<string, true> = {
   '/analysis/index.html': true,
@@ -9,34 +12,46 @@ const PAGES: Record<string, true> = {
 
 type Selection = { path: string; label: string }[]
 
+// A failure the host explains in the reader's language; anything else shows its own message.
+class HostError extends Error {
+  constructor(readonly key: CopyKey) {
+    super(key)
+  }
+}
+
 function selection(text: string | null): Selection {
   const value: unknown = JSON.parse(text ?? 'null')
   if (!Array.isArray(value) || value.length < 2 || !value.every((item) =>
     typeof item === 'object' && item !== null && typeof item.path === 'string' && typeof item.label === 'string')) {
-    throw new Error('比较链接缺少运行选择。请从“全部运行”选择至少两个运行。')
+    throw new HostError('an.compareSelection')
   }
   return value
 }
 
-function initialAnalysis(): { src: string | null; error: string | null } {
+function initialAnalysis(): { src: string | null; error: unknown } {
   try {
     const params = new URLSearchParams(window.location.search)
     const url = new URL(params.get('analysis') ?? '/analysis/index.html', window.location.origin)
-    if (url.origin !== window.location.origin || !PAGES[url.pathname]) {
-      throw new Error('分析链接无效。请从研究实验或“全部运行”重新进入。')
-    }
+    if (url.origin !== window.location.origin || !PAGES[url.pathname]) throw new HostError('an.badLink')
     if (url.pathname === '/compare.html') {
       url.searchParams.set('selection', JSON.stringify(selection(params.get('compare') ?? url.searchParams.get('selection'))))
     }
     return { src: url.pathname + url.search + url.hash, error: null }
   } catch (error) {
-    return { src: null, error: error instanceof Error ? error.message : String(error) }
+    return { src: null, error }
   }
 }
 
+// The recovered pages expose their own setters: viz_tree.html's applyLang also relabels its 中/EN button.
+function setFrameLanguage(child: Window, lang: Lang) {
+  const apply = Reflect.get(child, 'applyLang') ?? Reflect.get(child, 'shinkaSetLanguage')
+  if (typeof apply === 'function') apply(lang)
+}
+
 export function AnalysisWorkspace({ light }: { light: boolean }) {
+  const { lang, t } = useCopy()
   const [initial] = useState(initialAnalysis)
-  const [error, setError] = useState(initial.error)
+  const [error, setError] = useState<unknown>(initial.error)
   const frame = useRef<HTMLIFrameElement>(null)
   const theme = light ? 'light' : 'dark'
   useEffect(() => {
@@ -44,6 +59,10 @@ export function AnalysisWorkspace({ light }: { light: boolean }) {
     const apply = child && Reflect.get(child, 'shinkaSetTheme')
     if (typeof apply === 'function') apply(theme)
   }, [theme])
+  useEffect(() => {
+    const child = frame.current?.contentWindow
+    if (child) setFrameLanguage(child, lang)
+  }, [lang])
 
   function connect() {
     const child = frame.current?.contentWindow
@@ -51,13 +70,14 @@ export function AnalysisWorkspace({ light }: { light: boolean }) {
     try {
       const apply = Reflect.get(child, 'shinkaSetTheme')
       if (typeof apply !== 'function' || typeof Reflect.get(child, 'ShinkaHTML') !== 'function') {
-        throw new Error('分析资源未加载。请检查前端构建和静态资源后刷新页面。')
+        throw new HostError('an.notLoaded')
       }
       apply(theme)
+      setFrameLanguage(child, lang)
       const sync = () => {
         const inside = new URL(child.location.href)
         if (inside.origin !== window.location.origin || !PAGES[inside.pathname]) {
-          throw new Error('分析页面离开了工作区。请重新进入“全部运行”。')
+          throw new HostError('an.leftWorkspace')
         }
         const outside = new URL(window.location.href)
         outside.searchParams.set('analysis', inside.pathname + inside.search + inside.hash)
@@ -91,17 +111,18 @@ export function AnalysisWorkspace({ light }: { light: boolean }) {
       sync()
       setError(null)
     } catch (error) {
-      setError(error instanceof Error ? error.message : String(error))
+      setError(error)
     }
   }
 
+  const message = error === null ? null : error instanceof HostError ? t(error.key) : error instanceof Error ? error.message : String(error)
   return (
-    <section aria-label="运行浏览与实验分析">
-      <p className="analysis-context">本页显示各运行的原始 <code>combined_score</code>，只供诊断；不同评估器的得分不可直接比较。研究结论和全方向试验的噪声基准以对应研究方向页为准，本页不另行推算。</p>
-      {error && <InlineNotification kind="error" lowContrast hideCloseButton title="分析读取失败：" subtitle={error} />}
+    <section aria-label={t('an.section')}>
+      <p className="analysis-context"><Rich k="an.context" parts={PARTS} /></p>
+      {message && <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('an.readError')} subtitle={message} />}
       {initial.src && (
         <div className="analysis-scroll">
-          <iframe ref={frame} className="analysis-frame" title="运行浏览与实验分析" src={initial.src} onLoad={connect} />
+          <iframe ref={frame} className="analysis-frame" title={t('an.section')} src={initial.src} onLoad={connect} />
         </div>
       )}
     </section>

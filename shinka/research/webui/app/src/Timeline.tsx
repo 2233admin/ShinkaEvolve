@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { STATUS } from './format'
+import { Rich } from './i18n/lang'
+import { PARTS } from './Term'
 import type { Hypothesis } from './types'
 
 type Span = { h: Hypothesis; start: number; end: number }
@@ -50,7 +52,7 @@ export function Timeline({ hyps, selected, onSelect }: { hyps: Hypothesis[]; sel
   }, [])
 
   const spans = spansOf(hyps)
-  if (spans.length === 0) return <p className="muted">还没有试验，画不出时间线——用 <code className="mono">shinka_research run</code> 跑实验。</p>
+  if (spans.length === 0) return <p className="muted"><Rich k="dir.noTimeline" parts={PARTS} /></p>
 
   const lo = Math.min(...spans.map((s) => s.start))
   const hi = Math.max(...spans.map((s) => s.end))
@@ -63,7 +65,7 @@ export function Timeline({ hyps, selected, onSelect }: { hyps: Hypothesis[]; sel
         {spans.map(({ h, start, end }) => (
           <rux-track key={h.id}>
             <div slot="label" className="track-label">
-              <span className="mono">{h.id}</span>
+              <span className="mono" translate="no">{h.id}</span>
             </div>
             <rux-time-region
               start={iso(start)}
@@ -72,7 +74,7 @@ export function Timeline({ hyps, selected, onSelect }: { hyps: Hypothesis[]; sel
               selected={h.id === selected}
               onClick={() => onSelect(h.id)}
             >
-              {h.title}
+              <span translate="no">{h.title}</span>
             </rux-time-region>
           </rux-track>
         ))}

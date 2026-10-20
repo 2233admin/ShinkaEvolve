@@ -32,7 +32,6 @@ from .notebook import (
 from .skeptic import expected_max_sharpe
 
 DIST = Path(__file__).parent / "webui" / "dist"
-HIDDEN = "（验证段结果，出结论后显示）"
 
 
 def _iso(ts: float) -> str:
@@ -87,7 +86,7 @@ def _body(root: Path, hid: str) -> str:
     return path.read_text() if path.exists() else ""
 
 
-def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, str]]:
+def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, Any]]:
     path = _confined(root, root / RESULTS_LOG)
     if not path.exists():
         return []
@@ -96,16 +95,17 @@ def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, str]]:
     for line in path.read_text().splitlines()[1:][-limit:]:
         time, hid, eid, event, note = (line.split("\t", 4) + [""] * 5)[:5]
         # skeptic and verdict notes quote validation figures; a re-run clears
-        # the verdict, so an old verdict note must hide again too.
-        if event in ("skeptic", "verdict") and hid not in judged:
-            note = HIDDEN
+        # the verdict, so an old verdict note must hide again too. The page
+        # words the withheld note in the reader's language.
+        withheld = event in ("skeptic", "verdict") and hid not in judged
         rows.append(
             {
                 "time": time,
                 "hypothesis": hid,
                 "experiment": eid,
                 "event": event,
-                "note": note,
+                "note": None if withheld else note,
+                "withheld": withheld,
             }
         )
     return rows[::-1]

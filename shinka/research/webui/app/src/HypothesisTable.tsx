@@ -2,59 +2,58 @@ import {
   DataTable, DefinitionTooltip, Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@carbon/react'
 import { STATUS, bestIs, fmt, oosOf, trialsOf } from './format'
-import { Term } from './Term'
-import { TERMS } from './terms'
+import { Rich, useCopy } from './i18n/lang'
+import { PARTS } from './Term'
 import type { Hypothesis } from './types'
 
 type Props = { hyps: Hypothesis[]; selected: string; onSelect: (id: string) => void }
 
-const headers = [
-  { key: 'id', header: '编号', isSortable: true },
-  { key: 'title', header: '假设', isSortable: true },
-  { key: 'status', header: '状态', isSortable: true },
-  { key: 'exps', header: '实验数', isSortable: true },
-  { key: 'trials', header: <Term k="trials">试验数</Term>, isSortable: false },
-  {
-    key: 'best',
-    header: (
-      <>
-        最好<Term k="insample">样本内</Term>分数
-      </>
-    ),
-    isSortable: false,
-  },
-  { key: 'oos', header: <><Term k="validation">验证段</Term> <Term k="sharpe">Sharpe</Term></>, isSortable: false },
-]
-
-// 空值（—）排在最后，不论升降序都不影响其余行的比较。
-const sortRow = (a: unknown, b: unknown, { sortDirection }: { sortDirection: string }) => {
-  const d = sortDirection === 'DESC' ? -1 : 1
-  if (typeof a === 'number' && typeof b === 'number') return (a - b) * d
-  return String(a).localeCompare(String(b), 'zh') * d
-}
-
 export function HypothesisTable({ hyps, selected, onSelect }: Props) {
+  const { lang, t } = useCopy()
+  const headers = [
+    { key: 'id', header: t('hyp.colId'), isSortable: true },
+    { key: 'title', header: t('hyp.colTitle'), isSortable: true },
+    { key: 'status', header: t('hyp.colStatus'), isSortable: true },
+    { key: 'exps', header: t('hyp.colExperiments'), isSortable: true },
+    { key: 'trials', header: <Rich k="hyp.colTrials" parts={PARTS} />, isSortable: false },
+    { key: 'best', header: <Rich k="hyp.colBest" parts={PARTS} />, isSortable: false },
+    { key: 'oos', header: <Rich k="hyp.colOos" parts={PARTS} />, isSortable: false },
+  ]
+  // 空值（—）排在最后，不论升降序都不影响其余行的比较。
+  const sortRow = (a: unknown, b: unknown, { sortDirection }: { sortDirection: string }) => {
+    const d = sortDirection === 'DESC' ? -1 : 1
+    if (typeof a === 'number' && typeof b === 'number') return (a - b) * d
+    return String(a).localeCompare(String(b), lang) * d
+  }
   const byId = new Map(hyps.map((h) => [h.id, h]))
   const rows = hyps.map((h) => ({
     id: h.id,
     title: h.title,
-    status: STATUS[h.status].label,
+    status: t(STATUS[h.status].key),
     exps: h.experiments.length,
     trials: trialsOf(h),
     best: bestIs(h) ?? -Infinity,
     oos: oosOf(h) ?? -Infinity,
   }))
-
   return (
     <DataTable rows={rows} headers={headers} sortRow={sortRow} size="lg">
       {({ rows: rs, headers: hs, getTableProps, getHeaderProps, getRowProps }) => (
-        <Table {...getTableProps()} aria-label="假设列表">
+        <Table {...getTableProps()} aria-label={t('hyp.table')}>
           <TableHead>
             <TableRow>
               {hs.map((h) => {
                 const { key, ...p } = getHeaderProps({ header: h, isSortable: h.isSortable })
                 return (
-                  <TableHeader key={key} {...p}>
+                  <TableHeader
+                    key={key}
+                    {...p}
+                    // Carbon's assistive text for the sort button describes the action the click takes.
+                    translateWithId={(_id, s) => {
+                      const header = String(s?.header ?? '')
+                      if (!s?.isSortHeader || s.sortDirection === s.sortStates.NONE) return t('table.sortAsc', { header })
+                      return s.sortDirection === s.sortStates.ASC ? t('table.sortDesc', { header }) : t('table.sortNone', { header })
+                    }}
+                  >
                     {h.header}
                   </TableHeader>
                 )
@@ -83,11 +82,11 @@ export function HypothesisTable({ hyps, selected, onSelect }: Props) {
                   }}
                 >
                   <TableCell className="mono">{h.id}</TableCell>
-                  <TableCell className="title-cell">{h.title}</TableCell>
+                  <TableCell className="title-cell" translate="no">{h.title}</TableCell>
                   <TableCell>
                     <span className="status-cell">
                       <rux-status status={STATUS[h.status].rux} />
-                      {STATUS[h.status].label}
+                      {t(STATUS[h.status].key)}
                     </span>
                   </TableCell>
                   <TableCell className="mono num">{h.experiments.length}</TableCell>
@@ -95,7 +94,7 @@ export function HypothesisTable({ hyps, selected, onSelect }: Props) {
                   <TableCell className="mono num">{fmt(best)}</TableCell>
                   <TableCell className="mono num">
                     {oos === null ? (
-                      <DefinitionTooltip definition={TERMS.tbd} openOnHover>
+                      <DefinitionTooltip definition={t('term.tbd')} openOnHover>
                         —
                       </DefinitionTooltip>
                     ) : (

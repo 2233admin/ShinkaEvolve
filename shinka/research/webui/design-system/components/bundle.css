@@ -114,6 +114,11 @@ code { font-family: var(--font-mono); font-size: .92em; }
 /* ---- TopBar ---- */
 .bar-right { display: flex; align-items: center; gap: var(--space-3); padding-right: var(--space-2); }
 .bar-right .cds--toggle { padding: 0; }
+.lang-switch { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-control); overflow: hidden; }
+.lang-switch button { font: 500 12px/1 var(--font-sans); padding: 6px 10px; color: var(--muted); background: transparent; border: 0; cursor: pointer; }
+.lang-switch button + button { border-left: 1px solid var(--line-strong); }
+.lang-switch button[aria-pressed='true'] { color: var(--text); background: var(--selected); }
+.lang-switch button:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
 /* Astro 顶栏的文字色默认为白，浅色主题下要显式给到元素上。 */
 rux-global-status-bar, rux-monitoring-icon {
   --color-palette-neutral-000: var(--ink);

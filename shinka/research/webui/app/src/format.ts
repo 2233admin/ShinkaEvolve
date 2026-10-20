@@ -1,18 +1,19 @@
+import type { CopyKey } from './i18n/copy'
 import type { Evidence, Hypothesis, Status, Thresholds } from './types'
 
 export type RuxStatus = 'normal' | 'caution' | 'critical' | 'standby' | 'off'
 
-export const STATUS: Record<Status, { label: string; rux: RuxStatus }> = {
-  proposed: { label: '待跑', rux: 'off' },
-  selected: { label: '已选', rux: 'standby' },
-  running: { label: '运行中', rux: 'standby' },
-  challenged: { label: '待判定', rux: 'caution' },
-  supported: { label: '成立', rux: 'normal' },
-  refuted: { label: '否定', rux: 'critical' },
-  inconclusive: { label: '未定', rux: 'caution' },
-  confirmed: { label: '已确认', rux: 'normal' },
-  unconfirmed: { label: '未确认', rux: 'critical' },
-  dropped: { label: '放弃', rux: 'off' },
+export const STATUS: Record<Status, { key: CopyKey; rux: RuxStatus }> = {
+  proposed: { key: 'status.proposed', rux: 'off' },
+  selected: { key: 'status.selected', rux: 'standby' },
+  running: { key: 'status.running', rux: 'standby' },
+  challenged: { key: 'status.challenged', rux: 'caution' },
+  supported: { key: 'status.supported', rux: 'normal' },
+  refuted: { key: 'status.refuted', rux: 'critical' },
+  inconclusive: { key: 'status.inconclusive', rux: 'caution' },
+  confirmed: { key: 'status.confirmed', rux: 'normal' },
+  unconfirmed: { key: 'status.unconfirmed', rux: 'critical' },
+  dropped: { key: 'status.dropped', rux: 'off' },
 }
 
 export const EVENT_STATUS: Record<string, RuxStatus> = {
@@ -50,35 +51,20 @@ export const bestIs = (h: Hypothesis): number | null => {
 
 export const oosOf = (h: Hypothesis): number | null => (h.verdict ? num(h.verdict.evidence.oos_sharpe) : null)
 
-export type Check = { key: string; label: string; pass: boolean | null; value: string }
+export type Check = { key: string; pass: boolean | null; value: string }
 
-// 五条规则与 skeptic.decide() 一一对应，阈值用判定时记下的那组。
-export function checksOf(ev: Evidence, th: Thresholds): Check[] {
+// 五条规则与 skeptic.decide() 一一对应，阈值用判定时记下的那组。pboNone 是“无法计算”时显示的话。
+export function checksOf(ev: Evidence, th: Thresholds, pboNone: string): Check[] {
   const oos = num(ev.oos_sharpe)
   const hold = num(ev.baseline_buy_hold_oos_sharpe)
   const dsr = num(ev.dsr)
   const frac = num(ev.oos_positive_fraction)
   const pbo = num(ev.pbo)
   return [
-    { key: 'oos', label: '验证段 Sharpe > 0', pass: oos === null ? null : oos > 0, value: fmt(oos) },
-    {
-      key: 'hold',
-      label: '跑赢买入持有',
-      pass: oos === null || hold === null ? null : oos > hold,
-      value: `${fmt(oos)} vs ${fmt(hold)}`,
-    },
-    { key: 'dsr', label: `DSR ≥ ${th.dsr_supported}`, pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
-    {
-      key: 'sub',
-      label: `子区间为正 ≥ ${pct(th.min_positive_fraction)}`,
-      pass: frac === null ? null : frac >= th.min_positive_fraction,
-      value: pct(frac),
-    },
-    {
-      key: 'pbo',
-      label: `PBO ≤ ${th.max_pbo}`,
-      pass: pbo === null ? true : pbo <= th.max_pbo,
-      value: pbo === null ? '无法计算，视为通过' : fmt(pbo),
-    },
+    { key: 'oos', pass: oos === null ? null : oos > 0, value: fmt(oos) },
+    { key: 'hold', pass: oos === null || hold === null ? null : oos > hold, value: `${fmt(oos)} vs ${fmt(hold)}` },
+    { key: 'dsr', pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
+    { key: 'sub', pass: frac === null ? null : frac >= th.min_positive_fraction, value: pct(frac) },
+    { key: 'pbo', pass: pbo === null ? true : pbo <= th.max_pbo, value: pbo === null ? pboNone : fmt(pbo) },
   ]
 }

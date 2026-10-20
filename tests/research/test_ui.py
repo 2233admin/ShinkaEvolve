@@ -53,11 +53,13 @@ def test_validation_evidence_hidden_until_verdict(tmp_path: Path) -> None:
     assert "skeptic" not in h2["experiments"][0]
     assert h2["verdict"] is None
     assert "-0.40" not in json.dumps(snap)
-    notes = [(e["hypothesis"], e["event"], e["note"]) for e in snap["events"]]
+    notes = [
+        (e["hypothesis"], e["event"], e["note"], e["withheld"]) for e in snap["events"]
+    ]
     assert notes == [
-        ("h002", "verdict", ui.HIDDEN),  # verdict cleared by a re-run
-        ("h002", "skeptic", ui.HIDDEN),
-        ("h001", "skeptic", "rule says supported: val Sharpe 1.23"),
+        ("h002", "verdict", None, True),  # verdict cleared by a re-run
+        ("h002", "skeptic", None, True),
+        ("h001", "skeptic", "rule says supported: val Sharpe 1.23", False),
     ]
 
 

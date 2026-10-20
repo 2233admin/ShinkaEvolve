@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Toggle } from '@carbon/react'
 import { usd } from './format'
-import { TERMS } from './terms'
+import { useCopy, type Lang } from './i18n/lang'
 import type { Snapshot } from './types'
 
-type Props = { snap: Snapshot | null; light: boolean; onTheme: (light: boolean) => void }
+type Props = {
+  snap: Snapshot | null
+  light: boolean
+  onTheme: (light: boolean) => void
+  onLang: (lang: Lang) => void
+}
 
 function useNarrow(): boolean {
   const q = '(max-width: 900px)'
@@ -18,7 +23,8 @@ function useNarrow(): boolean {
   return narrow
 }
 
-export function TopBar({ snap, light, onTheme }: Props) {
+export function TopBar({ snap, light, onTheme, onLang }: Props) {
+  const { lang, t } = useCopy()
   let budget: { sub: string; status: 'normal' | 'caution' | 'critical' } | null = null
   if (snap) {
     const { spend_usd: s, budget_usd: b } = snap
@@ -33,17 +39,17 @@ export function TopBar({ snap, light, onTheme }: Props) {
   const lock = !snap
     ? null
     : lockbox == null
-      ? { sub: '未设', icon: 'lock-open', status: 'off' as const }
+      ? { sub: t('lockbox.unset'), icon: 'lock-open', status: 'off' as const }
       : lockbox.opened
-        ? { sub: '已开封', icon: 'lock-open', status: 'standby' as const }
-        : { sub: '封存', icon: 'lock', status: 'serious' as const }
+        ? { sub: t('lockbox.opened'), icon: 'lock-open', status: 'standby' as const }
+        : { sub: t('lockbox.sealed'), icon: 'lock', status: 'serious' as const }
 
   const icons =
     snap && budget && lock ? (
       <>
-        <rux-monitoring-icon icon="assessment" label="试验数" sublabel={String(snap.trials)} status="normal" title={TERMS.trials} />
-        <rux-monitoring-icon icon="attach-money" label="预算" sublabel={budget.sub} status={budget.status} />
-        <rux-monitoring-icon icon={lock.icon} label="封存段" sublabel={lock.sub} status={lock.status} title={TERMS.sealed} />
+        <rux-monitoring-icon icon="assessment" label={t('top.trials')} sublabel={String(snap.trials)} status="normal" title={t('term.trials')} />
+        <rux-monitoring-icon icon="attach-money" label={t('top.budget')} sublabel={budget.sub} status={budget.status} />
+        <rux-monitoring-icon icon={lock.icon} label={t('top.lockbox')} sublabel={lock.sub} status={lock.status} title={t('term.sealed')} />
       </>
     ) : null
 
@@ -53,7 +59,20 @@ export function TopBar({ snap, light, onTheme }: Props) {
       <rux-global-status-bar app-domain="SHINKA" app-name="RESEARCH" menu-icon="" compact={narrow || undefined}>
         <div slot="right-side" className="bar-right">
           {!narrow && icons}
-          <Toggle id="theme" labelText="主题" hideLabel labelA="暗" labelB="亮" toggled={light} onToggle={onTheme} size="sm" />
+          <div className="lang-switch" role="group" aria-label={t('lang.label')}>
+            <button type="button" lang="zh-CN" translate="no" aria-pressed={lang === 'zh'} onClick={() => onLang('zh')}>中</button>
+            <button type="button" lang="en" translate="no" aria-pressed={lang === 'en'} onClick={() => onLang('en')}>EN</button>
+          </div>
+          <Toggle
+            id="theme"
+            labelText={t('theme.label')}
+            hideLabel
+            labelA={t('theme.dark')}
+            labelB={t('theme.light')}
+            toggled={light}
+            onToggle={onTheme}
+            size="sm"
+          />
         </div>
       </rux-global-status-bar>
       {narrow && icons && <div className="status-strip">{icons}</div>}
