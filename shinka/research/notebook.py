@@ -16,7 +16,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional
+from typing import Any, Dict, Iterator, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
@@ -52,6 +52,44 @@ class Verdict(BaseModel):
     created: str = Field(default_factory=_now)
 
 
+class LockboxTarget(BaseModel):
+    """One supported hypothesis as the lockbox opening froze it: what it scores
+    and the hashes that must still match, the direction's trials for the DSR,
+    and how far its scoring got."""
+
+    hypothesis: str
+    experiment: str
+    program_id: str
+    code_sha256: str
+    evaluator_sha256: str
+    data_path: str
+    data_sha256: str
+    n_trials: int = Field(ge=1)
+    var_trials: float = Field(ge=0.0)
+    state: Literal["pending", "scoring", "done"] = "pending"
+
+
+class LockboxOpening(BaseModel):
+    """What ``confirm`` froze, under the lock, before it scored anything on the
+    lockbox: which programs and under which rules. A confirm interrupted after
+    that resumes exactly these, so a retry cannot choose differently after a
+    look at held-out data. It holds no lockbox figures."""
+
+    started: str = Field(default_factory=_now)
+    # The source file's hash when the lockbox opened; a resumed confirm checks
+    # its --data against this rather than the notebook's current value.
+    source_sha256: str
+    thresholds: Dict[str, float]
+    targets: List[LockboxTarget]
+    finished: Optional[str] = None
+
+    def target(self, hid: str) -> LockboxTarget:
+        return next(t for t in self.targets if t.hypothesis == hid)
+
+    def finish(self) -> None:
+        self.finished = _now()
+
+
 class DataSplit(BaseModel):
     """Direction-wide data. The lockbox (the tail of the source file) is never
     copied into experiments; only `confirm` reads it, once per direction.
@@ -66,6 +104,16 @@ class DataSplit(BaseModel):
     n_dev: int
     lockbox_start: str
     opened: bool = False
+    # Set with ``opened`` by the confirm that opens the lockbox; directions
+    # opened before it existed have none.
+    opening: Optional[LockboxOpening] = None
+
+    @property
+    def unfinished(self) -> bool:
+        """The lockbox was opened but its confirmation was never recorded."""
+        return (
+            self.opened and self.opening is not None and self.opening.finished is None
+        )
 
 
 class Experiment(BaseModel):

@@ -326,6 +326,14 @@ export const COPY = {
   'confirm.passed': { zh: '通过', en: 'Passed' },
   'confirm.yes': { zh: '是', en: 'yes' },
   'confirm.no': { zh: '否', en: 'no' },
+  // A target the lockbox opening could not score: only the category is recorded.
+  'confirm.failure': { zh: '未能打分', en: 'Not scored' },
+  'confirm.failure.changed': { zh: '开封后程序、评估器或开发数据有改动，未运行', en: 'Program, evaluator or development data changed after opening; not run' },
+  'confirm.failure.timeout': { zh: '在封存段上超时', en: 'Timed out on the lockbox' },
+  'confirm.failure.error': { zh: '在封存段上出错退出', en: 'Exited with an error on the lockbox' },
+  'confirm.failure.invalid-positions': { zh: '输出的仓位无效', en: 'Produced invalid positions' },
+  'confirm.failure.look-ahead': { zh: '在封存段内用到了未来数据', en: 'Looked ahead inside the lockbox' },
+  'confirm.failure.interrupted': { zh: '打分中途中断；封存段只开一次，不再重跑', en: 'Interrupted while scoring; not rerun, as the lockbox opens once' },
 
   // Library
   'lib.empty': { zh: '还没有资料库——用 <cmd>shinka_research library add</cmd> 加资料。', en: 'No library yet. Add sources with <cmd>shinka_research library add</cmd>.' },

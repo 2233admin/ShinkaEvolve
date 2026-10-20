@@ -9,13 +9,18 @@ UI) take no lock: a replaced file is either the old one or the new one.
 from __future__ import annotations
 
 import contextlib
+import json
 import os
 import threading
 import time
+import uuid
 from pathlib import Path
-from typing import Dict, Iterator
+from typing import Any, Dict, Iterator, List
+
+import psutil
 
 LOCK_FILENAME = ".research.lock"
+WORK_FILENAME = ".work.json"
 
 if os.name == "nt":
     import msvcrt
@@ -129,3 +134,65 @@ def read_text(path: Path, attempts: int = 100) -> str:
         except PermissionError:
             time.sleep(0.02)
     return Path(path).read_text()
+
+
+# Work that adds trials (a run, a probe) registers here for its duration, so
+# confirm can refuse to freeze the direction's trial count while any is still
+# under way. An entry names its processes (the command and any child doing the
+# work) by pid and start time, which survive neither a crash nor pid reuse, so
+# an entry whose processes are all gone is simply ignored.
+
+
+def _work(root: Path) -> List[Dict[str, Any]]:
+    path = Path(root) / WORK_FILENAME
+    return json.loads(read_text(path)) if path.exists() else []
+
+
+def register_work(root: Path, hid: str, eid: str) -> str:
+    """Record that this process is adding trials to an experiment; returns the
+    entry's id. Take the direction's lock around it together with the checks
+    that allowed the work, so confirm sees both or neither."""
+    entry = {
+        "id": uuid.uuid4().hex,
+        "hypothesis": hid,
+        "experiment": eid,
+        "pid": os.getpid(),
+        "created": psutil.Process().create_time(),
+    }
+    with file_lock(lock_path(root)):
+        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(_work(root) + [entry]))
+    return entry["id"]
+
+
+def finish_work(root: Path, work_id: str) -> None:
+    with file_lock(lock_path(root)):
+        rest = [e for e in _work(root) if e["id"] != work_id]
+        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(rest))
+
+
+def attach_worker(root: Path, work_id: str, pid: int) -> None:
+    """Add a child process doing the work: it may go on adding trials after the
+    command that registered the work is gone."""
+    try:
+        worker = {"pid": pid, "created": psutil.Process(pid).create_time()}
+    except psutil.Error:
+        return  # it has already ended
+    with file_lock(lock_path(root)):
+        entries = _work(root)
+        for entry in entries:
+            if entry["id"] == work_id:
+                entry["workers"] = entry.get("workers", []) + [worker]
+        atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(entries))
+
+
+def live_work(root: Path) -> List[Dict[str, Any]]:
+    """Registered work with a process still alive."""
+
+    def alive(process: Dict[str, Any]) -> bool:
+        try:
+            started = psutil.Process(process["pid"]).create_time()
+        except psutil.Error:
+            return False
+        return abs(started - process["created"]) < 1.0
+
+    return [e for e in _work(root) if any(alive(p) for p in [e, *e.get("workers", [])])]

@@ -1,14 +1,20 @@
-from pathlib import Path
-
+import contextlib
+import json
 import sqlite3
+import subprocess
+import sys
+import threading
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import psutil
 import pytest
 
-from shinka.research import cli
+from shinka.research import cli, skeptic
 from shinka.research.notebook import Notebook, Status, Verdict
 from shinka.research.skeptic import pbo
+from shinka.research.state import WORK_FILENAME, file_lock
 
 
 def test_pbo_noise_is_near_half_and_real_edge_is_low() -> None:
@@ -67,8 +73,8 @@ def run_experiment(bars):
 """
 
 
-def _mark_supported(root: Path, code: str) -> None:
-    results = root / "experiments/h001/e01/results"
+def _mark_supported(root: Path, code: str, hid: str = "h001") -> None:
+    results = root / f"experiments/{hid}/e01/results"
     results.mkdir(parents=True)
     with sqlite3.connect(results / "programs.sqlite") as conn:
         conn.execute(
@@ -77,11 +83,11 @@ def _mark_supported(root: Path, code: str) -> None:
         )
         conn.execute("INSERT INTO programs VALUES ('p1', ?, 1.0, 1, '{}')", (code,))
     nb = Notebook.load(root)
-    exp = nb.get("h001").experiments[0]
+    exp = nb.get(hid).experiments[0]
     exp.skeptic = {"rule_label": "supported", "rule_reason": "t", "program_id": "p1"}
-    nb.get("h001").status = Status.challenged
+    nb.get(hid).status = Status.challenged
     nb.set_verdict(
-        "h001",
+        hid,
         Verdict(
             label=Status.supported,
             reason="t",
@@ -111,14 +117,23 @@ def test_confirm_opens_lockbox_once(tmp_path: Path, example_dir: Path, bars_csv:
         cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
 
 
-def test_confirm_detects_lookahead_in_lockbox(
+def test_a_program_that_looks_ahead_inside_the_lockbox_is_unconfirmed(
     tmp_path: Path, example_dir: Path, bars_csv: Path
 ):
     root = _direction(tmp_path, example_dir, bars_csv)
     _mark_supported(root, LOCKBOX_PEEK)
-    with pytest.raises(ValueError, match="look-ahead"):
-        cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
-    assert not Notebook.load(root).data.opened
+    cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes"])
+    nb = Notebook.load(root)
+    assert nb.data.opened and not nb.data.unfinished
+    assert nb.get("h001").status is Status.unconfirmed
+    # Only the category: the program's own output may carry lockbox figures.
+    assert nb.get("h001").confirmation == {
+        "experiment": "e01",
+        "program_id": "p1",
+        "lockbox_start": nb.data.lockbox_start,
+        "passed": False,
+        "failure": "look-ahead",
+    }
 
 
 def test_confirm_checks_source_and_evaluator(
@@ -136,3 +151,229 @@ def test_confirm_checks_source_and_evaluator(
     nb = Notebook.load(root)
     assert not nb.data.opened
     assert "source_path" not in Notebook.path(root).read_text()
+
+
+class _Crash(Exception):
+    pass
+
+
+def _confirm(root: Path, bars_csv: Path, *extra: str) -> None:
+    cli.main(["confirm", str(root), "--data", str(bars_csv), "--yes", *extra])
+
+
+def _disk_error(*_args) -> None:
+    raise OSError("disk")
+
+
+def test_a_confirm_that_died_after_the_program_saw_the_lockbox_never_reruns_it(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    calls = []
+
+    def dies(*_args, **_kwargs):
+        calls.append(1)
+        raise _Crash
+
+    monkeypatch.setattr(skeptic, "positions_for", dies)
+    with pytest.raises(_Crash):
+        _confirm(root, bars_csv)
+    nb = Notebook.load(root)
+    assert nb.data.opened and nb.data.unfinished
+    assert nb.data.opening.target("h001").state == "scoring"
+    # Until it finishes, nothing may change the hypotheses it froze.
+    with pytest.raises(SystemExit, match="unfinished"):
+        cli.main(["skeptic", str(root), "h001"])
+
+    _confirm(root, bars_csv)
+    nb = Notebook.load(root)
+    assert calls == [1]
+    assert not nb.data.unfinished
+    assert nb.get("h001").status is Status.unconfirmed
+    assert nb.get("h001").confirmation["failure"] == "interrupted"
+
+
+def test_a_confirm_that_died_before_the_program_ran_finishes_under_its_frozen_rules(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    monkeypatch.setattr(skeptic, "load_bars", _disk_error)
+    with pytest.raises(OSError):
+        _confirm(root, bars_csv)
+    nb = Notebook.load(root)
+    assert nb.data.unfinished and nb.data.opening.target("h001").state == "pending"
+
+    monkeypatch.undo()
+    # A resume cannot change the rules after the lockbox was opened.
+    _confirm(root, bars_csv, "--dsr", "0")
+    nb = Notebook.load(root)
+    rep = nb.get("h001").confirmation
+    assert not nb.data.unfinished and rep["lockbox_bars"] == 200
+    assert rep["passed"] == (
+        rep["lockbox_sharpe"] > max(0.0, rep["lockbox_buy_hold_sharpe"])
+        and rep["dsr"] >= 0.95
+        and rep["lockbox_positive_fraction"] >= 2 / 3
+    )
+
+
+def test_a_program_changed_after_the_lockbox_opened_is_not_run(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    monkeypatch.setattr(skeptic, "load_bars", _disk_error)
+    with pytest.raises(OSError):
+        _confirm(root, bars_csv)
+    monkeypatch.undo()
+    results = root / "experiments/h001/e01/results/programs.sqlite"
+    with sqlite3.connect(results) as conn:
+        conn.execute("UPDATE programs SET code = ? WHERE id = 'p1'", (LOCKBOX_PEEK,))
+    calls = []
+    monkeypatch.setattr(skeptic, "positions_for", lambda *_a, **_k: calls.append(1))
+    _confirm(root, bars_csv)
+    nb = Notebook.load(root)
+    assert calls == []
+    assert nb.get("h001").confirmation["failure"] == "changed"
+
+
+def test_a_second_confirm_is_refused_without_opening_anything(
+    tmp_path: Path, example_dir: Path, bars_csv: Path
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    held, release = threading.Event(), threading.Event()
+
+    def another_confirm() -> None:
+        with file_lock(root / cli.CONFIRM_LOCK):
+            held.set()
+            release.wait(timeout=60)
+
+    holder = threading.Thread(target=another_confirm)
+    holder.start()
+    assert held.wait(timeout=10)
+    try:
+        with pytest.raises(SystemExit, match="another confirm"):
+            _confirm(root, bars_csv)
+    finally:
+        release.set()
+        holder.join(timeout=10)
+    assert not Notebook.load(root).data.opened
+
+
+def test_no_lockbox_result_is_readable_before_every_target_is_scored(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    hypothesis = ["--file", str(example_dir / "hypothesis.md")]
+    cli.main(["hypothesis", "add", str(root), "--title", "second", *hypothesis])
+    initial = example_dir / "initial.py"
+    cli.main(["scaffold", str(root), "h002", "--initial", str(initial)])
+    _mark_supported(root, initial.read_text())
+    _mark_supported(root, initial.read_text(), "h002")
+    readable, real = [], skeptic.positions_for
+
+    def what_a_program_could_read(*args, **kwargs):
+        # Candidate programs can read the notebook while they run.
+        readable.append([h.confirmation for h in Notebook.load(root).hypotheses])
+        return real(*args, **kwargs)
+
+    monkeypatch.setattr(skeptic, "positions_for", what_a_program_could_read)
+    _confirm(root, bars_csv)
+    assert readable == [[None, None], [None, None]]
+    nb = Notebook.load(root)
+    assert [h.confirmation["lockbox_bars"] for h in nb.hypotheses] == [200, 200]
+
+
+def test_a_confirm_that_died_after_recording_writes_its_files_on_the_next_run(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+
+    def dies(*_args):
+        raise _Crash
+
+    monkeypatch.setattr(cli, "append_log", dies)
+    with pytest.raises(_Crash):
+        _confirm(root, bars_csv)
+    monkeypatch.undo()
+    nb = Notebook.load(root)
+    assert nb.data.opened and not nb.data.unfinished
+    assert not (root / "CONFIRMATION.md").exists()
+
+    scored = []
+    monkeypatch.setattr(skeptic, "positions_for", lambda *_a, **_k: scored.append(1))
+    _confirm(root, bars_csv)
+    assert scored == []
+    assert "h001" in (root / "CONFIRMATION.md").read_text()
+    rows = (root / "results.tsv").read_text().splitlines()[1:]
+    assert [row.split("\t")[3] for row in rows].count("confirm") == 1
+    with pytest.raises(SystemExit, match="already opened"):
+        _confirm(root, bars_csv)
+
+
+def test_a_probe_counts_as_a_trial_from_the_moment_it_starts(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    started, release = threading.Event(), threading.Event()
+
+    def crashes_later(*_args, **_kwargs):
+        started.set()
+        assert release.wait(timeout=60)
+        raise _Crash
+
+    def probe() -> None:
+        with contextlib.suppress(_Crash):
+            cli.main(["probe", str(root), "h001", str(example_dir / "initial.py")])
+
+    monkeypatch.setattr(cli, "run_quant_eval", crashes_later)
+    probing = threading.Thread(target=probe)
+    probing.start()
+    assert started.wait(timeout=60)
+    try:
+        # Still evaluating, yet already in the trial count the lockbox freezes.
+        _confirm(root, bars_csv)
+        assert Notebook.load(root).data.opening.target("h001").n_trials == 2
+    finally:
+        release.set()
+        probing.join(timeout=60)
+    assert Notebook.load(root).get("h001").experiments[0].n_probed == 1
+
+
+def test_work_left_by_a_dead_process_does_not_hold_the_lockbox(
+    tmp_path: Path, example_dir: Path, bars_csv: Path
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    gone = subprocess.Popen([sys.executable, "-c", "pass"])
+    gone.wait()
+    entry = {"id": "x", "hypothesis": "h001", "experiment": "e01", "pid": gone.pid}
+    (root / WORK_FILENAME).write_text(json.dumps([{**entry, "created": 0.0}]))
+    _confirm(root, bars_csv)
+    assert Notebook.load(root).data.opened
+
+
+def test_a_run_whose_command_died_holds_the_lockbox_while_its_child_runs(
+    tmp_path: Path, example_dir: Path, bars_csv: Path
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    gone = subprocess.Popen([sys.executable, "-c", "pass"])
+    gone.wait()
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(60)"])
+    try:
+        worker = {"pid": child.pid, "created": psutil.Process(child.pid).create_time()}
+        entry = {"id": "x", "hypothesis": "h001", "experiment": "e01"}
+        work = {**entry, "pid": gone.pid, "created": 0.0, "workers": [worker]}
+        (root / WORK_FILENAME).write_text(json.dumps([work]))
+        with pytest.raises(SystemExit, match="still being added"):
+            _confirm(root, bars_csv)
+    finally:
+        child.kill()
+        child.wait()
+    _confirm(root, bars_csv)
+    assert Notebook.load(root).data.opened

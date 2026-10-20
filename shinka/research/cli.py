@@ -10,11 +10,13 @@ import subprocess
 import tempfile
 import sys
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from shinka.research import library
 from shinka.research.notebook import (
     RESULTS_LOG,
+    DataSplit,
+    LockboxOpening,
     Notebook,
     Status,
     Verdict,
@@ -26,7 +28,9 @@ from shinka.research.rundb import best_score, count_evaluated, run_cost
 from shinka.research.skeptic import (
     Thresholds,
     challenge,
+    check_source,
     confirm,
+    confirm_target,
     decide,
     render_report,
 )
@@ -37,7 +41,15 @@ from shinka.research.scaffold import (
     scaffold_experiment,
     verify_experiment,
 )
-from shinka.research.state import file_lock, lock_path
+from shinka.research.state import (
+    atomic_write_text,
+    attach_worker,
+    file_lock,
+    finish_work,
+    live_work,
+    lock_path,
+    register_work,
+)
 
 PROGRAM_TEMPLATE = """# Research program
 
@@ -103,11 +115,22 @@ def cmd_hypothesis_status(args: argparse.Namespace) -> None:
         nb.set_status(args.hid, Status(args.status))
 
 
+def _not_confirming(nb: Notebook) -> None:
+    """Experiment changes wait while a lockbox confirmation is unfinished: when
+    it finishes, it records over the hypotheses it froze."""
+    if nb.data is not None and nb.data.unfinished:
+        sys.exit(
+            "a lockbox confirmation is unfinished; `confirm --yes` finishes it, and "
+            "experiments wait until then"
+        )
+
+
 def cmd_scaffold(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     # The experiment number and the sealed split are allocated here, so the
     # whole scaffold holds the direction's lock.
     with Notebook.edit(root) as nb:
+        _not_confirming(nb)
         split = prepare_data(
             root,
             nb,
@@ -149,6 +172,7 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         )
     root = Path(args.dir)
     with Notebook.edit(root) as nb:
+        _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, args.hid, args.eid)
         verify_experiment(root, nb, hyp.id, exp)
         if nb.budget_usd is not None:
@@ -169,6 +193,9 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         previous_status, previous_verdict = hyp.status, hyp.verdict
         evaluated_before = count_evaluated(results_dir)
         hyp.status, hyp.verdict = Status.running, None
+        # With the checks that allowed it, so confirm cannot freeze the trial
+        # count while this run is adding trials.
+        work = register_work(root, hyp.id, exp.id)
 
     cmd = [
         "shinka_run",
@@ -181,17 +208,28 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     print("$ " + " ".join(cmd), flush=True)
     code = 1
     try:
-        code = subprocess.call(cmd)
+        # subprocess.call, keeping the child's pid: the child adds the trials
+        # and may outlive this command.
+        with subprocess.Popen(cmd) as proc:
+            try:
+                attach_worker(root, work, proc.pid)
+                code = proc.wait()
+            except BaseException:
+                proc.kill()
+                raise
     finally:
         # Always record what was evaluated, even on Ctrl-C, so trials are counted.
-        with Notebook.edit(root) as nb:
-            hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
-            exp.n_evaluated = count_evaluated(results_dir)
-            # Undo the running mark only while it is still there: another
-            # command may have moved the hypothesis on during the run.
-            unchanged = hyp.status is Status.running
-            if code and exp.n_evaluated == evaluated_before and unchanged:
-                hyp.status, hyp.verdict = previous_status, previous_verdict
+        try:
+            with Notebook.edit(root) as nb:
+                hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
+                exp.n_evaluated = count_evaluated(results_dir)
+                # Undo the running mark only while it is still there: another
+                # command may have moved the hypothesis on during the run.
+                unchanged = hyp.status is Status.running
+                if code and exp.n_evaluated == evaluated_before and unchanged:
+                    hyp.status, hyp.verdict = previous_status, previous_verdict
+        finally:
+            finish_work(root, work)
         best = best_score(results_dir)
         cost = run_cost(results_dir)
         append_log(
@@ -217,19 +255,20 @@ def _pick_experiment(nb: Notebook, hid: str, eid: Optional[str]):
 def cmd_probe(args: argparse.Namespace) -> None:
     """Score a program with the frozen evaluator, showing public metrics only."""
     root = Path(args.dir)
-    nb = Notebook.load(root)
-    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    verify_experiment(root, nb, hyp.id, exp)
+    # Probing is a manual search step and a trial for the DSR from the moment it
+    # starts, so one that fails or is killed is counted too, and a lockbox
+    # opened meanwhile has already frozen it.
+    with Notebook.edit(root) as nb:
+        _not_confirming(nb)
+        hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+        verify_experiment(root, nb, hyp.id, exp)
+        exp.n_probed += 1
     cfg = load_config(experiment_dir(root, hyp.id, exp.id) / "task")
     with (
         tempfile.TemporaryDirectory() as tmp,
         contextlib.redirect_stdout(io.StringIO()),
     ):
         metrics, correct, err = run_quant_eval(args.program, tmp, cfg)
-    # Probing is a manual search step: count it as a trial for the DSR. The
-    # evaluation ran unlocked, so the count goes onto the latest notebook.
-    with Notebook.edit(root) as nb:
-        _pick_experiment(nb, hyp.id, exp.id)[1].n_probed += 1
     shown = {
         "correct": correct,
         "error": err,
@@ -243,6 +282,7 @@ def cmd_probe(args: argparse.Namespace) -> None:
 def cmd_skeptic(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
+    _not_confirming(nb)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     th = _thresholds(args)
     # What the challenge starts from; a change to it meanwhile (a verdict, a
@@ -252,6 +292,7 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     label, reason = decide(report, th)
     # The challenge ran unlocked; its result goes onto the latest notebook.
     with Notebook.edit(root) as nb:
+        _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
         if (hyp.status, hyp.verdict, exp.skeptic) != start:
             sys.exit(
@@ -282,56 +323,190 @@ def _thresholds(args: argparse.Namespace) -> Thresholds:
     )
 
 
+# Held for a confirm's whole run: a target found mid-scoring then belongs to a
+# confirm that died, never to one still running.
+CONFIRM_LOCK = ".confirm.lock"
+
+
 def cmd_confirm(args: argparse.Namespace) -> None:
     root = Path(args.dir)
+    entered = False
+    try:
+        with file_lock(root / CONFIRM_LOCK, timeout=0):
+            entered = True
+            _confirm(root, args)
+    except TimeoutError:
+        if entered:
+            raise
+        sys.exit("another confirm is running for this direction; wait for it to end")
+
+
+def _confirmed(nb: Notebook, hid: str, report: Dict[str, Any]) -> None:
+    assert nb.data is not None and nb.data.opening is not None
+    hyp = nb.get(hid)
+    hyp.confirmation = report
+    hyp.status = Status.confirmed if report["passed"] else Status.unconfirmed
+    nb.data.opening.target(hid).state = "done"
+
+
+def _confirm(root: Path, args: argparse.Namespace) -> None:
     nb = Notebook.load(root)
-    if nb.data is None:
+    split = nb.data
+    if split is None:
         sys.exit("this direction has no data yet")
-    if nb.data.opened:
+    if split.opened and not split.unfinished:
+        if split.opening is not None and not (root / CONFIRMATION).exists():
+            # The results are in the notebook but that confirm died before
+            # writing them out; only the events it did not log are added.
+            logged = _confirm_events(root, split.opening.started)
+            hids = [t.hypothesis for t in split.opening.targets]
+            _publish(root, nb, [hid for hid in hids if hid not in logged])
+            return
         sys.exit("the lockbox was already opened; start a new direction with new data")
-    # The lockbox opens once, so every supported hypothesis is confirmed together.
-    hids = [h.id for h in nb.hypotheses if h.status is Status.supported]
-    if not hids:
-        sys.exit("no supported hypotheses to confirm; the lockbox stays closed")
-    if not args.yes:
-        sys.exit(
-            f"This opens the lockbox (from {nb.data.lockbox_start}) once for the whole "
-            f"direction and scores {', '.join(hids)}. Re-run with --yes to proceed."
-        )
-    th = _thresholds(args)
-    with tempfile.TemporaryDirectory() as tmp:
-        reports = {
-            hid: confirm(root, nb, hid, th, Path(args.data), Path(tmp)) for hid in hids
+    if split.unfinished:
+        assert split.opening is not None
+        left = [t.hypothesis for t in split.opening.targets if t.state != "done"]
+        if not args.yes:
+            sys.exit(
+                f"The lockbox opening of {split.opening.started} did not finish. "
+                f"This finishes it for {', '.join(left)} with the programs and rules "
+                "it froze. Re-run with --yes to proceed."
+            )
+        check_source(split.opening.source_sha256, Path(args.data))
+        th = Thresholds(**split.opening.thresholds)
+    else:
+        # The lockbox opens once, so every supported hypothesis is confirmed together.
+        hids = [h.id for h in nb.hypotheses if h.status is Status.supported]
+        if not hids:
+            sys.exit("no supported hypotheses to confirm; the lockbox stays closed")
+        if not args.yes:
+            sys.exit(
+                f"This opens the lockbox (from {split.lockbox_start}) once for the "
+                f"whole direction and scores {', '.join(hids)}. Re-run with --yes "
+                "to proceed."
+            )
+        th = _thresholds(args)
+        # Every check that leaves the lockbox untouched, so a mistake here, such
+        # as the wrong --data, keeps it sealed.
+        targets = [confirm_target(root, nb, hid) for hid in hids]
+        check_source(split.source_hash, Path(args.data))
+        with Notebook.edit(root) as nb:
+            assert nb.data is not None
+            # Every trial counts toward the DSR, so the count is frozen only
+            # once no run or probe is still adding to it.
+            busy = [f"{w['hypothesis']}/{w['experiment']}" for w in live_work(root)]
+            if busy:
+                sys.exit(
+                    f"trials are still being added ({', '.join(busy)}); the lockbox "
+                    "stays sealed, confirm once that work has ended"
+                )
+            supported = [h.id for h in nb.hypotheses if h.status is Status.supported]
+            if (
+                nb.data.opened
+                or [confirm_target(root, nb, h) for h in supported] != targets
+            ):
+                sys.exit(
+                    "the direction changed while confirm checked it; the lockbox "
+                    "stays sealed, run confirm again"
+                )
+            nb.data.opened = True
+            nb.data.opening = LockboxOpening(
+                source_sha256=nb.data.source_hash,
+                thresholds=th.model_dump(),
+                targets=targets,
+            )
+    split = nb.data
+    assert split is not None and split.opening is not None
+    # A target already scoring belongs to a confirm that died after its program
+    # saw the lockbox, whether or not it got a result: running it again would be
+    # a second look.
+    recorded: Dict[str, Dict[str, Any]] = {
+        t.hypothesis: {
+            "experiment": t.experiment,
+            "program_id": t.program_id,
+            "lockbox_start": split.lockbox_start,
+            "passed": False,
+            "failure": "interrupted",
         }
-    nb.data.opened = True
+        for t in split.opening.targets
+        if t.state == "scoring"
+    }
+    with tempfile.TemporaryDirectory() as tmp:
+        for t in [t for t in split.opening.targets if t.state == "pending"]:
+
+            def started(hid: str = t.hypothesis) -> None:
+                with Notebook.edit(root) as fresh:
+                    assert fresh.data is not None and fresh.data.opening is not None
+                    fresh.data.opening.target(hid).state = "scoring"
+
+            recorded[t.hypothesis] = confirm(
+                root,
+                split,
+                t,
+                th,
+                Path(args.data),
+                split.opening.source_sha256,
+                Path(tmp),
+                started,
+            )
+    # Every result reaches the notebook at once: candidate programs can read it,
+    # so a program scored later must not find an earlier one's lockbox figures.
+    with Notebook.edit(root) as nb:
+        assert nb.data is not None and nb.data.opening is not None
+        for hid, report in recorded.items():
+            _confirmed(nb, hid, report)
+        nb.data.opening.finish()
+    _publish(root, nb, list(recorded))
+
+
+CONFIRMATION = "CONFIRMATION.md"
+
+
+def _confirm_events(root: Path, since: str) -> set:
+    """Hypotheses with a confirm event in the run log from ``since`` on."""
+    path = root / RESULTS_LOG
+    rows = path.read_text().splitlines()[1:] if path.exists() else []
+    fields = [(row.split("\t") + [""] * 4)[:4] for row in rows]
+    return {
+        hid for time, hid, _eid, event in fields if event == "confirm" and time >= since
+    }
+
+
+def _publish(root: Path, nb: Notebook, log: List[str]) -> None:
+    """The confirmation's run-log events, then CONFIRMATION.md, both read from
+    the notebook. The Markdown comes last and in one step, so while it is
+    missing some events may be too, and the next confirm adds them."""
+    assert nb.data is not None and nb.data.opening is not None
+    for hid in log:
+        rep = nb.get(hid).confirmation or {}
+        status = nb.get(hid).status.value
+        note = (
+            f"{status}: {rep['failure']} on the lockbox"
+            if "failure" in rep
+            else f"{status}: lockbox Sharpe {rep['lockbox_sharpe']:.2f}, "
+            f"DSR {rep['dsr']:.3f}"
+        )
+        append_log(root, hid, rep["experiment"], "confirm", note)
     lines = [f"# Lockbox confirmation\n\nLockbox from {nb.data.lockbox_start}.\n"]
-    for hid, rep in reports.items():
-        hyp = nb.get(hid)
-        hyp.confirmation = rep
-        hyp.status = Status.confirmed if rep["passed"] else Status.unconfirmed
+    for t in nb.data.opening.targets:
+        hyp = nb.get(t.hypothesis)
         rows = "\n".join(
             f"| {k} | {v:.4g} |" if isinstance(v, float) else f"| {k} | {v} |"
-            for k, v in rep.items()
+            for k, v in (hyp.confirmation or {}).items()
         )
         lines.append(
-            f"## {hid}: {hyp.title} — {hyp.status.value}\n\n"
+            f"## {hyp.id}: {hyp.title} — {hyp.status.value}\n\n"
             f"| check | value |\n|---|---|\n{rows}\n"
         )
-    nb.save(root)
-    for hid, rep in reports.items():
-        append_log(
-            root, hid, rep["experiment"], "confirm",
-            f"{nb.get(hid).status.value}: lockbox Sharpe {rep['lockbox_sharpe']:.2f}, "
-            f"DSR {rep['dsr']:.3f}",
-        )  # fmt: skip
-    (root / "CONFIRMATION.md").write_text("\n".join(lines))
-    for hid in hids:
-        print(f"{hid}: {nb.get(hid).status.value}")
+    atomic_write_text(root / CONFIRMATION, "\n".join(lines))
+    for t in nb.data.opening.targets:
+        print(f"{t.hypothesis}: {nb.get(t.hypothesis).status.value}")
 
 
 def cmd_verdict(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     with Notebook.edit(root) as nb:
+        _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, args.hid, args.eid)
         if exp.skeptic is None:
             sys.exit(f"{hyp.id}/{exp.id} has not been challenged; run `skeptic` first")
@@ -389,6 +564,12 @@ def _evidence(h) -> str:
     return ", ".join(parts)
 
 
+def _lockbox(split: DataSplit) -> str:
+    if split.unfinished:
+        return "OPENED, confirmation unfinished (confirm --yes finishes it)"
+    return "OPENED" if split.opened else "sealed"
+
+
 def cmd_brief(args: argparse.Namespace) -> None:
     """Digest for the researcher agent before proposing the next round."""
     root = Path(args.dir)
@@ -400,8 +581,7 @@ def cmd_brief(args: argparse.Namespace) -> None:
     out.append(f"- Trials so far: {nb.total_trials} (raise the bar for 'supported')")
     out.append(f"- LLM spend: {'' if known else '>='}${spent:.2f}{budget}")
     if nb.data:
-        state = "OPENED" if nb.data.opened else "sealed"
-        out.append(f"- Lockbox: {state} (from {nb.data.lockbox_start})")
+        out.append(f"- Lockbox: {_lockbox(nb.data)} (from {nb.data.lockbox_start})")
     pend = library.pending(lib) if lib.exists() else []
     out.append(
         f"- Library: {len(library.wiki_pages(lib))} wiki pages, "
@@ -431,9 +611,8 @@ def cmd_status(args: argparse.Namespace) -> None:
     print(f"Direction: {nb.direction}")
     print(f"Total trials: {nb.total_trials}")
     if nb.data:
-        state = "OPENED" if nb.data.opened else "sealed"
         print(
-            f"Lockbox: {state} (from {nb.data.lockbox_start}, "
+            f"Lockbox: {_lockbox(nb.data)} (from {nb.data.lockbox_start}, "
             f"{nb.data.n_total - nb.data.n_dev} of {nb.data.n_total} bars)"
         )
     for h in nb.hypotheses:

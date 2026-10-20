@@ -5,10 +5,12 @@ import type { DirectionSummary, Status } from './types'
 export type DirectionState = 'active' | 'concluded' | 'new' | 'over-budget'
 
 // Statuses that end a hypothesis; a direction concludes once every hypothesis has one and the
-// lockbox is open.
-const SETTLED: ReadonlySet<Status> = new Set<Status>(['supported', 'refuted', 'inconclusive', 'confirmed', 'unconfirmed', 'dropped'])
+// lockbox is open. Supported is not among them: confirm turns every supported hypothesis into
+// confirmed or unconfirmed, so one still supported behind an open lockbox means that
+// confirmation is unfinished.
+const SETTLED: ReadonlySet<Status> = new Set<Status>(['refuted', 'inconclusive', 'confirmed', 'unconfirmed', 'dropped'])
 
-/** The overview's state of a direction (same rule as the approved high-fidelity package). */
+/** The overview's state of a direction: the approved high-fidelity package's rule, except that a supported hypothesis still awaits the lockbox. */
 export function directionState(d: DirectionSummary): DirectionState {
   if (d.budget_usd !== null && d.spend_usd > d.budget_usd) return 'over-budget'
   if (d.evidence.evaluated_programs === 0) return 'new'

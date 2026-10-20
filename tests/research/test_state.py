@@ -5,6 +5,7 @@ same time; separate processes stand in for them.
 """
 
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -174,13 +175,28 @@ def test_a_failed_run_keeps_a_status_another_command_set_meanwhile(
 ) -> None:
     root = _scaffolded(tmp_path, example_dir, bars_csv)
 
-    def fail_while_another_command_challenges(_cmd):
-        with Notebook.edit(root) as nb:
-            assert nb.get("h001").status is Status.running
-            nb.get("h001").status = Status.challenged
-        return 1
+    class FailsWhileAnotherCommandChallenges:
+        """A run whose process fails after another command moved the hypothesis on."""
 
-    monkeypatch.setattr(cli.subprocess, "call", fail_while_another_command_challenges)
+        def __init__(self, _cmd):
+            self.pid = os.getpid()
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_exc):
+            return False
+
+        def wait(self):
+            with Notebook.edit(root) as nb:
+                assert nb.get("h001").status is Status.running
+                nb.get("h001").status = Status.challenged
+            return 1
+
+        def kill(self):
+            pass
+
+    monkeypatch.setattr(cli.subprocess, "Popen", FailsWhileAnotherCommandChallenges)
     with pytest.raises(SystemExit):
         cli.main(["run", str(root), "h001"])
     assert Notebook.load(root).get("h001").status is Status.challenged

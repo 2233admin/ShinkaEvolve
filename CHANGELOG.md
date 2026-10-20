@@ -109,6 +109,21 @@ All notable changes to `shinka-evolve` are documented in this file.
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and
   `/api/snapshot` experiment links open `/?view=run&run=…`. The old
   `analysis=`/`compare=` and view-less `?direction=` links are not redirected.
+- Changed `shinka_research confirm` to open the lockbox only after every check
+  that leaves it untouched has passed, and then to freeze, under the direction's
+  lock, each supported hypothesis's program, evaluator and data hashes, trial
+  count and the thresholds before any candidate runs on it. A candidate that
+  times out, exits with an error, returns invalid positions, looks ahead or was
+  changed after opening is now recorded as `unconfirmed` with that category
+  alone (its output may carry lockbox figures) instead of aborting the whole
+  confirm; results reach the notebook together. Running `confirm --yes` again
+  after an interruption finishes the frozen hypotheses under the frozen rules
+  and records any whose candidate had already started as interrupted rather
+  than running it twice, or rewrites missing `CONFIRMATION.md` and log lines.
+  Until it finishes, experiment commands refuse and a second `confirm` is
+  refused at once; it does not open while a run is still adding trials, since
+  every trial counts toward the DSR. A probe now counts as a trial when it
+  starts, so one that fails or is killed is counted too.
 
 ### Fixed
 

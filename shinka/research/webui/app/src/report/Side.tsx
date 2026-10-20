@@ -95,10 +95,15 @@ export function LockboxResults({ h, data }: { h: Hypothesis; data: Evidence }) {
         {extra.map((key) => {
           const label = `confirm.${key}`
           const value = data[key]
+          // A recorded category such as a lockbox failure has its own words.
+          const word = `confirm.${key}.${String(value)}`
+          const worded = word in COPY
           return (
             <Fragment key={key}>
               <dt className="faint">{label in COPY ? t(label as CopyKey) : <span translate="no">{key}</span>}</dt>
-              <dd className="mono">{typeof value === 'number' ? (Number.isInteger(value) ? int(value) : fmt(value, 3)) : typeof value === 'boolean' ? t(value ? 'confirm.yes' : 'confirm.no') : <span translate="no">{String(value)}</span>}</dd>
+              <dd className={worded ? undefined : 'mono'}>
+                {worded ? t(word as CopyKey) : typeof value === 'number' ? (Number.isInteger(value) ? int(value) : fmt(value, 3)) : typeof value === 'boolean' ? t(value ? 'confirm.yes' : 'confirm.no') : <span translate="no">{String(value)}</span>}
+              </dd>
             </Fragment>
           )
         })}

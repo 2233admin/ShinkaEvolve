@@ -162,9 +162,16 @@ shinka_research confirm <dir> --data <bars.csv>          # shows what opens
 shinka_research confirm <dir> --data <bars.csv> --yes    # opens it, once
 ```
 All `supported` hypotheses become `confirmed` or `unconfirmed`
-(`CONFIRMATION.md`). Now add lockbox results to the finding pages and the
-report. The final gate is outside this tool: paper-trade `confirmed`
-strategies on data that did not exist when the research started.
+(`CONFIRMATION.md`). If `confirm` stops midway (a crash, Ctrl-C), run the same
+`--yes` command again: it finishes the hypotheses it froze under the rules it
+froze, and any whose program had already started on the lockbox becomes
+`unconfirmed` (interrupted) instead of running again. It does not open the
+lockbox while a `run` is still under way (a `probe` counts as a trial as soon as
+it starts); until it finishes, `run`, `probe`, `skeptic`, `verdict` and
+`scaffold` refuse. Now add lockbox results
+to the finding pages and the report. The final gate is outside this tool:
+paper-trade `confirmed` strategies on data that did not exist when the
+research started.
 
 ## Direction layout
 ```
