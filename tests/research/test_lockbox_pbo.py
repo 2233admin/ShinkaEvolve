@@ -377,3 +377,16 @@ def test_a_run_whose_command_died_holds_the_lockbox_while_its_child_runs(
         child.wait()
     _confirm(root, bars_csv)
     assert Notebook.load(root).data.opened
+
+
+def test_a_view_of_nan_positions_cannot_pass_the_look_ahead_check(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    # NaN differs from nothing under a tolerance check, so it would look causal.
+    monkeypatch.setattr(skeptic, "run_view", lambda *a: np.full(a[3], np.nan))
+    _confirm(root, bars_csv)
+    assert (
+        Notebook.load(root).get("h001").confirmation["failure"] == "invalid-positions"
+    )
