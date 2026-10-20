@@ -26,17 +26,25 @@ export const EVENT_STATUS: Record<string, RuxStatus> = {
 
 export const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
+// design.md › 格式: scores 2 decimals, DSR 3; negatives take the minus sign (U+2212), and a value
+// that rounds to zero shows as zero, never as −0.00. Missing is —.
 export const fmt = (v: unknown, digits = 2): string => {
   const n = num(v)
-  return n === null ? '—' : n.toFixed(digits)
+  if (n === null) return '—'
+  return (Math.abs(n) < 0.5 * 10 ** -digits ? 0 : n).toFixed(digits).replace(/^-/, '−')
 }
 
-export const pct = (v: unknown): string => {
+export const pct = (v: unknown, digits = 0): string => {
   const n = num(v)
-  return n === null ? '—' : `${(n * 100).toFixed(0)}%`
+  return n === null ? '—' : `${(n * 100).toFixed(digits)}%`
 }
 
-export const usd = (v: number): string => `$${v.toFixed(2)}`
+/** Whole counts with thousands separators. */
+export const int = (v: number): string => Math.round(v).toLocaleString('en-US')
+
+/** $0.00; a recorded amount under half a cent shows as <$0.01, never as $0.00. */
+export const money = (v: number): string =>
+  v === 0 ? '$0.00' : Math.abs(v) < 0.005 ? '<$0.01' : `${v < 0 ? '−' : ''}$${Math.abs(v).toFixed(2)}`
 
 export const when = (iso: string): string => iso.slice(0, 16).replace('T', ' ')
 

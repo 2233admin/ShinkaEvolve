@@ -137,9 +137,16 @@ export interface DirectionError {
 
 export type DirectionEntry = DirectionSummary | DirectionError
 
+/** An event in the overview's activity column: a direction event plus the direction it belongs to. */
+export interface WorkspaceEvent extends SnapshotEvent {
+  direction: string
+}
+
 export interface WorkspaceSnapshot {
   name: string
   directions: DirectionEntry[]
+  /** The newest events across every readable direction, newest first. */
+  events: WorkspaceEvent[]
   library: Library | null
 }
 

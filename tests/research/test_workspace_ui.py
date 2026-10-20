@@ -207,6 +207,50 @@ def test_overview_evidence_and_trial_programs_match_the_direction_page(
     assert beta["trial_points"] == []
 
 
+def _log(root: Path, *rows: str) -> None:
+    """results.tsv with explicit times, one tab-separated row per event."""
+    (root / "results.tsv").write_text(
+        "time\thypothesis\texperiment\tevent\tnote\n" + "".join(f"{r}\n" for r in rows),
+        encoding="utf-8",
+    )
+
+
+def test_overview_activity_merges_directions_newest_first_and_withholds(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "fixture-workspace"
+    _direction(workspace / "alpha", "Alpha fixture", "Unjudged.")
+    _direction(workspace / "beta", "Beta fixture", "Untested.")
+    _log(
+        workspace / "alpha",
+        "2026-01-01T00:00:01+00:00\th001\te01\trun\talpha run",
+        f"2026-01-01T00:00:04+00:00\th001\te01\tskeptic\toos {HELD_OUT}",
+    )
+    _log(
+        workspace / "beta",
+        "2026-01-01T00:00:02+00:00\th001\te01\trun\tbeta run",
+        "2026-01-01T00:00:03+00:00\th001\te01\tnote\tbeta note",
+    )
+    broken = workspace / "broken"
+    broken.mkdir()
+    (broken / "notebook.json").write_text("{not valid JSON", encoding="utf-8")
+    _log(broken, "2026-01-01T00:00:09+00:00\th001\te01\trun\tbroken run")
+    # The column keeps only the newest; the oldest alpha run falls off.
+    monkeypatch.setattr(ui, "WORKSPACE_EVENTS", 3)
+
+    with _server(workspace) as base:
+        overview = _get(base, "/api/workspace")
+    assert [
+        (e["direction"], e["event"], e["note"], e["withheld"])
+        for e in overview["events"]
+    ] == [
+        ("alpha", "skeptic", None, True),
+        ("beta", "note", "beta note", False),
+        ("beta", "run", "beta run", False),
+    ]
+    assert HELD_OUT not in json.dumps(overview)
+
+
 def test_unpriced_runs_make_direction_spend_a_lower_bound(tmp_path: Path) -> None:
     workspace = tmp_path / "fixture-workspace"
     root = workspace / "alpha"

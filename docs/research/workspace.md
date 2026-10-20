@@ -20,9 +20,9 @@
 
 | 入口 | 输出或行为 |
 | --- | --- |
-| `GET /api/workspace` | `{name, directions, library}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志末行和共享库，证据数字与方向快照同一算法；不返回假设正文、事件说明或验证段、封存段数字 |
+| `GET /api/workspace` | `{name, directions, library, events}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志和共享库，证据数字与方向快照同一算法；不返回假设正文或验证段、封存段数字 |
 | `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数 |
-| `/?view=directions`（`/` 同） | 研究方向首页 |
+| `/?view=directions`（`/` 同） | 研究方向首页（award-redesign 4.1）：数据句标题、合计小字、可排序方向表与合计行、动态栏；只读 `/api/workspace` 与 `/list_databases`，不逐方向请求 `/api/snapshot` |
 | `/?view=direction&direction=<id>&hypothesis=<hid>` | 方向及所选假设 |
 | `/?view=runs&q=…&sort=…&select=<run>…` | 全部运行；每个勾选的运行一个 `select` |
 | `/?view=compare&runs=<run>&runs=<run>…` | 多运行比较，至少 2 个运行 |
@@ -33,6 +33,10 @@
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物 |
 
 成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/unknown_cost_runs/budget_usd/lockbox_opened/evidence/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分，`unknown_cost_runs>0` 时 `spend_usd` 是下限。`evidence` 含 `hypothesis_status/best_score/noise_bar/evaluated_programs/failed_programs/last_activity`，与同一方向快照的 `trial_points` 计算一致；没有试验时分数、噪声线与最近活动为 `null`。错误条目只有 `id/direction/error`，`error` 是失败类别（如 `ValueError`），页面按读者语言措辞。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
+
+`events` 是首页动态栏的数据：各可读方向最近的事件按时间由新到旧合并，至多 `WORKSPACE_EVENTS`（30）条，每条与快照事件同形并多一个 `direction`（方向 ID）。说明的隐藏规则与 `/api/snapshot` 相同：所属假设尚无判词时，质疑检验与判词事件的说明为 `null` 且 `withheld=true`，页面按读者语言写占位；不可读方向不贡献事件。
+
+首页的合计与数据句只统计可读方向；不可读方向以错误条目列在表中（目录 ID、失败类别、“不计入合计”），不可进入。表格各行共用一把证据刻度（1、2、5 × 10ⁿ 的整刻度），排序只改本页状态，不写入 URL。动态栏在 1280 宽及以上是贴住视口、自行滚动的右栏，更窄时排在表格下方，手机上每个方向是一张卡片，最后更新时间移到数据句下方。
 
 ID 是一个真实目录名，不限 ASCII。服务端只解码查询一次，拒绝斜杠、反斜杠、点路径、绝对路径及驱动器形式，并校验规范路径仍是工作区的直接子目录。中文、空格、`+`、`%`、`#`、`&` 等合法名字可以往返；未知或越界 ID 返回 404，缺失、空值、重复参数返回 400，存在但无法读取的数据返回明确的 500 错误。
 

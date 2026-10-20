@@ -26,7 +26,7 @@
 
 ### Requirement: 工作区接口提供方向证据摘要
 
-`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读字段 `unknown_cost_runs`（整数，方向内费用未知的实验运行数，口径见 `run-analysis-ui` › 运行费用只有一个口径）与 `evidence`：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`evaluated_programs`（方向各运行库中非岛副本的已评估程序数，即快照 `trial_points` 的条数）、`failed_programs`（其中评估失败的程序数，即快照中分数为空的点）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。`spend_usd` 保持为已记录费用之和，`unknown_cost_runs` 大于 0 时它是下限；`trials` 仍是 notebook 的试验数，与已评估程序数分开。`/api/snapshot` 的方向同样带 `unknown_cost_runs`，每个实验带 `spend_known`。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
+`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读字段 `unknown_cost_runs`（整数，方向内费用未知的实验运行数，口径见 `run-analysis-ui` › 运行费用只有一个口径）与 `evidence`：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`evaluated_programs`（方向各运行库中非岛副本的已评估程序数，即快照 `trial_points` 的条数）、`failed_programs`（其中评估失败的程序数，即快照中分数为空的点）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。`spend_usd` 保持为已记录费用之和，`unknown_cost_runs` 大于 0 时它是下限；`trials` 仍是 notebook 的试验数，与已评估程序数分开。`/api/snapshot` 的方向同样带 `unknown_cost_runs`，每个实验带 `spend_known`。响应另含首页动态用的 `events`：各可读方向最近的事件按时间由新到旧合并（至多 30 条），每条带方向 ID，说明的隐藏规则与 `/api/snapshot` 相同；不可读方向不贡献事件。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
 
 #### Scenario: 与方向页数字一致
 

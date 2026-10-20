@@ -1,6 +1,6 @@
 import { Glyph, Icon } from './design/icons'
 import { directionState, STATE_LOOK } from './direction'
-import { pct, usd, when } from './format'
+import { money, pct, when } from './format'
 import { Rich, useCopy } from './i18n/lang'
 import { PARTS } from './Term'
 import type { DirectionSummary, Snapshot } from './types'
@@ -12,7 +12,7 @@ export function DirectionMeta({ snap, entry }: { snap: Snapshot; entry: Directio
   const look = entry ? STATE_LOOK[directionState(entry)] : null
   const budget = snap.budget_usd
   const ratio = budget ? snap.spend_usd / budget : null
-  const spend = `${snap.unknown_cost_runs > 0 ? '≥ ' : ''}${usd(snap.spend_usd)}`
+  const spend = `${snap.unknown_cost_runs > 0 ? '≥ ' : ''}${money(snap.spend_usd)}`
   const lockbox = snap.lockbox === null ? t('lockbox.unset') : snap.lockbox.opened ? t('lockbox.opened') : t('lockbox.sealed')
   return (
     <div className="dmeta">
@@ -30,7 +30,7 @@ export function DirectionMeta({ snap, entry }: { snap: Snapshot; entry: Directio
         <span className="faint">· {t('meta.evaluated', { n: snap.trial_points.length })}</span>
       </span>
       <span className="dmeta-item">
-        <span className="mono">{budget === null ? spend : `${spend} / ${usd(budget)}`}</span>
+        <span className="mono">{budget === null ? spend : `${spend} / ${money(budget)}`}</span>
         {budget === null && <span className="faint">{t('meta.noBudget')}</span>}
         {ratio !== null && ratio >= 0.8 && ratio <= 1 && (
           <>

@@ -2,7 +2,7 @@ import { InlineNotification, Link, Tile } from '@carbon/react'
 import { COPY, type CopyKey } from './i18n/copy'
 import { Rich, useCopy } from './i18n/lang'
 import { Markdown } from './Markdown'
-import { STATUS, checksOf, fmt, num, pct, spendOf, trialsOf, usd, when } from './format'
+import { STATUS, checksOf, fmt, money, num, pct, spendOf, trialsOf, when } from './format'
 import { PARTS } from './Term'
 import type { Evidence, Hypothesis, TrialPoint } from './types'
 
@@ -154,7 +154,7 @@ export function SpecCard({ h, points }: Props) {
           [t('spec.created'), <span className="mono">{when(h.created)}</span>],
           [t('spec.experiments'), <span className="mono">{h.experiments.length}</span>],
           [<Rich k="spec.trials" parts={PARTS} />, <span className="mono">{trialsOf(h)}</span>],
-          [t('spec.spend'), <span className="mono">{usd(spendOf(h))}</span>],
+          [t('spec.spend'), <span className="mono">{money(spendOf(h))}</span>],
         ]}
       />
       {h.body.trim() && <div translate="no"><Markdown text={h.body} /></div>}

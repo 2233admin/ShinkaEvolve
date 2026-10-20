@@ -99,7 +99,7 @@ export function Rail({ route, data, narrow, demo, onSearch }: RailProps) {
                 return (
                   <li key={d.id}>
                     <span className="railitem is-error" title={why}>
-                      <Glyph kind="error" label={why} />
+                      <Glyph kind="error" label={why} signal />
                       <span className="trunc" translate="no">{d.id}</span>
                     </span>
                   </li>

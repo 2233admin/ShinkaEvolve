@@ -28,6 +28,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   and actions, and on phones a bottom tab bar with a settings sheet. The data
   refreshes every 30 seconds while the page is visible without losing the
   selection. Demo workspaces show the DEMO label once instead of in every title.
+- Added the Research workbench's native directions overview: a data sentence
+  whose counts jump to the first matching row, totals of trials, evaluated and
+  failed programs, spend and budget, and a sortable table in which every row
+  shares one evidence scale (best record against its noise line), with a
+  totals row and an activity column fed by the new `/api/workspace` `events`
+  field (the newest 30 events across directions, withheld notes kept hidden).
+  Unreadable directions stay as error rows outside the totals; phones get one
+  card per direction. The overview never requests `/api/snapshot`.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

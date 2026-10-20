@@ -22,6 +22,8 @@
 .glyph { color: var(--text); }
 .glyph.is-signal { color: var(--signal-graphic); }
 .sig { color: var(--signal); }
+.faint { color: var(--faint); }
+.small { font-size: 12px; line-height: 18px; }
 
 kbd { font: 500 11px/16px var(--font-mono); color: var(--muted); border: 1px solid var(--line-strong); border-radius: 4px; padding: 0 4px; white-space: nowrap; }
 

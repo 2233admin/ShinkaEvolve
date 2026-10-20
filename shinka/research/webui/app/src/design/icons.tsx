@@ -7,6 +7,47 @@ import type { ReactNode } from 'react'
 const CUT = { stroke: 'var(--bg)' }
 
 const GLYPHS = {
+  supported: <circle cx="7" cy="7" r="5.5" fill="currentColor" />,
+  confirmed: (
+    <>
+      <circle cx="7" cy="7" r="5.5" fill="currentColor" />
+      <path d="M4.4 7.2l1.8 1.8 3.4-3.6" style={CUT} strokeWidth="1.5" fill="none" />
+    </>
+  ),
+  refuted: (
+    <>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M3.6 10.4l6.8-6.8" stroke="currentColor" strokeWidth="1.4" />
+    </>
+  ),
+  inconclusive: (
+    <>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M7 2a5 5 0 0 1 0 10z" fill="currentColor" />
+    </>
+  ),
+  running: (
+    <>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeDasharray="2.2 1.9" />
+      <circle cx="7" cy="7" r="1.8" fill="currentColor" />
+    </>
+  ),
+  challenged: (
+    <>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M7 4v3.4" stroke="currentColor" strokeWidth="1.5" />
+      <circle cx="7" cy="9.6" r=".9" fill="currentColor" />
+    </>
+  ),
+  proposed: <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeDasharray="1 2.1" />,
+  selected: <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.3" />,
+  unconfirmed: (
+    <>
+      <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.4" />
+      <path d="M4.8 4.8l4.4 4.4m0-4.4l-4.4 4.4" stroke="currentColor" strokeWidth="1.3" />
+    </>
+  ),
+  dropped: <circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" strokeWidth="1.2" strokeDasharray="3 2" />,
   'dir-active': (
     <>
       <rect x="2" y="2" width="10" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.4" />
@@ -134,5 +175,32 @@ export function Mark() {
       <circle cx="14" cy="10" r="1.6" fill="currentColor" />
       <circle cx="9" cy="14" r="1.6" fill="currentColor" />
     </svg>
+  )
+}
+
+// Event marks: the shape goes with the event word, never colour alone; a failed run is the signal.
+const EVENT_SHAPES: Record<string, ReactNode> = {
+  'run-failed': <path d="M3 3l6 6m0-6l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />,
+  verdict: <path d="M6 1.5l4.5 4.5L6 10.5 1.5 6z" fill="currentColor" />,
+  skeptic: <path d="M6 1.8l4.2 4.2L6 10.2 1.8 6z" fill="none" stroke="currentColor" strokeWidth="1.3" />,
+  run: <rect x="2.5" y="2.5" width="7" height="7" fill="currentColor" />,
+  scaffold: <path d="M6 2v8M2 6h8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />,
+  probe: <path d="M6 2.2l4 7H2z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />,
+}
+
+export function EventMark({ event }: { event: string }) {
+  if (event === 'confirm' || event === 'lockbox') {
+    return (
+      <span className="evmark">
+        <Icon name="unlock" />
+      </span>
+    )
+  }
+  return (
+    <span className={event === 'run-failed' ? 'evmark is-signal' : 'evmark'}>
+      <svg width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+        {EVENT_SHAPES[event] ?? EVENT_SHAPES.run}
+      </svg>
+    </span>
   )
 }

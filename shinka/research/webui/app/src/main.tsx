@@ -9,6 +9,7 @@ import '../../design-system/components/bundle.css'
 import './design/tokens.css'
 import './app.css'
 import './shell/shell.css'
+import './overview/overview.css'
 import App from './App'
 
 defineCustomElements()

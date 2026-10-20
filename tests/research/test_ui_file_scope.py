@@ -185,10 +185,15 @@ def _local_denial(base: str, *, summary_reads_target: bool) -> None:
     assert rows["beta"]["hypotheses"] == 1
     assert rows["beta"]["trials"] == 2
     assert rows["beta"]["spend_usd"] == pytest.approx(2.25)
-    assert SECRET not in summary_response[1]
-    # The sibling's own row shows its in-sample best; the selected row must not.
+    # The sibling's own row and events show its best and its notes; nothing
+    # attributed to the selected direction may carry them.
     assert rows["beta"]["evidence"]["best_score"] == SIBLING_SCORE
-    assert str(SIBLING_SCORE) not in json.dumps(rows["alpha"])
+    assert SECRET in [e["note"] for e in summary["events"] if e["direction"] == "beta"]
+    selected_view = [rows["alpha"]] + [
+        e for e in summary["events"] if e["direction"] == "alpha"
+    ]
+    assert SECRET not in json.dumps(selected_view)
+    assert str(SIBLING_SCORE) not in json.dumps(selected_view)
     _healthy_sibling(sibling)
 
 

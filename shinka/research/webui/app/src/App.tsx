@@ -10,12 +10,12 @@ import { ResearchTab } from './ResearchTab'
 import { Palette, type PaletteItem } from './shell/Palette'
 import { Rail, TabBar } from './shell/Rail'
 import { ALL_RUNS, routeHref, runRoute } from './shell/route'
-import { TopBar, type Crumb } from './shell/TopBar'
+import { TopBar, Updated, type Crumb } from './shell/TopBar'
 import { useMatches } from './shell/useMatches'
 import { useRouter } from './shell/useRouter'
 import { useShellData } from './shell/useShellData'
+import { Overview } from './overview/Overview'
 import { PARTS } from './Term'
-import { WorkspaceTable } from './WorkspaceTable'
 
 export default function App() {
   const [lang, setLang] = useLangState()
@@ -147,19 +147,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   let page: ReactNode
   switch (route.view) {
     case 'directions':
-      page = (
-        <>
-          <header className="page-head">
-            <h1>
-              {workspace
-                ? <Rich k="head.workspaceNamed" vars={{ name: workspace.name }} parts={{ name: (s) => <span translate="no">{s}</span> }} />
-                : t('head.workspace')}
-            </h1>
-            <p className="muted"><Rich k="lede.workspace" parts={PARTS} /></p>
-          </header>
-          {readError || (workspace ? <WorkspaceTable directions={workspace.directions} /> : loading)}
-        </>
-      )
+      page = workspace ? <Overview workspace={workspace} freshness={<Updated data={shown} />} /> : <div className="home-empty">{readError || loading}</div>
       break
     case 'direction': {
       const current = snap?.hypotheses.find((h) => h.id === route.hypothesis) ?? snap?.hypotheses[0] ?? null
@@ -228,7 +216,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
         <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
         <div className="main">
           <TopBar crumbs={crumbs} data={shown} demo={demo} theme={theme} onTheme={setTheme} onLang={onLang} onSearch={() => setPalette(true)} />
-          <main id="content" className={analysis || route.view === 'runs' ? 'page analysis-page' : 'page'} tabIndex={-1}>
+          <main id="content" className={route.view === 'directions' ? 'page home-page' : analysis || route.view === 'runs' ? 'page analysis-page' : 'page'} tabIndex={-1}>
             {page}
           </main>
         </div>

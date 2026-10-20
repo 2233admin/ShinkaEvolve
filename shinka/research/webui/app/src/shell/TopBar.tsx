@@ -42,7 +42,7 @@ function Choice<T extends string>({ label, value, options, onChange }: ChoicePro
 }
 
 /** OD-17: when the data last loaded; a click refreshes now. A failed refresh says so and keeps the data. */
-function Updated({ data }: { data: ShellData }) {
+export function Updated({ data }: { data: ShellData }) {
   const { t } = useCopy()
   if (data.updated === null) {
     return data.error === null ? (

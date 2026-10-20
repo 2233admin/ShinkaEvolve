@@ -257,15 +257,16 @@ def _direction_root(workspace: Path, direction: str) -> Path:
     return canonical
 
 
-def _evidence(root: Path, nb: Notebook) -> Dict[str, Any]:
+def _evidence(root: Path, nb: Notebook, recent: List[Dict[str, Any]]) -> Dict[str, Any]:
     """The overview's per-direction evidence, computed exactly as the direction
-    snapshot does so both pages show the same numbers; no held-out figures."""
+    snapshot does so both pages show the same numbers; no held-out figures.
+    ``recent`` is the direction's events, newest first."""
     points = _trials(root, nb)
     scores = [p["score"] for p in points if p["score"] is not None]
     # Trial and log times are both UTC isoformat(timespec="seconds"), so text
     # order is time order.
     times = [points[-1]["time"]] if points else []
-    times += [e["time"] for e in _events(root, nb, 1) if e["time"]]
+    times += [e["time"] for e in recent[:1] if e["time"]]
     return {
         "hypothesis_status": dict(Counter(h.status.value for h in nb.hypotheses)),
         "best_score": max(scores) if scores else None,
@@ -276,9 +277,14 @@ def _evidence(root: Path, nb: Notebook) -> Dict[str, Any]:
     }
 
 
+# The overview's activity column: the newest events across every direction.
+WORKSPACE_EVENTS = 30
+
+
 def workspace_snapshot(root: Path) -> Dict[str, Any]:
     root = _workspace_root(root)
     directions = []
+    events: List[Dict[str, Any]] = []
     for child in sorted(root.iterdir()):
         marker = child / NOTEBOOK_FILENAME
         if (
@@ -296,21 +302,20 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                 for h in nb.hypotheses
                 for e in h.experiments
             ]
-            directions.append(
-                {
-                    "id": child.name,
-                    "direction": nb.direction,
-                    "created": nb.created,
-                    "hypotheses": len(nb.hypotheses),
-                    "trials": nb.total_trials,
-                    "spend_usd": sum(c.recorded_usd for c in costs),
-                    "unknown_cost_runs": sum(not c.known for c in costs),
-                    "budget_usd": nb.budget_usd,
-                    "lockbox_opened": nb.data.opened if nb.data else None,
-                    "evidence": _evidence(direction, nb),
-                    "error": None,
-                }
-            )
+            recent = _events(direction, nb, WORKSPACE_EVENTS)
+            row = {
+                "id": child.name,
+                "direction": nb.direction,
+                "created": nb.created,
+                "hypotheses": len(nb.hypotheses),
+                "trials": nb.total_trials,
+                "spend_usd": sum(c.recorded_usd for c in costs),
+                "unknown_cost_runs": sum(not c.known for c in costs),
+                "budget_usd": nb.budget_usd,
+                "lockbox_opened": nb.data.opened if nb.data else None,
+                "evidence": _evidence(direction, nb, recent),
+                "error": None,
+            }
         except (OSError, ValueError, sqlite3.Error) as error:
             # The kind of failure only; the page words it in the reader's language.
             directions.append(
@@ -320,9 +325,17 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                     "error": type(error).__name__,
                 }
             )
+            continue
+        directions.append(row)
+        # Same withholding as the direction snapshot: unjudged skeptic and
+        # verdict notes never leave the server.
+        events += [{**e, "direction": child.name} for e in recent]
+    # UTC isoformat(timespec="seconds") times: text order is time order.
+    events.sort(key=lambda e: e["time"], reverse=True)
     return {
         "name": root.name,
         "directions": directions,
+        "events": events[:WORKSPACE_EVENTS],
         "library": _library(root),
     }
 
