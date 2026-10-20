@@ -340,8 +340,8 @@ export const COPY = {
   'lib.emptyPage': { zh: '这一页是空的。', en: 'This page is empty.' },
   'lib.meta': { zh: '{n} 个 wiki 页面', en: 'Wiki pages: {n}' },
   'lib.pendingHint': {
-    zh: '研究员把它们整理进 wiki 后，用 <cmd>shinka_research library compiled</cmd> 标记。',
-    en: 'Once the researcher has compiled them into the wiki, <cmd>shinka_research library compiled</cmd> marks them done.',
+    zh: '研究员把它们整理进 wiki 后，用 <cmd>shinka_research library compiled <工作区> --all</cmd> 全部标记；只标记一部分时，把 --all 换成那些文件。',
+    en: 'Once the researcher has compiled them into the wiki, mark them done with <cmd>shinka_research library compiled <workspace> --all</cmd>, or name the compiled files in place of --all.',
   },
   'lib.missing': { zh: '资料库里没有这一页：', en: 'The library has no such page:' },
 
@@ -389,7 +389,7 @@ export const COPY = {
   'runs.groupBest': { zh: '最佳 {score}', en: 'best {score}' },
   'runs.totals': { zh: '合计 · {n} 个运行', en: 'Total · runs: {n}' },
   'runs.subtotal': { zh: '当前筛选 · {n} 个运行', en: 'Shown · runs: {n}' },
-  'runs.lowerBound': { zh: '≥ 为下限：{n} 个运行费用未知或尚未读出', en: '≥ marks a lower bound: runs with an unknown or unread cost: {n}' },
+  'runs.lowerBound': { zh: '≥ 为下限：{n} 个运行费用未知、尚未读出或最近一次读取失败', en: '≥ marks a lower bound: runs with an unknown or unread cost, or whose latest read failed: {n}' },
   'runs.peakNote': { zh: '合计行的最佳是跨任务的最高分，只作参考。', en: 'The total’s best is the highest score across tasks, for reference only.' },
   'runs.tiers': {
     zh: '停滞超过 10 代为正文色，超过 50 代加粗并标“停滞”；费用超过 $1 为正文色，超过 $5 加粗。',

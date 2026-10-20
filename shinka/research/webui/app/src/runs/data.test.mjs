@@ -41,14 +41,30 @@ test('numbers sort largest first and a run without the value goes last; groups f
   assert.deepEqual(groups.map((g) => [g.key, g.runs.map((r) => runLabel(r))]), [['t1', ['a', 'c']], ['t2', ['b']]])
 })
 
+const read = (o) => ({ stats: stats(o), failed: false })
+
 test('totals count what has arrived and turn the cost into a lower bound for the rest', () => {
   const a = ordinary('t', 'a')
   const b = ordinary('t', 'b')
   const c = ordinary('t', 'c')
-  const s = new Map([[a.path, stats({ best_score: 0.4 })], [b.path, stats({ total_cost: null, best_score: 0.7, correct_count: 10 })]])
+  const s = new Map([[a.path, read({ best_score: 0.4 })], [b.path, read({ total_cost: null, best_score: 0.7, correct_count: 10 })]])
   const t = runTotals([a, b, c], s)
   // The unpriced run's prompt cost (0.5) still counts toward the lower bound.
-  assert.deepEqual([t.runs, t.missing, t.programs, t.valid, t.failed, t.cost, t.unknownCost, t.peak], [3, 1, 20, 18, 2, 2, 1, 0.7])
+  assert.deepEqual([t.runs, t.programs, t.valid, t.failed, t.cost, t.partial, t.peak], [3, 20, 18, 2, 2, 2, 0.7])
+})
+
+test('a run whose latest read failed keeps its earlier numbers in the totals and makes the cost a lower bound, counted once', () => {
+  const a = ordinary('t', 'a')
+  const b = ordinary('t', 'b')
+  const c = ordinary('t', 'c')
+  const s = new Map([
+    [a.path, { stats: stats({}), failed: true }],
+    // Kept from an earlier read and unpriced: still one run with a partial cost.
+    [b.path, { stats: stats({ total_cost: null }), failed: true }],
+    [c.path, { stats: null, failed: true }],
+  ])
+  const t = runTotals([a, b, c], s)
+  assert.deepEqual([t.programs, t.cost, t.partial], [20, 2, 3])
 })
 
 test('a runtime reads in minutes under an hour and in hours and minutes above', () => {

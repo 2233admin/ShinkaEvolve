@@ -277,9 +277,9 @@ export function Compare({ data, route, go }: Props) {
   const styles = paths.map((_, k) => seriesStyle(k))
   const entries = paths.map((path) => data.runs?.find((r) => r.path === path) ?? null)
   const keys = entries.map((e, k) => (e ? runGroup(e) : paths[k]))
-  const groupKey = keys.join('\n')
+  const groupKey = JSON.stringify(keys)
   // The groups follow the keys' text, not the array's identity.
-  const groups = useMemo(() => byGroup(groupKey.split('\n')), [groupKey])
+  const groups = useMemo(() => byGroup(JSON.parse(groupKey) as string[]), [groupKey])
 
   const curves = useMemo(() => {
     if (read.runs === null) return null

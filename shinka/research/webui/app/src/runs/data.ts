@@ -22,6 +22,12 @@ export type RunStats = {
   last_update: number | null
 }
 
+/**
+ * A run's statistics as last read, and whether the latest read failed: `stats` null with `failed`
+ * means it was never read; `stats` with `failed` means the numbers are from an earlier read.
+ */
+export type StatsEntry = { stats: RunStats | null; failed: boolean }
+
 export type RunKind = 'ordinary' | 'experiment'
 export type RunSort = 'updated' | 'name' | 'score' | 'cost'
 export const RUN_SORTS: RunSort[] = ['updated', 'name', 'score', 'cost']
@@ -87,27 +93,31 @@ export function groupRuns(runs: RunEntry[], sort: RunSort, stats: ReadonlyMap<st
 
 export type RunTotals = {
   runs: number
-  /** Runs whose statistics have not arrived or could not be read. */
-  missing: number
   programs: number
   valid: number
   failed: number
   prompts: number
   /** Across evaluators, so only a reference: scores are comparable within one evaluator. */
   peak: number | null
-  /** The recorded spend of the runs that have it; a lower bound when `unknownCost` or `missing` is above zero. */
+  /** The recorded spend of the runs read; a lower bound when `partial` is above zero. */
   cost: number
-  unknownCost: number
+  /**
+   * Runs the cost covers only in part, each counted once: not read yet, unpriced, or kept from an
+   * earlier read because the latest failed. A run's records only accumulate, so an earlier read is at
+   * most what the run holds now.
+   */
+  partial: number
   runtime: number
 }
 
-/** Totals over the listed runs, from the statistics that have arrived. */
-export function runTotals(runs: RunEntry[], stats: ReadonlyMap<string, RunStats>): RunTotals {
-  const t: RunTotals = { runs: runs.length, missing: 0, programs: 0, valid: 0, failed: 0, prompts: 0, peak: null, cost: 0, unknownCost: 0, runtime: 0 }
+/** Totals over the listed runs, from each run's latest statistics that arrived. */
+export function runTotals(runs: RunEntry[], stats: ReadonlyMap<string, StatsEntry>): RunTotals {
+  const t: RunTotals = { runs: runs.length, programs: 0, valid: 0, failed: 0, prompts: 0, peak: null, cost: 0, partial: 0, runtime: 0 }
   for (const r of runs) {
-    const s = stats.get(r.path)
-    if (!s) {
-      t.missing += 1
+    const entry = stats.get(r.path)
+    const s = entry?.stats
+    if (!entry || !s) {
+      t.partial += 1
       continue
     }
     t.programs += s.program_count
@@ -116,7 +126,7 @@ export function runTotals(runs: RunEntry[], stats: ReadonlyMap<string, RunStats>
     t.prompts += s.prompt_count
     if (s.best_score !== null && (t.peak === null || s.best_score > t.peak)) t.peak = s.best_score
     // An unpriced part leaves the run's cost unknown; its recorded part still counts toward the lower bound.
-    if (runCost(s) === null) t.unknownCost += 1
+    if (entry.failed || runCost(s) === null) t.partial += 1
     t.cost += (s.total_cost ?? 0) + (s.prompt_evo_cost ?? 0)
     t.runtime += s.total_runtime_seconds ?? 0
   }

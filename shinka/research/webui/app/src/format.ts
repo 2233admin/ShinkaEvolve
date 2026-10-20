@@ -27,9 +27,10 @@ export const fmt = (v: unknown, digits = 2): string => {
   return (Math.abs(n) < 0.5 * 10 ** -digits ? 0 : n).toFixed(digits).replace(/^-/, '−')
 }
 
+/** A fraction as a percentage, under fmt's sign rules. */
 export const pct = (v: unknown, digits = 0): string => {
   const n = num(v)
-  return n === null ? '—' : `${(n * 100).toFixed(digits)}%`
+  return n === null ? '—' : `${fmt(n * 100, digits)}%`
 }
 
 /** Whole counts with thousands separators. */

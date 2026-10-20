@@ -19,7 +19,7 @@ async function readJson<T>(url: string, signal: AbortSignal): Promise<T> {
  * read keeps the data shown before and says why.
  */
 export function useCompareData(paths: string[], listing: RunEntry[] | null): { runs: RunData[] | null; error: string | null } {
-  const key = paths.join('\n')
+  const key = JSON.stringify(paths)
   const [read, setRead] = useState<Read>({ key, runs: null, error: null })
   useEffect(() => {
     if (listing === null || paths.length < 2) return

@@ -58,9 +58,11 @@ All notable changes to `shinka-evolve` are documented in this file.
   with every legacy column plus failures, runtime and update time, search (`/`
   focuses it), a kind filter, sorting and a selection that survives filtering,
   all kept in the URL. Totals always cover every run, with a subtotal while
-  filtered and a lower bound when a cost is unknown; stall and cost thresholds
-  are shown by type weight instead of a second colour. The run list refreshes
-  every 10 seconds, and the top bar can pause automatic refresh for the visit.
+  filtered and a lower bound while a cost is unknown or unread, or while a row
+  keeps its earlier numbers because its latest read failed; stall and cost
+  thresholds are shown by type weight instead of a second colour. The run list
+  refreshes every 10 seconds, and the top bar can pause automatic refresh for
+  the visit.
 - Added the Research workbench's native compare page: cumulative best, program
   count or valid count against generation and against cumulative spend for any
   two or more runs, point for point as the old compare page drew them, with

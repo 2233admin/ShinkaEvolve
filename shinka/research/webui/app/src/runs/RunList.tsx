@@ -39,7 +39,7 @@ function StatCells({ stats }: { stats: RunStats }) {
       <span role="cell" className="num mono">
         {empty ? (
           <span className="rempty">
-            <Glyph kind="dir-new" />
+            <Glyph kind="empty" />
             {t('runs.empty')}
           </span>
         ) : (
@@ -144,9 +144,8 @@ export function RunList({ data, route, go }: Props) {
   const loaded = new Map([...stats].flatMap(([path, entry]) => (entry.stats === null ? [] : [[path, entry.stats] as const])))
   const groups = groupRuns(shown, sort, loaded, directions)
   // P01-Q2: the totals cover every run, whatever the filters show; a filter adds its own subtotal.
-  const totals = runTotals(runs, loaded)
-  const filtered = kind !== '' || route.q.trim() !== '' ? runTotals(shown, loaded) : null
-  const unknown = totals.unknownCost + totals.missing
+  const totals = runTotals(runs, stats)
+  const filtered = kind !== '' || route.q.trim() !== '' ? runTotals(shown, stats) : null
   const selected = new Set(route.select)
   const toggle = (path: string) => update({ select: selected.has(path) ? route.select.filter((p) => p !== path) : [...route.select, path] })
   const compare = route.select.length >= 2 ? routeHref({ view: 'compare', runs: route.select, metric: '' }) : null
@@ -222,7 +221,6 @@ export function RunList({ data, route, go }: Props) {
   }
 
   const totalsRow = (label: string, sums: RunTotals, className: string) => {
-    const open = sums.unknownCost + sums.missing
     return (
       <div className={className} role="row">
         <span role="cell" />
@@ -234,7 +232,7 @@ export function RunList({ data, route, go }: Props) {
         <span role="cell" className="num faint">—</span>
         <span role="cell" className="num faint">—</span>
         <span role="cell" className="num mono">{int(sums.prompts)}</span>
-        <span role="cell" className="num mono">{`${open > 0 ? '≥ ' : ''}${money(sums.cost)}`}</span>
+        <span role="cell" className="num mono">{`${sums.partial > 0 ? '≥ ' : ''}${money(sums.cost)}`}</span>
         <span role="cell" className="num mono">{runtimeText(sums.runtime)}</span>
         <span role="cell" />
       </div>
@@ -331,7 +329,7 @@ export function RunList({ data, route, go }: Props) {
             </div>
           </div>
           <p className="rkeynote">
-            {unknown > 0 && <>{t('runs.lowerBound', { n: unknown })} · </>}
+            {totals.partial > 0 && <>{t('runs.lowerBound', { n: totals.partial })} · </>}
             {t('runs.peakNote')} {t('runs.tiers')}
           </p>
         </>

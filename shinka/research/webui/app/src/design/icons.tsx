@@ -77,6 +77,8 @@ const GLYPHS = {
       <circle cx="7" cy="10" r=".8" fill="currentColor" />
     </>
   ),
+  // Nothing to show yet (hifi `empty`): rounder corners and longer dashes than a new direction's square.
+  empty: <rect x="2" y="2" width="10" height="10" rx="2" fill="none" stroke="currentColor" strokeWidth="1.3" strokeDasharray="2 1.6" />,
 } satisfies Record<string, ReactNode>
 
 export type GlyphKind = keyof typeof GLYPHS

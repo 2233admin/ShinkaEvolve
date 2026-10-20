@@ -63,7 +63,7 @@ const LOCKBOX_ROWS: [string, CopyKey, (v: unknown) => string][] = [
   ['lockbox_sharpe', 'rep.lbSharpe', (v) => fmt(v)],
   ['lockbox_buy_hold_sharpe', 'rep.lbBuyHold', (v) => fmt(v)],
   ['lockbox_annual_return', 'rep.lbReturn', (v) => pct(v, 1)],
-  ['lockbox_max_drawdown', 'rep.lbDrawdown', (v) => pct(v, 1).replace(/^-/, '−')],
+  ['lockbox_max_drawdown', 'rep.lbDrawdown', (v) => pct(v, 1)],
   ['dsr', 'rep.lbDsr', (v) => fmt(v, 3)],
   ['lockbox_positive_fraction', 'rep.lbPositive', (v) => pct(v)],
   ['n_trials', 'rep.lbTrials', (v) => (num(v) === null ? '—' : int(num(v)!))],

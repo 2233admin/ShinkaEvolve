@@ -564,7 +564,7 @@ All eight items need per-program `metadata.{pipeline,sampling,evaluation,postpro
 |---|---|---|---|---|
 | P10-Q1 | Q | What happened, newest first (50 latest): `hypothesis/experiment · event · note`, status-coloured (verdict, skeptic, run, run-failed, confirm). Skeptic and verdict notes hidden until a verdict. | SRC/EventStream.tsx:4-11; SRC/format.ts:18-24; UI:88-109, 213 | RPT |
 | P10-E1 | E | "还没有事件。" | SRC/EventStream.tsx:5 | RPT |
-| P10-Q2 | Q | Filter the events by text: rows whose `hypothesis/experiment · event · note` contains the filter (case-insensitive) stay, with a notice of how many are hidden. Built into `rux-log`, so the source never names it. | `app/node_modules/@astrouxds/astro-web-components/dist/collection/components/rux-log/rux-log.js:31-42` | RPT |
+| P10-Q2 | Q | Filter the events by text: rows whose `hypothesis/experiment · event · note` contains the filter (case-insensitive) stay, with a notice of how many are hidden. Built into `rux-log`, so the source never names it. | npm `@astrouxds/astro-web-components@8.0.0` (the version `app/package.json` pins) › `dist/collection/components/rux-log/rux-log.js:31-42` | RPT |
 | P10-A | D | Built on Astro `rux-log`. | SRC/EventStream.tsx:11 | OD-15 |
 
 ### P11 LibraryTab (`/?view=library`)

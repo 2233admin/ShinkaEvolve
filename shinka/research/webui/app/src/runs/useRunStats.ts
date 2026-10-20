@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import type { RunEntry } from '../types'
-import type { RunStats } from './data'
+import type { RunStats, StatsEntry } from './data'
 
 // As the legacy list did (D-P01a): every listed run, four requests at a time.
 const BATCH = 4
 
-/**
- * A run's statistics as last read, and whether the latest read failed: `stats` null with `failed`
- * means it was never read; `stats` with `failed` means the numbers shown are from an earlier read.
- * A run absent from the map is still loading.
- */
-export type StatsEntry = { stats: RunStats | null; failed: boolean }
+/** Every listed run's entry; a run absent from the map is still loading. */
 export type StatsMap = ReadonlyMap<string, StatsEntry>
 
 /**
