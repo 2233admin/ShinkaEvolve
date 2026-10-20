@@ -1,0 +1,5 @@
+schema: spec-driven
+created: 2026-10-20
+goal: A built-in conversational research agent the owner can talk to in the
+  workbench and in the terminal, whose runs survive closed windows and whose
+  authority is enforced by shinka_research, not by prompts
