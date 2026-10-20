@@ -84,6 +84,11 @@ Agent 发起的运行 SHALL 脱离启动它的终端或网页继续执行，并�
 - **WHEN** h002/e01 正在运行，另一端对 h003/e01 执行带有效授权的 `run`
 - **THEN** 两个运行同时进行，各自记账
 
+#### Scenario: 运行中的试验数
+
+- **WHEN** 一个实验正在运行，notebook 记的已评估数还是运行开始前的值
+- **THEN** `brief` 与 `status` 报的试验数等于各运行库非岛副本的已评估程序数加试探次数，与工作台和质疑检验一致
+
 ### Requirement: 网页写入只经本机 Agent 服务
 
 研究数据服务 SHALL 只接受 GET，并只接受 Host 为 `127.0.0.1:<端口>` 或 `localhost:<端口>` 的请求。对话与批准 MUST 经独立的本机 Agent 服务：每次启动生成令牌，令牌经 URL 片段交给页面并只放在 `Authorization` 头中；每个写请求与 WebSocket 升级精确校验 Origin 与 Host；不发 CORS 头。

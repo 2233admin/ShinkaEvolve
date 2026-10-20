@@ -32,7 +32,7 @@
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物。运行列表与比较已由工作台原生绘制，旧页面按 award-redesign 7.1 保留到能力组删除 |
 
-成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/unknown_cost_runs/budget_usd/lockbox_opened/evidence/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分，`unknown_cost_runs>0` 时 `spend_usd` 是下限。`evidence` 含 `hypothesis_status/best_score/noise_bar/evaluated_programs/failed_programs/last_activity`，与同一方向快照的 `trial_points` 计算一致；没有试验时分数、噪声线与最近活动为 `null`。错误条目只有 `id/direction/error`，`error` 是失败类别（如 `ValueError`），页面按读者语言措辞。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
+成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/unknown_cost_runs/budget_usd/lockbox_opened/evidence/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分，`unknown_cost_runs>0` 时 `spend_usd` 是下限。`trials` 是 `evidence.evaluated_programs` 加方向全部试探次数，与质疑检验计 DSR 的试验相同（空方向为 0，质疑检验在那里取下限 1），运行中的实验随运行计入，不读运行结束时才写入的 notebook 计数；`/api/snapshot` 的 `trials` 与各实验的 `n_evaluated`、`best_is_score` 同样按运行库计数，同一响应中的计数、最佳分数与试验点来自对每个运行库的同一次读取。`evidence` 含 `hypothesis_status/best_score/noise_bar/evaluated_programs/failed_programs/last_activity`，与同一方向快照的 `trial_points` 计算一致；没有试验时分数、噪声线与最近活动为 `null`。错误条目只有 `id/direction/error`，`error` 是失败类别（如 `ValueError`），页面按读者语言措辞。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
 
 `events` 是首页动态栏的数据：各可读方向最近的事件按时间由新到旧合并，至多 `WORKSPACE_EVENTS`（30）条，每条与快照事件同形并多一个 `direction`（方向 ID）。说明的隐藏规则与 `/api/snapshot` 相同：所属假设尚无判词时，质疑检验与判词事件的说明为 `null` 且 `withheld=true`，页面按读者语言写占位；不可读方向不贡献事件。
 

@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pytest
 
-from shinka.research import library, ui
+from shinka.research import library, skeptic, ui
 from shinka.research.notebook import (
     DataSplit,
     Experiment,
@@ -205,6 +205,48 @@ def test_overview_evidence_and_trial_programs_match_the_direction_page(
     assert rows["beta"]["spend_usd"] == beta["spend_usd"] == 0
     assert rows["beta"]["unknown_cost_runs"] == beta["unknown_cost_runs"] == 0
     assert beta["trial_points"] == []
+
+
+def test_a_running_experiment_counts_its_programs_before_the_notebook_does(
+    tmp_path: Path,
+) -> None:
+    # cmd_run writes n_evaluated only once the run returns; until then the
+    # notebook still says 0 while the run database already holds programs.
+    workspace = tmp_path / "fixture-workspace"
+    root = workspace / "alpha"
+    notebook = _direction(root, "Alpha fixture", "Running.")
+    notebook.hypotheses[0].status = Status.running
+    notebook.hypotheses[0].experiments.append(
+        Experiment(
+            id="e01",
+            created=CREATED,
+            evaluator_hash="fixture-evaluator-hash",
+            data_path="fixture-dev.csv",
+            data_hash="fixture-data-hash",
+            n_evaluated=0,
+            n_probed=2,
+        )
+    )
+    notebook.save(root)
+    cost = {"api_costs": 0.5}
+    _programs(
+        experiment_dir(root, "h001", "e01") / "results",
+        ("p1", 100.0, 1, 0.4, cost),
+        ("p2", 200.0, 0, None, cost),
+        ("p3", 300.0, 1, 0.7, cost),
+    )
+
+    with _server(workspace) as base:
+        (row,) = _get(base, "/api/workspace")["directions"]
+        snapshot = _get(base, _snapshot_path("alpha"))
+    (experiment,) = snapshot["hypotheses"][0]["experiments"]
+    assert experiment["n_evaluated"] == 3
+    assert experiment["best_is_score"] == 0.7
+    points = snapshot["trial_points"]
+    assert snapshot["trials"] == len(points) + snapshot["probes"] == 5
+    assert row["trials"] == row["evidence"]["evaluated_programs"] + 2 == 5
+    # The count the skeptic uses for the DSR.
+    assert skeptic.direction_trials(root, Notebook.load(root), 252.0)[0] == 5
 
 
 def _log(root: Path, *rows: str) -> None:

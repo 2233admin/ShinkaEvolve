@@ -6,7 +6,7 @@
 
 ### Requirement: 首页列出全部研究方向及其状态与证据
 
-首页 SHALL 列出工作区直接子目录中的每个有效研究方向，并为每个方向同时显示：标题与目录 ID、假设状态分布、试验数（notebook 计数，含试探，是 DSR 的依据）、已评估程序数与其中评估失败的程序数、当前最佳样本内记录与当时的噪声线、花费与预算、封存段状态、最近活动时间。花费包含费用未知的运行时 MUST 以 `≥` 标为下限并注明费用未知的运行数。无法读取的方向 MUST 显示为不可进入的错误条目，不得伪造零花费、零试验或封存状态。首页 MUST NOT 为取得这些字段逐方向请求 `/api/snapshot`。
+首页 SHALL 列出工作区直接子目录中的每个有效研究方向，并为每个方向同时显示：标题与目录 ID、假设状态分布、试验数（各运行库中非岛副本的已评估程序数加试探次数，即质疑检验计 DSR 的试验；运行中的实验随运行计入，不等运行结束才写入的 notebook 计数）、已评估程序数与其中评估失败的程序数、当前最佳样本内记录与当时的噪声线、花费与预算、封存段状态、最近活动时间。花费包含费用未知的运行时 MUST 以 `≥` 标为下限并注明费用未知的运行数。无法读取的方向 MUST 显示为不可进入的错误条目，不得伪造零花费、零试验或封存状态。首页 MUST NOT 为取得这些字段逐方向请求 `/api/snapshot`。
 
 #### Scenario: 演示工作区的四种方向状态
 
@@ -26,12 +26,18 @@
 
 ### Requirement: 工作区接口提供方向证据摘要
 
-`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读字段 `unknown_cost_runs`（整数，方向内费用未知的实验运行数，口径见 `run-analysis-ui` › 运行费用只有一个口径）与 `evidence`：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`evaluated_programs`（方向各运行库中非岛副本的已评估程序数，即快照 `trial_points` 的条数）、`failed_programs`（其中评估失败的程序数，即快照中分数为空的点）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。`spend_usd` 保持为已记录费用之和，`unknown_cost_runs` 大于 0 时它是下限；`trials` 仍是 notebook 的试验数，与已评估程序数分开。`/api/snapshot` 的方向同样带 `unknown_cost_runs`，每个实验带 `spend_known`。响应另含首页动态用的 `events`：各可读方向最近的事件按时间由新到旧合并（至多 30 条），每条带方向 ID，说明的隐藏规则与 `/api/snapshot` 相同；不可读方向不贡献事件。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
+`GET /api/workspace` 的每个成功方向条目 SHALL 增加只读字段 `unknown_cost_runs`（整数，方向内费用未知的实验运行数，口径见 `run-analysis-ui` › 运行费用只有一个口径）与 `evidence`：`hypothesis_status`（各状态计数）、`best_score`（全方向样本内最佳分数，无有效分数时为 `null`）、`noise_bar`（与方向试验图最后一点相同算法的噪声线，无试验时为 `null`）、`evaluated_programs`（方向各运行库中非岛副本的已评估程序数，即快照 `trial_points` 的条数）、`failed_programs`（其中评估失败的程序数，即快照中分数为空的点）、`last_activity`（最近事件或试验时间，无活动时为 `null`）。`spend_usd` 保持为已记录费用之和，`unknown_cost_runs` 大于 0 时它是下限；`trials` 是 `evaluated_programs` 加方向全部试探次数，与质疑检验计 DSR 的试验相同（空方向为 0，质疑检验在那里取下限 1）。`/api/snapshot` 的 `trials` 与每个实验的 `n_evaluated`、`best_is_score` 同样按运行库计数，同一响应中的计数、最佳分数与试验点来自对每个运行库的同一次读取。`/api/snapshot` 的方向同样带 `unknown_cost_runs`，每个实验带 `spend_known`。响应另含首页动态用的 `events`：各可读方向最近的事件按时间由新到旧合并（至多 30 条），每条带方向 ID，说明的隐藏规则与 `/api/snapshot` 相同；不可读方向不贡献事件。摘要 MUST NOT 包含验证段或封存段数字，也 MUST NOT 放宽现有路径限制。
 
 #### Scenario: 与方向页数字一致
 
 - **WHEN** 请求 `/api/workspace` 与同一方向的 `/api/snapshot`
 - **THEN** `best_score` 等于快照中有效分数的最大值，`noise_bar` 等于快照 `trial_points` 最后一点的 `bar`，`evaluated_programs` 等于 `trial_points` 的条数，`failed_programs` 等于其中分数为空的条数，两处的 `unknown_cost_runs` 相等
+
+#### Scenario: 运行中的实验按运行库计数
+
+- **WHEN** 一个实验正在运行，notebook 记的已评估数仍是 0，它的运行库已有 150 个程序，方向另有 5 次试探
+- **THEN** 该实验的 `n_evaluated` 为 150，两个接口的 `trials` 都等于全方向已评估程序数加 5，并与质疑检验计 DSR 的试验数相同
+- **AND** 首页、方向页页首、假设表与实验卡片显示同一组数字
 
 #### Scenario: 无试验方向
 

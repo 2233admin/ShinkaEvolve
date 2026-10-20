@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PureWindowsPath
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 
@@ -47,21 +47,38 @@ def _results(root: Path, hid: str, eid: str) -> Path:
     return results
 
 
-def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
+# rundb.trials rows: (timestamp, generation, in-sample score or None, program id).
+Trial = Tuple[float, int, Optional[float], str]
+
+
+def _runs(root: Path, nb: Notebook) -> Dict[Tuple[str, str], List[Trial]]:
+    """Each experiment's evaluated programs, read once per response, so every
+    count, best score and trial point in it comes from the same read even
+    while a run is adding programs."""
+    return {
+        (h.id, e.id): rundb.trials(_results(root, h.id, e.id))
+        for h in nb.hypotheses
+        for e in h.experiments
+    }
+
+
+def _experiment(root: Path, h: Hypothesis, e, trials: List[Trial]) -> Dict[str, Any]:
     rd = _results(root, h.id, e.id)
-    times = [t for t, *_ in rundb.trials(rd)]
+    scores = [s for _, _, s, _ in trials if s is not None]
     db = rd / rundb.DB_FILENAME
     cost = rundb.run_cost(rd)
     out: Dict[str, Any] = {
         "id": e.id,
         "created": e.created,
-        "n_evaluated": e.n_evaluated,
+        # Counted in the run database, as the skeptic counts trials: the
+        # notebook's copy is written only once a run returns.
+        "n_evaluated": len(trials),
         "n_probed": e.n_probed,
-        "best_is_score": rundb.best_score(rd),
+        "best_is_score": max(scores) if scores else None,
         "spend_usd": cost.recorded_usd,
         "spend_known": cost.known,
-        "first_trial": _iso(times[0]) if times else None,
-        "last_trial": _iso(times[-1]) if times else None,
+        "first_trial": _iso(trials[0][0]) if trials else None,
+        "last_trial": _iso(trials[-1][0]) if trials else None,
         # The experiment's analysis page (award-redesign design.md › 页面与路由),
         # remembering the research it returns to.
         "analysis_url": "/?"
@@ -111,19 +128,26 @@ def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, Any]]:
     return rows[::-1]
 
 
-def _trials(root: Path, nb: Notebook) -> List[Dict[str, Any]]:
+def _probes(nb: Notebook) -> int:
+    return sum(e.n_probed for h in nb.hypotheses for e in h.experiments)
+
+
+def _trials(
+    nb: Notebook, runs: Dict[Tuple[str, str], List[Trial]]
+) -> List[Dict[str, Any]]:
     """Every evaluated program of the direction in time order, with the noise
     bar: the expected best in-sample score of n null strategies, using the
     variance of the direction's in-sample scores (the skeptic's approximation,
     kept in the scores' own annualised units). Probes leave no program row, so
     they are not plotted; the bar counts them all from the start, which keeps
     it at least as high as the skeptic's (it counts every probe too)."""
-    probes = sum(e.n_probed for h in nb.hypotheses for e in h.experiments)
-    rows = []
-    for h in nb.hypotheses:
-        for e in h.experiments:
-            rd = _results(root, h.id, e.id)
-            rows += [(t, g, s, pid, h.id, e.id) for t, g, s, pid in rundb.trials(rd)]
+    probes = _probes(nb)
+    rows = [
+        (t, g, s, pid, h.id, e.id)
+        for h in nb.hypotheses
+        for e in h.experiments
+        for t, g, s, pid in runs[(h.id, e.id)]
+    ]
     rows.sort(key=lambda r: r[0])
     scores = np.array([r[2] for r in rows if r[2] is not None])
     var = float(scores.var(ddof=1)) if len(scores) > 1 else 0.0
@@ -180,9 +204,10 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
     root = Path(root).resolve()
     _confined(root, root / NOTEBOOK_FILENAME)
     nb = Notebook.load(root)
+    runs = _runs(root, nb)
     hyps = []
     for h in nb.hypotheses:
-        exps = [_experiment(root, h, e) for e in h.experiments]
+        exps = [_experiment(root, h, e, runs[(h.id, e.id)]) for e in h.experiments]
         hyps.append(
             {
                 "id": h.id,
@@ -196,6 +221,8 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
             }
         )
     data = nb.data
+    points = _trials(nb, runs)
+    probes = _probes(nb)
     return {
         "direction": nb.direction,
         "created": nb.created,
@@ -204,7 +231,9 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
         "unknown_cost_runs": sum(
             not e["spend_known"] for h in hyps for e in h["experiments"]
         ),
-        "trials": nb.total_trials,
+        # Every evaluated program plus every probe, the programs and probes the
+        # skeptic counts for the DSR; a running experiment counts as it goes.
+        "trials": len(points) + probes,
         "lockbox": None
         if data is None
         else {
@@ -214,8 +243,8 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
             "n_dev": data.n_dev,
         },
         "hypotheses": hyps,
-        "trial_points": _trials(root, nb),
-        "probes": sum(e.n_probed for h in nb.hypotheses for e in h.experiments),
+        "trial_points": points,
+        "probes": probes,
         "events": _events(root, nb, events),
         "library": _library(root.parent),
     }
@@ -261,7 +290,7 @@ def _evidence(root: Path, nb: Notebook, recent: List[Dict[str, Any]]) -> Dict[st
     """The overview's per-direction evidence, computed exactly as the direction
     snapshot does so both pages show the same numbers; no held-out figures.
     ``recent`` is the direction's events, newest first."""
-    points = _trials(root, nb)
+    points = _trials(nb, _runs(root, nb))
     scores = [p["score"] for p in points if p["score"] is not None]
     # Trial and log times are both UTC isoformat(timespec="seconds"), so text
     # order is time order.
@@ -303,17 +332,19 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                 for e in h.experiments
             ]
             recent = _events(direction, nb, WORKSPACE_EVENTS)
+            evidence = _evidence(direction, nb, recent)
             row = {
                 "id": child.name,
                 "direction": nb.direction,
                 "created": nb.created,
                 "hypotheses": len(nb.hypotheses),
-                "trials": nb.total_trials,
+                # As the direction snapshot counts them.
+                "trials": evidence["evaluated_programs"] + _probes(nb),
                 "spend_usd": sum(c.recorded_usd for c in costs),
                 "unknown_cost_runs": sum(not c.known for c in costs),
                 "budget_usd": nb.budget_usd,
                 "lockbox_opened": nb.data.opened if nb.data else None,
-                "evidence": _evidence(direction, nb, recent),
+                "evidence": evidence,
                 "error": None,
             }
         except (OSError, ValueError, sqlite3.Error) as error:

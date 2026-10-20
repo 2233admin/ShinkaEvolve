@@ -13,6 +13,7 @@
 - [ ] 2.3 Agent 执行环境（`SHINKA_RESEARCH_AGENT`）下的轮次授权账本、尝试次数与费用上限注入；`authorized-round` 模式；手动运行单独记日志；`probe` 写运行日志。检查：带标记时无授权拒绝、超次拒绝、自带费用上限被拒绝；不带标记的手动 `run` 与自定 `--set` 照旧可用。
 - [ ] 2.4 Agent 执行环境下的 `confirm` 需要封存段批准编号（该环境中 `--yes` 不够），在打分前于锁内消耗。检查：带标记时无批准拒绝、同一批准只能用一次；不带标记的 `confirm --yes` 照旧打开封存段且仍只能打开一次。
 - [ ] 2.5 `skills/shinka-research/SKILL.md` 与 `program.md` 模板补充：Agent 执行环境中任何模式都受授权账本约束；`autonomous` 与 `checkpoints` 模式及其手动含义保留。
+- [ ] 2.6 `brief` 与 `status` 的试验数按运行库计数（与质疑检验、工作台同一口径），不读运行结束才写入的 `n_evaluated`。检查：运行中（notebook 仍为运行前的值、运行库已有程序）时两者报的试验数等于运行库程序数加试探。
 
 ## 3. 只读接口
 

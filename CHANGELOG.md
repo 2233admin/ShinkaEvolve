@@ -126,6 +126,13 @@ All notable changes to `shinka-evolve` are documented in this file.
   direction with unknown spend refuses new runs.
 - Fixed the restored run list painting the prompt-evolution count in white on
   a near-white chip.
+- Fixed the Research workbench's trial counts while a run is in progress: the
+  overview, the direction header, the hypothesis table and each experiment card
+  used the notebook's figure, which `run` writes only when it returns, so a
+  running experiment showed fewer trials than evaluated programs. Workspace and
+  direction snapshots now count evaluated programs in the run databases, as the
+  skeptic counts trials for the DSR, and build every count, best score and trial
+  point of one response from a single read of each run.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block
