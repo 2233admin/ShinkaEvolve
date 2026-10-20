@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { RunEntry } from '../types'
-import type { RunStats, StatsEntry } from './data'
+import { afterRead, type RunStats, type StatsEntry } from './data'
 
 // As the legacy list did (D-P01a): every listed run, four requests at a time.
 const BATCH = 4
@@ -35,7 +35,7 @@ export function useRunStats(runs: RunEntry[] | null): StatsMap {
         setStats((previous) => {
           const next = new Map(previous)
           for (const [path, value] of results) {
-            next.set(path, value === null ? { stats: previous.get(path)?.stats ?? null, failed: true } : { stats: value, failed: false })
+            next.set(path, afterRead(previous.get(path), value))
           }
           return next
         })

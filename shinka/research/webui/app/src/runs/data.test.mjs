@@ -2,7 +2,7 @@
 // (node strips the TypeScript types).
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { compareRuns, groupRuns, matchesRun, runCost, runKind, runLabel, runTotals, runtimeText } from './data.ts'
+import { afterRead, compareRuns, groupRuns, matchesRun, runCost, runKind, runLabel, runTotals, runtimeText } from './data.ts'
 
 const exp = (dir, h, e) => ({ path: `workspace/${dir}/experiments/${h}/${e}/results/programs.sqlite`, name: `${dir}/experiments/${h}/${e}/results`, task: dir })
 const ordinary = (task, run) => ({ path: `runs/${task}/${run}/programs.sqlite`, name: `${task}/${run}`, task })
@@ -53,18 +53,20 @@ test('totals count what has arrived and turn the cost into a lower bound for the
   assert.deepEqual([t.runs, t.programs, t.valid, t.failed, t.cost, t.partial, t.peak], [3, 20, 18, 2, 2, 2, 0.7])
 })
 
-test('a run whose latest read failed keeps its earlier numbers in the totals and makes the cost a lower bound, counted once', () => {
+test('a read that fails after one that succeeded keeps the numbers in the totals and makes the cost a lower bound, counted once', () => {
   const a = ordinary('t', 'a')
   const b = ordinary('t', 'b')
-  const c = ordinary('t', 'c')
-  const s = new Map([
-    [a.path, { stats: stats({}), failed: true }],
-    // Kept from an earlier read and unpriced: still one run with a partial cost.
-    [b.path, { stats: stats({ total_cost: null }), failed: true }],
-    [c.path, { stats: null, failed: true }],
-  ])
-  const t = runTotals([a, b, c], s)
-  assert.deepEqual([t.programs, t.cost, t.partial], [20, 2, 3])
+  const sums = (s) => {
+    const t = runTotals([a, b], s)
+    return [t.programs, t.cost, t.partial]
+  }
+  const first = new Map([[a.path, afterRead(undefined, stats({}))], [b.path, afterRead(undefined, stats({ total_cost: null }))]])
+  assert.deepEqual(sums(first), [20, 2, 1])
+  const second = new Map([[a.path, afterRead(first.get(a.path), null)], [b.path, afterRead(first.get(b.path), null)]])
+  // The same numbers, now a lower bound; the unpriced run already was one and still counts once.
+  assert.deepEqual(sums(second), [20, 2, 2])
+  // A run that has never been read has no numbers to keep.
+  assert.deepEqual(afterRead(undefined, null), { stats: null, failed: true })
 })
 
 test('a runtime reads in minutes under an hour and in hours and minutes above', () => {

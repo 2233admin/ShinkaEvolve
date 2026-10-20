@@ -28,6 +28,10 @@ export type RunStats = {
  */
 export type StatsEntry = { stats: RunStats | null; failed: boolean }
 
+/** A run's entry after one read: a failed read keeps the numbers already shown and says so. */
+export const afterRead = (previous: StatsEntry | undefined, read: RunStats | null): StatsEntry =>
+  read === null ? { stats: previous?.stats ?? null, failed: true } : { stats: read, failed: false }
+
 export type RunKind = 'ordinary' | 'experiment'
 export type RunSort = 'updated' | 'name' | 'score' | 'cost'
 export const RUN_SORTS: RunSort[] = ['updated', 'name', 'score', 'cost']

@@ -279,7 +279,7 @@ export function Compare({ data, route, go }: Props) {
   const keys = entries.map((e, k) => (e ? runGroup(e) : paths[k]))
   const groupKey = JSON.stringify(keys)
   // The groups follow the keys' text, not the array's identity.
-  const groups = useMemo(() => byGroup(JSON.parse(groupKey) as string[]), [groupKey])
+  const groups = useMemo(() => byGroup(keys), [groupKey])
 
   const curves = useMemo(() => {
     if (read.runs === null) return null
