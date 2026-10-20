@@ -18,8 +18,8 @@ A notice tells the reader what is wrong, missing or withheld, in one line, with 
 | --- | --- | --- |
 | Snapshot cannot be read | `error` | 读取失败： · `{message}`。确认 shinka_research ui 还在运行，然后点刷新。 |
 | No hypotheses | `info` | 还没有假设： · 用 shinka_research hypothesis add 添加第一个假设。 |
-| Library has raw material to file | `warning` | 有 N 份资料待整理： · the first five file names joined with 、 (等 when there are more) |
-| Spec card, running hypothesis | `info` | 还没出结论： · 验证段结果出结论后显示。 |
+| Library has raw material to compile | `info` | 有 N 份资料待整理： · the first five file names joined with 、 (等 when there are more), then the command that marks them compiled |
+| Library page that does not exist | `info` | 资料库里没有这一页： · the page name |
 
 Empty-state sentences: 还没有试验——用 `shinka_research run` 跑实验。 · 还没有进化出的程序（只有 N 次试探，试探不画点）—— · 还没有试验，画不出时间线—— · 还没有事件。 · 还没有资料库——用 `shinka_research library add` 加资料。 · wiki 里还没有页面，研究员整理资料后会写到这里。 · 这一页是空的。
 

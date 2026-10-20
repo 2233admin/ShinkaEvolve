@@ -123,12 +123,8 @@ rux-status, rux-log {
 .table-wrap table { min-width: 720px; }
 .table-wrap th { white-space: nowrap; }
 .cds--data-table th .cds--definition-term { font-weight: 600; font-size: inherit; letter-spacing: inherit; }
-.hrow { cursor: pointer; }
-.hrow.is-selected td { background: var(--raised); }
-.hrow.is-selected td:first-child { box-shadow: inset 2px 0 0 var(--accent); }
 .cds--data-table thead th { box-shadow: inset 0 -1px 0 var(--line-strong); }
 .cds--data-table thead th .cds--table-sort { box-shadow: inset 0 -1px 0 var(--line-strong); }
-.hrow:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .title-cell { min-width: 160px; }
 .status-cell { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
 .status-cell rux-status { flex: none; }
@@ -200,8 +196,9 @@ rux-time-region {
 .md h1 { font-size: 20px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 14px; }
 .md p, .md ul, .md ol, .md blockquote, .md pre, .md table { margin: 0 0 .9em; }
 .md ul, .md ol { padding-left: 1.4em; }
-.md a { color: var(--accent-text); text-decoration: underline; text-underline-offset: 2px; }
-.md a:hover { color: var(--accent-hover); }
+/* Links keep the text colour with a quiet underline: the signal orange is reserved for limits and failures. */
+.md a { color: var(--text); text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 3px; }
+.md a:hover { text-decoration-color: var(--text); }
 .md code { font-family: var(--font-mono); font-size: 12px; border-bottom: 1px solid var(--line); }
 .md pre { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; }
 .md pre code { border: 0; }
@@ -212,13 +209,6 @@ rux-time-region {
 .md th { font: 500 11px/1.4 var(--font-mono); letter-spacing: .08em; color: var(--muted); border-bottom-color: var(--line-strong); }
 .md p, .md li, .md td, .md th, .md blockquote { font-size: inherit; line-height: inherit; letter-spacing: inherit; }
 .cds--tab-content > .cds--inline-notification { max-width: none; margin: 0 0 var(--space-6); }
-.lib { display: grid; grid-template-columns: var(--library-nav-width) minmax(0, 1fr); gap: var(--space-8); align-items: start; }
-.lib-list { display: flex; flex-direction: column; gap: var(--space-6); }
-.lib-empty { font-size: 12px; margin: 0; }
-.lib-page { max-width: 78ch; min-width: 0; }
-@media (max-width: 900px) {
-  .lib { grid-template-columns: minmax(0, 1fr); gap: var(--space-6); }
-}
 
 /* ---- 退路：Astro 自定义元素还没定义时（离线、预览、首屏）仍读得出。库一加载完，这些规则就不再匹配。 ---- */
 rux-status:not(:defined) { display: inline-block; width: 1em; text-align: center; line-height: 1; }

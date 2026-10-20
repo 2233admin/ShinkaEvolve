@@ -47,6 +47,12 @@ All notable changes to `shinka-evolve` are documented in this file.
   scroll position, sort, open text and event filter as left. The timeline and
   the filterable event stream are native too, so the workbench no longer loads
   Astro UXDS web components.
+- Added the Research workbench's native shared library: the index, the log and
+  every wiki page are links that can be shared and reopened, sources waiting to
+  be compiled are named with the command that marks them done, and a missing
+  page says so instead of silently showing the index. `[[page]]` links open the
+  library page from any Markdown in the workbench, including hypothesis text;
+  Markdown links use the text colour instead of the signal orange.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

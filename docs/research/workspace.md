@@ -27,7 +27,7 @@
 | `/?view=runs&q=…&sort=…&select=<run>…` | 全部运行；每个勾选的运行一个 `select` |
 | `/?view=compare&runs=<run>&runs=<run>…` | 多运行比较，至少 2 个运行 |
 | `/?view=run&run=<run>&tab=…&program=…&pane=…&gen=…` | 实验分析；研究入口另带 `direction`、`hypothesis` 作为返回上下文。原生视图（award-redesign 6.1）完成前另带恢复页的面板 `left_tab/right_tab/meta_section`，`tab/pane/gen` 只随链接保留 |
-| `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库；无 `page` 为索引 |
+| `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库（award-redesign 4.3）：索引、日志与每个 wiki 页面都是可分享的链接，待整理的原始资料在页首说明；无 `page` 为索引，不存在的页面显示索引并注明缺页。正文是 markdown-it（`html: false`）渲染的净化 Markdown，`[[页面]]` 在工作台任何正文里都链接到这一路由，其他链接在新标签页打开 |
 | `/list_databases`、`/get_database_stats?db_path=…` | 授权范围内的真实程序库与只读统计；费用记录不全时 `total_cost=null`，不能当成免费 |
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物 |

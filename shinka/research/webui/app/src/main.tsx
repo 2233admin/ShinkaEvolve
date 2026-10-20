@@ -9,6 +9,7 @@ import './app.css'
 import './shell/shell.css'
 import './overview/overview.css'
 import './report/report.css'
+import './library/library.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(<App />)

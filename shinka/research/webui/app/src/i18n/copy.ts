@@ -334,6 +334,12 @@ export const COPY = {
   'lib.pageGroup': { zh: '页面（{n}）', en: 'Pages ({n})' },
   'lib.noPages': { zh: 'wiki 里还没有页面，研究员整理资料后会写到这里。', en: 'The wiki has no pages yet; the researcher writes them here after triaging sources.' },
   'lib.emptyPage': { zh: '这一页是空的。', en: 'This page is empty.' },
+  'lib.meta': { zh: '{n} 个 wiki 页面', en: 'Wiki pages: {n}' },
+  'lib.pendingHint': {
+    zh: '研究员把它们整理进 wiki 后，用 <cmd>shinka_research library compiled</cmd> 标记。',
+    en: 'Once the researcher has compiled them into the wiki, <cmd>shinka_research library compiled</cmd> marks them done.',
+  },
+  'lib.missing': { zh: '资料库里没有这一页：', en: 'The library has no such page:' },
 
   // Analysis host
   'an.section': { zh: '运行浏览与实验分析', en: 'Runs and experiment analysis' },

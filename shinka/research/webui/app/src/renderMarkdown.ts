@@ -1,6 +1,7 @@
 import MarkdownIt from 'markdown-it'
+import { routeHref } from './shell/route.ts'
 
-// [[页面名]] → 应用内链接（data-wiki），点击时由 Markdown 组件接管。
+// [[页面名]] → 资料库里那一页的应用内链接（data-wiki 标出），由外壳的路由接管，新标签页打开也可用。
 const md = new MarkdownIt({ html: false, linkify: true, breaks: false })
 
 md.inline.ruler.before('link', 'wikilink', (state, silent) => {
@@ -12,7 +13,7 @@ md.inline.ruler.before('link', 'wikilink', (state, silent) => {
   if (!name || name.includes('\n')) return false
   if (!silent) {
     const open = state.push('link_open', 'a', 1)
-    open.attrs = [['href', `#${encodeURIComponent(name)}`], ['data-wiki', name]]
+    open.attrs = [['href', routeHref({ view: 'library', page: `wiki/${name}` })], ['data-wiki', name]]
     state.push('text', '', 0).content = src.slice(state.pos + 2, end).split('|').pop()!.trim()
     state.push('link_close', 'a', -1)
   }

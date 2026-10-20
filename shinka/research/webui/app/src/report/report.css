@@ -64,8 +64,6 @@
 .fulltext > summary:hover { color: var(--text); }
 .fulltext > summary:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 details.fulltext[open] > summary { margin-bottom: 8px; }
-/* Links in the notebook keep the text colour: orange is reserved for limits and signals. */
-.fulltext .md a, .fulltext .md a:hover { color: var(--text); text-decoration-color: var(--stroke); }
 
 .shead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; column-gap: 16px; }
 .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 0 0 8px; font-size: 12px; color: var(--muted); }

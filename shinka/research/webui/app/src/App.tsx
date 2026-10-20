@@ -5,16 +5,26 @@ import { DEMO_TAG, untagged } from './demo'
 import { DirectionMeta } from './DirectionMeta'
 import { useTheme } from './design/theme'
 import { LangProvider, useCopy, useLangState, type Lang } from './i18n/lang'
-import { LibraryTab } from './LibraryTab'
+import { Library } from './library/Library'
 import { Report } from './report/Report'
 import { Palette, type PaletteItem } from './shell/Palette'
 import { Rail, TabBar } from './shell/Rail'
-import { ALL_RUNS, routeHref, runRoute } from './shell/route'
+import { ALL_RUNS, routeHref, runRoute, type Route } from './shell/route'
 import { TopBar, Updated, type Crumb } from './shell/TopBar'
 import { useMatches } from './shell/useMatches'
 import { useRouter } from './shell/useRouter'
 import { useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
+
+// Each page's own layout; the hosted analysis pages take the full width.
+const PAGE_CLASS: Record<Route['view'], string> = {
+  directions: 'home-page',
+  direction: 'report-page',
+  library: 'library-page',
+  runs: 'analysis-page',
+  compare: 'analysis-page',
+  run: 'analysis-page',
+}
 
 export default function App() {
   const [lang, setLang] = useLangState()
@@ -197,17 +207,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       )
       break
     case 'library':
-      page = (
-        <>
-          <header className="page-head">
-            <h1>{t('head.library')}</h1>
-            <p className="muted">{t('lede.library')}</p>
-          </header>
-          {readError || (workspace
-            ? <LibraryTab lib={lib} page={route.page} onPage={(next) => go(routeHref({ view: 'library', page: next }))} />
-            : loading)}
-        </>
-      )
+      page = workspace ? <Library lib={lib} page={route.page} /> : <div className="lib-none">{readError || loading}</div>
       break
   }
 
@@ -219,11 +219,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
         <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
         <div className="main">
           <TopBar crumbs={crumbs} data={shown} demo={demo} theme={theme} onTheme={setTheme} onLang={onLang} onSearch={() => setPalette(true)} />
-          <main
-            id="content"
-            className={route.view === 'directions' ? 'page home-page' : route.view === 'direction' ? 'page report-page' : analysis || route.view === 'runs' ? 'page analysis-page' : 'page'}
-            tabIndex={-1}
-          >
+          <main id="content" className={`page ${PAGE_CLASS[route.view]}`} tabIndex={-1}>
             {page}
           </main>
         </div>
