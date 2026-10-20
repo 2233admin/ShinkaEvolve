@@ -11,7 +11,7 @@ import { parseAction, plotURL } from './actions.js'
 import { translatedLabel } from './accessibility.js'
 import '@fontsource-variable/inter'
 import '@fontsource/ibm-plex-mono/400.css'
-import 'virtual:tokens.css'
+import '../design/tokens.css'
 import './workbench.css'
 
 hljs.registerLanguage('python', python)

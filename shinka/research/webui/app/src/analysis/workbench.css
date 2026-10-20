@@ -8,6 +8,8 @@
   color-scheme: dark;
 }
 :root[data-theme="light"] { color-scheme: light; }
+/* The recovered pages paint white text on --gemini-gradient, which is ink here: use the ground colour. */
+.pe-active, .btn-primary { color: var(--base) !important; }
 html { background: var(--base); font-family: var(--font-sans); }
 body, body.dark { background: var(--base) !important; color: var(--ink) !important; font: 13px/1.6 var(--font-sans) !important; margin: 0; }
 *, *::before, *::after { box-sizing: border-box; border-radius: 0 !important; box-shadow: none !important; text-shadow: none !important; }

@@ -23,7 +23,7 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 - **States.** Hover: Carbon's own step to `hover`. Selected: `selected` for a tree node or time region, `raised` plus a 2px `accent` inset bar for a table row. Focus: a 2px `accent` outline (3:1 on `base`, `raised` and `hover`). Disabled: Carbon's default, set in `muted`. Withheld: `—` with a tooltip.
 - **Motion.** None of our own; only the libraries' micro-transitions. See MOTION.md.
 - **The two libraries.** Astro UXDS 8.0 owns the signal layer: `rux-global-status-bar`, `rux-monitoring-icon`, `rux-status`, `rux-timeline`, `rux-log`. Carbon 1.118 owns the content: `DataTable`, `Tabs`, `DefinitionTooltip`, `InlineNotification`, `Toggle`, `TreeView`, `StructuredList` and `Tile` for blocks, `Tag`, Carbon Charts for plots. Astro's tabs, accordion and notification are not used (their accent use is too loud); neither is `rux-classification-marking`. Do not hand-draw a component a library already provides; map its variables in `bundle.css` instead.
-- **Theme switch.** The app sets `data-theme` on `<html>` and the Carbon `Theme` (`g100` for dark, `white` for light); `body.light-theme` is set for Astro. Both come from the same `tokens.json`.
+- **Theme switch.** The app sets `data-theme` on `<html>` (`app/src/design/theme.ts`) and the Carbon `Theme` (`g100` for dark, `white` for light); `body.light-theme` is set for Astro. Colours come from `app/src/design/tokens.css`.
 
 ## Iconography
 
@@ -41,5 +41,5 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 
 ## Using the package
 
-- The app reads `tokens.json` through the Vite plugin in `app/vite.config.ts` (`virtual:tokens.css`) and imports `components/bundle.css`; nothing is copied. Change a value in `tokens.json`, regenerate the `DESIGN.md` token groups (`design-system design-md-tokens`) and run the checks.
+- The app reads its tokens from `app/src/design/tokens.css` (award-redesign task 2.1); `tokens.json` and the previews here still describe the previous system until task 7.2 rewrites this package. The app imports `components/bundle.css` for the screens tasks 4–6 have not replaced yet.
 - Previews load the pinned library builds (Astro Web Components 8.0.0, `@carbon/styles` 1.117.0) from a CDN inside a CSS layer, so `bundle.css` always wins over library defaults; offline they stay readable through the `:not(:defined)` fallbacks at the end of `bundle.css`.

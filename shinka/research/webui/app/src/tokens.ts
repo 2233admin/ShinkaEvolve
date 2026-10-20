@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react'
 
 export type Tokens = Record<'ink' | 'muted' | 'base' | 'line' | 'lineStrong' | 'accent', string>
 
+// Opaque canonical tokens only: mix() below parses #rrggbb, and --line/--line-strong are translucent.
 const NAMES: Record<keyof Tokens, string> = {
-  ink: '--ink', muted: '--muted', base: '--base', line: '--line', lineStrong: '--line-strong', accent: '--accent',
+  ink: '--text', muted: '--muted', base: '--bg', line: '--grid', lineStrong: '--stroke', accent: '--signal-graphic',
 }
 
 function read(): Tokens {
@@ -13,8 +14,8 @@ function read(): Tokens {
   ) as Tokens
 }
 
-// 画布类组件（Carbon Charts）吃不了 CSS 变量，运行时从 virtual:tokens.css（design-system/tokens.json）读成色值；
-// 主题切换时重读。App 在 layout effect 里改主题，这里的 passive effect 一定在其后。
+// 画布类组件（Carbon Charts）吃不了 CSS 变量，运行时从 design/tokens.css 读成色值；
+// 主题切换时重读。useTheme 在 layout effect 里改主题，这里的 passive effect 一定在其后。
 export function useTokens(light: boolean): Tokens | null {
   const [t, setT] = useState<Tokens | null>(null)
   useEffect(() => {

@@ -1,6 +1,7 @@
-import { useEffect, useLayoutEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Breadcrumb, BreadcrumbItem, Button, InlineNotification, Theme } from '@carbon/react'
 import { AnalysisWorkspace } from './AnalysisWorkspace'
+import { useTheme } from './design/theme'
 import { LibraryTab } from './LibraryTab'
 import { ResearchTab } from './ResearchTab'
 import { Term } from './Term'
@@ -9,19 +10,9 @@ import { WorkspaceTable } from './WorkspaceTable'
 import { WorkspaceNav, type WorkspaceView } from './WorkspaceNav'
 import type { Snapshot, WorkspaceSnapshot } from './types'
 
-const THEME_KEY = 'shinka-theme'
-
-function initialLight(): boolean {
-  try {
-    return localStorage.getItem(THEME_KEY) === 'light'
-  } catch {
-    return false
-  }
-}
-
-
 export default function App() {
-  const [light, setLight] = useState(initialLight)
+  const [theme, setTheme] = useTheme()
+  const light = theme === 'light'
   const [snap, setSnap] = useState<Snapshot | null>(null)
   const [workspace, setWorkspace] = useState<WorkspaceSnapshot | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -32,17 +23,6 @@ export default function App() {
   const requestedView = params.get('view')
   const view: WorkspaceView = requestedView === 'runs' || requestedView === 'library' ? requestedView : 'research'
   const [refreshVersion, setRefreshVersion] = useState(0)
-
-  // layout effect：先于子组件读取主题色值的 passive effect 生效。
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = light ? 'light' : 'dark'
-    document.body.classList.toggle('light-theme', light)
-    try {
-      localStorage.setItem(THEME_KEY, light ? 'light' : 'dark')
-    } catch {
-      /* 存不了就不记 */
-    }
-  }, [light])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -85,7 +65,7 @@ export default function App() {
 
   return (
     <Theme theme={light ? 'white' : 'g100'}>
-      <TopBar snap={snap} light={light} onTheme={setLight} />
+      <TopBar snap={snap} light={light} onTheme={(next) => setTheme(next ? 'light' : 'dark')} />
       <main className={`page${view === 'runs' ? ' analysis-page' : ''}`}>
         <WorkspaceNav view={view} pending={pending} />
         {directionId !== null && (

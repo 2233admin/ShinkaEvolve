@@ -22,5 +22,3 @@ declare module 'react' {
     }
   }
 }
-
-declare module 'virtual:tokens.css'

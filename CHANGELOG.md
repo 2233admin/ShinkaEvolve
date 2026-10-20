@@ -41,6 +41,10 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Relaxed the exact HTTPX dependency pin to a `>=0.27` compatibility lower
   bound in issue #180. Thanks @htmai-880.
 - Removed the automatic Claude Code Review pull-request workflow.
+- Moved the Research workbench to one token stylesheet
+  (`app/src/design/tokens.css`) for the dark default and light themes, with
+  Carbon styled from the same tokens; the remembered theme now applies before
+  the first paint.
 
 ### Fixed
 
@@ -56,6 +60,8 @@ All notable changes to `shinka-evolve` are documented in this file.
   as unknown, prompt evolution in every total. Island copies no longer double
   count cost, read-only connections close after failed reads, and a budgeted
   direction with unknown spend refuses new runs.
+- Fixed the restored run list painting the prompt-evolution count in white on
+  a near-white chip.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block

@@ -2,7 +2,6 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import ts from 'typescript'
-import { designTokens } from './vite.config'
 
 // Preserve the recovered analysis engine, but compile every HTML insertion
 // through the same sanitizer. This boundary is limited to the owned documents.
@@ -66,7 +65,7 @@ function workbenchDocuments(): Plugin {
 }
 
 export default defineConfig({
-  plugins: [designTokens(), workbenchDocuments()],
+  plugins: [workbenchDocuments()],
   build: {
     outDir: '../dist/analysis', emptyOutDir: true,
     lib: {

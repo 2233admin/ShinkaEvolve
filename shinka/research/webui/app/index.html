@@ -5,6 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" href="data:," />
     <title>Shinka Research</title>
+    <script>
+      // Apply the remembered theme before any stylesheet paints (design/theme.ts owns the key).
+      try {
+        if (localStorage.getItem('shinka-theme') === 'light') document.documentElement.dataset.theme = 'light'
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

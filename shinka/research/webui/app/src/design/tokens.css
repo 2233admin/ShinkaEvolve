@@ -1,0 +1,155 @@
+/* Shinka Research design tokens (award-redesign, design.md › 设计系统).
+   Dark is the default; [data-theme="light"] on <html> switches every token. */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0a0b;
+  --rail: #0e0e10;
+  --raised: #16161a;
+  --hover: #1c1c21;
+  --selected: #232329;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #ededef;
+  --muted: #a1a1aa;
+  --faint: #8a8a93;
+  /* Signal orange: text and graphics share one value in dark. */
+  --signal: #f2622e;
+  --signal-graphic: #f2622e;
+  --stroke: #6d6d76;
+  --grid: #34343b;
+  /* Score ramp for lineage and solution space: lowest score -> best score. */
+  --ramp-0: #606066;
+  --ramp-1: #f1f1f3;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --rail: #f6f6f7;
+  --raised: #ffffff;
+  --hover: #efeff1;
+  --selected: #e7e7ea;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --text: #18181b;
+  --muted: #52525b;
+  --faint: #66666f;
+  --signal: #b83e0b;
+  --signal-graphic: #e3550c;
+  --stroke: #82828b;
+  --grid: #d4d4d8;
+  --ramp-0: #8d8d90;
+  --ramp-1: #18181b;
+}
+
+:root {
+  --font-sans: 'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
+
+  /* Type scale: size / line height, weight on the role. */
+  --type-headline: 600 30px/40px var(--font-sans);
+  --type-title: 590 26px/34px var(--font-sans);
+  --type-section: 590 15px/22px var(--font-sans);
+  --type-body: 400 13px/20px var(--font-sans);
+  --type-small: 400 12px/18px var(--font-sans);
+
+  /* 4px baseline. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Controls 6px, floating layers 8px; panels, tables, cards and code blocks stay square. */
+  --radius-control: 6px;
+  --radius-float: 8px;
+
+  --focus-ring: 2px solid var(--text);
+}
+
+/* Carbon keeps behaviour and accessibility; its appearance comes from the tokens above.
+   Imported after every Carbon and legacy stylesheet so these mappings win. */
+.cds--white,
+.cds--g10,
+.cds--g90,
+.cds--g100 {
+  --cds-background: var(--bg);
+  --cds-background-hover: var(--hover);
+  --cds-background-selected: var(--selected);
+  --cds-layer-01: var(--bg);
+  --cds-layer-02: var(--rail);
+  --cds-layer-03: var(--raised);
+  --cds-layer-hover-01: var(--hover);
+  --cds-layer-hover-02: var(--hover);
+  --cds-layer-selected-01: var(--selected);
+  --cds-layer-selected-02: var(--selected);
+  --cds-layer-accent-01: var(--selected);
+  --cds-field-01: var(--rail);
+  --cds-field-02: var(--raised);
+  --cds-field-hover-01: var(--hover);
+  --cds-border-subtle-00: var(--line);
+  --cds-border-subtle-01: var(--line);
+  --cds-border-subtle-02: var(--line);
+  --cds-border-strong-01: var(--stroke);
+  --cds-border-interactive: var(--text);
+  --cds-text-primary: var(--text);
+  --cds-text-secondary: var(--muted);
+  --cds-text-helper: var(--faint);
+  --cds-text-placeholder: var(--faint);
+  --cds-text-on-color: var(--text);
+  --cds-icon-primary: var(--text);
+  --cds-icon-secondary: var(--muted);
+  --cds-interactive: var(--text);
+  --cds-focus: var(--text);
+  --cds-focus-inset: var(--bg);
+  --cds-highlight: var(--selected);
+  --cds-link-primary: var(--text);
+  --cds-link-primary-hover: var(--text);
+  --cds-button-primary: var(--raised);
+  --cds-button-primary-hover: var(--hover);
+  --cds-button-primary-active: var(--selected);
+  --cds-button-secondary: var(--raised);
+  --cds-button-secondary-hover: var(--hover);
+  --cds-button-tertiary: var(--text);
+  --cds-button-tertiary-hover: var(--hover);
+  --cds-button-tertiary-active: var(--selected);
+  --cds-support-error: var(--signal);
+  --cds-support-warning: var(--signal);
+  --cds-support-success: var(--muted);
+  --cds-support-info: var(--muted);
+  --cds-notification-background-info: var(--hover);
+  --cds-tag-background-gray: var(--selected);
+  --cds-tag-color-gray: var(--text);
+}
+
+/* Legacy names used by screens that tasks 4-6 replace; removed with them in task 7.1. */
+:root,
+[data-theme='dark'] {
+  --ink: var(--text);
+  --base: var(--bg);
+  --accent: var(--signal-graphic);
+  --accent-text: var(--signal);
+  --accent-hover: var(--signal);
+  --on-accent: #0a0a0b;
+  --ok: #9cd1ac;
+  --warn: #e5c06f;
+  --err: #ffa095;
+  --space-16: 64px;
+  --page-max: 1480px;
+  --side-width: 420px;
+  --spec-key-width: 110px;
+  --library-nav-width: 240px;
+  --stripe-height: 8px;
+  --radius-none: 0px;
+}
+
+[data-theme='light'] {
+  --ok: #2f7a4a;
+  --warn: #8a6410;
+  --err: #b3261e;
+}
