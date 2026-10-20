@@ -133,6 +133,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   direction snapshots now count evaluated programs in the run databases, as the
   skeptic counts trials for the DSR, and build every count, best score and trial
   point of one response from a single read of each run.
+- Fixed concurrent `shinka_research` commands discarding each other's notebook
+  changes: a probe, skeptic or run that finished after another command saved
+  wrote back its stale copy of the whole notebook, and two first events could
+  truncate `results.tsv`. Writers now take a per-direction lock
+  (`.research.lock`), re-read the notebook, evaluate outside the lock and
+  replace `notebook.json` atomically, so readers never see half a file; a
+  failed run restores the hypothesis's earlier status only if nothing moved it
+  on meanwhile.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block

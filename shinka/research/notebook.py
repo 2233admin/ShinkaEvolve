@@ -12,12 +12,15 @@ diff them::
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from pydantic import BaseModel, Field
+
+from .state import atomic_write_text, file_lock, lock_path, read_text
 
 NOTEBOOK_FILENAME = "notebook.json"
 
@@ -104,10 +107,22 @@ class Notebook(BaseModel):
         p = cls.path(root)
         if not p.exists():
             raise FileNotFoundError(f"No research notebook at {p}; run `init` first")
-        return cls.model_validate_json(p.read_text())
+        return cls.model_validate_json(read_text(p))
 
     def save(self, root: Path) -> None:
-        self.path(root).write_text(self.model_dump_json(indent=2) + "\n")
+        """Replace the notebook in one step. Writers that may run alongside
+        another command change it through ``edit`` instead."""
+        atomic_write_text(self.path(root), self.model_dump_json(indent=2) + "\n")
+
+    @classmethod
+    @contextmanager
+    def edit(cls, root: Path) -> Iterator["Notebook"]:
+        """The latest notebook, saved when the block ends without an exception.
+        Other writers wait meanwhile, so long work belongs outside the block."""
+        with file_lock(lock_path(root)):
+            nb = cls.load(root)
+            yield nb
+            nb.save(root)
 
     # ---- queries ---------------------------------------------------------
 
@@ -176,11 +191,14 @@ _LOG_HEADER = "time\thypothesis\texperiment\tevent\tnote\n"
 def append_log(root: Path, hid: str, eid: str, event: str, note: str) -> None:
     """One line per research event, autoresearch's results.tsv style."""
     path = Path(root) / RESULTS_LOG
-    if not path.exists():
-        path.write_text(_LOG_HEADER)
     clean = " ".join(note.split())
-    with path.open("a") as f:
-        f.write(f"{_now()}\t{hid}\t{eid}\t{event}\t{clean}\n")
+    # Two first writers would each write the header, the second truncating the
+    # first one's line.
+    with file_lock(lock_path(root)):
+        if not path.exists():
+            path.write_text(_LOG_HEADER)
+        with path.open("a") as f:
+            f.write(f"{_now()}\t{hid}\t{eid}\t{event}\t{clean}\n")
 
 
 def experiment_dir(root: Path, hid: str, eid: str) -> Path:

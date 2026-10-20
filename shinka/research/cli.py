@@ -37,6 +37,7 @@ from shinka.research.scaffold import (
     scaffold_experiment,
     verify_experiment,
 )
+from shinka.research.state import file_lock, lock_path
 
 PROGRAM_TEMPLATE = """# Research program
 
@@ -78,9 +79,10 @@ PROGRAM_TEMPLATE = """# Research program
 def cmd_init(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     root.mkdir(parents=True, exist_ok=True)
-    if Notebook.path(root).exists():
-        sys.exit(f"{root} already has a notebook")
-    Notebook(direction=args.direction, budget_usd=args.budget_usd).save(root)
+    with file_lock(lock_path(root)):
+        if Notebook.path(root).exists():
+            sys.exit(f"{root} already has a notebook")
+        Notebook(direction=args.direction, budget_usd=args.budget_usd).save(root)
     library.ensure(library.library_root(root))
     program = root / "program.md"
     if not program.exists():
@@ -90,41 +92,39 @@ def cmd_init(args: argparse.Namespace) -> None:
 
 def cmd_hypothesis_add(args: argparse.Namespace) -> None:
     root = Path(args.dir)
-    nb = Notebook.load(root)
     body = Path(args.file).read_text() if args.file else sys.stdin.read()
-    hyp = nb.add_hypothesis(root, args.title, body)
-    nb.save(root)
+    with Notebook.edit(root) as nb:
+        hyp = nb.add_hypothesis(root, args.title, body)
     print(hyp.id)
 
 
 def cmd_hypothesis_status(args: argparse.Namespace) -> None:
-    root = Path(args.dir)
-    nb = Notebook.load(root)
-    nb.set_status(args.hid, Status(args.status))
-    nb.save(root)
+    with Notebook.edit(Path(args.dir)) as nb:
+        nb.set_status(args.hid, Status(args.status))
 
 
 def cmd_scaffold(args: argparse.Namespace) -> None:
     root = Path(args.dir)
-    nb = Notebook.load(root)
-    split = prepare_data(
-        root,
-        nb,
-        Path(args.data) if args.data else None,
-        args.timestamp_col,
-        args.lockbox_fraction,
-    )
-    cfg = QuantConfig(
-        data_path=split.dev_path,
-        timestamp_col=split.timestamp_col,
-        oos_fraction=args.oos_fraction,
-        n_folds=args.n_folds,
-        cost_bps=args.cost_bps,
-        periods_per_year=args.periods_per_year,
-        lookahead_checks=args.lookahead_checks,
-    )
-    exp, task_dir = scaffold_experiment(root, nb, args.hid, Path(args.initial), cfg)
-    nb.save(root)
+    # The experiment number and the sealed split are allocated here, so the
+    # whole scaffold holds the direction's lock.
+    with Notebook.edit(root) as nb:
+        split = prepare_data(
+            root,
+            nb,
+            Path(args.data) if args.data else None,
+            args.timestamp_col,
+            args.lockbox_fraction,
+        )
+        cfg = QuantConfig(
+            data_path=split.dev_path,
+            timestamp_col=split.timestamp_col,
+            oos_fraction=args.oos_fraction,
+            n_folds=args.n_folds,
+            cost_bps=args.cost_bps,
+            periods_per_year=args.periods_per_year,
+            lookahead_checks=args.lookahead_checks,
+        )
+        exp, task_dir = scaffold_experiment(root, nb, args.hid, Path(args.initial), cfg)
     append_log(root, args.hid, exp.id, "scaffold", f"seed {Path(args.initial).name}")
     print(task_dir)
 
@@ -148,28 +148,27 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
             "headless/* mutation models are not allowed: they can read OOS metrics"
         )
     root = Path(args.dir)
-    nb = Notebook.load(root)
-    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    verify_experiment(root, nb, hyp.id, exp)
-    if nb.budget_usd is not None:
-        spent, known = direction_spend(root, nb)
-        if spent >= nb.budget_usd:
-            sys.exit(
-                f"direction budget exhausted: {'' if known else '>='}${spent:.2f} "
-                f"of ${nb.budget_usd:.2f}"
-            )
-        # A lower bound cannot show that the budget still has room.
-        if not known:
-            sys.exit(
-                "direction budget cannot be checked: some runs have an unknown cost "
-                f"(recorded ${spent:.2f} of ${nb.budget_usd:.2f})"
-            )
-    exp_dir = experiment_dir(root, hyp.id, exp.id)
-    results_dir = exp_dir / "results"
-    previous_status, previous_verdict = hyp.status, hyp.verdict
-    evaluated_before = count_evaluated(results_dir)
-    hyp.status, hyp.verdict = Status.running, None
-    nb.save(root)
+    with Notebook.edit(root) as nb:
+        hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+        verify_experiment(root, nb, hyp.id, exp)
+        if nb.budget_usd is not None:
+            spent, known = direction_spend(root, nb)
+            if spent >= nb.budget_usd:
+                sys.exit(
+                    f"direction budget exhausted: {'' if known else '>='}${spent:.2f} "
+                    f"of ${nb.budget_usd:.2f}"
+                )
+            # A lower bound cannot show that the budget still has room.
+            if not known:
+                sys.exit(
+                    "direction budget cannot be checked: some runs have an unknown "
+                    f"cost (recorded ${spent:.2f} of ${nb.budget_usd:.2f})"
+                )
+        exp_dir = experiment_dir(root, hyp.id, exp.id)
+        results_dir = exp_dir / "results"
+        previous_status, previous_verdict = hyp.status, hyp.verdict
+        evaluated_before = count_evaluated(results_dir)
+        hyp.status, hyp.verdict = Status.running, None
 
     cmd = [
         "shinka_run",
@@ -185,13 +184,14 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         code = subprocess.call(cmd)
     finally:
         # Always record what was evaluated, even on Ctrl-C, so trials are counted.
-        nb = Notebook.load(root)
-        hyp = nb.get(hyp.id)
-        exp = next(e for e in hyp.experiments if e.id == exp.id)
-        exp.n_evaluated = count_evaluated(results_dir)
-        if code and exp.n_evaluated == evaluated_before:
-            hyp.status, hyp.verdict = previous_status, previous_verdict
-        nb.save(root)
+        with Notebook.edit(root) as nb:
+            hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
+            exp.n_evaluated = count_evaluated(results_dir)
+            # Undo the running mark only while it is still there: another
+            # command may have moved the hypothesis on during the run.
+            unchanged = hyp.status is Status.running
+            if code and exp.n_evaluated == evaluated_before and unchanged:
+                hyp.status, hyp.verdict = previous_status, previous_verdict
         best = best_score(results_dir)
         cost = run_cost(results_dir)
         append_log(
@@ -226,9 +226,10 @@ def cmd_probe(args: argparse.Namespace) -> None:
         contextlib.redirect_stdout(io.StringIO()),
     ):
         metrics, correct, err = run_quant_eval(args.program, tmp, cfg)
-    # Probing is a manual search step: count it as a trial for the DSR.
-    exp.n_probed += 1
-    nb.save(root)
+    # Probing is a manual search step: count it as a trial for the DSR. The
+    # evaluation ran unlocked, so the count goes onto the latest notebook.
+    with Notebook.edit(root) as nb:
+        _pick_experiment(nb, hyp.id, exp.id)[1].n_probed += 1
     shown = {
         "correct": correct,
         "error": err,
@@ -244,18 +245,28 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     nb = Notebook.load(root)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
     th = _thresholds(args)
+    # What the challenge starts from; a change to it meanwhile (a verdict, a
+    # confirmation, a run, another challenge) is newer than this result.
+    start = (hyp.status, hyp.verdict, exp.skeptic)
     report = challenge(root, nb, hyp.id, exp, th)
     label, reason = decide(report, th)
-    exp.skeptic = {
-        **report,
-        "rule_label": label.value,
-        "rule_reason": reason,
-        "thresholds": th.model_dump(
-            include={"dsr_supported", "min_positive_fraction", "max_pbo"}
-        ),
-    }
-    hyp.status, hyp.verdict = Status.challenged, None
-    nb.save(root)
+    # The challenge ran unlocked; its result goes onto the latest notebook.
+    with Notebook.edit(root) as nb:
+        hyp, exp = _pick_experiment(nb, hyp.id, exp.id)
+        if (hyp.status, hyp.verdict, exp.skeptic) != start:
+            sys.exit(
+                f"{hyp.id} changed while the challenge ran (now {hyp.status.value}); "
+                "nothing was recorded, challenge it again"
+            )
+        exp.skeptic = {
+            **report,
+            "rule_label": label.value,
+            "rule_reason": reason,
+            "thresholds": th.model_dump(
+                include={"dsr_supported", "min_positive_fraction", "max_pbo"}
+            ),
+        }
+        hyp.status, hyp.verdict = Status.challenged, None
     append_log(root, hyp.id, exp.id, "skeptic", f"rule says {label.value}: {reason}")
     out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
     out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
@@ -320,21 +331,22 @@ def cmd_confirm(args: argparse.Namespace) -> None:
 
 def cmd_verdict(args: argparse.Namespace) -> None:
     root = Path(args.dir)
-    nb = Notebook.load(root)
-    hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    if exp.skeptic is None:
-        sys.exit(f"{hyp.id}/{exp.id} has not been challenged; run `skeptic` first")
-    label = Status(args.label or exp.skeptic["rule_label"])
-    if args.label and label.value != exp.skeptic["rule_label"] and not args.reason:
-        sys.exit("--reason is required when overriding the rule-based verdict")
-    reason = args.reason or exp.skeptic["rule_reason"]
-    nb.set_verdict(
-        hyp.id,
-        Verdict(
-            label=label, reason=reason, evidence={"experiment": exp.id, **exp.skeptic}
-        ),
-    )
-    nb.save(root)
+    with Notebook.edit(root) as nb:
+        hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+        if exp.skeptic is None:
+            sys.exit(f"{hyp.id}/{exp.id} has not been challenged; run `skeptic` first")
+        label = Status(args.label or exp.skeptic["rule_label"])
+        if args.label and label.value != exp.skeptic["rule_label"] and not args.reason:
+            sys.exit("--reason is required when overriding the rule-based verdict")
+        reason = args.reason or exp.skeptic["rule_reason"]
+        nb.set_verdict(
+            hyp.id,
+            Verdict(
+                label=label,
+                reason=reason,
+                evidence={"experiment": exp.id, **exp.skeptic},
+            ),
+        )
     append_log(root, hyp.id, exp.id, "verdict", f"{label.value}: {reason}")
     print(f"{hyp.id}: {label.value} — {reason}")
 
