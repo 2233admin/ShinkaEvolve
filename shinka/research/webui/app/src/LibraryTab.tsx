@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { InlineNotification, TreeNode, TreeView } from '@carbon/react'
 import { Rich, useCopy } from './i18n/lang'
 import { Markdown } from './Markdown'
@@ -8,9 +7,14 @@ import type { Library } from './types'
 const INDEX = '__index__'
 const LOG = '__log__'
 
-export function LibraryTab({ lib }: { lib: Library | null }) {
+// The URL names the page: none is the index, `log` the log and `wiki/<name>` a wiki page.
+const fromUrl = (page: string | null) => (page === null ? INDEX : page === 'log' ? LOG : page.replace(/^wiki\//, ''))
+const toUrl = (sel: string) => (sel === INDEX ? null : sel === LOG ? 'log' : `wiki/${sel}`)
+
+type Props = { lib: Library | null; page: string | null; onPage: (page: string | null) => void }
+
+export function LibraryTab({ lib, page, onPage }: Props) {
   const { t } = useCopy()
-  const [sel, setSel] = useState(INDEX)
   if (lib === null)
     return (
       <p className="muted">
@@ -19,14 +23,15 @@ export function LibraryTab({ lib }: { lib: Library | null }) {
     )
 
   const names = new Set(lib.pages.map((p) => p.name))
-  const page = lib.pages.find((p) => p.name === sel)
-  const text = sel === INDEX ? lib.index : sel === LOG ? lib.log : (page?.text ?? '')
+  const wanted = fromUrl(page)
+  const sel = wanted === INDEX || wanted === LOG || names.has(wanted) ? wanted : INDEX
+  const current = lib.pages.find((p) => p.name === sel)
+  const text = sel === INDEX ? lib.index : sel === LOG ? lib.log : (current?.text ?? '')
   const goto = (name: string) => {
-    if (names.has(name)) setSel(name)
+    if (names.has(name)) onPage(toUrl(name))
   }
   const list = lib.pending.slice(0, 5).join(t('lib.listSeparator'))
   const shown = lib.pending.length > 5 ? t('lib.pendingMore', { list }) : list
-
   return (
     <>
       {lib.pending.length > 0 && (
@@ -43,7 +48,7 @@ export function LibraryTab({ lib }: { lib: Library | null }) {
       <div className="lib">
         <nav className="lib-list" aria-label={t('lib.pages')}>
           {/* Carbon TreeView 只在挂载时读 active/selected；按所选页换 key，[[链接]] 跳页时左侧选中跟着走。 */}
-          <TreeView key={sel} label={t('lib.pages')} hideLabel size="sm" active={sel} selected={[sel]} onSelect={(_e, node) => node.id && node.id !== '__pages__' && setSel(String(node.id))}>
+          <TreeView key={sel} label={t('lib.pages')} hideLabel size="sm" active={sel} selected={[sel]} onSelect={(_e, node) => node.id && node.id !== '__pages__' && node.id !== sel && onPage(toUrl(String(node.id)))}>
             <TreeNode id={INDEX} label={t('lib.index')} value={INDEX} />
             <TreeNode id={LOG} label={t('lib.log')} value={LOG} />
             {lib.pages.length > 0 && (

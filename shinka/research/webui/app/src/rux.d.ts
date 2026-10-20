@@ -12,8 +12,6 @@ export interface RuxLogEntry {
 declare module 'react' {
   namespace JSX {
     interface IntrinsicElements {
-      'rux-global-status-bar': El<{ 'app-domain'?: string; 'app-name'?: string; 'app-version'?: string; 'menu-icon'?: string; compact?: boolean }>
-      'rux-monitoring-icon': El<{ icon: string; label?: string; sublabel?: string; status?: RuxStatusValue; title?: string }>
       'rux-status': El<{ status: RuxStatusValue }>
       'rux-log': El<{ data: RuxLogEntry[] }>
       'rux-timeline': El<{ start: string; end: string; interval?: 'month' | 'week' | 'hour' | 'day' | 'minute'; timezone?: string; hideJDay?: boolean; zoom?: number; showGrid?: boolean; rulerPosition?: 'top' | 'bottom' | 'both' }>

@@ -21,6 +21,13 @@ All notable changes to `shinka-evolve` are documented in this file.
   best in-sample score, noise bar, evaluated and failed programs, last
   activity), computed exactly as the direction page computes it, and the
   program id on every `/api/snapshot` trial point.
+- Added the Research workbench's native shell: a rail with section counts and
+  every direction's state (shape and word), a top bar with breadcrumb, an
+  “Updated” time that refreshes on click and flags a lost connection, theme and
+  language switches, a Ctrl K palette for pages, directions, runs, library pages
+  and actions, and on phones a bottom tab bar with a settings sheet. The data
+  refreshes every 30 seconds while the page is visible without losing the
+  selection. Demo workspaces show the DEMO label once instead of in every title.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.
@@ -53,6 +60,11 @@ All notable changes to `shinka-evolve` are documented in this file.
   (`app/src/design/tokens.css`) for the dark default and light themes, with
   Carbon styled from the same tokens; the remembered theme now applies before
   the first paint.
+- Changed the Research workbench URLs to one page per `view`
+  (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
+  analysis pages' state now appears as `select`, `runs`, `run` and `program`, and
+  `/api/snapshot` experiment links open `/?view=run&run=…`. The old
+  `analysis=`/`compare=` and view-less `?direction=` links are not redirected.
 
 ### Fixed
 

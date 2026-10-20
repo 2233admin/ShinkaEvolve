@@ -22,19 +22,19 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 - **Depth.** None. No shadows, gradients (except the stripes), blur or overlays; the only layer above the page is Carbon's popover for a definition.
 - **States.** Hover: Carbon's own step to `hover`. Selected: `selected` for a tree node or time region, `raised` plus a 2px `accent` inset bar for a table row. Focus: a 2px `accent` outline (3:1 on `base`, `raised` and `hover`). Disabled: Carbon's default, set in `muted`. Withheld: `—` with a tooltip.
 - **Motion.** None of our own; only the libraries' micro-transitions. See MOTION.md.
-- **The two libraries.** Astro UXDS 8.0 owns the signal layer: `rux-global-status-bar`, `rux-monitoring-icon`, `rux-status`, `rux-timeline`, `rux-log`. Carbon 1.118 owns the content: `DataTable`, `Tabs`, `DefinitionTooltip`, `InlineNotification`, `Toggle`, `TreeView`, `StructuredList` and `Tile` for blocks, `Tag`, Carbon Charts for plots. Astro's tabs, accordion and notification are not used (their accent use is too loud); neither is `rux-classification-marking`. Do not hand-draw a component a library already provides; map its variables in `bundle.css` instead.
+- **The two libraries.** Astro UXDS 8.0 owns the signal layer: `rux-status`, `rux-timeline`, `rux-log`. Carbon 1.118 owns the content: `DataTable`, `Tabs`, `DefinitionTooltip`, `InlineNotification`, `TreeView`, `StructuredList` and `Tile` for blocks, `Tag`, Carbon Charts for plots. Astro's tabs, accordion and notification are not used (their accent use is too loud); neither is `rux-classification-marking`. Do not hand-draw a component a library already provides; map its variables in `bundle.css` instead. The app shell is the exception: task 2.3 drew it natively (below).
 - **Theme switch.** The app sets `data-theme` on `<html>` (`app/src/design/theme.ts`) and the Carbon `Theme` (`g100` for dark, `white` for light); `body.light-theme` is set for Astro. Colours come from `app/src/design/tokens.css`.
 
 ## Iconography
 
-- No custom icon set and no logo: the product name is `SHINKA` in the bold weight and `RESEARCH` in regular, set by the Astro status bar.
-- Icons come from the libraries: Astro monitoring icons (`assessment`, `attach-money`, `lock`, `lock-open`) in the top bar, Astro `rux-status` symbols for state (circle, square, triangle, ring and dot shapes), Carbon's own sort, tree and notification icons. Do not add another icon font or SVG set.
-- Status is shape plus word, never colour alone; the sealed lockbox is the only orange icon.
+- The product mark and the name `Shinka Research` head the rail (`app/src/design/icons.tsx` › `Mark`).
+- The rail, top bar and direction header use the line icons and state glyphs of the approved high-fidelity package (`app/src/design/icons.tsx`); Astro `rux-status` symbols still mark hypothesis state until task 4.2; Carbon keeps its own sort, tree and notification icons.
+- Status is shape plus word, never colour alone.
 - `↗` follows a link that leaves the page; `—` marks a withheld or missing value.
 
 ## Rules that protect the research
 
-- Read-only: no control writes research state, and never a confirm or lockbox button. Controls only change the theme, refresh the displayed files or navigate between the workspace, a direction and the shared library.
+- Read-only: no control writes research state, and never a confirm or lockbox button. Controls only change the theme or language, refresh the displayed files or navigate between pages.
 - Validation evidence only after a verdict; lockbox figures only after confirmation.
 - Every research evidence best score has its direction-wide noise benchmark beside it. The unified generic analysis shows original `combined_score` for diagnosis, explicitly refers research interpretation back to the direction view, and never invents a Sharpe null model or maps trial-order noise onto generation/cost axes. Failed evaluations stay in counts/resources but never become a valid zero-score frontier.
 - The evaluator, data split and out-of-sample metrics are never reachable from this page.
@@ -42,4 +42,5 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 ## Using the package
 
 - The app reads its tokens from `app/src/design/tokens.css` (award-redesign task 2.1); `tokens.json` and the previews here still describe the previous system until task 7.2 rewrites this package. The app imports `components/bundle.css` for the screens tasks 4–6 have not replaced yet.
+- The shell is native since task 2.3 (`app/src/shell/`): rail with section counts and the direction list, top bar with breadcrumb, “最后更新” refresh, theme and language switches, Ctrl K palette, and on phones a bottom tab bar with a settings sheet. Its styles are `app/src/shell/shell.css`; the old Astro status bar and its preview are gone.
 - Previews load the pinned library builds (Astro Web Components 8.0.0, `@carbon/styles` 1.117.0) from a CDN inside a CSS layer, so `bundle.css` always wins over library defaults; offline they stay readable through the `:not(:defined)` fallbacks at the end of `bundle.css`.

@@ -1,4 +1,4 @@
-/* 页面布局：只管栅格与页边距；组件样式在 design-system/components/bundle.css，颜色、字体、间距来自 tokens.json。 */
+/* 页面布局：只管栅格与页边距；外壳在 shell/shell.css，组件样式在 design-system/components/bundle.css，颜色、字体、间距来自 design/tokens.css。 */
 .page { max-width: var(--page-max); margin: 0 auto; padding: var(--space-6) var(--space-8) var(--space-16); }
 .page-head { margin-bottom: var(--space-6); }
 .page-head-row { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-4); }
@@ -12,9 +12,6 @@
 .workspace-table .workspace-error { overflow-wrap: anywhere; }
 .workspace-table .workspace-folder { display: block; margin-block-start: var(--space-1); }
 
-.workspace-nav { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-6); border-bottom: 1px solid var(--line); padding-bottom: var(--space-4); margin-bottom: var(--space-6); }
-.workspace-nav a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: 32px; }
-.workspace-nav a[aria-current="page"] { color: var(--ink); text-decoration: underline; text-underline-offset: var(--space-2); }
 .analysis-scroll { width: 100%; border-top: 1px solid var(--line); }
 .analysis-context { margin: 0 0 var(--space-4); padding-block: var(--space-3); border-top: 1px solid var(--line); color: var(--muted); font: 12px/1.7 var(--font-sans); max-width: 96ch; }
 .analysis-frame { display: block; width: 100%; height: max(780px, calc(100dvh - 250px)); border: 0; background: var(--base); }

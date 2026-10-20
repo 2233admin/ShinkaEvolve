@@ -62,16 +62,15 @@ def _experiment(root: Path, h: Hypothesis, e) -> Dict[str, Any]:
         "spend_known": cost.known,
         "first_trial": _iso(times[0]) if times else None,
         "last_trial": _iso(times[-1]) if times else None,
+        # The experiment's analysis page (award-redesign design.md › 页面与路由),
+        # remembering the research it returns to.
         "analysis_url": "/?"
         + urllib.parse.urlencode(
             {
-                "view": "runs",
+                "view": "run",
+                "run": f"workspace/{db.relative_to(root.parent).as_posix()}",
                 "direction": root.name,
                 "hypothesis": h.id,
-                "analysis": "/viz_tree.html?"
-                + urllib.parse.urlencode(
-                    {"db_path": f"workspace/{db.relative_to(root.parent).as_posix()}"}
-                ),
             }
         )
         if db.exists()

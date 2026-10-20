@@ -22,9 +22,12 @@
 | --- | --- |
 | `GET /api/workspace` | `{name, directions, library}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志末行和共享库，证据数字与方向快照同一算法；不返回假设正文、事件说明或验证段、封存段数字 |
 | `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数 |
-| `/?direction=<id>&hypothesis=<hid>` | 对应方向及所选假设；刷新和返回保留身份 |
-| `/`、`/?view=runs`、`/?view=library` | 研究方向首页、独立全部运行、共享资料库 |
-| `/?view=runs&analysis=<encoded-relative-url>` | 同源分析文档；研究入口另带原方向及假设作为返回上下文 |
+| `/?view=directions`（`/` 同） | 研究方向首页 |
+| `/?view=direction&direction=<id>&hypothesis=<hid>` | 方向及所选假设 |
+| `/?view=runs&q=…&sort=…&select=<run>…` | 全部运行；每个勾选的运行一个 `select` |
+| `/?view=compare&runs=<run>&runs=<run>…` | 多运行比较，至少 2 个运行 |
+| `/?view=run&run=<run>&tab=…&program=…&pane=…&gen=…` | 实验分析；研究入口另带 `direction`、`hypothesis` 作为返回上下文。原生视图（award-redesign 6.1）完成前另带恢复页的面板 `left_tab/right_tab/meta_section`，`tab/pane/gen` 只随链接保留 |
+| `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库；无 `page` 为索引 |
 | `/list_databases`、`/get_database_stats?db_path=…` | 授权范围内的真实程序库与只读统计；费用记录不全时 `total_cost=null`，不能当成免费 |
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物 |
@@ -39,11 +42,11 @@ UI 在原始工作区/方向授权根下校验规范文件目标：资料库根�
 
 | 方案 | 状态与复杂度 | 代价与边界 | 选择 |
 | --- | --- | --- | --- |
-| 原生文档导航 | 浏览器管理方向身份和历史，React 只保存当前方向内状态 | 切方向重新取数；不跨方向保存假设、页签选择 | 采用；全局主题继续保留 |
-| SPA 路由或方向 store | 需要管理迟到请求、假设 ID 重用及各组件重置 | 无刷新切换不是本项要求 | 不采用 |
+| 查询参数路由（pushState，award-redesign 2.3） | 一个外壳；站内链接、前进后退不整页重载，每个页面的状态都在 URL | 迟到请求由 `AbortController` 取消；切换方向时不显示上一方向的快照 | 采用 |
+| 原生文档导航 | 每次跳转整页重载 | 外壳、命令面板与自动刷新的状态每页重建 | 不再采用 |
 | 工作区注册表或持久 UUID | 增加索引、迁移和失效规则 | 现有数据没有该模型 | 不采用；重命名后旧链接自然 404 |
 
-工作区和方向页均复用现有 Carbon 页签和 `LibraryTab`。工作区使用现有 Carbon 表格、token、方角和分隔线，不新增卡片网格、动画或手绘组件。每次文档只请求工作区或单方向一种视图，effect 清理取消所属请求。
+外壳（`app/src/shell/`）在页面可见时每 30 秒刷新 `/api/workspace`、所开方向的 `/api/snapshot` 与 `/list_databases`，保持当前选择和滚动位置；刷新失败时保留已读数据，顶栏标注“连接中断”和最后更新时间，点按立即重试。手动刷新同时重载托管的分析页，自动刷新不动它。
 
 统一分析由 `shinka/research/analysis.py` 复用上游只读 API、缓存和文件读取器，不启动额外树端口。客户端数据库身份仅为 `workspace/<relative>` 或显式授权的 `runs/<relative>`；规范路径必须仍在相应根内，且文件必须有真实 Shinka 程序表。原始资料库、方向数据、封存目录、无效 SQLite 和越界别名不进入发现列表。程序接口获得规范绝对路径作为内部缓存键，客户端不获得任意绝对路径权限。派生提示库和 meta 限定在所选运行目录内；图片仅限真实运行的 `gen_N/results/plots/` 图像。服务强制 `show_private=False`，不返回宽松 CORS 头。
 
@@ -51,7 +54,7 @@ UI 在原始工作区/方向授权根下校验规范文件目标：资料库根�
 
 本地打包资源的完整许可告知随构建输出为 `/analysis/THIRD_PARTY_NOTICES.txt`，来源和补充清单保存在 `analysis/licenses/`。补充清单覆盖 Plotly 内嵌组件，包括实际使用的 `@plotly/mapbox-gl` fork；历史 `native-promise-only` 版本只提供作者 MIT 链接，因此保留其原归属和当前作者端点的完整许可，不伪造同时代快照。
 
-React 保留研究导航与原方向返回入口，分析文档保留自身 DOM、页签和图表状态。iframe 的原生导航拥有历史；外层只用 `replaceState` 投影分析 URL，不额外推入历史。运行列表把检索、排序和暂存勾选写入自身 URL，比较页把选择写入 `selection`；程序页保存 `left_tab/right_tab/selected_node/meta_section`。因此刷新、直接链接及原生前进/后退不依赖最近一次全局存储值。原方向参数只是来源上下文，不证明随后浏览的普通运行属于该方向。尺寸变化只重排已读取数据，不重载运行或清除程序选择；迟到的跨运行响应及延后渲染不取得当前运行身份。
+React 外壳保留研究导航与原方向返回入口，分析文档保留自身 DOM、页签和图表状态。iframe 的原生导航拥有历史；外层只用 `replaceState` 把分析页的位置投影成公开路由（`app/src/legacyFrame.ts`）：运行列表的检索、排序和勾选成为 `q/sort/select`，比较页的选择成为 `runs`，程序页的 `db_path/selected_node` 成为 `run/program`，其面板 `left_tab/right_tab/meta_section` 原样保留；比较页的标签由 `/list_databases` 的运行名还原。因此刷新、直接链接及原生前进/后退不依赖最近一次全局存储值。原方向参数只是来源上下文，分析页转到另一个运行时随即去掉，不证明随后浏览的普通运行属于该方向。尺寸变化只重排已读取数据，不重载运行或清除程序选择；迟到的跨运行响应及延后渲染不取得当前运行身份。
 
 通用分析显示原始 `combined_score`；不同评估器的分数未必同量纲，不能直接作研究结论。研究方向页继续展示全方向试验数及对应噪声基准，通用代数/费用图不套用其横轴或给普通任务虚构 Sharpe 校正。Tree、Path、比较、Cost、Battle 和 Diversity 的有效分数统计排除评估失败的有限占位分数；失败仍计入程序与已记录资源。缺失费用、少于两个得分的样本标准差和少于两个嵌入的距离保持缺失，不能伪装成免费或测得零多样性；明确记录的零成本继续显示为零，混有未知成本的累计值不重新变成已知。
 

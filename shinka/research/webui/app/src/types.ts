@@ -142,3 +142,10 @@ export interface WorkspaceSnapshot {
   directions: DirectionEntry[]
   library: Library | null
 }
+
+/** One run database from /list_databases: its client path, display name and task group. */
+export interface RunEntry {
+  path: string
+  name: string
+  task: string
+}

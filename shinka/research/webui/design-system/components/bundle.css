@@ -5,7 +5,7 @@
 html, body { margin: 0; background: var(--base); color: var(--ink); font-family: var(--font-sans); }
 
 /* ---- 映射：token -> Astro UXDS（--color-*、--status-symbol-*、--gsb-*、--font-*） ---- */
-:root, body.light-theme, rux-global-status-bar, rux-monitoring-icon, rux-classification-marking, rux-tag, rux-status, rux-notification, rux-card, rux-log, rux-timeline, rux-track, rux-time-region, rux-tabs, rux-tab, rux-table, rux-accordion, rux-accordion-item, rux-switch, rux-tooltip, rux-clock {
+:root, body.light-theme, rux-classification-marking, rux-tag, rux-status, rux-notification, rux-card, rux-log, rux-timeline, rux-track, rux-time-region, rux-tabs, rux-tab, rux-table, rux-accordion, rux-accordion-item, rux-switch, rux-tooltip, rux-clock {
   --gsb-color-background: var(--base);
   --classification-banner-color-background-unclassified: var(--accent);
   --status-symbol-color-fill-normal-on-dark: var(--ok); --status-symbol-color-fill-normal: var(--ok);
@@ -111,35 +111,12 @@ p.muted { font: 13px/1.7 var(--font-sans); margin: 0; }
 code { font-family: var(--font-mono); font-size: .92em; }
 .section-title { font: 500 11px/1 var(--font-mono); letter-spacing: .08em; color: var(--muted); margin: 0 0 var(--space-3); }
 
-/* ---- TopBar ---- */
-.bar-right { display: flex; align-items: center; gap: var(--space-3); padding-right: var(--space-2); }
-.bar-right .cds--toggle { padding: 0; }
-.lang-switch { display: inline-flex; border: 1px solid var(--line-strong); border-radius: var(--radius-control); overflow: hidden; }
-.lang-switch button { font: 500 12px/1 var(--font-sans); padding: 6px 10px; color: var(--muted); background: transparent; border: 0; cursor: pointer; }
-.lang-switch button + button { border-left: 1px solid var(--line-strong); }
-.lang-switch button[aria-pressed='true'] { color: var(--text); background: var(--selected); }
-.lang-switch button:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
-/* Astro 顶栏的文字色默认为白，浅色主题下要显式给到元素上。 */
-rux-global-status-bar, rux-monitoring-icon {
-  --color-palette-neutral-000: var(--ink);
-  --gsb-color-text: var(--ink);
-}
-rux-global-status-bar { border-bottom: 1px solid var(--line); }
-.status-strip { display: flex; flex-wrap: wrap; justify-content: space-around; gap: var(--space-2); padding: var(--space-2) var(--space-4); background: var(--base); border-bottom: 1px solid var(--line); }
-rux-monitoring-icon, rux-status, rux-log {
+/* Astro status colours for the event stream and status words. */
+rux-status, rux-log {
   --status-symbol-color-fill-caution-on-dark: var(--warn); --status-symbol-color-fill-caution: var(--warn);
   --status-symbol-color-fill-serious-on-dark: var(--warn); --status-symbol-color-fill-serious: var(--warn);
   --status-symbol-color-fill-standby-on-dark: var(--muted); --status-symbol-color-fill-standby: var(--muted);
 }
-/* 顶栏图标：正常用正文色，只有要注意的状态上色；封存中用强调橙（封存是一条界线）。 */
-rux-monitoring-icon {
-  --status-symbol-color-fill-normal-on-dark: var(--ink); --status-symbol-color-fill-normal: var(--ink);
-  --color-status-normal: var(--ink); --normal-fill: var(--ink);
-  --status-symbol-color-fill-serious-on-dark: var(--accent); --status-symbol-color-fill-serious: var(--accent);
-  --color-status-serious: var(--accent); --serious-fill: var(--accent);
-}
-/* 索引条纹：顶栏下一道橙色竖纹。 */
-.stripes { height: var(--stripe-height); background: repeating-linear-gradient(90deg, var(--accent) 0 2px, transparent 2px 6px); }
 
 /* ---- HypothesisTable ---- */
 .table-wrap { overflow-x: auto; }
@@ -250,14 +227,6 @@ rux-status[status='caution']:not(:defined)::before, rux-status[status='serious']
 rux-status[status='critical']:not(:defined)::before { content: '▼'; color: var(--err); }
 rux-status[status='standby']:not(:defined)::before { content: '○'; color: var(--muted); }
 rux-status[status='off']:not(:defined)::before { content: '•'; color: var(--muted); }
-rux-monitoring-icon:not(:defined) { display: inline-flex; flex-direction: column; align-items: center; padding: 0 var(--space-2); font: 12px/1.4 var(--font-sans); }
-rux-monitoring-icon:not(:defined)::before { content: attr(label); }
-rux-monitoring-icon:not(:defined)::after { content: attr(sublabel); color: var(--muted); }
-rux-monitoring-icon[status='serious']:not(:defined)::after { color: var(--accent); }
-rux-monitoring-icon[status='caution']:not(:defined)::after { color: var(--warn); }
-rux-monitoring-icon[status='critical']:not(:defined)::after { color: var(--err); }
-rux-global-status-bar:not(:defined) { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--line); }
-rux-global-status-bar:not(:defined)::before { content: attr(app-domain) ' ' attr(app-name); font: 600 20px/1 var(--font-sans); }
 rux-timeline:not(:defined) { display: block; }
 rux-track:not(:defined) { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); }
 rux-track:not(:defined) > [slot='label'] { flex: none; width: var(--spec-key-width); }

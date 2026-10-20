@@ -1,6 +1,7 @@
 import { Link, Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@carbon/react'
 import { usd } from './format'
 import { Rich, useCopy } from './i18n/lang'
+import { routeHref } from './shell/route'
 import type { DirectionEntry } from './types'
 
 export function WorkspaceTable({ directions }: { directions: DirectionEntry[] }) {
@@ -32,7 +33,7 @@ export function WorkspaceTable({ directions }: { directions: DirectionEntry[] })
                 <span translate="no">
                   {entry.error === null ? (
                     <Link
-                      href={`/?direction=${encodeURIComponent(entry.id)}`}
+                      href={routeHref({ view: 'direction', direction: entry.id, hypothesis: null })}
                       aria-label={t('ws.linkLabel', { direction: entry.direction, id: entry.id })}
                     >
                       {entry.direction}

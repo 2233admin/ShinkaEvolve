@@ -286,13 +286,17 @@ def test_snapshot_analysis_links_open_the_correct_experiment(workspace) -> None:
             hypothesis = snapshot["hypotheses"][0]
             experiment = hypothesis["experiments"][0]
             link = urllib.parse.urlsplit(experiment["analysis_url"])
-            assert not link.scheme and not link.netloc
-            analysis_url = urllib.parse.parse_qs(link.query)["analysis"][0]
-            analysis = urllib.parse.urlsplit(analysis_url)
-            assert not analysis.scheme and not analysis.netloc
-            status, _ = _get(base, analysis_url)
+            assert not link.scheme and not link.netloc and link.path == "/"
+            query = urllib.parse.parse_qs(link.query)
+            assert query["view"] == ["run"]
+            assert query["direction"] == [direction]
+            assert query["hypothesis"] == [hypothesis["id"]]
+            (db_path,) = query["run"]
+            # The shell draws the run with the restored analysis page until task 6.x.
+            status, _ = _get(
+                base, "/viz_tree.html?" + urllib.parse.urlencode({"db_path": db_path})
+            )
             assert status == 200
-            db_path = urllib.parse.parse_qs(analysis.query)["db_path"][0]
             program = next(
                 value
                 for path, value in expected.items()
