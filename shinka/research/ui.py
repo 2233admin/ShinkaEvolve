@@ -291,12 +291,9 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                 }
             )
         except (OSError, ValueError, sqlite3.Error) as error:
+            # The kind of failure only; the page words it in the reader's language.
             directions.append(
-                {
-                    "id": child.name,
-                    "direction": child.name,
-                    "error": f"研究记录无法读取（{type(error).__name__}）",
-                }
+                {"id": child.name, "direction": child.name, "error": type(error).__name__}
             )
     return {
         "name": root.name,

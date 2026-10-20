@@ -74,7 +74,7 @@ export const COPY = {
   'ws.colSpend': { zh: '花费 / 预算', en: 'Spend / budget' },
   'ws.colLockbox': { zh: '封存段', en: 'Lockbox' },
   'ws.linkLabel': { zh: '{direction}（目录：{id}）', en: '{direction} (folder: {id})' },
-  'ws.readError': { zh: '读取失败：{error}', en: 'Could not read: {error}' },
+  'ws.readError': { zh: '研究记录无法读取（{error}）', en: 'Research notebook unreadable ({error})' },
 
   // Direction page
   'dir.hypotheses': { zh: '假设', en: 'Hypotheses' },
