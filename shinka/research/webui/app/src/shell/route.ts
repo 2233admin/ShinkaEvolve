@@ -6,7 +6,8 @@
 export type Route =
   | { view: 'directions' }
   | { view: 'direction'; direction: string; hypothesis: string | null }
-  | { view: 'runs'; q: string; sort: string; select: string[] }
+  /** `kind` is ordinary, experiment or '' for every run; `sort` '' is the list's default order. */
+  | { view: 'runs'; q: string; kind: string; sort: string; select: string[] }
   | { view: 'compare'; runs: string[] }
   | {
       view: 'run'
@@ -28,7 +29,7 @@ export type RunRoute = Extract<Route, { view: 'run' }>
 
 export const RUN_PANELS = ['left_tab', 'right_tab', 'meta_section']
 
-export const ALL_RUNS: Route = { view: 'runs', q: '', sort: '', select: [] }
+export const ALL_RUNS: Route = { view: 'runs', q: '', kind: '', sort: '', select: [] }
 
 export function parseRoute(search: string): Route {
   const p = new URLSearchParams(search)
@@ -40,7 +41,7 @@ export function parseRoute(search: string): Route {
       break
     }
     case 'runs':
-      return { view: 'runs', q: p.get('q') ?? '', sort: p.get('sort') ?? '', select: p.getAll('select') }
+      return { view: 'runs', q: p.get('q') ?? '', kind: p.get('kind') ?? '', sort: p.get('sort') ?? '', select: p.getAll('select') }
     case 'compare':
       return { view: 'compare', runs: p.getAll('runs') }
     case 'run': {
@@ -76,6 +77,7 @@ export function routeHref(route: Route): string {
       break
     case 'runs':
       put('q', route.q)
+      put('kind', route.kind)
       put('sort', route.sort)
       for (const run of route.select) p.append('select', run)
       break

@@ -1,0 +1,73 @@
+/* All runs (award-redesign 5.1). Measurements follow the approved high-fidelity package
+   (hifi/build.mjs › runs); colours come from design/tokens.css. */
+
+.shell .page.runs-page { max-width: none; padding: 22px 28px 64px; font: var(--type-body); }
+.runs-page .num { text-align: right; justify-self: end; }
+.runs-page .mono { font-variant-numeric: tabular-nums; }
+
+.rtoolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 16px; }
+.rsearch {
+  display: flex; gap: 8px; align-items: center; width: 300px; height: 32px; padding: 0 6px 0 10px;
+  border: 1px solid var(--stroke); border-radius: var(--radius-control); color: var(--faint);
+}
+.rsearch:focus-within { outline: var(--focus-ring); outline-offset: 1px; }
+.rsearch input { flex: 1; min-width: 0; height: 30px; border: 0; background: none; color: var(--text); font: 400 13px var(--font-sans); outline: none; }
+.rsearch input::placeholder { color: var(--faint); }
+.runs-page .select { display: inline-flex; gap: 6px; align-items: center; height: 32px; padding: 0 4px 0 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); color: var(--muted); white-space: nowrap; }
+.runs-page .select select { height: 30px; border: 0; background: none; color: var(--text); font: inherit; cursor: pointer; }
+.runs-page .select select option { background: var(--raised); color: var(--text); }
+.runs-page .seg button .mono { color: var(--faint); }
+.selbar { margin-left: auto; display: flex; gap: 12px; align-items: center; color: var(--muted); white-space: nowrap; }
+.btn.is-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+.btn.is-primary:hover { background: var(--text); opacity: .9; }
+.btn.is-disabled { color: var(--faint); cursor: not-allowed; }
+.caveat { display: flex; gap: 8px; align-items: center; margin: -4px 0 14px; color: var(--muted); font-size: 12px; line-height: 18px; }
+
+.rtable { min-width: 0; border-top: 1px solid var(--line); }
+.rrow {
+  position: relative; display: grid; grid-template-columns: 20px minmax(0, 1fr) 64px 56px 48px 56px 48px 72px 56px 76px 72px 128px;
+  column-gap: 14px; align-items: center; min-height: 38px; padding: 0 12px; border-bottom: 1px solid var(--line); font-size: 12.5px;
+}
+.rrow.rhead2 { min-height: 34px; color: var(--faint); font-size: 12px; }
+.rrow:not(.rhead2):not(.rtotal):hover { background: var(--hover); }
+.rrow.is-selected { background: var(--selected); }
+.rrow.rtotal { background: var(--rail); color: var(--muted); }
+.rrow.rtotal.is-sub { background: none; border-top: 1px solid var(--line-strong); }
+.rcheck { position: relative; z-index: 1; width: 16px; height: 16px; margin: 0; accent-color: var(--text); cursor: pointer; }
+.rname { min-width: 0; }
+/* The whole row opens the run; the name stays the one link, the checkbox and prompt note stay above it. */
+.rlink { display: block; color: var(--text); font-size: 12.5px; font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
+.rlink::after { content: ''; position: absolute; inset: 0; }
+.rlink:focus-visible { outline: none; }
+.rrow:has(.rlink:focus-visible) { outline: var(--focus-ring); outline-offset: -2px; }
+.rrow .cds--popover-container { position: relative; z-index: 1; }
+.rstate { grid-column: 3 / -1; display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
+.rstale { position: relative; z-index: 1; display: inline-flex; gap: 5px; align-items: center; margin-top: 2px; font: 400 11.5px/16px var(--font-sans); }
+.rempty { display: inline-flex; gap: 6px; align-items: center; color: var(--faint); font-family: var(--font-sans); }
+.rempty .glyph { color: var(--faint); }
+.is-high { color: var(--text); font-weight: 600; }
+.rstalled { margin-left: 4px; font: 500 11px var(--font-sans); font-style: normal; color: var(--text); }
+
+.rgroup { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px 16px; min-height: 36px; padding: 10px 12px 4px; font-size: 12.5px; }
+.rgroup-name { min-width: 0; }
+.rgroup-toggle { display: inline-flex; gap: 8px; align-items: center; min-width: 0; padding: 2px 4px 2px 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
+.rgroup-toggle b { font-weight: 500; overflow-wrap: anywhere; }
+.rgroup-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.rchev { display: inline-flex; color: var(--muted); transition: transform .15s; }
+.rchev.is-shut { transform: rotate(-90deg); }
+@media (prefers-reduced-motion: reduce) { .rchev { transition: none; } }
+.rgroup-meta { font-size: 12px; }
+.rnomatch { margin: 0; padding: 16px 12px; }
+.rnone { padding: 24px 0; }
+.rnone p { margin: 0 0 6px; }
+.rkeynote { margin: 8px 0 0; max-width: 900px; font-size: 12px; line-height: 18px; color: var(--faint); }
+
+/* Below 1280px the rail narrows: the table keeps every column and scrolls inside its own area. */
+@media (max-width: 1279px) {
+  .rtable { min-width: 1100px; }
+}
+@media (max-width: 767px) {
+  .shell .page.runs-page { padding: 16px 16px 96px; }
+  .rsearch { width: 100%; }
+  .selbar { margin-left: 0; }
+}

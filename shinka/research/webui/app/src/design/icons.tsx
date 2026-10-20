@@ -164,6 +164,18 @@ const ICONS = {
     box: 12,
     body: <path d="M2 6h7.5M6.5 3l3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
   },
+  pause: {
+    box: 12,
+    body: <path d="M4 2.5v7M8 2.5v7" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />,
+  },
+  play: {
+    box: 12,
+    body: <path d="M3.5 2.3l6 3.7-6 3.7z" fill="currentColor" />,
+  },
+  chevron: {
+    box: 12,
+    body: <path d="M3.5 4.5l2.5 2.5 2.5-2.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+  },
 } satisfies Record<string, { box: number; body: ReactNode }>
 
 export type IconName = keyof typeof ICONS

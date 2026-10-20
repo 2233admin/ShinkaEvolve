@@ -1,8 +1,8 @@
 import type { CopyKey } from './i18n/copy'
 import { ALL_RUNS, RUN_PANELS, routeHref, runRoute, type Route } from './shell/route.ts'
 
-/** Routes still drawn by a restored analysis page inside the frame (tasks 5.1, 5.2 and 6.x replace them). */
-export type HostedRoute = Extract<Route, { view: 'runs' | 'compare' | 'run' }>
+/** Routes still drawn by a restored analysis page inside the frame (tasks 5.2 and 6.x replace them). */
+export type HostedRoute = Extract<Route, { view: 'compare' | 'run' }>
 
 /** A failure the host explains in the reader's language; anything else shows its own message. */
 export class HostError extends Error {
@@ -14,7 +14,6 @@ export class HostError extends Error {
 }
 
 const PAGES: Record<string, HostedRoute['view']> = {
-  '/analysis/index.html': 'runs',
   '/compare.html': 'compare',
   '/viz_tree.html': 'run',
 }
@@ -41,11 +40,6 @@ export function framePath(route: HostedRoute, names: ReadonlyMap<string, string>
   const labelled = (paths: string[]) => JSON.stringify(paths.map((path) => ({ path, label: names.get(path) ?? path })))
   const p = new URLSearchParams()
   switch (route.view) {
-    case 'runs':
-      if (route.q) p.set('q', route.q)
-      if (route.sort) p.set('sort', route.sort)
-      if (route.select.length) p.set('selected', labelled(route.select))
-      return `/analysis/index.html?${p}`
     case 'compare':
       if (route.runs.length < 2) throw new HostError('an.compareSelection')
       p.set('selection', labelled(route.runs))
@@ -69,16 +63,6 @@ export function framePath(route: HostedRoute, names: ReadonlyMap<string, string>
 export function projectedHref(inside: URL, route: HostedRoute): string {
   const q = inside.searchParams
   switch (PAGES[inside.pathname]) {
-    case 'runs': {
-      let select: string[] = []
-      try {
-        const value: unknown = JSON.parse(q.get('selected') ?? '[]')
-        if (isSelection(value)) select = value.map((item) => item.path)
-      } catch {
-        /* The run list ignores an unreadable selection too. */
-      }
-      return routeHref({ view: 'runs', q: q.get('q') ?? '', sort: q.get('sort') ?? '', select })
-    }
     case 'compare':
       return routeHref({ view: 'compare', runs: selection(q.get('selection')).map((item) => item.path) })
     case 'run': {

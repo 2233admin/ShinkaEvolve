@@ -17,10 +17,12 @@ type Props = {
   light: boolean
   /** The frame moved on its own; the URL already says where. */
   onProject: () => void
+  /** A link in the frame leads to the run list, which the shell now draws itself. */
+  onRunList: () => void
 }
 
 /** Hosts a restored analysis page for a route; mount once per navigation (key it by the router entry). */
-export function AnalysisWorkspace({ route, names, light, onProject }: Props) {
+export function AnalysisWorkspace({ route, names, light, onProject, onRunList }: Props) {
   const { lang, t } = useCopy()
   const [initial] = useState(() => {
     try {
@@ -31,8 +33,8 @@ export function AnalysisWorkspace({ route, names, light, onProject }: Props) {
   })
   const [error, setError] = useState<unknown>(initial.error)
   const frame = useRef<HTMLIFrameElement>(null)
-  const latest = useRef({ route, onProject })
-  latest.current = { route, onProject }
+  const latest = useRef({ route, onProject, onRunList })
+  latest.current = { route, onProject, onRunList }
   const theme = light ? 'light' : 'dark'
   useEffect(() => {
     const child = frame.current?.contentWindow
@@ -76,8 +78,9 @@ export function AnalysisWorkspace({ route, names, light, onProject }: Props) {
         if (!anchor) return
         const url = new URL(anchor.href, child.location.href)
         if (url.origin === window.location.origin && (url.pathname === '/' || url.pathname === '/index.html')) {
+          // The restored pages' "back to all runs" link: a navigation of the shell, so Back returns here.
           event.preventDefault()
-          child.location.assign('/analysis/index.html')
+          latest.current.onRunList()
         }
       }, true)
       sync()

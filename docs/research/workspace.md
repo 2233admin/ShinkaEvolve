@@ -24,7 +24,7 @@
 | `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数 |
 | `/?view=directions`（`/` 同） | 研究方向首页（award-redesign 4.1）：数据句标题、合计小字、可排序方向表与合计行、动态栏；只读 `/api/workspace` 与 `/list_databases`，不逐方向请求 `/api/snapshot` |
 | `/?view=direction&direction=<id>&hypothesis=<hid>` | 方向研究报告（award-redesign 4.2）：假设表、所选假设的主张与全文、试验与噪声线、检查台账、判词与封存段确认与实验、时间线和可筛选的事件；只读所开方向的 `/api/snapshot` |
-| `/?view=runs&q=…&sort=…&select=<run>…` | 全部运行；每个勾选的运行一个 `select` |
+| `/?view=runs&q=…&kind=…&sort=…&select=<run>…` | 全部运行（award-redesign 5.1）：按评估器分组——研究实验（`workspace/` 下属于某个方向的运行）按方向、普通运行按任务；`kind` 为 `ordinary` 或 `experiment` 时只列该类，`sort` 为 `name`、`score` 或 `cost`，缺省按最近更新；每个勾选的运行一个 `select`，被检索或类型隐藏的运行仍保持勾选。统计逐个读 `/get_database_stats`（每批 4 个），随外壳每 10 秒的自动刷新重读；分组折叠沿用旧列表的 `localStorage['collapsed-task-<任务>']` |
 | `/?view=compare&runs=<run>&runs=<run>…` | 多运行比较，至少 2 个运行 |
 | `/?view=run&run=<run>&tab=…&program=…&pane=…&gen=…` | 实验分析；研究入口另带 `direction`、`hypothesis` 作为返回上下文。原生视图（award-redesign 6.1）完成前另带恢复页的面板 `left_tab/right_tab/meta_section`，`tab/pane/gen` 只随链接保留 |
 | `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库（award-redesign 4.3）：索引、日志与每个 wiki 页面都是可分享的链接，待整理的原始资料在页首说明；无 `page` 为索引，不存在的页面显示索引并注明缺页。正文是 markdown-it（`html: false`）渲染的净化 Markdown，`[[页面]]` 在工作台任何正文里都链接到这一路由，其他链接在新标签页打开 |

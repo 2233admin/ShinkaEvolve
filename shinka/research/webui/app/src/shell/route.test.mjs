@@ -25,7 +25,7 @@ test('every page and its state survive the URL', () => {
   for (const route of [
     { view: 'directions' },
     { view: 'direction', direction: '中文 space + % literal%2F # &', hypothesis: 'h002' },
-    { view: 'runs', q: 'gap & drift', sort: 'cost', select: [ODD, B] },
+    { view: 'runs', q: 'gap & drift', kind: 'experiment', sort: 'cost', select: [ODD, B] },
     { view: 'compare', runs: [ODD, B] },
     opened,
     { view: 'library', page: 'wiki/concept-lockbox' },
@@ -60,7 +60,7 @@ test('the frame gets the restored page, with the run list names as labels', () =
 })
 
 test('each hosted page survives the trip through its restored page', () => {
-  for (const route of [{ view: 'runs', q: 'gap & drift', sort: 'cost', select: [ODD, B] }, { view: 'compare', runs: [ODD, B] }, opened]) {
+  for (const route of [{ view: 'compare', runs: [ODD, B] }, opened]) {
     assert.equal(projectedHref(inside(framePath(route, new Map())), route), routeHref(route))
   }
 })
@@ -87,12 +87,8 @@ test('where the frame goes becomes the public URL', () => {
   })
   // Another run, say from the compare page's rows: the research context does not belong to it.
   assert.deepEqual(at(projectedHref(frame('/viz_tree.html', { db_path: B }), opened)), runRoute(B))
-  assert.deepEqual(
-    at(projectedHref(frame('/analysis/index.html', { q: 'gap', sort: 'cost', selected: JSON.stringify([{ path: ODD, label: 'x' }]) }), opened)),
-    { view: 'runs', q: 'gap', sort: 'cost', select: [ODD] },
-  )
-  // The run list itself ignores an unreadable selection.
-  assert.deepEqual(at(projectedHref(frame('/analysis/index.html', { selected: '{not json' }), opened)), ALL_RUNS)
+  // The run list is native now: a frame that lands on the old one has left what the host draws.
+  assert.throws(() => projectedHref(frame('/analysis/index.html', { q: 'gap' }), opened), failsWith('an.leftWorkspace'))
   assert.throws(() => projectedHref(frame('/compare.html', { selection: JSON.stringify([{ path: B, label: 'b' }]) }), opened), failsWith('an.compareSelection'))
   assert.throws(() => projectedHref(inside('/elsewhere.html'), opened), failsWith('an.leftWorkspace'))
 })

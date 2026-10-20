@@ -123,12 +123,18 @@ export function Rail({ route, data, narrow, demo, onSearch }: RailProps) {
           </ul>
         </section>
       )}
-      {demo && (
-        <div className="railfoot">
-          <span className="demo" title={t('shell.demo')}>DEMO</span>
-          <span className="railfoot-note">{t('shell.demo')}</span>
-        </div>
-      )}
+      <div className="railfoot">
+        {demo && (
+          <span className="railfoot-demo">
+            <span className="demo" title={t('shell.demo')}>DEMO</span>
+            <span className="railfoot-note">{t('shell.demo')}</span>
+          </span>
+        )}
+        {/* The legacy run list's header link (P01-C5), now with the rest of the app's chrome. */}
+        <a className="railgit" href="https://github.com/SakanaAI/ShinkaEvolve" target="_blank" rel="noopener noreferrer" title={t('runs.github')}>
+          GitHub ↗
+        </a>
+      </div>
     </aside>
   )
 }

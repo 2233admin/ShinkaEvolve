@@ -7,13 +7,14 @@ import { useTheme } from './design/theme'
 import { LangProvider, useCopy, useLangState, type Lang } from './i18n/lang'
 import { Library } from './library/Library'
 import { Report } from './report/Report'
+import { RunList } from './runs/RunList'
 import { Palette, type PaletteItem } from './shell/Palette'
 import { Rail, TabBar } from './shell/Rail'
 import { ALL_RUNS, routeHref, runRoute, type Route } from './shell/route'
 import { TopBar, Updated, type Crumb } from './shell/TopBar'
 import { useMatches } from './shell/useMatches'
 import { useRouter } from './shell/useRouter'
-import { useShellData } from './shell/useShellData'
+import { REFRESH_MS, RUNS_REFRESH_MS, useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
 
 // Each page's own layout; the hosted analysis pages take the full width.
@@ -21,7 +22,7 @@ const PAGE_CLASS: Record<Route['view'], string> = {
   directions: 'home-page',
   direction: 'report-page',
   library: 'library-page',
-  runs: 'analysis-page',
+  runs: 'runs-page',
   compare: 'analysis-page',
   run: 'analysis-page',
 }
@@ -41,8 +42,8 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   const light = theme === 'light'
   const { route, entry, go, sync } = useRouter()
   // An experiment's analysis keeps its direction's snapshot, so Back draws the report at once and the
-  // browser can restore the scroll position.
-  const data = useShellData(route.view === 'direction' || route.view === 'run' ? route.direction : null)
+  // browser can restore the scroll position. The run list refreshes as often as its legacy page did.
+  const data = useShellData(route.view === 'direction' || route.view === 'run' ? route.direction : null, route.view === 'runs' ? RUNS_REFRESH_MS : REFRESH_MS)
   const [palette, setPalette] = useState(false)
   // A manual refresh also reloads a hosted analysis page; the automatic one leaves it alone.
   const [reload, setReload] = useState(0)
@@ -191,6 +192,13 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       break
     }
     case 'runs':
+      page = (
+        <>
+          <h1 className="sr-only">{t('nav.runs')}</h1>
+          <RunList data={shown} route={route} go={go} />
+        </>
+      )
+      break
     case 'compare':
     case 'run':
       page = (
@@ -199,10 +207,19 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
             <h1>{t('head.runs')}</h1>
             <p className="muted">{t('lede.runs')}</p>
           </header>
-          {/* Selections carry run names as labels, so the run list and compare page wait for the listing. */}
-          {route.view !== 'run' && !data.listed
-            ? loading
-            : <AnalysisWorkspace key={`${entry}:${reload}`} route={route} names={names} light={light} onProject={sync} />}
+          {/* Selections carry run names as labels, so the compare page waits for the listing. */}
+          {route.view === 'compare' && !data.listed ? (
+            loading
+          ) : (
+            <AnalysisWorkspace
+              key={`${entry}:${reload}`}
+              route={route}
+              names={names}
+              light={light}
+              onProject={sync}
+              onRunList={() => go(routeHref(ALL_RUNS))}
+            />
+          )}
         </>
       )
       break
@@ -218,7 +235,16 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       <div className="shell">
         <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
         <div className="main">
-          <TopBar crumbs={crumbs} data={shown} demo={demo} theme={theme} onTheme={setTheme} onLang={onLang} onSearch={() => setPalette(true)} />
+          <TopBar
+            crumbs={crumbs}
+            data={shown}
+            demo={demo}
+            liveToggle={!analysis}
+            theme={theme}
+            onTheme={setTheme}
+            onLang={onLang}
+            onSearch={() => setPalette(true)}
+          />
           <main id="content" className={`page ${PAGE_CLASS[route.view]}`} tabIndex={-1}>
             {page}
           </main>

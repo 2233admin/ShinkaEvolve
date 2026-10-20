@@ -41,7 +41,10 @@ function Choice<T extends string>({ label, value, options, onChange }: ChoicePro
   )
 }
 
-/** OD-17: when the data last loaded; a click refreshes now. A failed refresh says so and keeps the data. */
+/**
+ * OD-17: when the data last loaded; a click refreshes now. A failed refresh says so and keeps the
+ * data; a paused refresh says so with its shape and word.
+ */
 export function Updated({ data }: { data: ShellData }) {
   const { t } = useCopy()
   if (data.updated === null) {
@@ -57,17 +60,30 @@ export function Updated({ data }: { data: ShellData }) {
   }
   const time = when(data.updated.toISOString())
   const stale = data.error !== null
+  const hint = stale ? t('shell.staleHint', { time }) : data.live ? t('shell.updatedHint', { s: data.every / 1000 }) : t('shell.pausedHint')
   return (
-    <button
-      type="button"
-      className={stale ? 'updated is-stale' : 'updated'}
-      onClick={data.refresh}
-      title={stale ? t('shell.staleHint', { time }) : t('shell.updatedHint')}
-    >
+    <button type="button" className={stale ? 'updated is-stale' : 'updated'} onClick={data.refresh} title={hint}>
       {stale && <Glyph kind="error" signal />}
       {stale && <span className="sig">{t('shell.stale')}</span>}
+      {!data.live && (
+        <span className="paused">
+          <Icon name="pause" />
+          {t('shell.paused')}
+        </span>
+      )}
       <span>{t('shell.updated')}</span>
       <span className="mono">{time} UTC</span>
+    </button>
+  )
+}
+
+/** Pauses or resumes the automatic refresh of every page the shell draws itself (P01-C5 under OD-17). */
+function LiveToggle({ data }: { data: ShellData }) {
+  const { t } = useCopy()
+  const label = t(data.live ? 'shell.pause' : 'shell.resume')
+  return (
+    <button type="button" className="live-toggle" aria-label={label} title={label} aria-pressed={!data.live} onClick={() => data.setLive(!data.live)}>
+      <Icon name={data.live ? 'pause' : 'play'} />
     </button>
   )
 }
@@ -77,18 +93,23 @@ type Props = {
   data: ShellData
   /** Demo data: on phones, where the rail is hidden, the top bar carries the DEMO mark. */
   demo: boolean
+  /** False while a restored analysis page with its own refresh switch fills the page (until task 6.1). */
+  liveToggle: boolean
   theme: ThemeName
   onTheme: (theme: ThemeName) => void
   onLang: (lang: Lang) => void
   onSearch: () => void
 }
 
-export function TopBar({ crumbs, data, demo, theme, onTheme, onLang, onSearch }: Props) {
+export function TopBar({ crumbs, data, demo, liveToggle, theme, onTheme, onLang, onSearch }: Props) {
   const { lang, t } = useCopy()
   const [settings, setSettings] = useState(false)
   const tools = (
     <>
-      <Updated data={data} />
+      <span className="updated-group">
+        <Updated data={data} />
+        {liveToggle && data.updated !== null && <LiveToggle data={data} />}
+      </span>
       <Choice
         label={t('theme.label')}
         value={theme}

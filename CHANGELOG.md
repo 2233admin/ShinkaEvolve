@@ -53,6 +53,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   page says so instead of silently showing the index. `[[page]]` links open the
   library page from any Markdown in the workbench, including hypothesis text;
   Markdown links use the text colour instead of the signal orange.
+- Added the Research workbench's native run list: runs grouped by evaluator
+  (research experiments under their direction, ordinary runs under their task)
+  with every legacy column plus failures, runtime and update time, search (`/`
+  focuses it), a kind filter, sorting and a selection that survives filtering,
+  all kept in the URL. Totals always cover every run, with a subtotal while
+  filtered and a lower bound when a cost is unknown; stall and cost thresholds
+  are shown by type weight instead of a second colour. The run list refreshes
+  every 10 seconds, and the top bar can pause automatic refresh for the visit.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { RunEntry, Snapshot, WorkspaceSnapshot } from '../types'
 
-// OD-17: the data refreshes on its own and keeps the current selection and scroll position.
-const REFRESH_MS = 30_000
+// OD-17: the data refreshes on its own and keeps the current selection and scroll position. The run
+// list refreshes as often as its legacy page did (P01-C5); every other page every 30 seconds.
+export const REFRESH_MS = 30_000
+export const RUNS_REFRESH_MS = 10_000
 
 export type ShellData = {
   workspace: WorkspaceSnapshot | null
@@ -12,11 +14,18 @@ export type ShellData = {
   runs: RunEntry[] | null
   /** The first listing attempt has finished, whatever its outcome. */
   listed: boolean
+  /** Why the latest listing failed (P01-E1); the runs above are still from the last good one. */
+  runsError: string | null
   /** When the workspace (and open direction) last loaded. */
   updated: Date | null
   /** Why the latest load failed; the data above is still from `updated`. */
   error: string | null
   refresh: () => void
+  /** Automatic refresh is on. A pause lasts for this visit only (the legacy toggle reset on every load); a click on Updated still refreshes. */
+  live: boolean
+  setLive: (live: boolean) => void
+  /** How often the automatic refresh runs, in milliseconds. */
+  every: number
 }
 
 async function getJson<T>(url: string, signal: AbortSignal): Promise<T> {
@@ -25,8 +34,8 @@ async function getJson<T>(url: string, signal: AbortSignal): Promise<T> {
   return res.json() as Promise<T>
 }
 
-/** Workspace summary, run list and the open direction's snapshot, refreshed together. */
-export function useShellData(direction: string | null): ShellData {
+/** Workspace summary, run list and the open direction's snapshot, refreshed together every `every` ms while visible. */
+export function useShellData(direction: string | null, every = REFRESH_MS): ShellData {
   const [loaded, setLoaded] = useState<{
     workspace: WorkspaceSnapshot | null
     snap: Snapshot | null
@@ -35,6 +44,7 @@ export function useShellData(direction: string | null): ShellData {
     error: string | null
   }>({ workspace: null, snap: null, snapFor: null, updated: null, error: null })
   const [runs, setRuns] = useState<RunEntry[] | null>(null)
+  const [runsError, setRunsError] = useState<string | null>(null)
   const [listed, setListed] = useState(false)
   const [round, setRound] = useState(0)
 
@@ -52,18 +62,28 @@ export function useShellData(direction: string | null): ShellData {
     )
     // The research pages never wait for the run list.
     getJson<RunEntry[]>('/list_databases', signal)
-      .then(setRuns, () => {})
+      .then(
+        (listing) => {
+          setRuns(listing)
+          setRunsError(null)
+        },
+        (e: unknown) => {
+          if (!signal.aborted) setRunsError(e instanceof Error ? e.message : String(e))
+        },
+      )
       .finally(() => {
         if (!signal.aborted) setListed(true)
       })
     return () => controller.abort()
   }, [direction, round])
 
+  const [live, setLive] = useState(true)
   useEffect(() => {
+    if (!live) return
     const again = () => {
       if (document.visibilityState === 'visible') setRound((r) => r + 1)
     }
-    const timer = window.setInterval(again, REFRESH_MS)
+    const timer = window.setInterval(again, every)
     document.addEventListener('visibilitychange', again)
     window.addEventListener('online', again)
     return () => {
@@ -71,9 +91,14 @@ export function useShellData(direction: string | null): ShellData {
       document.removeEventListener('visibilitychange', again)
       window.removeEventListener('online', again)
     }
+  }, [live, every])
+  const resume = useCallback((next: boolean) => {
+    setLive(next)
+    // Resuming catches up at once instead of waiting for the next tick.
+    if (next) setRound((r) => r + 1)
   }, [])
 
   const refresh = useCallback(() => setRound((r) => r + 1), [])
   const { workspace, snap, snapFor, updated, error } = loaded
-  return { workspace, snap: snapFor === direction ? snap : null, runs, listed, updated, error, refresh }
+  return { workspace, snap: snapFor === direction ? snap : null, runs, listed, runsError, updated, error, refresh, live, setLive: resume, every }
 }

@@ -37,9 +37,13 @@ kbd { font: 500 11px/16px var(--font-mono); color: var(--muted); border: 1px sol
 .brand { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 8px; font: 600 14px/1 var(--font-sans); color: var(--text); }
 .ws { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 0 8px 0 35px; margin-top: -4px; font-size: 12px; line-height: 18px; color: var(--faint); min-width: 0; }
 .demo { flex: none; font: 500 10px/16px var(--font-mono); letter-spacing: .04em; color: var(--muted); border: 1px solid var(--line-strong); border-radius: 3px; padding: 0 4px; }
-.railfoot { margin-top: auto; display: flex; gap: 8px; align-items: center; padding: 10px; color: var(--faint); font-size: 12px; line-height: 18px; }
-.rail.is-narrow .railfoot { justify-content: center; padding: 10px 0; }
+.railfoot { margin-top: auto; display: grid; gap: 8px; padding: 10px; color: var(--faint); font-size: 12px; line-height: 18px; }
+.railfoot-demo { display: flex; gap: 8px; align-items: center; }
+.railgit { justify-self: start; color: var(--faint); text-decoration: none; }
+.railgit:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
+.rail.is-narrow .railfoot { justify-items: center; padding: 10px 0; }
 .rail.is-narrow .railfoot-note { display: none; }
+.rail.is-narrow .railgit { justify-self: center; font-size: 11px; }
 .top-demo { display: none; }
 .search {
   display: flex; align-items: center; gap: 8px; height: 32px; margin: 12px 0 10px; padding: 0 6px 0 10px;
@@ -96,6 +100,14 @@ a.railitem:hover, .railitem.is-on { background: var(--hover); color: var(--text)
 }
 .updated .mono { color: var(--muted); }
 .updated:hover { background: var(--hover); }
+.updated-group { display: inline-flex; align-items: center; gap: 2px; }
+.paused { display: inline-flex; align-items: center; gap: 4px; color: var(--text); }
+.live-toggle {
+  display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0;
+  border: 0; border-radius: var(--radius-control); background: none; color: var(--muted); cursor: pointer;
+}
+.live-toggle:hover { background: var(--hover); color: var(--text); }
+.live-toggle[aria-pressed='true'] { color: var(--text); background: var(--raised); box-shadow: inset 0 0 0 1px var(--stroke); }
 .seg { display: flex; gap: 2px; padding: 2px; border: 1px solid var(--line-strong); border-radius: 7px; }
 .seg button {
   padding: 2px 9px; border: 1px solid transparent; border-radius: 5px; background: none;
