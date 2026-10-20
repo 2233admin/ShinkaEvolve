@@ -10,7 +10,7 @@ export type Status =
   | 'unconfirmed'
   | 'dropped'
 
-export type Evidence = Record<string, number | string | null | undefined>
+export type Evidence = Record<string, number | string | boolean | null | undefined>
 
 // skeptic 判定时实际用的阈值（cli.cmd_skeptic 写入），台账照它比较。
 export interface Thresholds {

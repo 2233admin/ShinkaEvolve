@@ -4,9 +4,9 @@ import { AnalysisWorkspace } from './AnalysisWorkspace'
 import { DEMO_TAG, untagged } from './demo'
 import { DirectionMeta } from './DirectionMeta'
 import { useTheme } from './design/theme'
-import { LangProvider, Rich, useCopy, useLangState, type Lang } from './i18n/lang'
+import { LangProvider, useCopy, useLangState, type Lang } from './i18n/lang'
 import { LibraryTab } from './LibraryTab'
-import { ResearchTab } from './ResearchTab'
+import { Report } from './report/Report'
 import { Palette, type PaletteItem } from './shell/Palette'
 import { Rail, TabBar } from './shell/Rail'
 import { ALL_RUNS, routeHref, runRoute } from './shell/route'
@@ -15,7 +15,6 @@ import { useMatches } from './shell/useMatches'
 import { useRouter } from './shell/useRouter'
 import { useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
-import { PARTS } from './Term'
 
 export default function App() {
   const [lang, setLang] = useLangState()
@@ -31,7 +30,9 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   const { lang, t } = useCopy()
   const light = theme === 'light'
   const { route, entry, go, sync } = useRouter()
-  const data = useShellData(route.view === 'direction' ? route.direction : null)
+  // An experiment's analysis keeps its direction's snapshot, so Back draws the report at once and the
+  // browser can restore the scroll position.
+  const data = useShellData(route.view === 'direction' || route.view === 'run' ? route.direction : null)
   const [palette, setPalette] = useState(false)
   // A manual refresh also reloads a hosted analysis page; the automatic one leaves it alone.
   const [reload, setReload] = useState(0)
@@ -154,10 +155,9 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       const summary = directions.find((d) => d.id === route.direction)
       page = (
         <>
-          <header className="page-head">
+          <header className="rhead">
             <h1>{snap ? <span translate="no">{untagged(snap.direction)}</span> : t('head.direction')}</h1>
             {snap && <DirectionMeta snap={snap} entry={summary && summary.error === null ? summary : null} />}
-            <p className="muted"><Rich k="lede.direction" parts={PARTS} /></p>
           </header>
           {data.error !== null && snap === null
             ? <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
@@ -166,11 +166,14 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
               : snap.hypotheses.length === 0
                 ? <InlineNotification kind="info" statusIconDescription={t('icon.info')} lowContrast hideCloseButton title={t('empty.hypotheses')} subtitle={t('empty.hypothesesHint')} />
                 : current && (
-                  <ResearchTab
+                  // One report per direction: its remembered sort, filter and open sections are read on mount.
+                  <Report
+                    key={route.direction}
                     snap={snap}
+                    direction={route.direction}
                     current={current}
-                    light={light}
                     onSelect={(id) => go(routeHref({ view: 'direction', direction: route.direction, hypothesis: id }), { replace: true })}
+                    onOpen={go}
                   />
                 )}
         </>
@@ -216,7 +219,11 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
         <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
         <div className="main">
           <TopBar crumbs={crumbs} data={shown} demo={demo} theme={theme} onTheme={setTheme} onLang={onLang} onSearch={() => setPalette(true)} />
-          <main id="content" className={route.view === 'directions' ? 'page home-page' : analysis || route.view === 'runs' ? 'page analysis-page' : 'page'} tabIndex={-1}>
+          <main
+            id="content"
+            className={route.view === 'directions' ? 'page home-page' : route.view === 'direction' ? 'page report-page' : analysis || route.view === 'runs' ? 'page analysis-page' : 'page'}
+            tabIndex={-1}
+          >
             {page}
           </main>
         </div>

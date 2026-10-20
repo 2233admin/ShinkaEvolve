@@ -8,24 +8,6 @@
 .analysis-frame { display: block; width: 100%; height: max(780px, calc(100dvh - 250px)); border: 0; background: var(--base); }
 @media (max-width: 900px) {
   .analysis-frame { height: 1400px; }
-}
-
-/* 研究页：表格 → 试验图 → 时间线 → 事件，右侧规格卡 */
-.grid {
-  display: grid; grid-template-columns: minmax(0, 1fr) var(--side-width); gap: var(--space-8) var(--space-6); align-items: start;
-  grid-template-areas: 'table side' 'chart side' 'timeline side' 'events side';
-  grid-template-rows: auto auto auto 1fr;
-}
-.grid > * { min-width: 0; }
-.area-table { grid-area: table; }
-.area-chart { grid-area: chart; }
-.area-timeline { grid-area: timeline; }
-.area-events { grid-area: events; }
-.area-side { grid-area: side; position: sticky; top: var(--space-4); }
-
-@media (max-width: 900px) {
   .page { padding: var(--space-4); }
-  .grid { grid-template-columns: minmax(0, 1fr); grid-template-areas: 'table' 'side' 'chart' 'timeline' 'events'; }
-  .area-side { position: static; }
   .page-head h1 { font-size: 22px; }
 }

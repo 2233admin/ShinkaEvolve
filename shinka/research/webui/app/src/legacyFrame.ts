@@ -19,6 +19,9 @@ const PAGES: Record<string, HostedRoute['view']> = {
   '/viz_tree.html': 'run',
 }
 
+/** The restored run page's code tab: the public URL's `pane=code`. */
+const CODE_TAB = 'agent-code'
+
 type Selection = { path: string; label: string }[]
 
 function isSelection(value: unknown): value is Selection {
@@ -47,11 +50,15 @@ export function framePath(route: HostedRoute, names: ReadonlyMap<string, string>
       if (route.runs.length < 2) throw new HostError('an.compareSelection')
       p.set('selection', labelled(route.runs))
       return `/compare.html?${p}`
-    case 'run':
+    case 'run': {
       p.set('db_path', route.run)
       if (route.program) p.set('selected_node', route.program)
-      for (const [key, value] of route.panels) p.append(key, value)
+      // The inspector's code pane (task 6.1) is the restored page's code tab; it wins over a right_tab.
+      const code = route.pane === 'code'
+      for (const [key, value] of route.panels) if (!(code && key === 'right_tab')) p.append(key, value)
+      if (code) p.append('right_tab', CODE_TAB)
       return `/viz_tree.html?${p}`
+    }
   }
 }
 
@@ -78,10 +85,14 @@ export function projectedHref(inside: URL, route: HostedRoute): string {
       const run = q.get('db_path')
       if (!run) return routeHref(ALL_RUNS)
       const kept = route.view === 'run' && route.run === run ? route : runRoute(run)
+      const panels = RUN_PANELS.flatMap((key) => q.getAll(key).map((value): [string, string] => [key, value]))
+      const code = panels.some(([key, value]) => key === 'right_tab' && value === CODE_TAB)
       return routeHref({
         ...kept,
         program: q.get('selected_node') || null,
-        panels: RUN_PANELS.flatMap((key) => q.getAll(key).map((value): [string, string] => [key, value])),
+        // The frame's own tab decides: its code tab is pane=code, any other tab ends a code pane.
+        pane: code ? 'code' : kept.pane === 'code' ? null : kept.pane,
+        panels: code ? panels.filter(([key]) => key !== 'right_tab') : panels,
       })
     }
     default:

@@ -152,6 +152,18 @@ const ICONS = {
       </>
     ),
   },
+  check: {
+    box: 12,
+    body: <path d="M2.5 6.2l2.4 2.4 4.6-5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />,
+  },
+  cross: {
+    box: 12,
+    body: <path d="M3 3l6 6m0-6l-6 6" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />,
+  },
+  arrow: {
+    box: 12,
+    body: <path d="M2 6h7.5M6.5 3l3 3-3 3" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+  },
 } satisfies Record<string, { box: number; body: ReactNode }>
 
 export type IconName = keyof typeof ICONS

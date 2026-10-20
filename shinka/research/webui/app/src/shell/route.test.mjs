@@ -65,6 +65,18 @@ test('each hosted page survives the trip through its restored page', () => {
   }
 })
 
+test("the code pane opens the restored page's code tab and comes back as the code pane", () => {
+  const code = { ...opened, pane: 'code', panels: [['left_tab', 'embeddings'], ['right_tab', 'meta']] }
+  const run = inside(framePath(code, new Map()))
+  // The code tab wins over a right tab the URL also carries.
+  assert.deepEqual(run.searchParams.getAll('right_tab'), ['agent-code'])
+  assert.equal(projectedHref(run, code), routeHref({ ...code, panels: [['left_tab', 'embeddings']] }))
+  // Choosing another tab in the frame ends the code pane; any other pane belongs to the native views.
+  const other = inside(`/viz_tree.html?${new URLSearchParams({ db_path: ODD, right_tab: 'node-details' })}`)
+  assert.equal(at(projectedHref(other, code)).pane, null)
+  assert.equal(at(projectedHref(other, opened)).pane, 'diff')
+})
+
 test('where the frame goes becomes the public URL', () => {
   const frame = (path, params) => inside(`${path}?${new URLSearchParams(params)}`)
   // The same run: research context and native state stay, the frame's own state follows it.

@@ -36,6 +36,17 @@ All notable changes to `shinka-evolve` are documented in this file.
   field (the newest 30 events across directions, withheld notes kept hidden).
   Unreadable directions stay as error rows outside the totals; phones get one
   card per direction. The overview never requests `/api/snapshot`.
+- Added the Research workbench's native direction report, read in the order the
+  argument runs: a sortable hypothesis table, the selected hypothesis's claim,
+  mechanism and falsification with its full notebook text, every trial against
+  the noise line the chart draws itself (integer trial numbers, failures in
+  their own band), the check ledger, and beside it the verdict, the lockbox
+  confirmation and each experiment. A trial point, by click or by keyboard,
+  opens that program's code in its experiment's analysis; an experiment opens
+  the program its verdict rests on. Back returns to the same hypothesis with the
+  scroll position, sort, open text and event filter as left. The timeline and
+  the filterable event stream are native too, so the workbench no longer loads
+  Astro UXDS web components.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

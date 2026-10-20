@@ -2,7 +2,7 @@ import { Fragment, useState, type CSSProperties, type KeyboardEvent, type ReactN
 import { untagged } from '../demo'
 import { EventMark, Glyph, Icon } from '../design/icons'
 import { directionState, STATE_LOOK, type DirectionState } from '../direction'
-import { fmt, int, money, pct, STATUS, when } from '../format'
+import { fmt, int, money, pct, STATUS, STATUS_ORDER, when } from '../format'
 import { COPY, type CopyKey } from '../i18n/copy'
 import { Rich, useCopy } from '../i18n/lang'
 import { routeHref } from '../shell/route'
@@ -12,9 +12,6 @@ import type { DirectionEvidence, DirectionSummary, Status, WorkspaceEvent, Works
 
 // Gauges and their header axis share one inset, wide enough for a centred end label.
 const EV_PAD = 14
-
-// Statuses read best-first: outcomes, then work in progress, then what has not started.
-const STATUS_ORDER: Status[] = ['confirmed', 'supported', 'unconfirmed', 'refuted', 'inconclusive', 'challenged', 'running', 'selected', 'proposed', 'dropped']
 
 type Scale = { lo: number; hi: number; ticks: number[] }
 

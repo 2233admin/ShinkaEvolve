@@ -1,28 +1,21 @@
 import type { CopyKey } from './i18n/copy'
 import type { Evidence, Hypothesis, Status, Thresholds } from './types'
 
-export type RuxStatus = 'normal' | 'caution' | 'critical' | 'standby' | 'off'
-
-export const STATUS: Record<Status, { key: CopyKey; rux: RuxStatus }> = {
-  proposed: { key: 'status.proposed', rux: 'off' },
-  selected: { key: 'status.selected', rux: 'standby' },
-  running: { key: 'status.running', rux: 'standby' },
-  challenged: { key: 'status.challenged', rux: 'caution' },
-  supported: { key: 'status.supported', rux: 'normal' },
-  refuted: { key: 'status.refuted', rux: 'critical' },
-  inconclusive: { key: 'status.inconclusive', rux: 'caution' },
-  confirmed: { key: 'status.confirmed', rux: 'normal' },
-  unconfirmed: { key: 'status.unconfirmed', rux: 'critical' },
-  dropped: { key: 'status.dropped', rux: 'off' },
+export const STATUS: Record<Status, { key: CopyKey }> = {
+  proposed: { key: 'status.proposed' },
+  selected: { key: 'status.selected' },
+  running: { key: 'status.running' },
+  challenged: { key: 'status.challenged' },
+  supported: { key: 'status.supported' },
+  refuted: { key: 'status.refuted' },
+  inconclusive: { key: 'status.inconclusive' },
+  confirmed: { key: 'status.confirmed' },
+  unconfirmed: { key: 'status.unconfirmed' },
+  dropped: { key: 'status.dropped' },
 }
 
-export const EVENT_STATUS: Record<string, RuxStatus> = {
-  verdict: 'normal',
-  skeptic: 'caution',
-  run: 'standby',
-  'run-failed': 'critical',
-  confirm: 'normal',
-}
+/** Statuses read best-first: outcomes, then work in progress, then what has not started. */
+export const STATUS_ORDER: Status[] = ['confirmed', 'supported', 'unconfirmed', 'refuted', 'inconclusive', 'challenged', 'running', 'selected', 'proposed', 'dropped']
 
 export const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
@@ -70,7 +63,7 @@ export function checksOf(ev: Evidence, th: Thresholds, pboNone: string): Check[]
   const pbo = num(ev.pbo)
   return [
     { key: 'oos', pass: oos === null ? null : oos > 0, value: fmt(oos) },
-    { key: 'hold', pass: oos === null || hold === null ? null : oos > hold, value: `${fmt(oos)} vs ${fmt(hold)}` },
+    { key: 'hold', pass: oos === null || hold === null ? null : oos > hold, value: `${fmt(oos)} / ${fmt(hold)}` },
     { key: 'dsr', pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
     { key: 'sub', pass: frac === null ? null : frac >= th.min_positive_fraction, value: pct(frac) },
     { key: 'pbo', pass: pbo === null ? true : pbo <= th.max_pbo, value: pbo === null ? pboNone : fmt(pbo) },
