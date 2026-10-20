@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { InlineNotification, Theme } from '@carbon/react'
 import { AnalysisWorkspace } from './AnalysisWorkspace'
+import { Compare } from './compare/Compare'
 import { DEMO_TAG, untagged } from './demo'
 import { DirectionMeta } from './DirectionMeta'
 import { useTheme } from './design/theme'
@@ -17,13 +18,13 @@ import { useRouter } from './shell/useRouter'
 import { REFRESH_MS, RUNS_REFRESH_MS, useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
 
-// Each page's own layout; the hosted analysis pages take the full width.
+// Each page's own layout; the hosted analysis page takes the full width.
 const PAGE_CLASS: Record<Route['view'], string> = {
   directions: 'home-page',
   direction: 'report-page',
   library: 'library-page',
   runs: 'runs-page',
-  compare: 'analysis-page',
+  compare: 'compare-page',
   run: 'analysis-page',
 }
 
@@ -47,7 +48,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   const [palette, setPalette] = useState(false)
   // A manual refresh also reloads a hosted analysis page; the automatic one leaves it alone.
   const [reload, setReload] = useState(0)
-  // design.md › 响应式: the rail narrows below 1280px and on the analysis pages.
+  // design.md › 响应式: the rail narrows below 1280px and on the analysis page.
   const compact = useMatches('(max-width: 1279px)')
 
   useEffect(() => {
@@ -200,6 +201,8 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       )
       break
     case 'compare':
+      page = <Compare data={shown} route={route} go={go} />
+      break
     case 'run':
       page = (
         <>
@@ -207,19 +210,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
             <h1>{t('head.runs')}</h1>
             <p className="muted">{t('lede.runs')}</p>
           </header>
-          {/* Selections carry run names as labels, so the compare page waits for the listing. */}
-          {route.view === 'compare' && !data.listed ? (
-            loading
-          ) : (
-            <AnalysisWorkspace
-              key={`${entry}:${reload}`}
-              route={route}
-              names={names}
-              light={light}
-              onProject={sync}
-              onRunList={() => go(routeHref(ALL_RUNS))}
-            />
-          )}
+          <AnalysisWorkspace key={`${entry}:${reload}`} route={route} light={light} onProject={sync} onRunList={() => go(routeHref(ALL_RUNS))} />
         </>
       )
       break
@@ -228,7 +219,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       break
   }
 
-  const analysis = route.view === 'run' || route.view === 'compare'
+  const analysis = route.view === 'run'
   return (
     <Theme theme={light ? 'white' : 'g100'}>
       <a className="skip" href="#content">{t('shell.skip')}</a>

@@ -11,6 +11,7 @@ import './overview/overview.css'
 import './report/report.css'
 import './library/library.css'
 import './runs/runs.css'
+import './compare/compare.css'
 import App from './App'
 
 createRoot(document.getElementById('root')!).render(<App />)

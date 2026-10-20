@@ -8,7 +8,8 @@ export type Route =
   | { view: 'direction'; direction: string; hypothesis: string | null }
   /** `kind` is ordinary, experiment or '' for every run; `sort` '' is the list's default order. */
   | { view: 'runs'; q: string; kind: string; sort: string; select: string[] }
-  | { view: 'compare'; runs: string[] }
+  /** `metric` is program_count or correct_count; '' is the cumulative best. */
+  | { view: 'compare'; runs: string[]; metric: string }
   | {
       view: 'run'
       run: string
@@ -29,7 +30,7 @@ export type RunRoute = Extract<Route, { view: 'run' }>
 
 export const RUN_PANELS = ['left_tab', 'right_tab', 'meta_section']
 
-export const ALL_RUNS: Route = { view: 'runs', q: '', kind: '', sort: '', select: [] }
+export const ALL_RUNS: Extract<Route, { view: 'runs' }> = { view: 'runs', q: '', kind: '', sort: '', select: [] }
 
 export function parseRoute(search: string): Route {
   const p = new URLSearchParams(search)
@@ -43,7 +44,7 @@ export function parseRoute(search: string): Route {
     case 'runs':
       return { view: 'runs', q: p.get('q') ?? '', kind: p.get('kind') ?? '', sort: p.get('sort') ?? '', select: p.getAll('select') }
     case 'compare':
-      return { view: 'compare', runs: p.getAll('runs') }
+      return { view: 'compare', runs: p.getAll('runs'), metric: p.get('metric') ?? '' }
     case 'run': {
       const run = one('run')
       if (!run) return ALL_RUNS
@@ -83,6 +84,7 @@ export function routeHref(route: Route): string {
       break
     case 'compare':
       for (const run of route.runs) p.append('runs', run)
+      put('metric', route.metric)
       break
     case 'run':
       put('run', route.run)

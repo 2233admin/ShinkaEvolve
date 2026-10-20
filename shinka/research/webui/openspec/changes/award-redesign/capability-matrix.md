@@ -482,6 +482,7 @@ All eight items need per-program `metadata.{pipeline,sampling,evaluation,postpro
 | P02-Q1 | Q | How do the selected runs compare by generation? Cumulative best valid score, program count or correct count. | CP:353-357, 539-585, 637 | CON / RUN — OD-5 |
 | P02-Q2 | Q | How do they compare against cumulative cost? Same metrics vs cost in timestamp order; downsampled to 200 points. | CP:587-630, 667 | CON / RUN — OD-5 |
 | P02-Q3 | Q | Legend table: run, best valid score, max generation, programs, cost; a row opens the run's analysis. | CP:376-391, 469-505 | RUN |
+| P02-Q4 | Q | What is each run's value at a given generation or spend? Chart.js index-mode tooltips list every run's value at the pointed position (scores to 2 decimals). | CP:681-692, 711-723 | RUN |
 | P02-S1 | S | URL `selection` only; the metric choice is not persisted. Inside the app it is mirrored as `compare=`. | CP:409-427; SRC/AnalysisWorkspace.tsx:28-30, 64-68 | RUN |
 | P02-E1 | E | Loading "正在读取比较数据。"; "没有可比较的运行：请从全部运行选择至少两个运行。"; "读取失败：<msg>". | CP:338-347, 412-441 | RUN |
 | P02-I1 | I | Hardcoded ZH. | CP:332-385, 516-524 | carry-over |

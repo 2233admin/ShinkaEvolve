@@ -61,6 +61,15 @@ All notable changes to `shinka-evolve` are documented in this file.
   filtered and a lower bound when a cost is unknown; stall and cost thresholds
   are shown by type weight instead of a second colour. The run list refreshes
   every 10 seconds, and the top bar can pause automatic refresh for the visit.
+- Added the Research workbench's native compare page: cumulative best, program
+  count or valid count against generation and against cumulative spend for any
+  two or more runs, point for point as the old compare page drew them, with
+  each run told apart by shape and line and its value readable by pointer or
+  arrow keys; a leaderboard of the best valid programs, each opening its code;
+  and run-level metrics with the better value in bold. Runs from different
+  tasks keep their score curves, leaderboards and best apart by task, since
+  scores from different evaluators do not compare. The metric and the selection
+  live in the URL, and the page follows automatic refresh and its pause.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

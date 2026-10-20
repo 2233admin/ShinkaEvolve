@@ -7,7 +7,7 @@ import { Rich, useCopy } from '../i18n/lang'
 import { PARTS } from '../Term'
 import type { Hypothesis, SnapshotEvent } from '../types'
 import { marks, spans, type MarkKind, type Span } from './data'
-import { useWidth } from './useWidth'
+import { useWidth } from '../design/useWidth'
 
 const ROW = 40
 const DAY = 864e5

@@ -149,7 +149,7 @@ export function RunList({ data, route, go }: Props) {
   const unknown = totals.unknownCost + totals.missing
   const selected = new Set(route.select)
   const toggle = (path: string) => update({ select: selected.has(path) ? route.select.filter((p) => p !== path) : [...route.select, path] })
-  const compare = route.select.length >= 2 ? routeHref({ view: 'compare', runs: route.select }) : null
+  const compare = route.select.length >= 2 ? routeHref({ view: 'compare', runs: route.select, metric: '' }) : null
 
   const row = (r: RunEntry) => {
     const label = runLabel(r)

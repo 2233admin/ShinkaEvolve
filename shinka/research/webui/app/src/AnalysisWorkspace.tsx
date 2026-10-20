@@ -12,8 +12,6 @@ function setFrameLanguage(child: Window, lang: Lang) {
 
 type Props = {
   route: HostedRoute
-  /** Run names by path, for the labels the compare selection carries. */
-  names: ReadonlyMap<string, string>
   light: boolean
   /** The frame moved on its own; the URL already says where. */
   onProject: () => void
@@ -22,16 +20,10 @@ type Props = {
 }
 
 /** Hosts a restored analysis page for a route; mount once per navigation (key it by the router entry). */
-export function AnalysisWorkspace({ route, names, light, onProject, onRunList }: Props) {
+export function AnalysisWorkspace({ route, light, onProject, onRunList }: Props) {
   const { lang, t } = useCopy()
-  const [initial] = useState(() => {
-    try {
-      return { src: framePath(route, names), error: null }
-    } catch (error) {
-      return { src: null, error }
-    }
-  })
-  const [error, setError] = useState<unknown>(initial.error)
+  const [src] = useState(() => framePath(route))
+  const [error, setError] = useState<unknown>(null)
   const frame = useRef<HTMLIFrameElement>(null)
   const latest = useRef({ route, onProject, onRunList })
   latest.current = { route, onProject, onRunList }
@@ -95,11 +87,9 @@ export function AnalysisWorkspace({ route, names, light, onProject, onRunList }:
     <section aria-label={t('an.section')}>
       <p className="analysis-context"><Rich k="an.context" parts={PARTS} /></p>
       {message && <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('an.readError')} subtitle={message} />}
-      {initial.src && (
-        <div className="analysis-scroll">
-          <iframe ref={frame} className="analysis-frame" title={t('an.section')} src={initial.src} onLoad={connect} />
-        </div>
-      )}
+      <div className="analysis-scroll">
+        <iframe ref={frame} className="analysis-frame" title={t('an.section')} src={src} onLoad={connect} />
+      </div>
     </section>
   )
 }

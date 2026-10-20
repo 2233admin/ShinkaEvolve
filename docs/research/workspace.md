@@ -25,12 +25,12 @@
 | `/?view=directions`（`/` 同） | 研究方向首页（award-redesign 4.1）：数据句标题、合计小字、可排序方向表与合计行、动态栏；只读 `/api/workspace` 与 `/list_databases`，不逐方向请求 `/api/snapshot` |
 | `/?view=direction&direction=<id>&hypothesis=<hid>` | 方向研究报告（award-redesign 4.2）：假设表、所选假设的主张与全文、试验与噪声线、检查台账、判词与封存段确认与实验、时间线和可筛选的事件；只读所开方向的 `/api/snapshot` |
 | `/?view=runs&q=…&kind=…&sort=…&select=<run>…` | 全部运行（award-redesign 5.1）：按评估器分组——研究实验（`workspace/` 下属于某个方向的运行）按方向、普通运行按任务；`kind` 为 `ordinary` 或 `experiment` 时只列该类，`sort` 为 `name`、`score` 或 `cost`，缺省按最近更新；每个勾选的运行一个 `select`，被检索或类型隐藏的运行仍保持勾选。统计逐个读 `/get_database_stats`（每批 4 个），随外壳每 10 秒的自动刷新重读；分组折叠沿用旧列表的 `localStorage['collapsed-task-<任务>']` |
-| `/?view=compare&runs=<run>&runs=<run>…` | 多运行比较，至少 2 个运行 |
+| `/?view=compare&runs=<run>&runs=<run>…&metric=…` | 多运行比较（award-redesign 5.2），至少 2 个运行：所选指标（缺省为累计最佳，`metric` 为 `program_count` 或 `correct_count` 时为程序数或有效程序数）按代与按累计花费的阶梯曲线，指向或用 ← → 读取各运行在该处的数值；跨运行排行榜（每个运行至多 4 个有效程序，合起来取前 8 名）与运行级指标。曲线与旧比较页逐点一致：花费按时间顺序累计程序与提示词进化费用，遇到未计价的调用后曲线止于此，超过 200 点时抽样。运行分属多个任务时，得分曲线、排行榜与最佳只在同一任务内比较，计数与费用仍放在一起。每个运行读 `/get_programs_summary`、`/get_database_stats`，有提示词进化时再读 `/get_system_prompts`，随外壳每 30 秒的自动刷新重读 |
 | `/?view=run&run=<run>&tab=…&program=…&pane=…&gen=…` | 实验分析；研究入口另带 `direction`、`hypothesis` 作为返回上下文。原生视图（award-redesign 6.1）完成前另带恢复页的面板 `left_tab/right_tab/meta_section`，`tab/pane/gen` 只随链接保留 |
 | `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库（award-redesign 4.3）：索引、日志与每个 wiki 页面都是可分享的链接，待整理的原始资料在页首说明；无 `page` 为索引，不存在的页面显示索引并注明缺页。正文是 markdown-it（`html: false`）渲染的净化 Markdown，`[[页面]]` 在工作台任何正文里都链接到这一路由，其他链接在新标签页打开 |
 | `/list_databases`、`/get_database_stats?db_path=…` | 授权范围内的真实程序库与只读统计；费用记录不全时 `total_cost=null`，不能当成免费 |
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
-| `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物 |
+| `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物。运行列表与比较已由工作台原生绘制，旧页面按 award-redesign 7.1 保留到能力组删除 |
 
 成功摘要字段为 `id/direction/created/hypotheses/trials/spend_usd/unknown_cost_runs/budget_usd/lockbox_opened/evidence/error`，其中 `error=null`；`budget_usd=null` 表示未设预算，`lockbox_opened=null` 表示未设置数据切分，`unknown_cost_runs>0` 时 `spend_usd` 是下限。`evidence` 含 `hypothesis_status/best_score/noise_bar/evaluated_programs/failed_programs/last_activity`，与同一方向快照的 `trial_points` 计算一致；没有试验时分数、噪声线与最近活动为 `null`。错误条目只有 `id/direction/error`，`error` 是失败类别（如 `ValueError`），页面按读者语言措辞。两种响应中的 `library` 都是同一工作区资料库；读页面不调用 `library.ensure`，不写研究数据。
 

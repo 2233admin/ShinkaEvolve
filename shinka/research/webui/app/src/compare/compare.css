@@ -1,0 +1,84 @@
+/* Compare runs (award-redesign 5.2). Measurements follow the approved high-fidelity package
+   (hifi/build.mjs › comparePage); colours come from design/tokens.css. Every rule is scoped to the
+   page, since this sheet loads for the whole app. */
+
+.shell .page.compare-page { max-width: none; padding: 22px 28px 64px; font: var(--type-body); }
+.compare-page .num { text-align: right; justify-self: end; }
+.compare-page .mono { font-variant-numeric: tabular-nums; }
+.compare-page h3 { margin: 0 0 8px; font-size: 14px; line-height: 22px; font-weight: 500; }
+
+.compare-page .chead h1 { margin: 0; font-size: 24px; line-height: 32px; font-weight: 600; }
+.compare-page .chead p { margin: 4px 0 0; }
+.compare-page .chead .caveat { margin: 8px 0 0; }
+.compare-page .cto { margin: 12px 0 0; }
+
+.compare-page .chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 20px; }
+.compare-page .chip {
+  display: inline-flex; gap: 8px; align-items: center; min-height: 30px; padding: 0 12px; border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control); color: var(--text); font-size: 12.5px; text-decoration: none;
+}
+.compare-page .chip:hover { background: var(--hover); }
+.compare-page .chip:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.compare-page .chip b { font-weight: 500; overflow-wrap: anywhere; }
+.compare-page .chip.is-add { color: var(--muted); border-style: dashed; }
+.compare-page .runmark { flex: none; }
+
+.compare-page .ctools { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; margin: 0 0 16px; font-size: 12.5px; }
+
+.compare-page .ccharts { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px; margin-bottom: 22px; }
+.compare-page .cchart { min-width: 0; }
+.compare-page .cplot { position: relative; }
+.compare-page .cplot:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.compare-page .chart { display: block; overflow: visible; }
+.compare-page .cnone { margin: 0; padding: 24px 0; }
+.compare-page .clabels { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; font-size: 12px; }
+.compare-page .clabels > span { display: inline-flex; gap: 6px; align-items: center; }
+.compare-page .clabels b { font-weight: 500; }
+.compare-page .ctip {
+  position: absolute; top: 14px; z-index: 2; display: grid; gap: 2px; min-width: 140px; padding: 6px 10px; pointer-events: none;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-float); background: var(--raised); font-size: 12px; white-space: nowrap;
+}
+.compare-page .ctip-row { display: grid; grid-template-columns: 12px minmax(0, 1fr) auto; gap: 6px; align-items: center; }
+.compare-page .ctip-row b { font-weight: 500; text-align: right; }
+
+/* The hi-fi's three runs fit the 560px metrics column; more runs put the metrics under the board. */
+.compare-page .cbottom { display: grid; grid-template-columns: minmax(0, 1fr) 560px; gap: 28px; align-items: start; }
+.compare-page .cbottom.is-wide { grid-template-columns: minmax(0, 1fr); }
+.compare-page .cbottom > section { min-width: 0; }
+
+/* Narrower than this, the board scrolls in its own area so the program column keeps room for its names. */
+.compare-page .cboard { min-width: 520px; border-top: 1px solid var(--line); }
+.compare-page .cboard-group + .cboard-group { margin-top: 14px; }
+.compare-page .cgroup-name { margin: 0 0 6px; font-size: 12.5px; line-height: 18px; font-weight: 500; color: var(--muted); overflow-wrap: anywhere; }
+.compare-page .cbrow {
+  position: relative; display: grid; grid-template-columns: 28px 92px minmax(0, 1fr) 72px 40px 56px 56px; column-gap: 14px;
+  align-items: center; min-height: 32px; padding: 0 4px; border-bottom: 1px solid var(--line); font-size: 12.5px;
+}
+.compare-page .cbrow.cbhead { min-height: 28px; color: var(--faint); font-size: 12px; }
+.compare-page .cbrow:not(.cbhead):hover { background: var(--hover); }
+.compare-page .runmk { display: inline-flex; gap: 6px; align-items: center; min-width: 0; }
+.compare-page .runmk .mono { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.compare-page .cbname { min-width: 0; }
+/* The whole row opens the program; the name stays the one link. */
+.compare-page .cblink { display: block; overflow: hidden; color: var(--text); text-decoration: none; text-overflow: ellipsis; white-space: nowrap; }
+.compare-page .cblink::after { content: ''; position: absolute; inset: 0; }
+.compare-page .cblink:focus-visible { outline: none; }
+.compare-page .cbrow:has(.cblink:focus-visible) { outline: var(--focus-ring); outline-offset: -2px; }
+
+.compare-page .cmetrics { width: max-content; min-width: 100%; border-top: 1px solid var(--line); }
+.compare-page .crow { display: grid; column-gap: 14px; align-items: center; min-height: 48px; padding: 4px 6px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+.compare-page .crow.chd { min-height: 32px; color: var(--faint); font-size: 12px; }
+.compare-page .crow.chd .num { display: inline-flex; justify-content: flex-end; }
+.compare-page .crow .is-lead { color: var(--text); font-weight: 500; }
+.compare-page .crow .is-trail { color: var(--muted); }
+.compare-page .crow svg { display: block; }
+
+@media (max-width: 1439px) {
+  .compare-page .cbottom { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 1023px) {
+  .compare-page .ccharts { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 767px) {
+  .shell .page.compare-page { padding: 16px 16px 96px; }
+}

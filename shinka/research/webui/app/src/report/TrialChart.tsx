@@ -4,7 +4,7 @@ import { fmt, int } from '../format'
 import { useCopy } from '../i18n/lang'
 import type { TrialPoint } from '../types'
 import { frontier } from './data'
-import { useWidth } from './useWidth'
+import { useWidth } from '../design/useWidth'
 
 type Props = {
   points: TrialPoint[]
