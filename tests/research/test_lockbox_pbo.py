@@ -11,7 +11,8 @@ import pandas as pd
 import psutil
 import pytest
 
-from shinka.research import cli, skeptic
+from shinka.research import cli, grants, skeptic
+from shinka.research.grants import AGENT_ENV, LEDGER
 from shinka.research.notebook import Notebook, Status, Verdict
 from shinka.research.skeptic import pbo
 from shinka.research.state import WORK_FILENAME, file_lock
@@ -390,3 +391,94 @@ def test_a_view_of_nan_positions_cannot_pass_the_look_ahead_check(
     assert (
         Notebook.load(root).get("h001").confirmation["failure"] == "invalid-positions"
     )
+
+
+# ---- The owner's lockbox approval (research-agent 2.4) ----------------------
+
+
+def _approve(root: Path) -> str:
+    cli.main(["approve", str(root)])
+    ledger = json.loads((root / LEDGER).read_text())
+    return [r for r in ledger if r["kind"] == "approval"][-1]["id"]
+
+
+def _confirm_with(root: Path, bars_csv: Path, *extra: str) -> None:
+    cli.main(["confirm", str(root), "--data", str(bars_csv), *extra])
+
+
+def test_an_agent_opens_the_lockbox_only_with_the_owners_approval(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    monkeypatch.setenv(AGENT_ENV, "1")
+    # --yes is not enough there, and the agent cannot approve itself.
+    with pytest.raises(SystemExit, match="lockbox approval"):
+        _confirm(root, bars_csv)
+    with pytest.raises(SystemExit, match="the owner's to give"):
+        cli.main(["approve", str(root)])
+    with pytest.raises(SystemExit, match="no lockbox approval a009"):
+        _confirm_with(root, bars_csv, "--approval", "a009")
+    assert not Notebook.load(root).data.opened
+    monkeypatch.delenv(AGENT_ENV)
+    approval = _approve(root)
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _confirm_with(root, bars_csv, "--approval", approval)
+    nb = Notebook.load(root)
+    assert nb.data.opened and not nb.data.unfinished
+    uses = [
+        r
+        for r in json.loads((root / LEDGER).read_text())
+        if r["kind"] == "approval-used"
+    ]
+    assert [(u["approval"], u["opening"]) for u in uses] == [
+        (approval, nb.data.opening.started)
+    ]
+
+
+def test_an_approval_is_spent_before_the_opening_and_only_once(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    first, second = _approve(root), _approve(root)
+    spend = grants.use_approval
+
+    def dies_after_spending(*args):
+        spend(*args)
+        raise _Crash
+
+    monkeypatch.setattr(grants, "use_approval", dies_after_spending)
+    monkeypatch.setenv(AGENT_ENV, "1")
+    with pytest.raises(_Crash):
+        _confirm_with(root, bars_csv, "--approval", first)
+    # A crash between the two leaves the lockbox sealed, never opened unpaid.
+    assert not Notebook.load(root).data.opened
+    monkeypatch.setattr(grants, "use_approval", spend)
+    with pytest.raises(SystemExit, match=f"approval {first} was already used"):
+        _confirm_with(root, bars_csv, "--approval", first)
+    _confirm_with(root, bars_csv, "--approval", second)
+    assert Notebook.load(root).data.opened
+
+
+def test_an_agent_finishes_an_opening_only_with_the_approval_that_opened_it(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, monkeypatch
+):
+    root = _direction(tmp_path, example_dir, bars_csv)
+    _mark_supported(root, (example_dir / "initial.py").read_text())
+    opened_with, other = _approve(root), _approve(root)
+    monkeypatch.setenv(AGENT_ENV, "1")
+    load_bars = skeptic.load_bars
+    monkeypatch.setattr(skeptic, "load_bars", _disk_error)
+    with pytest.raises(OSError):
+        _confirm_with(root, bars_csv, "--approval", opened_with)
+    assert Notebook.load(root).data.unfinished
+    monkeypatch.setattr(skeptic, "load_bars", load_bars)
+    for extra, refusal in (
+        (["--yes"], "lockbox approval"),
+        (["--approval", other], "did not open this lockbox"),
+    ):
+        with pytest.raises(SystemExit, match=refusal):
+            _confirm_with(root, bars_csv, *extra)
+    _confirm_with(root, bars_csv, "--approval", opened_with)
+    assert not Notebook.load(root).data.unfinished

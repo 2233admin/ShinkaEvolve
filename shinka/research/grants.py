@@ -1,14 +1,16 @@
-"""Round grants: the owner's approval of one round of agent runs.
+"""The owner's approvals for agent work: round grants and lockbox approvals.
 
 In the agent execution environment (``SHINKA_RESEARCH_AGENT`` set) every
-``run`` takes an attempt from a grant the owner gave; a grant names its
+``run`` takes an attempt from a round grant the owner gave; a grant names its
 hypotheses, how many runs it allows, where each run stops spending and which
-``shinka_run`` settings the agent may choose. The grants and the attempts
-taken live in ``ledger.json``; each grant's terms also go into the run log,
-and the run log's end events name the attempt each grant run used, so a
-ledger edited by hand no longer matches the log and grant runs refuse to
-start. Someone with a shell as the same user can still forge both; the check
-makes bypass and tampering discoverable, not impossible (design.md).
+``shinka_run`` settings the agent may choose. Opening the lockbox there takes a
+lockbox approval, spent by the opening it allowed. Grants, approvals and their
+uses live in ``ledger.json``; each grant's and approval's terms also go into
+the run log, and the run log's end events name the attempt each grant run
+used, so a ledger edited by hand no longer matches the log and what it
+allows is refused. Someone with a shell as the same user can still forge
+both; the check makes bypass and tampering discoverable, not impossible
+(design.md).
 """
 
 import hashlib
@@ -17,7 +19,7 @@ import math
 import os
 import re
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, NamedTuple, Optional, Tuple
 
 import yaml
 
@@ -30,7 +32,13 @@ from shinka.research.notebook import (
 )
 from shinka.research.quant import file_sha256
 from shinka.research.scaffold import SHINKA_CONFIG_FILENAME
-from shinka.research.state import atomic_write_text, file_lock, lock_path, read_text
+from shinka.research.state import (
+    atomic_write_text,
+    file_lock,
+    live_work,
+    lock_path,
+    read_text,
+)
 
 AGENT_ENV = "SHINKA_RESEARCH_AGENT"
 LEDGER = "ledger.json"
@@ -162,33 +170,56 @@ def add_grant(
     return grant
 
 
-def _verify(root: Path, records: List[Dict[str, Any]], live: List[Dict[str, Any]]):
+class Ledger(NamedTuple):
+    grants: Dict[str, Dict[str, Any]]
+    attempts: Dict[str, List[Dict[str, Any]]]
+    approvals: Dict[str, Dict[str, Any]]
+    # Each approval's use, by approval id.
+    uses: Dict[str, Dict[str, Any]]
+
+
+def _verify(
+    root: Path, records: List[Dict[str, Any]], live: List[Dict[str, Any]]
+) -> Ledger:
     """The ledger against the run log and the live leases; raises on the first
-    mismatch. Returns the grants by id and the attempts by grant."""
+    mismatch."""
     changed = f"{Path(root) / LEDGER} does not match the run log"
     stated = {}
     for _time, _hid, _eid, event, note in _log_rows(root):
-        if event == "grant":
+        if event in ("grant", "approval"):
             stated[note.split(":", 1)[0]] = note
-    grants: Dict[str, Dict[str, Any]] = {}
-    attempts: Dict[str, List[Dict[str, Any]]] = {}
+    ledger = Ledger({}, {}, {}, {})
     for record in records:
-        if record.get("kind") == "grant":
-            if record["id"] in grants or stated.get(record["id"]) != terms(record):
-                raise Refused(f"{changed} at grant {record['id']}; ask the owner")
-            grants[record["id"]] = record
-            attempts[record["id"]] = []
-        elif record.get("kind") == "attempt":
-            taken = attempts.get(record["grant"])
+        kind = record.get("kind")
+        if kind == "grant":
+            gid = record["id"]
+            if gid in ledger.grants or stated.get(gid) != terms(record):
+                raise Refused(f"{changed} at grant {gid}; ask the owner")
+            ledger.grants[gid] = record
+            ledger.attempts[gid] = []
+        elif kind == "attempt":
+            taken = ledger.attempts.get(record["grant"])
             if taken is None or record["number"] != len(taken) + 1:
                 raise Refused(f"{changed} at an attempt of {record['grant']}")
             taken.append(record)
+        elif kind == "approval":
+            aid = record["id"]
+            if aid in ledger.approvals or stated.get(aid) != approval_terms(record):
+                raise Refused(f"{changed} at approval {aid}; ask the owner")
+            ledger.approvals[aid] = record
+        elif kind == "approval-used":
+            aid = record["approval"]
+            if aid not in ledger.approvals or aid in ledger.uses:
+                raise Refused(f"{changed} at a use of approval {aid}")
+            ledger.uses[aid] = record
         else:
             raise Refused(f"{changed}: a record of unknown kind")
-    for gid, taken in attempts.items():
-        if len(taken) > grants[gid]["attempts"]:
+    for gid, taken in ledger.attempts.items():
+        if len(taken) > ledger.grants[gid]["attempts"]:
             raise Refused(f"{changed}: {gid} has more attempts than it allows")
-    works = {(a["grant"], a["work"]) for taken in attempts.values() for a in taken}
+    works = {
+        (a["grant"], a["work"]) for taken in ledger.attempts.values() for a in taken
+    }
     ran = []
     for _time, _hid, _eid, event, note in _log_rows(root):
         found = _ATTEMPT_NOTE.search(note) if event in ("run", "run-failed") else None
@@ -202,7 +233,7 @@ def _verify(root: Path, records: List[Dict[str, Any]], live: List[Dict[str, Any]
     for gid, work in ran:
         if (gid, work) not in works:
             raise Refused(f"{changed}: a run of {gid} has no attempt in the ledger")
-    return grants, attempts
+    return ledger
 
 
 def _passthrough(extra: List[str], grant: Dict[str, Any]) -> List[str]:
@@ -261,8 +292,8 @@ def check_run(
     lock, before anything is taken. Returns the grant, the attempts it has
     used and the settings to pass. A grant with none left pauses the round:
     the refusal is logged once."""
-    records = load(root)
-    grants, attempts = _verify(root, records, live)
+    ledger = _verify(root, load(root), live)
+    grants, attempts = ledger.grants, ledger.attempts
     grant = grants.get(grant_id)
     if grant is None:
         raise Refused(
@@ -333,6 +364,72 @@ def _log_paused(root: Path, grant: Dict[str, Any], hid: str, eid: str) -> None:
         f"{gid}: all {grant['attempts']} attempts taken; the next round needs the "
         "owner's grant",
     )  # fmt: skip
+
+
+def approval_terms(approval: Dict[str, Any]) -> str:
+    """A lockbox approval's terms as the run log states them."""
+    return f"{approval['id']}: the lockbox may be opened once"
+
+
+def add_approval(root: Path, note: str = "") -> Dict[str, Any]:
+    """Record the owner's approval to open the direction's lockbox once."""
+    with file_lock(lock_path(root)):
+        nb = Notebook.load(root)
+        if nb.data is None:
+            raise Refused("this direction has no data yet, so no lockbox to open")
+        if nb.data.opened:
+            raise Refused("the lockbox was already opened")
+        records = load(root)
+        number = 1 + sum(1 for row in _log_rows(root) if row[3] == "approval")
+        approval = {
+            "kind": "approval",
+            "id": f"a{number:03d}",
+            "time": _now(),
+            "note": " ".join(note.split()),
+        }
+        # The log first, as for a grant.
+        append_log(root, "", "", "approval", approval_terms(approval))
+        records.append(approval)
+        atomic_write_text(Path(root) / LEDGER, json.dumps(records, indent=1))
+    return approval
+
+
+def use_approval(root: Path, approval_id: str, opening: str) -> None:
+    """Spend the owner's lockbox approval on the opening that starts at
+    ``opening``; under the lock that records the opening, before it is saved,
+    so the lockbox never opens on an approval left unspent."""
+    records = load(root)
+    ledger = _verify(root, records, live_work(root))
+    if approval_id not in ledger.approvals:
+        raise Refused(
+            f"no lockbox approval {approval_id}: opening the lockbox needs the "
+            "owner's approval (`shinka_research approve`)"
+        )
+    if approval_id in ledger.uses:
+        used = ledger.uses[approval_id]["opening"]
+        raise Refused(
+            f"approval {approval_id} was already used (the opening of {used})"
+        )
+    records.append(
+        {
+            "kind": "approval-used",
+            "approval": approval_id,
+            "opening": opening,
+            "time": _now(),
+        }
+    )
+    atomic_write_text(Path(root) / LEDGER, json.dumps(records, indent=1))
+
+
+def check_opened_by(root: Path, approval_id: str, opening: str) -> None:
+    """Whether ``approval_id`` is the approval spent on the opening that
+    started at ``opening``: finishing that opening carries it."""
+    use = _verify(root, load(root), live_work(root)).uses.get(approval_id)
+    if use is None or use["opening"] != opening:
+        raise Refused(
+            f"approval {approval_id} did not open this lockbox (opened {opening}); "
+            "finishing that opening carries the approval that opened it"
+        )
 
 
 def origin_note(origin: Optional[Dict[str, Any]], spent: float) -> str:

@@ -91,7 +91,11 @@ All notable changes to `shinka-evolve` are documented in this file.
   spent). A used-up grant pauses the round, logged once. Grants and attempts
   live in `ledger.json`, checked against `results.tsv`, so a ledger changed by
   hand stops grant runs; manual runs are unchanged and their end events say
-  "manual run", and `probe` now logs each probe when it starts.
+  "manual run", and `probe` now logs each probe when it starts. Opening the
+  lockbox there takes `confirm --approval <id>` from the owner's
+  `shinka_research approve`: the opening spends it in the same lock, `--yes`
+  alone is refused, and an interrupted opening is finished only with the
+  approval that opened it; a manual `confirm --yes` is unchanged.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

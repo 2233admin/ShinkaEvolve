@@ -168,6 +168,7 @@ export const COPY = {
   'evt.note': { zh: '备注', en: 'note' },
   'evt.grant': { zh: '轮次授权', en: 'round granted' },
   'evt.round-paused': { zh: '本轮暂停', en: 'round paused' },
+  'evt.approval': { zh: '封存段批准', en: 'lockbox approved' },
 
   // Direction page
   'dir.noProgramsProbes': {

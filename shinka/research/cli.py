@@ -12,7 +12,7 @@ import tempfile
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 from shinka.research import grants, library
 from shinka.research.notebook import (
@@ -186,20 +186,42 @@ def _held(root: Path, live: List[Dict[str, Any]]) -> float:
     return held
 
 
-def cmd_grant(args: argparse.Namespace) -> None:
-    if grants.in_agent_env():
-        sys.exit(
-            "a round grant is the owner's to give: from a terminal without "
-            f"{grants.AGENT_ENV}, or from the workbench"
-        )
-    root = Path(args.dir).resolve()
+@contextlib.contextmanager
+def _refused() -> Iterator[None]:
+    """A refusal from the owner's approvals ends the command with its reason."""
     try:
-        grant = grants.add_grant(
-            root, args.hids, args.attempts, args.max_cost, args.allow, args.note
-        )
+        yield
     except grants.Refused as refused:
         sys.exit(str(refused))
+
+
+def _the_owners(what: str) -> None:
+    if grants.in_agent_env():
+        sys.exit(
+            f"{what} is the owner's to give: from a terminal without "
+            f"{grants.AGENT_ENV}, or from the workbench"
+        )
+
+
+def cmd_grant(args: argparse.Namespace) -> None:
+    _the_owners("a round grant")
+    with _refused():
+        grant = grants.add_grant(
+            Path(args.dir).resolve(),
+            args.hids,
+            args.attempts,
+            args.max_cost,
+            args.allow,
+            args.note,
+        )
     print(grants.terms(grant))
+
+
+def cmd_approve(args: argparse.Namespace) -> None:
+    _the_owners("a lockbox approval")
+    with _refused():
+        approval = grants.add_approval(Path(args.dir).resolve(), args.note)
+    print(grants.approval_terms(approval))
 
 
 # The evolution command a run starts; the lease keeps the full command, so a
@@ -257,12 +279,10 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         if args.grant is not None:
             # Every refusal comes before the attempt is taken, and the attempt
             # before the lease, so no run goes without one.
-            try:
+            with _refused():
                 grant, used, tokens = grants.check_run(
                     root, args.grant, hyp.id, exp.id, extra, live
                 )
-            except grants.Refused as refused:
-                sys.exit(str(refused))
             cap = grant["max_cost"]
             if nb.budget_usd is not None:
                 # A run with no stop point (the owner's own, say) may spend any
@@ -487,12 +507,24 @@ def _confirmed(nb: Notebook, hid: str, report: Dict[str, Any]) -> None:
 
 
 def _confirm(root: Path, args: argparse.Namespace) -> None:
+    approval = args.approval
+    if grants.in_agent_env() and approval is None:
+        sys.exit(
+            "an agent confirm needs the owner's lockbox approval: `confirm "
+            "--approval <id>` (`shinka_research approve` records one); --yes is "
+            "not enough here"
+        )
+    # The owner's approval stands for --yes.
+    proceed = args.yes or approval is not None
     nb = Notebook.load(root)
     split = nb.data
     if split is None:
         sys.exit("this direction has no data yet")
     if split.opened and not split.unfinished:
         if split.opening is not None and not (root / CONFIRMATION).exists():
+            if approval is not None:
+                with _refused():
+                    grants.check_opened_by(root, approval, split.opening.started)
             # The results are in the notebook but that confirm died before
             # writing them out; only the events it did not log are added.
             logged = _confirm_events(root, split.opening.started)
@@ -503,12 +535,15 @@ def _confirm(root: Path, args: argparse.Namespace) -> None:
     if split.unfinished:
         assert split.opening is not None
         left = [t.hypothesis for t in split.opening.targets if t.state != "done"]
-        if not args.yes:
+        if not proceed:
             sys.exit(
                 f"The lockbox opening of {split.opening.started} did not finish. "
                 f"This finishes it for {', '.join(left)} with the programs and rules "
                 "it froze. Re-run with --yes to proceed."
             )
+        if approval is not None:
+            with _refused():
+                grants.check_opened_by(root, approval, split.opening.started)
         check_source(split.opening.source_sha256, Path(args.data))
         th = Thresholds(**split.opening.thresholds)
     else:
@@ -516,7 +551,7 @@ def _confirm(root: Path, args: argparse.Namespace) -> None:
         hids = [h.id for h in nb.hypotheses if h.status is Status.supported]
         if not hids:
             sys.exit("no supported hypotheses to confirm; the lockbox stays closed")
-        if not args.yes:
+        if not proceed:
             sys.exit(
                 f"This opens the lockbox (from {split.lockbox_start}) once for the "
                 f"whole direction and scores {', '.join(hids)}. Re-run with --yes "
@@ -546,12 +581,17 @@ def _confirm(root: Path, args: argparse.Namespace) -> None:
                     "the direction changed while confirm checked it; the lockbox "
                     "stays sealed, run confirm again"
                 )
-            nb.data.opened = True
-            nb.data.opening = LockboxOpening(
+            opening = LockboxOpening(
                 source_sha256=nb.data.source_hash,
                 thresholds=th.model_dump(),
                 targets=targets,
             )
+            if approval is not None:
+                # Spent in the same lock, before the opening is saved.
+                with _refused():
+                    grants.use_approval(root, approval, opening.started)
+            nb.data.opened = True
+            nb.data.opening = opening
     split = nb.data
     assert split is not None and split.opening is not None
     # A target already scoring belongs to a confirm that died after its program
@@ -899,6 +939,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--data", required=True, help="The source CSV the direction was split from"
     )
     s.add_argument("--yes", action="store_true", help="Really open the lockbox")
+    s.add_argument(
+        "--approval",
+        help="The owner's lockbox approval this opening spends (instead of --yes); "
+        f"required where {grants.AGENT_ENV} is set",
+    )
     _add_threshold_args(s)
     s.set_defaults(func=cmd_confirm)
 
@@ -959,6 +1004,15 @@ def build_parser() -> argparse.ArgumentParser:
     )
     s.add_argument("--note", default="")
     s.set_defaults(func=cmd_grant)
+
+    s = sub.add_parser(
+        "approve",
+        help="Approve opening the lockbox once (the owner's, never from the agent "
+        "environment)",
+    )
+    s.add_argument("dir")
+    s.add_argument("--note", default="")
+    s.set_defaults(func=cmd_approve)
 
     s = sub.add_parser(
         "watch",

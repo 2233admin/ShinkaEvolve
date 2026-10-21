@@ -53,7 +53,10 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
   `results.tsv` or a task's `shinka.yaml` by hand, never call `shinka_run`
   directly, and never unset the flag.
 - **The lockbox is the human's.** Never run `confirm` unless the human says to
-  close the direction.
+  close the direction. In the agent environment `--yes` is not enough: ask the
+  human for a lockbox approval (`shinka_research approve`, which refuses in
+  that environment) and pass `confirm --approval <id>`; the opening spends it,
+  and finishing an interrupted opening takes the same id.
 - **Budget**: `init --budget-usd` makes `run` refuse once the direction's LLM
   spend reaches it; outside the agent environment also pass
   `--set evo.max_api_costs=<usd>` per run (inside it the grant sets the cap).
