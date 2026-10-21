@@ -17,7 +17,7 @@
 
 ## 3. 只读接口
 
-- [ ] 3.1 研究数据服务 Host 校验。检查：错误 Host 的请求被拒绝的 HTTP 回归测试。
+- [x] 3.1 研究数据服务 Host 校验。检查：错误 Host 的请求被拒绝的 HTTP 回归测试。实现：`ui._Handler.parse_request`，每种方法与路径都先经过它；`Host` 不是 `127.0.0.1:<端口>` 或 `localhost:<端口>`（不分大小写）时回 421。按 spec 只接受 GET：继承来的 HEAD 回 405（`Allow: GET`，两个前端都不发 HEAD），其他方法照旧 501；`AnalysisHandler` 早已不发 `Access-Control-Allow-Origin`。检查：`tests/research/test_ui.py` 真实 HTTP 服务上 `attacker.example:<端口>` 的 GET `/`、GET `/api/workspace` 与 HEAD `/` 都是 421，`127.0.0.1` 与 `LOCALHOST` 的 GET 都是 200、HEAD 405、POST 501；用 `shinka_research ui` 启动的真实服务实测 421/200/200，工作台在浏览器中照常加载数据（「共 1,886 次试验」）。
 - [ ] 3.2 运行日志、授权账本、待决事项与 Agent 状态的只读接口。检查：HTTP 回归测试；私有指标不出现。
 
 ## 4. Agent 服务

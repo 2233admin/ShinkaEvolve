@@ -15,6 +15,7 @@ import webbrowser
 from collections import Counter
 from datetime import datetime, timezone
 from functools import partial
+from http import HTTPStatus
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path, PureWindowsPath
 from typing import Any, Dict, List, Optional, Tuple
@@ -382,6 +383,26 @@ class _Handler(AnalysisHandler):
         super().__init__(
             *args, search_root=str(self.workspace_root), directory=str(DIST), **kwargs
         )
+
+    def parse_request(self) -> bool:
+        """Answer only requests addressed to this machine by name. A page on
+        another site that points its own name at 127.0.0.1 (DNS rebinding)
+        still sends that name as its Host, so it cannot read the workspace."""
+        if not super().parse_request():
+            return False
+        port = self.server.server_address[1]
+        host = (self.headers.get("Host") or "").lower()
+        if host not in (f"127.0.0.1:{port}", f"localhost:{port}"):
+            self.send_error(HTTPStatus.MISDIRECTED_REQUEST, "Unexpected Host header")
+            return False
+        return True
+
+    def do_HEAD(self) -> None:
+        # The research data service accepts GET alone (research-agent spec).
+        self.send_response(HTTPStatus.METHOD_NOT_ALLOWED)
+        self.send_header("Allow", "GET")
+        self.send_header("Content-Length", "0")
+        self.end_headers()
 
     def _json(self, payload: Dict[str, Any]) -> None:
         body = json.dumps(payload, ensure_ascii=False, allow_nan=False).encode()

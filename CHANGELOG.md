@@ -151,6 +151,11 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Fixed
 
+- Fixed the Research workspace UI answering requests addressed to any host
+  name: a page on another site that points its own name at 127.0.0.1 (DNS
+  rebinding) could read notebooks and code. It now answers only a `Host` of
+  `127.0.0.1:<port>` or `localhost:<port>`, refusing any other with 421, and
+  only GET (HEAD gets 405).
 - Fixed restored analysis frontiers admitting failed zero-valued scores, stale
   program details after rapid selection, lost selected-program links, and absent
   cost/diversity measurements being presented as measured zero values.

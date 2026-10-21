@@ -1,3 +1,4 @@
+import http.client
 import json
 import sqlite3
 import threading
@@ -90,6 +91,44 @@ def test_server_serves_snapshot(tmp_path: Path, monkeypatch) -> None:
         snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot?{query}").read())
         assert snap["hypotheses"][1]["verdict"] is None
         assert b"<title>t</title>" in urllib.request.urlopen(f"{base}/").read()
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_server_answers_only_requests_addressed_to_this_machine(
+    tmp_path: Path, monkeypatch
+) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html><title>t</title>")
+    monkeypatch.setattr(ui, "DIST", dist)
+    root = tmp_path / "workspace"
+    _direction(root / "d")
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(ui._Handler, root=root))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    port = server.server_address[1]
+
+    def status(method: str, path: str, host: str) -> int:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        try:
+            conn.request(method, path, headers={"Host": host})
+            response = conn.getresponse()
+            response.read()
+            return response.status
+        finally:
+            conn.close()
+
+    try:
+        for path in ("/", "/api/workspace"):
+            # A rebinding page reaches 127.0.0.1 under its own name.
+            assert status("GET", path, f"attacker.example:{port}") == 421
+            assert status("GET", path, f"127.0.0.1:{port}") == 200
+            assert status("GET", path, f"LOCALHOST:{port}") == 200
+        # The Host is checked before anything else, and only GET is answered.
+        assert status("HEAD", "/", f"attacker.example:{port}") == 421
+        assert status("HEAD", "/", f"127.0.0.1:{port}") == 405
+        assert status("POST", "/api/workspace", f"127.0.0.1:{port}") == 501
     finally:
         server.shutdown()
         server.server_close()

@@ -16,6 +16,8 @@
 
 `shinka_research ui <workspace> [--runs-root <ordinary-runs>] [--port 8765] [--no-browser]` 启动同源只读工作区。主参数必须是工作区；方向参数仍明确报错并提示父目录。可选 `--runs-root` 显式授权另一处普通运行历史，不从当前目录自动扩大权限。其他研究 CLI 仍接收方向目录。
 
+服务只回应 `Host` 为 `127.0.0.1:<端口>` 或 `localhost:<端口>` 的请求，其他一律 421：把自己的域名指向本机的网页（DNS 重绑定）发来的仍是它自己的域名，读不到笔记本与代码。服务只接受 GET（HEAD 回 405，其他方法 501），没有写接口。
+
 开发环境先在 `shinka/research/webui/app/` 运行 `pnpm install --frozen-lockfile`，再单独运行 `pnpm build`，不要关闭安装器的供应链校验。若安装器要求依赖脚本审批，先审阅再决定；本轮验收显式不执行依赖安装脚本，记录见 `qa.md`。然后在仓库根目录运行 `uv run shinka_research ui <workspace>`。前端构建产物仍不进入源码库。
 
 | 入口 | 输出或行为 |
