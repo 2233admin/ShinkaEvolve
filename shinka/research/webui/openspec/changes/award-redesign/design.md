@@ -116,7 +116,7 @@
 ## 数据接口
 
 - `/api/workspace` 为每个成功方向增加只读 `evidence`（假设状态计数、最佳样本内分数、当时噪声线、`evaluated_programs`、`failed_programs`、最近活动）与 `unknown_cost_runs`；`/api/snapshot` 的方向带 `unknown_cost_runs`，每个实验带 `spend_known`。首页不再逐方向请求 `/api/snapshot`（`research-workspace-ui` 规格）。
-- 费用口径（OD-9）：`rundb.run_cost` 是唯一规则，预算检查、工作区接口、方向快照与 `/get_database_stats` 都用它（`run-analysis-ui` › 运行费用只有一个口径）。它只计非岛副本的程序与提示词进化。缺失或为 null 的费用字段按 0 计，因为运行器只为执行过的步骤写字段：`meta_cost` 只写在元分析计费的程序上（`async_runner.py:4469-4479`），预算合计也把缺失按 0 计（`async_runner.py:813-829`）。出现的值必须是有限且不小于 0 的数；headless 模型带 `headless_pricing_unknown` 时该程序费用未知，与 `dbase.py:1745-1764` 的遥测一致。单个未知运行显示“—”，含它的合计显示 `≥` 下限。研究实验不能用 headless 模型（`cli.py:142-149`），所以研究方向的花费在数据完好时是精确值。
+- 费用口径（OD-9）：`shinka.database.cost` 是唯一规则，研究层经 `rundb.run_cost` 使用；预算检查、授权运行的上限、工作区接口、方向快照、`/get_database_stats` 与运行器续跑的起点都用它（`run-analysis-ui` › 运行费用只有一个口径）。它计非岛副本的程序、`attempt_log` 中没有成为程序的已付费工作（耗尽尝试的提案、到达目标后丢弃的提案、没有存下提示词的提示词进化）与提示词进化。缺失或为 null 的费用字段按 0 计，因为运行器只为执行过的步骤写字段（`meta_cost` 只写在元分析计费的程序上）。出现的值必须是有限且不小于 0 的数；headless 模型带 `headless_pricing_unknown` 时该程序费用未知，与 `dbase.py` 的人口遥测一致；运行器写不进的费用留下 `cost-unrecorded.json`，该运行的合计从此未知。单个未知运行显示“—”，含它的合计按 `recorded_cost` 求和并显示 `≥` 下限。研究实验的运行拒绝 headless 模型（`cli.py` 的 `cmd_run`：`--set` 传入的与 `shinka.yaml` 中配置的都拒绝），所以研究方向的花费在数据完好时是精确值。
 - `/api/snapshot` 的 `trial_points` 增加程序编号，供试验点打开检查器（OD-18）；验证段与封存段数字仍按规则隐藏。
 - 分析数据沿用 `analysis.py` 的只读接口（`/list_databases`、`/get_programs`、`/get_program_details`、元分析与图像），路径约束、私有指标隐藏与错误语义不变；只在新视图确需时增加只读聚合接口。
 

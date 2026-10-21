@@ -100,9 +100,10 @@ does, so every research direction and every ordinary run has a known cost except
 Its first model is `headless/demo-agent`, a headless CLI agent with no price list. Its
 programs carry `headless_pricing_unknown: true` and `api_costs: 0.0`, which core telemetry
 treats as pricing-unknown. `/get_database_stats` therefore returns `total_cost: null` for
-that run, the runs list shows its cost as unknown, and the runs total becomes a lower bound.
-Research experiments cannot use headless models (`shinka_research run` refuses them), so no
-direction has an unknown spend.
+that run (with what it did record in `recorded_cost`), the runs list shows its cost as
+unknown, and the runs total becomes a lower bound. The generator gives no research
+experiment a headless model, so no direction has an unknown spend; `shinka_research run`
+would refuse one, whether passed with `--set` or configured in the task's `shinka.yaml`.
 
 ## Determinism
 

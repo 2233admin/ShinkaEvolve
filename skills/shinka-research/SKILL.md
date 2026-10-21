@@ -63,8 +63,9 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
   A run's cost counts every paid call, failed and discarded work included.
   When a run's cost is unknown (an entry without a valid amount, or a
   `cost-unrecorded.json` the runner left for a charge it could not record),
-  budgeted runs and every grant run on that experiment refuse: tell the human,
-  who records the missing charge. Never delete or edit `cost-unrecorded.json`;
+  budgeted runs and every grant run on that experiment refuse. Stop and tell
+  the human: only the human can settle the missing charge, and there is no
+  command for recording it yet. Never delete or edit `cost-unrecorded.json`;
   removing it does not record the charge.
 - **Simplicity**: when two programs score about the same in-sample, prefer
   the simpler one. A small change with a clear gain beats a big rewrite with a
