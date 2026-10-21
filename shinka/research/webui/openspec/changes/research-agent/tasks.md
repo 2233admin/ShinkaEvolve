@@ -23,8 +23,8 @@
 
 ## 4. Agent 服务
 
-- [x] 4.1 对话适配握手实测（ACP 与 RPC，不发提示词），记录启动、技能加载与审批转发结果，据此定适配方式。结果：RPC 加宿主工具，写入 design.md《对话适配》与《规则落在 CLI》，经 discuss:steady 两轮与 discuss:divergent 审查。检查：`E:/projects/ShinkaEvolve-runs/handshake-20261021/` 的 `criteria.md`（运行前写下的判据与事后补记）、`handshake.py`、`summary.json` 与十一个变体的逐帧记录，零花费、不留进程。“审批请求的形态”这条判据最后不再区分两种候选，决定改由宿主工具作出。未实测的宿主工具往返与会话恢复转入 4.2。
-- [ ] 4.2 独立进程与端口、令牌、Origin 与 Host 校验、批准接口、对话转发、网页开着时的 `watch` 定时器；以 RPC 驱动无界面 omp 并提供宿主工具（`shinka_research`、`write_research_file`、`shinka_models`、查看最佳程序）。第一道关：无凭据独立 profile 下的本地桩模型发起一次 `host_tool_call` 往返（正常结果、`isError`、取消），并确认 `write` 被拒绝；不通过就退回 ACP 方案。检查：真实 HTTP 回归测试；宿主工具参数与 Windows 路径的表驱动测试。
+- [x] 4.1 对话适配握手实测（ACP 与 RPC，不发提示词），记录启动、技能加载与审批转发结果，据此定适配方式。结果：RPC 加宿主工具，写入 design.md《对话适配》与《规则落在 CLI》，经 discuss:steady 两轮与 discuss:divergent 审查。检查：`E:/projects/ShinkaEvolve-runs/handshake-20261021/` 的 `criteria.md`（运行前写下的判据与事后补记）、`handshake.py`、`summary.json` 与十一个变体的逐帧记录，零花费、不留进程。“审批请求的形态”这条判据最后不再区分两种候选：两者都不能把审批转给网页（审批形态只有文档依据，运行时转发要有模型发起的工具调用，没有实测），design.md 第 30 行“需所有者审批”因此改为网页 Agent 中做不到，待所有者确认；决定改由事后选定的宿主工具作出，它只实测到注册被接受。未比较的候选：Claude Agent SDK，文档写明宿主回调 `canUseTool` 逐次批准工具调用、进程内自定义工具与 `PreToolUse` 钩子，正是事先写下的审批形态；是否纳入（所有者要求用 Anthropic 官方轮子）待所有者定。未实测的宿主工具往返与会话恢复转入 4.2；4.2 第一道关不通过、拒绝规则拦下宿主工具或 `yolo` 放行了内置工具时，4.1 重开。
+- [ ] 4.2 独立进程与端口、令牌、Origin 与 Host 校验、批准接口、对话转发、网页开着时的 `watch` 定时器；以 RPC 驱动无界面 omp 并提供宿主工具（`shinka_research`、`write_research_file`、`shinka_models`、查看最佳程序）。第一道关：无凭据独立 profile 下的本地桩模型发起一次 `host_tool_call` 往返（正常结果、`isError`、取消），确认内置 `write` 被拒绝而 `tools.approval.write: deny` 不拦宿主工具 `write_research_file`，且该 profile 不带所有者的全局系统提示；不通过就退回 ACP 方案。检查：真实 HTTP 回归测试；宿主工具参数与 Windows 路径的表驱动测试。
 - [ ] 4.3 终端定时 `watch` 任务与使用说明。检查：关闭并重开后补查一次，期间不触发模型。
 
 ## 5. 工作台
