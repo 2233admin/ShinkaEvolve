@@ -189,7 +189,16 @@ def _overview(root: Path) -> Dict[str, Any]:
             }
         )
 
-    for i, r in enumerate(rounds):
+    # Where each round's attempts ran out in the run log: its round-paused line,
+    # or its grant line when a crash came between the last attempt and that.
+    paused, last_grant = {}, -1
+    for i, (_time, _hid, _eid, event, note) in enumerate(rows):
+        if event == "grant":
+            paused.setdefault(note.split(":", 1)[0], i)
+            last_grant = i
+        elif event == "round-paused":
+            paused[note.split(":", 1)[0]] = i
+    for r in rounds:
         pending += [
             {
                 "kind": "lost",
@@ -205,11 +214,11 @@ def _overview(root: Path) -> Dict[str, Any]:
         done = r["used"] == r["attempts"] and all(
             run["state"] in ("ended", "lost") for run in r["runs"]
         )
-        # A later grant for any of its hypotheses opened the next round.
-        followed = any(
-            set(r["hypotheses"]) & set(s["hypotheses"]) for s in rounds[i + 1 :]
-        )
-        if done and not followed:
+        # The owner's next grant after its attempts ran out answers the round,
+        # whatever it names: the next round's hypotheses are usually new ones
+        # (SKILL.md step 9). A grant given before then, for a round beside this
+        # one, does not.
+        if done and last_grant <= paused.get(r["id"], -1):
             pending.append(
                 {
                     "kind": "round-over",

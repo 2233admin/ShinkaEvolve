@@ -106,7 +106,9 @@ All notable changes to `shinka-evolve` are documented in this file.
   unrecorded end, a lost attempt, a grant the agent cannot use and why, an
   unfinished opening, a ledger that does not match the run log), each with
   what to do, plus the round's state. It names no process, command or path
-  and none of the validation figures a run keeps for its end.
+  and none of the validation figures a run keeps for its end. The owner's next
+  grant after a round's attempts ran out answers the round, whatever hypotheses
+  it names.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

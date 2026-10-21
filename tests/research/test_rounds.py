@@ -269,3 +269,28 @@ def test_an_attempt_without_its_lease_yet_is_starting_and_only_later_lost(
     view = rounds.overview(direction)
     assert [run["state"] for run in view["grants"][0]["runs"]] == ["lost"]
     assert {item["kind"] for item in view["pending"]} >= {"lost", "round-over"}
+
+
+def test_the_owners_next_grant_answers_an_ended_round_whatever_it_names(
+    direction: Path, example_dir: Path
+) -> None:
+    cli.main(
+        [
+            "hypothesis", "add", str(direction), "--title", "next",
+            "--file", str(example_dir / "hypothesis.md"),
+        ]
+    )  # fmt: skip
+    first = _grant(direction, 1)
+    # A round beside it, granted before the first one's attempts ran out.
+    cli.main(["grant", str(direction), "h002", "--attempts", "1", "--max-cost", "0.5"])
+    finish_run(direction, _attempt(direction, first, 1), 0)
+    view = rounds.overview(direction)
+    assert [i["grant"] for i in view["pending"] if i["kind"] == "round-over"] == [
+        "g001"
+    ]
+    assert view["state"] == "waiting"
+    # The next round names a new hypothesis, as rounds usually do.
+    cli.main(["grant", str(direction), "h002", "--attempts", "2", "--max-cost", "0.5"])
+    view = rounds.overview(direction)
+    assert [i for i in view["pending"] if i["kind"] == "round-over"] == []
+    assert view["state"] == "open"
