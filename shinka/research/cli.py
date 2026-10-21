@@ -284,8 +284,16 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                         "by grant runs in progress"
                     )
             # shinka_run counts what the experiment's database already spent
-            # toward its cap when it resumes it.
-            cost_before = run_cost(results_dir).recorded_usd
+            # toward its cap when it resumes it, by the same rule; from a lower
+            # bound the run could spend past the grant's cap.
+            prior = run_cost(results_dir)
+            if not prior.known:
+                sys.exit(
+                    f"{hyp.id}/{exp.id} has spent an unknown amount (at least "
+                    f"${prior.recorded_usd:.2f}), so a grant run's cap cannot "
+                    "hold; the owner must resolve the unknown cost first"
+                )
+            cost_before = prior.recorded_usd
             stops_at = cost_before + cap
             passthrough = [part for token in tokens for part in ("--set", token)]
             passthrough += ["--set", f"evo.max_api_costs={stops_at!r}"]

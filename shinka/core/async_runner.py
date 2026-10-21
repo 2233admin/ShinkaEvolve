@@ -25,6 +25,16 @@ import rich.box
 
 from shinka.database import ProgramDatabase, DatabaseConfig, Program
 from shinka.database.async_dbase import AsyncProgramDatabase
+from shinka.database.cost import (
+    DISCARDED_PROPOSAL,
+    EVENT_FIELDS,
+    FAILED_PROMPT_EVOLUTION,
+    UNRECORDED,
+    mark_unrecorded,
+    program_spend,
+    prompt_spend,
+    recorded_in_full,
+)
 from shinka.database.prompt_dbase import (
     SystemPromptDatabase,
     SystemPromptConfig,
@@ -103,6 +113,11 @@ def _print_gradient_logo_and_mirror(
     except Exception:
         # Never break startup output if log write fails.
         pass
+
+
+class ChargeNotRecordedError(RuntimeError):
+    """A paid charge reached neither the database nor the cost rule's marker,
+    so the run's recorded spend would read as complete while short of it."""
 
 
 class RichTeeConsole:
@@ -548,6 +563,9 @@ class ShinkaEvolveRunner:
         # Performance tracking
         self.total_proposals_generated = 0
         self.total_api_cost = 0.0
+        # Set when a paid charge could not be recorded at all; the run stops and
+        # raises it, since continuing would leave spend no total can see.
+        self._fatal_error: Optional[BaseException] = None
         self.start_time = None
 
         # In-flight cost estimation for accurate budget enforcement
@@ -600,6 +618,12 @@ class ShinkaEvolveRunner:
         self.MAX_DB_RETRY_ATTEMPTS = (
             5  # Maximum number of retry attempts for DB operations
         )
+        # How long the target cleanup waits for proposals still in flight before
+        # cancelling them (their unbooked spend then reads as unrecorded).
+        self.surplus_proposal_wait_s = 600.0
+        # How long the end-of-run meta summary may take; past it the summary is
+        # cancelled and what it had paid reads as unrecorded.
+        self.final_summary_timeout_s = 600.0
 
         # Stuck detection and recovery
         self.last_progress_time = None
@@ -701,6 +725,175 @@ class ShinkaEvolveRunner:
                 e,
             )
 
+    async def _record_charge_event(
+        self,
+        generation: int,
+        stage: str,
+        status: str,
+        details: Dict[str, Any],
+    ) -> None:
+        """Durably record paid work that has no program row, which the cost
+        rule (``shinka.database.cost``) counts. One write, no retry, so never a
+        duplicate. When the database refuses it, the run leaves the cost rule's
+        marker that keeps its total unknown (capped resumes and grant runs then
+        refuse until the owner accounts for the charge) and starts no more
+        proposals; proposals already in flight finish, the same bound as the
+        soft cost limit."""
+
+        # A charge of nothing needs no durable record; any other amount, one
+        # that is not a finite number included (a bool compares equal to 0 but
+        # is not an amount), must not vanish.
+        def nothing(value: Any) -> bool:
+            return value is None or (
+                isinstance(value, (int, float))
+                and not isinstance(value, bool)
+                and math.isfinite(value)
+                and value == 0
+            )
+
+        if all(nothing(details.get(field)) for field in EVENT_FIELDS):
+            await self._record_attempt_event(generation, stage, status, details)
+            return
+        try:
+            await self.async_db.record_attempt_event_async(
+                generation=generation,
+                stage=stage,
+                status=status,
+                details=details,
+            )
+            return
+        except Exception as e:
+            error = e
+        charge = {
+            "generation": generation,
+            "node_kind": details.get("node_kind"),
+            **{field: details.get(field) for field in EVENT_FIELDS},
+            "error": str(error),
+        }
+        self._mark_unrecorded(charge)
+        logger.error(
+            f"Could not record a paid charge {charge}; marked "
+            f"{UNRECORDED} so its total reads unknown. No more proposals start."
+        )
+
+    def _mark_unrecorded(self, charge: Dict[str, Any]) -> None:
+        """Leave the cost rule's marker for a paid charge the database did not
+        take, and start no more proposals: the run's total now reads unknown.
+        When even the marker fails, stop the run and raise: continuing would
+        leave spend that every total reads as complete without it."""
+        self.cost_limit_reached = True
+        try:
+            mark_unrecorded(Path(self.results_dir), charge)
+        except Exception as marker_error:
+            fatal = ChargeNotRecordedError(
+                f"could not record a paid charge {charge} nor mark it unrecorded "
+                f"({marker_error}); this run's recorded spend would read as complete"
+            )
+            self._fatal_error = fatal
+            self.should_stop.set()
+            self.slot_available.set()
+            self.finalization_complete.set()
+            logger.critical(str(fatal))
+            raise fatal from marker_error
+
+    async def _record_discarded_job(self, job: AsyncRunningJob, reason: str) -> None:
+        """Charge a job dropped once the run reached its target: its proposal
+        was booked when it was submitted but will never be a program row. Each
+        job is dropped at exactly one of the target paths, so charged once."""
+        await self._record_charge_event(
+            generation=job.generation,
+            stage="discard",
+            status="discarded",
+            details={
+                "node_kind": DISCARDED_PROPOSAL,
+                "reason": reason,
+                "source_job_id": str(job.job_id),
+                "api_costs": (job.meta_patch_data or {}).get("api_costs", 0.0),
+                "embed_cost": job.embed_cost,
+                "novelty_cost": job.novelty_cost,
+            },
+        )
+
+    async def _store_final_meta_cost(self, best_program: Program, cost: float) -> None:
+        """Charge the end-of-run summary to the best program's row. The best
+        program can be an island copy, which the cost rule skips, so the charge
+        follows the copy back to its original (or falls back to the best row
+        that is not a copy). Only ``meta_cost`` is incremented; the rest of the
+        row's metadata is never rewritten. A write the database refuses leaves
+        the unrecorded marker."""
+
+        def store() -> str:
+            import sqlite3
+            from contextlib import closing
+
+            with closing(
+                sqlite3.connect(
+                    self.db.config.db_path, check_same_thread=False, timeout=60.0
+                )
+            ) as conn:
+                target, seen = best_program.id, set()
+                while target and target not in seen:
+                    seen.add(target)
+                    row = conn.execute(
+                        "SELECT metadata FROM programs WHERE id = ?", (target,)
+                    ).fetchone()
+                    try:
+                        md = json.loads(row[0]) if row and row[0] else {}
+                    except ValueError:
+                        md = {}
+                    if md.get("_is_island_copy"):
+                        target = md.get("_original_program_id")
+                    elif md.get("_spawned_island"):
+                        target = md.get("_spawned_from_program_id")
+                    else:
+                        break
+                else:
+                    row = conn.execute(
+                        "SELECT id FROM programs WHERE correct = 1 AND "
+                        "CASE WHEN json_valid(COALESCE(metadata, '{}')) THEN "
+                        "COALESCE(json_extract(metadata, '$._is_island_copy'), 0) = 0 "
+                        "AND COALESCE(json_extract(metadata, '$._spawned_island'), 0) = 0 "
+                        "ELSE 0 END ORDER BY combined_score DESC LIMIT 1"
+                    ).fetchone()
+                    target = row[0] if row else None
+                # Only a recorded meta_cost (absent, null or a finite number >= 0)
+                # is added to: SQLite would coerce text to 0 and make an unknown
+                # historical value look known.
+                column = "COALESCE(metadata, '{}')"
+                kind = f"json_type({column}, '$.meta_cost')"
+                value = f"json_extract({column}, '$.meta_cost')"
+                recorded = (
+                    f"{kind} IS NULL OR {kind} = 'null' OR ({kind} IN "
+                    f"('integer', 'real') AND {value} >= 0 AND {value} < 1e999)"
+                )
+                updated = conn.execute(
+                    f"UPDATE programs SET metadata = json_set({column}, "
+                    f"'$.meta_cost', COALESCE({value}, 0) + ?) WHERE id = ? AND "
+                    f"CASE WHEN json_valid({column}) THEN ({recorded}) ELSE 0 END",
+                    (cost, target),
+                ).rowcount
+                conn.commit()
+                if updated != 1:
+                    raise LookupError(
+                        f"no program row with a recorded meta_cost to charge "
+                        f"(target {target})"
+                    )
+                return str(target)
+
+        try:
+            target = await asyncio.get_event_loop().run_in_executor(None, store)
+            logger.info(f"Stored final meta cost ${cost:.4f} on program {target}")
+        except Exception as e:
+            self._mark_unrecorded(
+                {
+                    "node_kind": "final_meta_summary",
+                    "meta_cost": cost,
+                    "program": best_program.id,
+                    "error": str(e),
+                }
+            )
+            logger.error(f"Could not store the final meta cost ${cost:.4f}: {e}")
+
     def _validate_concurrency_settings(
         self,
         max_evaluation_jobs: int,
@@ -790,63 +983,56 @@ class ShinkaEvolveRunner:
                 )
 
     async def _get_total_api_costs(self) -> float:
-        """Calculate total API costs from all programs and prompt evolution."""
+        """What this results directory has already spent, by the one cost rule
+        (``shinka.database.cost``): evaluated programs without island copies,
+        charge events of paid work that never became a program, and prompt
+        evolution. The same rule totals the run for every reader, so a resumed
+        run's cost limit starts where its recorded spend is."""
 
         def _compute_costs_thread_safe():
-            """Thread-safe computation of total costs from database."""
             import sqlite3
-            import json
+            from contextlib import closing
+            from urllib.parse import quote
 
-            conn = None
-            try:
-                conn = sqlite3.connect(
-                    self.db.config.db_path, check_same_thread=False, timeout=60.0
+            def read_only(path: Path):
+                # Encoded so UNC paths never become URI authorities; mode=ro
+                # so accounting never creates or writes a database.
+                return closing(
+                    sqlite3.connect(
+                        f"file:{quote(str(path.resolve()), safe='')}?mode=ro",
+                        uri=True,
+                        check_same_thread=False,
+                        timeout=60.0,
+                    )
                 )
-                cursor = conn.cursor()
 
-                # Get all metadata fields
-                cursor.execute(
-                    "SELECT metadata FROM programs WHERE metadata IS NOT NULL"
-                )
-                rows = cursor.fetchall()
+            with read_only(Path(self.db.config.db_path)) as conn:
+                programs = program_spend(conn)
+            prompts_db = Path(self.results_dir) / "prompts.sqlite"
+            if not prompts_db.exists():
+                return programs.usd, programs.known
+            with read_only(prompts_db) as conn:
+                prompts = prompt_spend(conn)
+            return programs.usd + prompts.usd, programs.known and prompts.known
 
-                total_costs = 0.0
-                for row in rows:
-                    metadata_str = row[0]
-                    if metadata_str:
-                        try:
-                            metadata = json.loads(metadata_str)
-                            # Sum up all cost-related fields (handle None values)
-                            api_cost = metadata.get("api_costs")
-                            total_costs += api_cost if api_cost is not None else 0.0
-                            embed_cost = metadata.get("embed_cost")
-                            total_costs += embed_cost if embed_cost is not None else 0.0
-                            novelty_cost = metadata.get("novelty_cost")
-                            total_costs += (
-                                novelty_cost if novelty_cost is not None else 0.0
-                            )
-                            meta_cost = metadata.get("meta_cost")
-                            total_costs += meta_cost if meta_cost is not None else 0.0
-                        except json.JSONDecodeError:
-                            continue
-
-                return total_costs
-            finally:
-                if conn:
-                    conn.close()
-
-        # Call thread-safe method through executor
         loop = asyncio.get_event_loop()
-        total_costs = await loop.run_in_executor(None, _compute_costs_thread_safe)
-
-        # Add prompt evolution costs if prompt evolution is enabled
-        if self.prompt_db is not None:
-            try:
-                prompt_costs = self.prompt_db.get_total_evolution_costs()
-                total_costs += prompt_costs
-            except Exception as e:
-                logger.warning(f"Failed to get prompt evolution costs: {e}")
-
+        total_costs, known = await loop.run_in_executor(
+            None, _compute_costs_thread_safe
+        )
+        if not recorded_in_full(Path(self.results_dir)):
+            known = False
+        if not known:
+            message = (
+                "some recorded costs in this results directory have no valid "
+                f"amount, or a paid charge was not recorded ({UNRECORDED}), so "
+                f"${total_costs:.4f} is only a lower bound of its spend"
+            )
+            if self.evo_config.max_api_costs is not None:
+                # A lower bound would let the run spend past its limit.
+                raise RuntimeError(
+                    f"{message}; evo.max_api_costs cannot be enforced from it"
+                )
+            logger.warning(message)
         return total_costs
 
     def _update_avg_proposal_cost(self, proposal_cost: float) -> None:
@@ -924,9 +1110,7 @@ class ShinkaEvolveRunner:
         buffer_max = max(0, getattr(self.evo_config, "proposal_buffer_max", 0))
         hard_cap = getattr(self.evo_config, "proposal_target_hard_cap", None)
         if hard_cap is not None and hard_cap < base_target:
-            if not getattr(
-                self, "_warned_invalid_proposal_target_hard_cap", False
-            ):
+            if not getattr(self, "_warned_invalid_proposal_target_hard_cap", False):
                 logger.warning(
                     "Ignoring proposal_target_hard_cap=%s because it is below "
                     "max_evaluation_jobs=%s and would disable oversubscription.",
@@ -1053,6 +1237,8 @@ class ShinkaEvolveRunner:
 
             # Wait for the finalization signal instead of gathering all tasks
             await self.finalization_complete.wait()
+            if self._fatal_error is not None:
+                raise self._fatal_error
 
             await self._wait_for_completed_job_batches()
 
@@ -1127,23 +1313,39 @@ class ShinkaEvolveRunner:
                         )
                         if best_program:
                             # Run async meta summary with timeout
-                            success, final_meta_cost = await asyncio.wait_for(
-                                self.meta_summarizer.perform_final_summary_async(
-                                    str(self.results_dir),
-                                    best_program,
-                                    self.db.config,
-                                ),
-                                timeout=600.0,  # 10 minute timeout for final meta summary
-                            )
-                            if success and final_meta_cost > 0:
+                            try:
+                                success, final_meta_cost = await asyncio.wait_for(
+                                    self.meta_summarizer.perform_final_summary_async(
+                                        str(self.results_dir),
+                                        best_program,
+                                    ),
+                                    timeout=self.final_summary_timeout_s,
+                                )
+                            except asyncio.TimeoutError:
+                                # Cancelled mid-summary: steps already paid have
+                                # no amount anyone can record.
+                                self._mark_unrecorded(
+                                    {
+                                        "node_kind": "final_meta_summary",
+                                        "program": best_program.id,
+                                        "error": "timed out after "
+                                        f"{self.final_summary_timeout_s:.0f} s",
+                                    }
+                                )
+                                raise
+                            # A failed summary still paid for the steps that ran.
+                            if final_meta_cost > 0:
                                 self.total_api_cost += final_meta_cost
+                                await self._store_final_meta_cost(
+                                    best_program, final_meta_cost
+                                )
                             if self.verbose:
                                 if success and final_meta_cost > 0:
                                     logger.info(
                                         f"Final meta summary completed successfully "
                                         f"(cost: ${final_meta_cost:.4f})"
                                     )
-                                else:
+                                elif success:
                                     logger.info(
                                         "Final meta summary completed successfully"
                                     )
@@ -1164,6 +1366,9 @@ class ShinkaEvolveRunner:
 
             # Save final bandit state
             self._save_bandit_state()
+            # A charge lost during finalization may have been swallowed above.
+            if self._fatal_error is not None:
+                raise self._fatal_error
 
             if self.verbose:
                 logger.info(
@@ -1219,8 +1424,25 @@ class ShinkaEvolveRunner:
                 results_dir=Path(self.results_dir),
             )
 
-        # Check if we're resuming from an existing database
-        resuming_run = db_path.exists() and self.db.last_iteration > 0
+        # Resume whenever the database holds a program, generation 0 alone
+        # included: running the seed again would add a second generation 0 and,
+        # for an LLM-written seed, pay for it again.
+        program_count = (
+            await self.async_db.get_total_program_count_async()
+            if db_path.exists()
+            else 0
+        )
+        resuming_run = db_path.exists() and (
+            self.db.last_iteration > 0 or program_count > 0
+        )
+
+        # Recorded spend counts toward the cost limit even when the run does not
+        # resume past generation 0: proposals that all failed after the initial
+        # program leave no later program row, yet they were paid for.
+        if db_path.exists():
+            self.total_api_cost = await self._get_total_api_costs()
+            if self.total_api_cost:
+                logger.info(f"Loaded existing API costs: ${self.total_api_cost:.4f}")
 
         # Load bandit state if resuming
         if resuming_run:
@@ -1228,13 +1450,7 @@ class ShinkaEvolveRunner:
             logger.info("RESUMING PREVIOUS ASYNC EVOLUTION RUN")
             logger.info("=" * 80)
             logger.info(f"Resuming from generation {self.db.last_iteration}")
-            program_count = await self.async_db.get_total_program_count_async()
             logger.info(f"Found {program_count} programs in database")
-
-            # Load existing API costs from database
-            existing_costs = await self._get_total_api_costs()
-            self.total_api_cost = existing_costs
-            logger.info(f"Loaded existing API costs: ${existing_costs:.4f}")
 
             logger.info("=" * 80)
             self._load_bandit_state()
@@ -1435,13 +1651,17 @@ class ShinkaEvolveRunner:
             name="prompt_percentile_recompute",
         )
 
-    async def _recompute_prompt_percentiles_async(self, recompute_interval: int) -> None:
+    async def _recompute_prompt_percentiles_async(
+        self, recompute_interval: int
+    ) -> None:
         """Refresh prompt fitness percentiles without blocking side-effect workers."""
         try:
             loop = asyncio.get_event_loop()
             if hasattr(self.db, "config"):
 
-                def load_program_scores_thread_safe() -> Tuple[List[float], Dict[str, float]]:
+                def load_program_scores_thread_safe() -> Tuple[
+                    List[float], Dict[str, float]
+                ]:
                     thread_db = None
                     try:
                         thread_db = ProgramDatabase(self.db.config, read_only=True)
@@ -1486,9 +1706,7 @@ class ShinkaEvolveRunner:
                 len(all_correct_scores),
             )
         except Exception as recompute_err:
-            logger.warning(
-                "Failed to recompute prompt percentiles: %s", recompute_err
-            )
+            logger.warning("Failed to recompute prompt percentiles: %s", recompute_err)
         finally:
             rerun_requested = self._prompt_percentile_recompute_pending
             self._prompt_percentile_recompute_pending = False
@@ -1561,15 +1779,50 @@ class ShinkaEvolveRunner:
             self.prompt_api_cost += cost
             self.total_api_cost += cost
 
-            if new_prompt:
-                self.prompt_db.add(new_prompt, verbose=self.verbose)
-                logger.info(
-                    f"Evolved new prompt {new_prompt.id[:8]}... "
-                    f"(prompt_gen={new_prompt.generation}, prog_gen={current_program_generation}, "
-                    f"patch={patch_type}, cost=${cost:.4f})"
-                )
-            else:
-                logger.warning(f"Prompt evolution failed (patch_type={patch_type})")
+            prompt_added = False
+            try:
+                if new_prompt:
+                    self.prompt_db.add(new_prompt, verbose=self.verbose)
+                    prompt_added = True
+                    logger.info(
+                        f"Evolved new prompt {new_prompt.id[:8]}... "
+                        f"(prompt_gen={new_prompt.generation}, prog_gen={current_program_generation}, "
+                        f"patch={patch_type}, cost=${cost:.4f})"
+                    )
+                else:
+                    logger.warning(f"Prompt evolution failed (patch_type={patch_type})")
+            finally:
+                # Only a stored prompt row carries this cost; otherwise it gets
+                # an event. add() commits the row before its archive upkeep, so
+                # a failure there can leave the row, and its cost, in place;
+                # when that cannot be told, the total reads unknown rather than
+                # count the cost twice or not at all.
+                stored: Optional[bool] = prompt_added
+                if new_prompt and not stored and cost > 0:
+                    try:
+                        stored = self.prompt_db.get(new_prompt.id) is not None
+                    except Exception as lookup_error:
+                        stored = None
+                        self._mark_unrecorded(
+                            {
+                                "generation": current_program_generation,
+                                "node_kind": FAILED_PROMPT_EVOLUTION,
+                                "api_costs": cost,
+                                "error": "prompt row may exist; lookup failed: "
+                                f"{lookup_error}",
+                            }
+                        )
+                if cost > 0 and stored is False:
+                    await self._record_charge_event(
+                        generation=current_program_generation,
+                        stage="prompt_evolution",
+                        status="failed",
+                        details={
+                            "node_kind": FAILED_PROMPT_EVOLUTION,
+                            "patch_type": patch_type,
+                            "api_costs": cost,
+                        },
+                    )
 
         except Exception as e:
             logger.error(f"Error during prompt evolution: {e}")
@@ -1794,23 +2047,28 @@ class ShinkaEvolveRunner:
                     updated_recs,
                     meta_cost,
                 ) = await self.meta_summarizer.update_meta_memory_async(best_program)
-                if updated_recs:
-                    # Write meta output file asynchronously
-                    await self.meta_summarizer.write_meta_output_async(
-                        str(self.results_dir)
+                # Every step that ran is paid for, failed update included, so the
+                # cost is booked before the output file can fail.
+                if meta_cost > 0:
+                    logger.info(
+                        f"Meta recommendation generation cost: ${meta_cost:.4f}"
                     )
-                    # Store meta cost for tracking
-                    if meta_cost > 0:
-                        logger.info(
-                            f"Meta recommendation generation cost: ${meta_cost:.4f}"
-                        )
-                        # Add meta cost to in-memory total for accurate budget tracking
-                        self.total_api_cost += meta_cost
+                    # Add meta cost to in-memory total for accurate budget tracking
+                    self.total_api_cost += meta_cost
 
-                        # Add meta cost to this program's metadata (the one that triggered the update)
-                        if initial_program.metadata is None:
-                            initial_program.metadata = {}
-                        initial_program.metadata["meta_cost"] = meta_cost
+                    # Add meta cost to this program's metadata (the one that triggered the update)
+                    if initial_program.metadata is None:
+                        initial_program.metadata = {}
+                    initial_program.metadata["meta_cost"] = meta_cost
+                if updated_recs:
+                    # The steps are paid for; a failed output file must not stop
+                    # setup before the cost is stored with the program below.
+                    try:
+                        await self.meta_summarizer.write_meta_output_async(
+                            str(self.results_dir)
+                        )
+                    except Exception as e:
+                        logger.error(f"Meta recommendation output failed: {e}")
 
         # Set baseline score for LLM selection
         if self.llm_selection is not None:
@@ -1835,7 +2093,22 @@ class ShinkaEvolveRunner:
             postprocess_started_at=postprocess_started_at,
             postprocess_finished_at=postprocess_finished_at,
         )
-        await self._persist_program_metadata_async(initial_program)
+        try:
+            await self._persist_program_metadata_async(initial_program)
+        except Exception as e:
+            # The row is already in the database without its paid meta cost.
+            paid_meta_cost = (initial_program.metadata or {}).get("meta_cost") or 0.0
+            if paid_meta_cost > 0:
+                self._mark_unrecorded(
+                    {
+                        "generation": 0,
+                        "node_kind": "meta_update",
+                        "program": initial_program.id,
+                        "meta_cost": paid_meta_cost,
+                        "error": str(e),
+                    }
+                )
+            raise
         self._log_program_to_wandb(initial_program)
 
         if self.verbose:
@@ -2065,9 +2338,7 @@ class ShinkaEvolveRunner:
                                         f"{job.generation} - {status_results[i]}"
                                     )
                                 else:
-                                    status_display.append(
-                                        f"{job.generation} - unknown"
-                                    )
+                                    status_display.append(f"{job.generation} - unknown")
 
                             logger.debug(
                                 f"Job statuses ({len(monitored_jobs)}): gen [{', '.join(status_display)}]"
@@ -2433,7 +2704,9 @@ class ShinkaEvolveRunner:
                     and self._get_in_flight_work_count() == 0
                     and self.completed_generations < self.evo_config.num_generations
                 ):
-                    missing_generations = await self._get_missing_persisted_generations()
+                    missing_generations = (
+                        await self._get_missing_persisted_generations()
+                    )
                     await self._record_generation_event(
                         generation=self.next_generation_to_submit,
                         status="stopped_generation_budget_exhausted",
@@ -2721,7 +2994,9 @@ class ShinkaEvolveRunner:
         novelty_total_cost = 0.0
         novelty_explanation = ""
         last_failure_stage = "proposal"
-        last_failure_reason = "LLM failed to generate a valid proposal after all attempts"
+        last_failure_reason = (
+            "LLM failed to generate a valid proposal after all attempts"
+        )
         proposal_accepted = False
         parent_program: Optional[Program] = None
         archive_programs: List[Program] = []
@@ -2926,6 +3201,27 @@ class ShinkaEvolveRunner:
                     novelty_total_cost  # Use "novelty_cost" key like sync
                 )
                 meta_patch_data["novelty_explanation"] = novelty_explanation
+
+            # Once the run has reached its target, a proposal still in flight is
+            # surplus: it books what it paid and is discarded instead of taking
+            # an evaluation slot, so the target cleanup waiting for it never
+            # blocks on a slot.
+            if self.completed_generations >= self.evo_config.num_generations:
+                proposal_total_cost = api_costs + embed_cost + novelty_total_cost
+                self.total_api_cost += proposal_total_cost
+                await self._record_charge_event(
+                    generation=generation,
+                    stage="discard",
+                    status="discarded",
+                    details={
+                        "node_kind": DISCARDED_PROPOSAL,
+                        "reason": "finished after the target",
+                        "api_costs": api_costs,
+                        "embed_cost": embed_cost,
+                        "novelty_cost": novelty_total_cost,
+                    },
+                )
+                return None
 
             try:
                 (
@@ -3139,7 +3435,9 @@ class ShinkaEvolveRunner:
 
         reason = (failure_reason or "").lower()
         error_attempt = str((meta_patch_data or {}).get("error_attempt") or "").lower()
-        last_error_msg = str((meta_patch_data or {}).get("last_error_msg") or "").lower()
+        last_error_msg = str(
+            (meta_patch_data or {}).get("last_error_msg") or ""
+        ).lower()
         combined = " ".join(
             part for part in [reason, error_attempt, last_error_msg] if part
         )
@@ -3325,8 +3623,8 @@ class ShinkaEvolveRunner:
         failure_reason: str,
     ) -> None:
         """Record one terminal pre-eval failure via attempt_log plus failure.json."""
-        terminal_failure_cost = float(api_costs) + float(embed_cost) + float(
-            novelty_cost
+        terminal_failure_cost = (
+            float(api_costs) + float(embed_cost) + float(novelty_cost)
         )
         self.total_api_cost += terminal_failure_cost
         if terminal_failure_cost > 0.0:
@@ -3355,7 +3653,7 @@ class ShinkaEvolveRunner:
             active_proposals_at_start=active_proposals_at_start,
         )
         terminal_failure_at = time.time()
-        await self._record_attempt_event(
+        await self._record_charge_event(
             generation=generation,
             stage=failure_stage,
             status="failed",
@@ -3371,9 +3669,7 @@ class ShinkaEvolveRunner:
                 "code_diff_available": bool(code_diff),
                 "patch_type": (meta_patch_data or {}).get("patch_type"),
                 "patch_name": (meta_patch_data or {}).get("patch_name"),
-                "patch_description": (meta_patch_data or {}).get(
-                    "patch_description"
-                ),
+                "patch_description": (meta_patch_data or {}).get("patch_description"),
                 "system_prompt_id": (meta_patch_data or {}).get("system_prompt_id"),
                 "model_name": (meta_patch_data or {}).get("model_name"),
                 "api_costs": api_costs,
@@ -3460,6 +3756,9 @@ class ShinkaEvolveRunner:
                     model_posterior=model_posterior,
                 )
 
+                # A reply without content is still paid for.
+                if response is not None and response.cost:
+                    total_costs += response.cost
                 if not response or not response.content:
                     error_str = "LLM response content was None."
 
@@ -3482,8 +3781,6 @@ class ShinkaEvolveRunner:
                         continue
                     else:
                         break
-
-                total_costs += response.cost if response.cost else 0.0
 
                 patch_name = extract_between(
                     response.content, "<NAME>", "</NAME>", False
@@ -3684,6 +3981,9 @@ class ShinkaEvolveRunner:
                     model_posterior=model_posterior,
                 )
 
+                # A reply without content is still paid for.
+                if response is not None and response.cost:
+                    total_costs += response.cost
                 if not response or not response.content:
                     error_str = "LLM response content was None."
 
@@ -3707,8 +4007,6 @@ class ShinkaEvolveRunner:
                         continue
                     else:
                         break
-
-                total_costs += response.cost if response.cost else 0.0
 
                 # Extract patch name and description from LLM response
                 patch_name = extract_between(
@@ -3842,7 +4140,9 @@ class ShinkaEvolveRunner:
                 "patch_attempt": self.evo_config.max_patch_attempts,
                 "system_prompt_id": current_prompt_id,  # Track evolved prompt
                 **llm_kwargs,
-                "llm_result": response.to_dict() if "response" in locals() and response else None,
+                "llm_result": response.to_dict()
+                if "response" in locals() and response
+                else None,
             }
 
             return None, meta_patch_data, False
@@ -3927,6 +4227,18 @@ class ShinkaEvolveRunner:
             job.generation,
             self.MAX_DB_RETRY_ATTEMPTS,
         )
+        # Its paid proposal never reaches the database, so the run's recorded
+        # total must read unknown rather than complete.
+        charge = {
+            "generation": job.generation,
+            "node_kind": "lost_program",
+            "source_job_id": str(job.job_id),
+            "api_costs": (job.meta_patch_data or {}).get("api_costs", 0.0),
+            "embed_cost": job.embed_cost,
+            "novelty_cost": job.novelty_cost,
+            "error": error_message,
+        }
+        self._mark_unrecorded(charge)
 
     async def _persist_failed_generation(
         self,
@@ -3963,7 +4275,10 @@ class ShinkaEvolveRunner:
                 failure_reason=failure_reason,
                 meta_patch_data=meta_patch_data,
             )
-            failure_json_path, failure_payload = await self._write_failure_artifact_async(
+            (
+                failure_json_path,
+                failure_payload,
+            ) = await self._write_failure_artifact_async(
                 generation=generation,
                 exec_fname=exec_fname,
                 parent_program=parent_program,
@@ -4089,6 +4404,7 @@ class ShinkaEvolveRunner:
                     f"⏭️  DISCARD SURPLUS: Skipping persistence for {job.job_id} "
                     f"(gen {job.generation}) after target was already reached"
                 )
+                await self._record_discarded_job(job, "completed after the target")
                 return CompletedJobPersistResult(job=job, success=True)
 
             # Get job results with timeout to prevent hanging
@@ -4403,6 +4719,9 @@ class ShinkaEvolveRunner:
         program = persisted_event.program
         apply_started_at = time.time()
         metadata_persist_needed = False
+        # Meta cost this pass charged to the program; it lives only in the
+        # metadata written below, so losing that write loses the charge.
+        paid_meta_cost = 0.0
         side_effects_completed = False
 
         try:
@@ -4461,23 +4780,27 @@ class ShinkaEvolveRunner:
                             ) = await self.meta_summarizer.update_meta_memory_async(
                                 best_program
                             )
+                            # Every step that ran is paid for, failed update
+                            # included, so the cost is booked before the output
+                            # file can fail.
+                            if meta_cost > 0:
+                                logger.info(
+                                    f"Meta recommendation cost: ${meta_cost:.4f}"
+                                )
+                                # Add meta cost to in-memory total for accurate budget tracking
+                                self.total_api_cost += meta_cost
+
+                                # Add meta cost to this program's metadata
+                                if program.metadata is None:
+                                    program.metadata = {}
+                                program.metadata["meta_cost"] = meta_cost
+                                paid_meta_cost = meta_cost
+                                metadata_persist_needed = True
                             if updated_recs:
                                 # Write meta output file asynchronously
                                 await self.meta_summarizer.write_meta_output_async(
                                     str(self.results_dir)
                                 )
-                                if meta_cost > 0:
-                                    logger.info(
-                                        f"Meta recommendation cost: ${meta_cost:.4f}"
-                                    )
-                                    # Add meta cost to in-memory total for accurate budget tracking
-                                    self.total_api_cost += meta_cost
-
-                                    # Add meta cost to this program's metadata
-                                    if program.metadata is None:
-                                        program.metadata = {}
-                                    program.metadata["meta_cost"] = meta_cost
-                                    metadata_persist_needed = True
                 except Exception as e:
                     logger.warning(f"Meta summarizer error for {job.job_id}: {e}")
                     # Don't fail the whole job for meta summarizer issues
@@ -4517,10 +4840,14 @@ class ShinkaEvolveRunner:
                 program.metadata = with_pipeline_timing(
                     base_metadata,
                     pipeline_started_at=float(
-                        base_metadata.get("pipeline_started_at", job.proposal_started_at)
+                        base_metadata.get(
+                            "pipeline_started_at", job.proposal_started_at
+                        )
                     ),
                     sampling_started_at=float(
-                        base_metadata.get("sampling_started_at", job.proposal_started_at)
+                        base_metadata.get(
+                            "sampling_started_at", job.proposal_started_at
+                        )
                     ),
                     sampling_finished_at=float(
                         base_metadata.get(
@@ -4574,6 +4901,16 @@ class ShinkaEvolveRunner:
                     logger.warning(
                         f"Apply-stage metadata persistence error for {job.job_id}: {e}"
                     )
+                    if paid_meta_cost > 0:
+                        self._mark_unrecorded(
+                            {
+                                "generation": job.generation,
+                                "node_kind": "meta_update",
+                                "program": program.id,
+                                "meta_cost": paid_meta_cost,
+                                "error": str(e),
+                            }
+                        )
 
         self._log_program_to_wandb(program)
         logger.info(
@@ -4666,8 +5003,7 @@ class ShinkaEvolveRunner:
         finally:
             self._completed_jobs_pending = max(
                 0,
-                int(getattr(self, "_completed_jobs_pending", 0))
-                - len(completed_jobs),
+                int(getattr(self, "_completed_jobs_pending", 0)) - len(completed_jobs),
             )
 
         self._record_progress()
@@ -4678,12 +5014,9 @@ class ShinkaEvolveRunner:
         if self.completed_generations != old_completed:
             if self.evo_config.max_api_costs is not None:
                 cost_str = (
-                    f"${self.total_api_cost:.4f}/"
-                    f"${self.evo_config.max_api_costs:.2f}"
+                    f"${self.total_api_cost:.4f}/${self.evo_config.max_api_costs:.2f}"
                 )
-                cost_pct = (
-                    self.total_api_cost / self.evo_config.max_api_costs
-                ) * 100
+                cost_pct = (self.total_api_cost / self.evo_config.max_api_costs) * 100
                 cost_info = f" (cost: {cost_str}, {cost_pct:.1f}%)"
             else:
                 cost_info = f" (cost: ${self.total_api_cost:.4f})"
@@ -4706,12 +5039,9 @@ class ShinkaEvolveRunner:
         elif new_retries > 0:
             if self.evo_config.max_api_costs is not None:
                 cost_str = (
-                    f"${self.total_api_cost:.4f}/"
-                    f"${self.evo_config.max_api_costs:.2f}"
+                    f"${self.total_api_cost:.4f}/${self.evo_config.max_api_costs:.2f}"
                 )
-                cost_pct = (
-                    self.total_api_cost / self.evo_config.max_api_costs
-                ) * 100
+                cost_pct = (self.total_api_cost / self.evo_config.max_api_costs) * 100
                 cost_info = f", cost: {cost_str} ({cost_pct:.1f}%)"
             else:
                 cost_info = f", cost: ${self.total_api_cost:.4f}"
@@ -5248,49 +5578,42 @@ class ShinkaEvolveRunner:
             for job in self.failed_jobs_for_retry.values():
                 job.discard_if_completed = True
                 self.submitted_jobs.pop(str(job.job_id), None)
+                await self._record_discarded_job(job, "queued for retry at the target")
             self.failed_jobs_for_retry.clear()
 
+        # Running jobs go first, so their evaluation slots are free before the
+        # wait: a proposal that passed the target check just before the target
+        # cannot block on a slot. Jobs such proposals still submit are discarded
+        # by the second pass.
+        await self._cancel_running_surplus_jobs()
         if self.active_proposal_tasks:
-            logger.info(
-                f"🛑 Cancelling {len(self.active_proposal_tasks)} surplus proposal "
-                "task(s) after reaching target generations"
-            )
             proposal_tasks = list(self.active_proposal_tasks.values())
-            for task in proposal_tasks:
-                task.cancel()
-            await asyncio.gather(*proposal_tasks, return_exceptions=True)
-            await self._cleanup_completed_proposal_tasks()
-
-        if self.running_jobs:
-            cancelled_jobs: List[AsyncRunningJob] = []
-            surviving_jobs: List[AsyncRunningJob] = []
-
-            for job in list(self.running_jobs):
-                job.discard_if_completed = True
-                try:
-                    cancelled = await self.scheduler.cancel_job_async(job.job_id)
-                except Exception as e:
-                    logger.warning(
-                        f"Failed to cancel surplus job {job.job_id} "
-                        f"(gen {job.generation}): {e}"
-                    )
-                    cancelled = False
-
-                if cancelled:
-                    cancelled_jobs.append(job)
-                    self.submitted_jobs.pop(str(job.job_id), None)
-                    await self._release_evaluation_slot_once(job)
-                else:
-                    surviving_jobs.append(job)
-
-            self.running_jobs = surviving_jobs
-
-            if cancelled_jobs:
-                cancelled_gens = [job.generation for job in cancelled_jobs]
-                logger.info(
-                    f"🧹 Cancelled {len(cancelled_jobs)} surplus evaluation job(s): "
-                    f"gens {cancelled_gens}"
+            logger.info(
+                f"⏳ Waiting for {len(proposal_tasks)} in-flight proposal task(s) "
+                "after reaching target generations; each records what it paid "
+                "and is discarded"
+            )
+            # Cancelling a proposal mid-call would drop calls it already paid
+            # for, so they finish (and, past the target, discard themselves
+            # without taking an evaluation slot). Only one still running after
+            # the wait is cancelled, and its unbooked spend is marked unrecorded.
+            _, hung = await asyncio.wait(
+                proposal_tasks, timeout=self.surplus_proposal_wait_s
+            )
+            if hung:
+                for task in hung:
+                    task.cancel()
+                await asyncio.gather(*hung, return_exceptions=True)
+                self._mark_unrecorded(
+                    {
+                        "node_kind": "cancelled_proposal",
+                        "tasks": len(hung),
+                        "error": f"still running {self.surplus_proposal_wait_s:.0f} s "
+                        "after the target",
+                    }
                 )
+            await self._cleanup_completed_proposal_tasks()
+        await self._cancel_running_surplus_jobs()
 
         remaining_task_generations = {
             int(task.get_name().split("_", 1)[1])
@@ -5302,6 +5625,43 @@ class ShinkaEvolveRunner:
             job.generation for job in self.running_jobs
         } | remaining_task_generations
         self.slot_available.set()
+
+    async def _cancel_running_surplus_jobs(self) -> None:
+        """Cancel evaluation jobs still running after the target and charge
+        each cancelled one; a job whose cancel fails keeps running and is
+        charged when it completes (``_persist_completed_job``)."""
+        if not self.running_jobs:
+            return
+        cancelled_jobs: List[AsyncRunningJob] = []
+        surviving_jobs: List[AsyncRunningJob] = []
+
+        for job in list(self.running_jobs):
+            job.discard_if_completed = True
+            try:
+                cancelled = await self.scheduler.cancel_job_async(job.job_id)
+            except Exception as e:
+                logger.warning(
+                    f"Failed to cancel surplus job {job.job_id} "
+                    f"(gen {job.generation}): {e}"
+                )
+                cancelled = False
+
+            if cancelled:
+                cancelled_jobs.append(job)
+                self.submitted_jobs.pop(str(job.job_id), None)
+                await self._release_evaluation_slot_once(job)
+                await self._record_discarded_job(job, "cancelled at the target")
+            else:
+                surviving_jobs.append(job)
+
+        self.running_jobs = surviving_jobs
+
+        if cancelled_jobs:
+            cancelled_gens = [job.generation for job in cancelled_jobs]
+            logger.info(
+                f"🧹 Cancelled {len(cancelled_jobs)} surplus evaluation job(s): "
+                f"gens {cancelled_gens}"
+            )
 
     def _is_system_stuck(self) -> bool:
         """
@@ -5601,9 +5961,7 @@ class ShinkaEvolveRunner:
             return
 
         loop = asyncio.get_running_loop()
-        last_snapshot_at = getattr(
-            self, "_wandb_last_population_snapshot_at", None
-        )
+        last_snapshot_at = getattr(self, "_wandb_last_population_snapshot_at", None)
         interval = getattr(
             self,
             "_wandb_population_interval_seconds",
@@ -5629,9 +5987,7 @@ class ShinkaEvolveRunner:
         try:
             population_snapshot = self._capture_wandb_population_snapshot(db)
         except Exception as exc:
-            logger.warning(
-                "Failed to query in-memory W&B population snapshot: %s", exc
-            )
+            logger.warning("Failed to query in-memory W&B population snapshot: %s", exc)
             return
         if population_snapshot is None:
             if not hasattr(wandb_logger, "log_population_progress"):
@@ -5639,15 +5995,11 @@ class ShinkaEvolveRunner:
         elif not hasattr(wandb_logger, "log_population_snapshot"):
             return
         else:
-            self._wandb_last_population_snapshot_at = (
-                asyncio.get_running_loop().time()
-            )
+            self._wandb_last_population_snapshot_at = asyncio.get_running_loop().time()
 
         self._wandb_population_pending = False
         self._wandb_population_task = asyncio.create_task(
-            self._run_wandb_population_snapshot(
-                wandb_logger, db, population_snapshot
-            ),
+            self._run_wandb_population_snapshot(wandb_logger, db, population_snapshot),
             name="wandb_population_snapshot",
         )
 
@@ -5870,9 +6222,7 @@ class ShinkaEvolveRunner:
                     return
                 callback, program_id, payload = operation
                 try:
-                    await self._run_wandb_operation(
-                        callback, program_id, payload
-                    )
+                    await self._run_wandb_operation(callback, program_id, payload)
                 except Exception as exc:
                     logger.warning("Failed W&B candidate operation: %s", exc)
             finally:

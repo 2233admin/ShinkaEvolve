@@ -96,11 +96,14 @@ export const MAX_POINTS = 200
 /**
  * P02-Q2: the metric against cumulative spend. Programs and prompt versions are charged in one clock
  * order, Unix time when every one of them has a time and generation otherwise; a prompt charged after
- * the last program still moves the curve's end to the run's total. From the first charge without a
- * price the spend is unknown, so the curve ends there.
+ * the last program still moves the curve's end to the run's total. Paid work that never became a
+ * program (a surplus proposal discarded at the target, a prompt evolution that produced nothing) has
+ * no charge here, so with the run's stats the end moves on to the server's total (rundb.run_cost, as
+ * runs/data.ts `runCost` reads it). From the first charge without a price the spend is unknown, so the
+ * curve ends there.
  */
-export function bySpend(run: Pick<RunData, 'programs' | 'prompts'>, metric: Metric): Point[] {
-  const { programs, prompts } = run
+export function bySpend(run: Pick<RunData, 'programs' | 'prompts'> & { stats?: RunStats }, metric: Metric): Point[] {
+  const { programs, prompts, stats } = run
   const byTime = programs.every((p) => Number.isFinite(p.timestamp)) && prompts.every((v) => Number.isFinite(v.timestamp))
   const charges = [
     ...programs.map((p) => ({ time: byTime ? (p.timestamp as number) : p.generation || 0, cost: programCost(p), program: p as ProgramSummary | null })),
@@ -117,6 +120,11 @@ export function bySpend(run: Pick<RunData, 'programs' | 'prompts'>, metric: Metr
     value = valueOf(t, metric)
     points.push({ x: spent, y: value })
   }
+  const total =
+    stats && Number.isFinite(stats.total_cost) && Number.isFinite(stats.prompt_evo_cost)
+      ? (stats.total_cost as number) + (stats.prompt_evo_cost as number)
+      : null
+  if (spent !== null && total !== null && total > spent) spent = total
   if (points.length && points[points.length - 1].x !== spent) points.push({ x: spent, y: value })
   const step = Math.ceil(points.length / MAX_POINTS)
   const sampled = points.length > MAX_POINTS ? points.filter((_, i) => i % step === 0 || i === points.length - 1) : points

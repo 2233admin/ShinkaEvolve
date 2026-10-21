@@ -5,10 +5,21 @@ from __future__ import annotations
 import sqlite3
 from contextlib import closing
 from pathlib import Path
-from typing import List, NamedTuple, Optional, Tuple
+from typing import Callable, List, NamedTuple, Optional, Tuple, TypeVar
 from urllib.parse import quote
 
+# Administrative copies (migration and dynamic island spawning) are not trials
+# and not charges; the cost rule owns the predicate.
+from shinka.database.cost import NOT_COPY as _NOT_COPY
+from shinka.database.cost import (
+    Spend,
+    program_spend,
+    prompt_spend,
+    recorded_in_full,
+)
+
 DB_FILENAME = "programs.sqlite"
+T = TypeVar("T")
 
 
 def has_programs(results_dir: Path) -> bool:
@@ -33,27 +44,30 @@ def count_evaluated(results_dir: Path) -> int:
     return int(n)
 
 
-# Administrative copies (migration and dynamic island spawning) are not trials;
-# same predicate as shinka.database.dbase's evaluated_count.
-_NOT_COPY = (
-    "COALESCE(json_extract(metadata, '$._is_island_copy'), 0) = 0 "
-    "AND COALESCE(json_extract(metadata, '$._spawned_island'), 0) = 0"
-)
-
-
-def _query(
-    results_dir: Path, sql: str, params: tuple = (), filename: str = DB_FILENAME
-) -> list:
+def _connect(
+    results_dir: Path, filename: str = DB_FILENAME
+) -> "closing[sqlite3.Connection]":
     db = Path(results_dir) / filename
     if not db.exists():
         raise FileNotFoundError(db)
     # Encode the native filename so UNC paths never become URI authorities.
     # closing(): the connection's own context manager only commits, and an open
     # handle keeps the file locked on Windows after a failed read.
-    with closing(
+    return closing(
         sqlite3.connect(f"file:{quote(str(db.resolve()), safe='')}?mode=ro", uri=True)
-    ) as conn:
+    )
+
+
+def _query(
+    results_dir: Path, sql: str, params: tuple = (), filename: str = DB_FILENAME
+) -> list:
+    with _connect(results_dir, filename) as conn:
         return conn.execute(sql, params).fetchall()
+
+
+def _read(results_dir: Path, filename: str, total: Callable[..., T]) -> T:
+    with _connect(results_dir, filename) as conn:
+        return total(conn)
 
 
 def best_program(results_dir: Path) -> Tuple[str, str, float]:
@@ -120,12 +134,15 @@ def program_code(results_dir: Path, program_id: str) -> str:
 
 
 PROMPT_DB_FILENAME = "prompts.sqlite"
-COST_FIELDS = ("api_costs", "embed_cost", "novelty_cost", "meta_cost")
 
 
 class RunCost(NamedTuple):
-    """Recorded LLM spend of a run (USD). A part whose ``*_known`` flag is false
-    holds an unpriced or malformed entry, so its amount is only a lower bound."""
+    """Recorded LLM spend of a run (USD), by the one cost rule
+    (``shinka.database.cost``): evaluated programs without island copies,
+    charge events of paid work that never became a program, and prompt
+    evolution. A part whose ``*_known`` flag is false holds an unpriced or
+    malformed entry, or the run marked a charge it could not record, so its
+    amount is only a lower bound."""
 
     programs_usd: float
     programs_known: bool
@@ -141,75 +158,22 @@ class RunCost(NamedTuple):
         return self.programs_known and self.prompts_known
 
 
-def _cost_field(path: str) -> Tuple[str, str]:
-    """(amount, recorded) SQL for one cost field of valid JSON ``metadata``.
-    An absent or null field is a recorded zero: the runner writes a field only
-    for the steps that ran (``meta_cost`` only on a program a meta update
-    charged) and totals missing ones as 0. A present value must be a finite
-    number >= 0; anything else leaves the cost unknown."""
-    kind = f"json_type(metadata, '$.{path}')"
-    value = f"json_extract(metadata, '$.{path}')"
-    number = f"({kind} IN ('integer', 'real') AND {value} >= 0 AND {value} < 1e999)"
-    recorded = f"({kind} IS NULL OR {kind} = 'null' OR {number})"
-    return f"(CASE WHEN {number} THEN {value} ELSE 0 END)", recorded
-
-
-def _cost_sql(table: str, amount: str, recorded: str, skip: str) -> str:
-    """Total of ``amount`` and whether every row is recorded. Null metadata is
-    a recorded zero, malformed metadata is unknown, and rows matching ``skip``
-    are not charges. CASE keeps the JSON functions off malformed rows."""
-    return (
-        "SELECT COALESCE(SUM(amount), 0), COALESCE(MIN(recorded), 1) FROM ("
-        "SELECT CASE WHEN metadata IS NULL THEN 0 WHEN json_valid(metadata) "
-        f"THEN CASE WHEN {skip} THEN 0 ELSE {amount} END ELSE 0 END AS amount, "
-        "CASE WHEN metadata IS NULL THEN 1 WHEN json_valid(metadata) "
-        f"THEN CASE WHEN {skip} OR {recorded} THEN 1 ELSE 0 END ELSE 0 END "
-        f"AS recorded FROM {table})"
-    )
-
-
-_FIELDS = {field: _cost_field(field) for field in COST_FIELDS}
-_MODEL = (
-    "COALESCE("
-    + ", ".join(
-        f"NULLIF(json_extract(metadata, '$.{p}'), '')"
-        for p in ("model_name", "model", "llm_result.model_name", "llm_result.model")
-    )
-    + ", '')"
-)
-# A headless call without pricing carries an api_costs that is not an amount;
-# core telemetry leaves it out and counts it as pricing-unknown (dbase.py).
-_UNPRICED = (
-    f"({_MODEL} GLOB 'headless/*' "
-    "AND COALESCE(json_extract(metadata, '$.headless_pricing_unknown'), 0) = 1)"
-)
-_PROGRAMS_COST = _cost_sql(
-    "programs",
-    f"(CASE WHEN {_UNPRICED} THEN 0 ELSE {_FIELDS['api_costs'][0]} END) + "
-    + " + ".join(_FIELDS[f][0] for f in COST_FIELDS[1:]),
-    f"(NOT {_UNPRICED} AND " + " AND ".join(r for _, r in _FIELDS.values()) + ")",
-    f"NOT ({_NOT_COPY})",
-)
-_PROMPTS_COST = _cost_sql("system_prompts", *_cost_field("llm.cost"), "0")
-
-
 def run_cost(results_dir: Path, db_name: str = DB_FILENAME) -> RunCost:
-    """LLM spend of a run: its evaluated (non-copy) programs plus prompt
-    evolution (``prompts.sqlite``). The budget, the workspace and the run
-    statistics all use this one rule, so a run never shows two costs."""
+    """LLM spend of a run. The budget, grants, the workspace, the run
+    statistics and the runner's resume base all use this one rule, so a run
+    never shows two costs."""
     results_dir = Path(results_dir)
-    programs, programs_known = 0.0, 1
+    programs = Spend(0.0, True)
     if (results_dir / db_name).exists():
-        ((programs, programs_known),) = _query(
-            results_dir, _PROGRAMS_COST, filename=db_name
-        )
-    prompts, prompts_known = 0.0, 1
+        programs = _read(results_dir, db_name, program_spend)
+    prompts = Spend(0.0, True)
     if (results_dir / PROMPT_DB_FILENAME).exists():
-        ((prompts, prompts_known),) = _query(
-            results_dir, _PROMPTS_COST, filename=PROMPT_DB_FILENAME
-        )
+        prompts = _read(results_dir, PROMPT_DB_FILENAME, prompt_spend)
     return RunCost(
-        float(programs), bool(programs_known), float(prompts), bool(prompts_known)
+        programs.usd,
+        programs.known and recorded_in_full(results_dir),
+        prompts.usd,
+        prompts.known,
     )
 
 

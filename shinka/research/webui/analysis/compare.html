@@ -643,7 +643,12 @@
                     }
                     pointsCost.push({ x: runningCost, y: value });
                 });
-                // A prompt charged after the last program still moves the curve's end to the run's total.
+                // Paid work that never became a program (a surplus proposal discarded at the target, a
+                // prompt evolution that produced nothing) has no charge above, so the end moves on to the
+                // server's total (rundb.run_cost); a prompt charged after the last program moves it too.
+                const statsTotal = Number.isFinite(data.stats?.total_cost) && Number.isFinite(data.stats?.prompt_evo_cost)
+                    ? data.stats.total_cost + data.stats.prompt_evo_cost : null;
+                if (runningCost !== null && statsTotal !== null && statsTotal > runningCost) runningCost = statsTotal;
                 if (pointsCost.length && pointsCost[pointsCost.length - 1].x !== runningCost) {
                     pointsCost.push({ x: runningCost, y: value });
                 }

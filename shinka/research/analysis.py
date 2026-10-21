@@ -332,6 +332,23 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
         scope = getattr(self, "run_scope", Path(self.search_root))
         return confined(scope, path) if path is not None else None
 
+    def _load_failed_proposal_nodes(
+        self, abs_db_path, *, include_code=False, generation=None
+    ):
+        # A database from before attempt_log has no failed proposals; the
+        # original reader would fail the whole summary on it.
+        uri = f"file:{urllib.parse.quote(str(Path(abs_db_path)), safe='')}?mode=ro"
+        with closing(sqlite3.connect(uri, uri=True)) as connection:
+            logged = connection.execute(
+                "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+                "AND name = 'attempt_log'"
+            ).fetchone()
+        if logged is None:
+            return []
+        return super()._load_failed_proposal_nodes(
+            abs_db_path, include_code=include_code, generation=generation
+        )
+
     def send_header(self, keyword: str, value: str) -> None:
         if keyword.lower() != "access-control-allow-origin":
             super().send_header(keyword, value)

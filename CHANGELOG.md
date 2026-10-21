@@ -179,6 +179,30 @@ All notable changes to `shinka-evolve` are documented in this file.
   as unknown, prompt evolution in every total. Island copies no longer double
   count cost, read-only connections close after failed reads, and a budgeted
   direction with unknown spend refuses new runs.
+- Fixed run cost totals that missed real spend or counted some twice, as
+  measured against a stub model's own charge ledger: a resumed run counted
+  island copies again and ignored failed proposals; paid steps of a failed
+  meta update or final summary were recorded nowhere; surplus proposals
+  discarded at the target, paid empty replies and prompt evolutions that
+  produced no prompt were dropped; and a results directory holding only
+  generation 0 plus failures resumed from zero. One rule
+  (`shinka.database.cost`) now totals a run for the runner's resume base and
+  `rundb.run_cost`: non-copy programs, one `attempt_log` charge event for each
+  paid proposal or prompt evolution that never became a row, and prompt
+  evolution. Proposals still in flight at the target finish and are charged
+  instead of being cancelled (up to `surplus_proposal_wait_s`, 600 s by
+  default; one still running then is cancelled and leaves the marker), a
+  deliberate change from upstream, whose two recovery tests in
+  `tests/test_async_runner_recovery.py` now expect it. A charge the database
+  refuses, or whose amount
+  cannot be known, leaves `cost-unrecorded.json`, and the run's total reads
+  unknown until the missing charge is recorded durably (deleting the file is
+  not that); with `evo.max_api_costs` set a resume then refuses, as does a
+  research grant run in any direction, and a run that cannot even leave the
+  marker stops with `ChargeNotRecordedError`. The analysis cost tab takes its
+  total from the server and lists the rest as other charges, and the compare
+  spend curve ends at the run total. A results directory holding only
+  generation 0 now resumes instead of running its seed again.
 - Fixed the restored run list painting the prompt-evolution count in white on
   a near-white chip.
 - Fixed the Research workbench's trial counts while a run is in progress: the

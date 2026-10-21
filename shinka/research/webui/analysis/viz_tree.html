@@ -5455,6 +5455,7 @@ console.error("[DEBUG] Error in processData:", error);
                         <p><strong>Novelty Cost:</strong> <span id="meta-cost-novelty">N/A</span></p>
                         <p><strong>Meta Cost:</strong> <span id="meta-cost-meta">N/A</span></p>
                         <p><strong>PromptEvo Cost:</strong> <span id="meta-cost-prompt">N/A</span></p>
+                        <p title="Paid work that never became a program: surplus proposals discarded at the target and prompt evolutions that produced nothing"><strong>Other Charges:</strong> <span id="meta-cost-other">N/A</span></p>
                     </div>
             </div>
 
@@ -5558,6 +5559,40 @@ console.error("[DEBUG] Error in processData:", error);
             function promptCostTotal() {
                 if (window.metaPromptFailed) return null;
                 return sumRecorded((window.metaPromptData || []).map(prompt => recordedCost(prompt.metadata?.llm?.cost)));
+            }
+            // The run's total follows rundb.run_cost on the server. Paid work that never became a
+            // program (a surplus proposal discarded at the target, a prompt evolution that produced
+            // nothing) has no entry here, so the entries alone undercount: the total comes from
+            // /get_database_stats, and nothing shows until it answers or when it cannot.
+            let serverTotalRequest = 0;
+            async function applyServerRunTotal(entrySum, numAgents) {
+                const dbPath = window.currentDbPath;
+                const totalEl = document.getElementById('meta-total-cost');
+                const avgEl = document.getElementById('meta-cost-avg');
+                const otherEl = document.getElementById('meta-cost-other');
+                if (!totalEl || !avgEl || !otherEl) return;
+                const request = ++serverTotalRequest;
+                // A newer refresh, of this run or another, supersedes this answer.
+                const isCurrent = () => request === serverTotalRequest && window.currentDbPath === dbPath;
+                totalEl.textContent = avgEl.textContent = otherEl.textContent = '…';
+                try {
+                    if (!dbPath) throw new Error('no run selected');
+                    const response = await fetch(`/get_database_stats?db_path=${encodeURIComponent(dbPath)}`);
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                    const stats = await response.json();
+                    if (!isCurrent()) return;
+                    const total = Number.isFinite(stats.total_cost) && Number.isFinite(stats.prompt_evo_cost)
+                        ? stats.total_cost + stats.prompt_evo_cost : null;
+                    totalEl.textContent = total === null ? '—' : `$${total.toFixed(2)}`;
+                    avgEl.textContent = total === null || !numAgents ? '—' : `$${(total / numAgents).toFixed(2)}`;
+                    // Below zero the entries and the server disagree, so the rest is not known.
+                    const gap = total === null || entrySum === null ? null : total - entrySum;
+                    otherEl.textContent = gap === null || gap < -1e-9 ? '—' : `$${Math.max(0, gap).toFixed(2)}`;
+                } catch (error) {
+                    if (!isCurrent()) return;
+                    console.warn('[cost] run total unavailable:', error);
+                    totalEl.textContent = avgEl.textContent = otherEl.textContent = '—';
+                }
             }
         // Update the Meta Info tab with global data
         function updateMetaInfoTab(data) {
@@ -5769,6 +5804,7 @@ console.error("[DEBUG] Error in processData:", error);
             document.getElementById('meta-cost-meta').textContent = totalMetaCostNum === null ? '—' : `$${totalMetaCostNum.toFixed(2)}`;
             document.getElementById('meta-cost-prompt').textContent = totalPromptCostNum === null ? '—' : `$${totalPromptCostNum.toFixed(2)}`;
             document.getElementById('meta-cost-avg').textContent = totalCombinedCost === null || !numAgents ? '—' : `$${(totalCombinedCost / numAgents).toFixed(2)}`;
+            applyServerRunTotal(totalCombinedCost, numAgents);
             // Update Best Solution section
             const bestScoreEl = document.getElementById('meta-best-score');
             bestScoreEl.textContent = formatScore(bestScore);

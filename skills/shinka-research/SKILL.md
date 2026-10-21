@@ -60,6 +60,12 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
 - **Budget**: `init --budget-usd` makes `run` refuse once the direction's LLM
   spend reaches it; outside the agent environment also pass
   `--set evo.max_api_costs=<usd>` per run (inside it the grant sets the cap).
+  A run's cost counts every paid call, failed and discarded work included.
+  When a run's cost is unknown (an entry without a valid amount, or a
+  `cost-unrecorded.json` the runner left for a charge it could not record),
+  budgeted runs and every grant run on that experiment refuse: tell the human,
+  who records the missing charge. Never delete or edit `cost-unrecorded.json`;
+  removing it does not record the charge.
 - **Simplicity**: when two programs score about the same in-sample, prefer
   the simpler one. A small change with a clear gain beats a big rewrite with a
   marginal one.

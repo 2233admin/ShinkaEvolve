@@ -80,7 +80,7 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/rounds.py` | Agent 轮次的只读视图（工作台、`brief` 与 Agent 服务共用）：每份授权的尝试与运行状态、进行中的运行、封存段批准、待决事项与轮次状态；方向预算的已花与进行中授权运行的余量（`run` 用同一规则） |
 | `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
-| `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
+| `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本）；`run_cost` 用 `shinka/database/cost.py` 的费用规则（非岛副本程序、`attempt_log` 中没有成为程序的已付费工作、提示词进化；读不出或 `cost-unrecorded.json` 时未知），与运行器续跑的起点相同 |
 | `shinka/research/skeptic.py` | DSR、PBO、子区间稳定性、样本内外衰减、基线；lockbox 一次性确认 |
 | `shinka/research/library.py` | 工作区资料库的记账：`raw/` 中哪些资料是新的/已编译（按哈希）、操作日志；编译本身由 agent 完成 |
 | `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `grant` / `approve` / `watch` / `library` / `brief` / `status` |

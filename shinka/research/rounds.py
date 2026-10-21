@@ -260,6 +260,18 @@ def _overview(root: Path) -> Dict[str, Any]:
                             "grant anew",
                         }
                     )
+                results = experiment_dir(root, hid, exp.id) / "results"
+                if not unbuilt(results) and not run_cost(results).known:
+                    stuck.append(
+                        {
+                            "reason": "cost-unknown",
+                            "grant": r["id"],
+                            "hypothesis": hid,
+                            "experiment": exp.id,
+                            "do": "resolve the experiment's unknown cost; a grant "
+                            "run's cap cannot hold from a lower bound",
+                        }
+                    )
     pending += [{"kind": "stuck", **item} for item in stuck]
 
     opened_by = {use["opening"]: aid for aid, use in ledger.uses.items()}

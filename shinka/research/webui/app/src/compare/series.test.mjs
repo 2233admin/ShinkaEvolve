@@ -39,6 +39,17 @@ test('without a time on every charge the clock is the generation', () => {
   assert.deepEqual(xy(bySpend(run, 'program_count')), [[2, 1], [3, 2], [3.5, 2]])
 })
 
+test('paid work without a program moves the spend curve end to the run total', () => {
+  const programs = [program('a', 0, 0.2, { timestamp: 1, cost: 1 }), program('b', 1, 0.6, { timestamp: 2, cost: 2 })]
+  // The server's total holds a discarded surplus proposal no program carries.
+  const stats = { total_cost: 3.5, prompt_evo_cost: 0 }
+  assert.deepEqual(xy(bySpend({ programs, prompts: [], stats }, 'best_score')), [[1, 0.2], [3, 0.6], [3.5, 0.6]])
+  // An unknown total, or the charges' own unknown spend, leaves the end where the charges put it.
+  assert.deepEqual(xy(bySpend({ programs, prompts: [], stats: { total_cost: null, prompt_evo_cost: 0 } }, 'best_score')), [[1, 0.2], [3, 0.6]])
+  const headless = { metadata: { model_name: 'headless/agent', headless_pricing_unknown: true } }
+  assert.deepEqual(xy(bySpend({ programs: [programs[0], program('h', 1, 0.6, { timestamp: 2, ...headless })], prompts: [], stats }, 'best_score')), [[1, 0.2]])
+})
+
 test('the spend curve ends at the first charge without a price', () => {
   const headless = { metadata: { model_name: 'headless/agent', headless_pricing_unknown: true } }
   const run = {

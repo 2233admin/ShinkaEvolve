@@ -336,6 +336,7 @@ class SystemPromptEvolver:
             global_scratchpad,
         )
 
+        cost = 0.0
         try:
             response = self.llm_client.query(
                 msg=user_msg,
@@ -343,11 +344,14 @@ class SystemPromptEvolver:
                 llm_kwargs=self.llm_kwargs,
             )
 
-            if response is None or not response.content:
+            if response is None:
                 logger.warning("Empty response from LLM for diff mutation")
                 return None, None, None, 0.0, None
-
+            # Paid once it arrives, whatever happens to it below.
             cost = response.cost or 0.0
+            if not response.content:
+                logger.warning("Empty response from LLM for diff mutation")
+                return None, None, None, cost, None
 
             # Extract LLM metadata from response
             llm_metadata = _extract_llm_metadata(response)
@@ -371,7 +375,7 @@ class SystemPromptEvolver:
 
         except Exception as e:
             logger.error(f"Error in diff mutation: {e}")
-            return None, None, None, 0.0, None
+            return None, None, None, cost, None
 
     def _full_rewrite(
         self,
@@ -397,6 +401,7 @@ class SystemPromptEvolver:
             global_scratchpad,
         )
 
+        cost = 0.0
         try:
             response = self.llm_client.query(
                 msg=user_msg,
@@ -404,11 +409,14 @@ class SystemPromptEvolver:
                 llm_kwargs=self.llm_kwargs,
             )
 
-            if response is None or not response.content:
+            if response is None:
                 logger.warning("Empty response from LLM for full rewrite")
                 return None, None, None, 0.0, None
-
+            # Paid once it arrives, whatever happens to it below.
             cost = response.cost or 0.0
+            if not response.content:
+                logger.warning("Empty response from LLM for full rewrite")
+                return None, None, None, cost, None
 
             # Extract LLM metadata from response
             llm_metadata = _extract_llm_metadata(response)
@@ -432,7 +440,7 @@ class SystemPromptEvolver:
 
         except Exception as e:
             logger.error(f"Error in full rewrite: {e}")
-            return None, None, None, 0.0, None
+            return None, None, None, cost, None
 
 
 class AsyncSystemPromptEvolver:
@@ -590,6 +598,7 @@ class AsyncSystemPromptEvolver:
             global_scratchpad,
         )
 
+        cost = 0.0
         try:
             # Pass None if llm_kwargs is empty to let client sample params
             kwargs = self.llm_kwargs if self.llm_kwargs else None
@@ -599,10 +608,12 @@ class AsyncSystemPromptEvolver:
                 llm_kwargs=kwargs,
             )
 
-            if response is None or not response.content:
+            if response is None:
                 return None, None, None, 0.0, None
-
+            # Paid once it arrives, whatever happens to it below.
             cost = response.cost or 0.0
+            if not response.content:
+                return None, None, None, cost, None
 
             # Extract LLM metadata from response
             llm_metadata = _extract_llm_metadata(response)
@@ -618,7 +629,7 @@ class AsyncSystemPromptEvolver:
 
         except Exception as e:
             logger.error(f"Error in async diff mutation: {e}")
-            return None, None, None, 0.0, None
+            return None, None, None, cost, None
 
     async def _full_rewrite_async(
         self,
@@ -637,6 +648,7 @@ class AsyncSystemPromptEvolver:
             global_scratchpad,
         )
 
+        cost = 0.0
         try:
             # Pass None if llm_kwargs is empty to let client sample params
             kwargs = self.llm_kwargs if self.llm_kwargs else None
@@ -646,10 +658,12 @@ class AsyncSystemPromptEvolver:
                 llm_kwargs=kwargs,
             )
 
-            if response is None or not response.content:
+            if response is None:
                 return None, None, None, 0.0, None
-
+            # Paid once it arrives, whatever happens to it below.
             cost = response.cost or 0.0
+            if not response.content:
+                return None, None, None, cost, None
 
             # Extract LLM metadata from response
             llm_metadata = _extract_llm_metadata(response)
@@ -665,4 +679,4 @@ class AsyncSystemPromptEvolver:
 
         except Exception as e:
             logger.error(f"Error in async full rewrite: {e}")
-            return None, None, None, 0.0, None
+            return None, None, None, cost, None
