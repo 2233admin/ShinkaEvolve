@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from shinka.research.grants import origin_note
 from shinka.research.notebook import (
     RESULTS_LOG,
     Hypothesis,
@@ -107,6 +108,9 @@ def finish_run(
         if not _end_logged(root, entry):
             best = best_score(results)
             cost = run_cost(results)
+            origin = entry.get("origin") or {}
+            own = cost.recorded_usd - origin.get("cost_before", 0.0)
+            # Who started it goes before the run key, which ends the note.
             append_log(
                 root, hid, eid, event,
                 ("ended unobserved, " if code is None else "")
@@ -114,6 +118,7 @@ def finish_run(
                 f"{exp.n_evaluated} total, best IS score "
                 f"{'n/a' if best is None else f'{best:.3f}'}, "
                 f"spend {'' if cost.known else '>='}${cost.recorded_usd:.2f}, "
+                + origin_note(origin, own)
                 + _run_key(entry),
             )  # fmt: skip
         drop_work(root, work_id)

@@ -166,6 +166,8 @@ export const COPY = {
   'evt.lockbox': { zh: '封存段', en: 'lockbox' },
   'evt.hypothesis': { zh: '提出假设', en: 'hypothesis' },
   'evt.note': { zh: '备注', en: 'note' },
+  'evt.grant': { zh: '轮次授权', en: 'round granted' },
+  'evt.round-paused': { zh: '本轮暂停', en: 'round paused' },
 
   // Direction page
   'dir.noProgramsProbes': {

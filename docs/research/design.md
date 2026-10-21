@@ -76,12 +76,13 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/notebook.py` | 研究笔记本的数据模型与文件存储（方向 → 假设 → 实验 → 结论） |
 | `shinka/research/state.py` | 方向的目录锁与原子替换；运行租约（`.work.json`：命令、监管进程与 `shinka_run` 子进程的 pid 与启动时间） |
 | `shinka/research/runs.py` | 运行的结束只记一次：前台命令、后台监管进程（`run --detach`）或 `watch` 谁先到谁记 |
+| `shinka/research/grants.py` | 所有者给 Agent 的轮次授权（`ledger.json`：授权与已用尝试）；Agent 执行环境（`SHINKA_RESEARCH_AGENT`）中 `run` 的授权、尝试、参数白名单与费用上限；账本与 `results.tsv` 对照，手改后授权运行拒绝启动 |
 | `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
 | `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
 | `shinka/research/skeptic.py` | DSR、PBO、子区间稳定性、样本内外衰减、基线；lockbox 一次性确认 |
 | `shinka/research/library.py` | 工作区资料库的记账：`raw/` 中哪些资料是新的/已编译（按哈希）、操作日志；编译本身由 agent 完成 |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `watch` / `library` / `brief` / `status` |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `grant` / `watch` / `library` / `brief` / `status` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）

@@ -154,14 +154,16 @@ def _save_work(root: Path, entries: List[Dict[str, Any]]) -> None:
     atomic_write_text(Path(root) / WORK_FILENAME, json.dumps(entries))
 
 
-def register_work(root: Path, hid: str, eid: str, **details: Any) -> str:
+def register_work(
+    root: Path, hid: str, eid: str, work_id: str | None = None, **details: Any
+) -> str:
     """Record that this process is adding trials to an experiment, with what its
-    end needs (``details``); returns the entry's id. Take the direction's lock
-    around it together with the checks that allowed the work, so others see
-    both or neither."""
+    end needs (``details``); returns the entry's id (``work_id`` when a record
+    made first names it). Take the direction's lock around it together with the
+    checks that allowed the work, so others see both or neither."""
     entry = {
         **details,
-        "id": uuid.uuid4().hex,
+        "id": work_id or uuid.uuid4().hex,
         "hypothesis": hid,
         "experiment": eid,
         "pid": os.getpid(),

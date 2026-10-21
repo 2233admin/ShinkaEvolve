@@ -81,6 +81,17 @@ All notable changes to `shinka-evolve` are documented in this file.
   `watch` gets there first; one experiment runs once at a time, overlapping
   runs of a hypothesis share the status they restore, and only when none of
   them added a program.
+- Added round grants for the research agent: `shinka_research grant <dir>
+  <hid>... --attempts N --max-cost USD [--allow NS.FIELD]` records the owner's
+  approval of one round, and where `SHINKA_RESEARCH_AGENT` is set every `run`
+  needs `--grant`, takes one of its attempts, always runs in the background,
+  passes `shinka_run` only the `--set` keys the grant allows and stops at the
+  smaller of the grant's cap and the direction budget left after the stops of
+  grant runs in progress (counted on top of what a resumed experiment already
+  spent). A used-up grant pauses the round, logged once. Grants and attempts
+  live in `ledger.json`, checked against `results.tsv`, so a ledger changed by
+  hand stops grant runs; manual runs are unchanged and their end events say
+  "manual run", and `probe` now logs each probe when it starts.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

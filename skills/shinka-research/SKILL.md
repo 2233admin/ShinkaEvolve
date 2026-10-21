@@ -35,14 +35,28 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
 - **Every attempt goes through `shinka_research`** (scaffold/run/probe), so it
   counts as a trial for the Deflated Sharpe Ratio.
 - **Checkpoints**: stop for the human after proposing hypotheses and after
-  verdicts, unless `program.md` sets `Autonomy: autonomous`. In autonomous
-  mode never pause to ask whether to continue: keep going until the budget is
-  spent or the human interrupts. When out of ideas, re-read the wiki, combine
-  near-misses, or try a different mechanism.
+  verdicts, unless `program.md` sets `Autonomy: autonomous` or
+  `Autonomy: authorized-round`. In autonomous mode never pause to ask whether
+  to continue: keep going until the budget is spent or the human interrupts.
+  In authorized-round mode go through the round the human granted without
+  stopping at checkpoints, and pause when its attempts are taken. When out of
+  ideas, re-read the wiki, combine near-misses, or try a different mechanism.
+- **Round grants (agent environment)**: where `SHINKA_RESEARCH_AGENT` is set,
+  every `run`, in any autonomy mode, needs a round the human granted
+  (`shinka_research grant`, which refuses in that environment): pass
+  `--grant <id>`. Each run takes one of the grant's attempts and goes to the
+  background. Pass shinka_run only the `--set` keys the grant lists and never
+  `evo.max_api_costs`: the run stops at the grant's cap or at the budget left.
+  When the grant's attempts are taken (`round-paused` in `results.tsv`), the
+  round is over: finish its runs, report, and put the next round to the
+  human. Never edit `ledger.json`, `.work.json`, `notebook.json`,
+  `results.tsv` or a task's `shinka.yaml` by hand, never call `shinka_run`
+  directly, and never unset the flag.
 - **The lockbox is the human's.** Never run `confirm` unless the human says to
   close the direction.
 - **Budget**: `init --budget-usd` makes `run` refuse once the direction's LLM
-  spend reaches it; also pass `--set evo.max_api_costs=<usd>` per run.
+  spend reaches it; outside the agent environment also pass
+  `--set evo.max_api_costs=<usd>` per run (inside it the grant sets the cap).
 - **Simplicity**: when two programs score about the same in-sample, prefer
   the simpler one. A small change with a clear gain beats a big rewrite with a
   marginal one.
@@ -127,6 +141,15 @@ workspace) records the end of a run whose processes vanished without doing
 so; it prints nothing when there is nothing new. One experiment runs once at
 a time; different experiments can run side by side.
 
+In the agent environment the same runs take `--grant <id>`, keep only the
+`--set` keys the grant allows, and leave the cap out:
+```bash
+shinka_research run <dir> <hid> --grant <id> --num-generations 40 -- \
+    --set 'evo.patch_types=["diff","full","cross"]'
+```
+A further attempt on the same experiment resumes it, so give it a higher
+`--num-generations` or it ends at once and the attempt is spent.
+
 ### 5. Ablate (stage 4)
 Remove one component of the best program at a time and score each variant:
 `shinka_research probe <dir> <hid> ablation_x.py`. Record what carries the
@@ -157,7 +180,8 @@ you can, list what needs the human, and
 
 ### 9. Report, then next round
 Write `REPORT.md` (template: `templates/report.md`). **Checkpoint** (unless
-autonomous). Then `brief` again: new hypotheses should follow from verdicts
+autonomous, or until the granted round is over in authorized-round mode).
+Then `brief` again: new hypotheses should follow from verdicts
 and the wiki. Every experiment raises the trial count and the bar for
 "supported" — intended.
 
@@ -183,7 +207,8 @@ research started.
 ```
 <dir>/program.md            human: direction, constraints, budget, autonomy
 <dir>/notebook.json         hypotheses, statuses, experiments, verdicts, budget
-<dir>/results.tsv           one line per event (scaffold, run, skeptic, verdict, confirm)
+<dir>/results.tsv           one line per event (scaffold, run, probe, skeptic, verdict, confirm, grant, round-paused)
+<dir>/ledger.json           the human's round grants and the attempts taken from them
 <dir>/hypotheses/<hid>.md
 <dir>/experiments/<hid>/<eid>/{task,results,skeptic.md,best_program.py}
 <dir>/data/dev.csv          development data (the lockbox tail is not in it)

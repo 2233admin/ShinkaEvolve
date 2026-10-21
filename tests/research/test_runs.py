@@ -1,11 +1,14 @@
-"""Runs that outlive their window, and their ends recorded once (research-agent 2.2).
+"""Runs that outlive their window, their ends recorded once (research-agent 2.2),
+and the owner's round grants that agent runs take attempts from (2.3).
 
-A stand-in for shinka_run writes program rows at a set pace, then exits or
-hangs; detached runs are real background processes.
+A stand-in for shinka_run records what it was asked, writes program rows at a
+set pace and cost, then exits or hangs; detached runs are real background
+processes.
 """
 
 import json
 import os
+import re
 import subprocess
 import sys
 import time
@@ -15,6 +18,7 @@ import psutil
 import pytest
 
 from shinka.research import cli
+from shinka.research.grants import AGENT_ENV, LEDGER
 from shinka.research.notebook import RESULTS_LOG, Notebook, Status
 from shinka.research.state import live_work, work_entries
 
@@ -25,8 +29,10 @@ from pathlib import Path
 args = sys.argv[1:]
 results = Path(args[args.index("--results_dir") + 1])
 results.mkdir(parents=True, exist_ok=True)
+with (results / "argv.jsonl").open("a") as asked:
+    asked.write(json.dumps(args) + "\\n")
 # One plan per experiment, named by the results directory's parent.
-plan = {"rows": 0, "pause": 0.0, "wait": 0.0, "code": 0}
+plan = {"rows": 0, "pause": 0.0, "wait": 0.0, "code": 0, "cost": 0.0}
 plan.update(json.loads(os.environ["FAKE_SHINKA_RUN"]).get(results.parent.name, {}))
 db = results / "programs.sqlite"
 with sqlite3.connect(db) as conn:
@@ -38,8 +44,9 @@ for i in range(plan["rows"]):
     time.sleep(plan["pause"])
     with sqlite3.connect(db) as conn:
         conn.execute(
-            "INSERT INTO programs VALUES (?, '', ?, ?, 1, 0.1, '{}')",
-            (f"p{time.time_ns()}", i, time.time()),
+            "INSERT INTO programs VALUES (?, '', ?, ?, 1, 0.1, ?)",
+            (f"p{time.time_ns()}", i, time.time(),
+             json.dumps({"api_costs": plan["cost"]})),
         )
 time.sleep(plan["wait"])
 if plan.get("hang"):
@@ -280,3 +287,278 @@ def test_a_foreground_run_still_waits_and_records_its_end(
     assert _ends(direction) == ["run"]
     assert work_entries(direction) == []
     assert Notebook.load(direction).get("h001").experiments[0].n_evaluated == 2
+
+
+# ---- Round grants (2.3) -----------------------------------------------------
+
+
+def _log(root: Path) -> list:
+    """(event, note) of every run-log line."""
+    rows = (root / RESULTS_LOG).read_text().splitlines()[1:]
+    return [tuple(row.split("\t")[3:5]) for row in rows]
+
+
+def _asked(root: Path, eid: str = "e01") -> list:
+    """The arguments each run of the experiment passed shinka_run."""
+    path = root / "experiments" / "h001" / eid / "results" / "argv.jsonl"
+    lines = path.read_text().splitlines() if path.exists() else []
+    return [json.loads(line) for line in lines]
+
+
+def _stops_at(argv: list) -> float:
+    """The cost cap a shinka_run command ends with."""
+    assert argv[-2] == "--set" and argv[-1].startswith("evo.max_api_costs=")
+    return float(argv[-1].split("=", 1)[1])
+
+
+def _ledger(root: Path) -> list:
+    path = root / LEDGER
+    return json.loads(path.read_text()) if path.exists() else []
+
+
+def _attempts(root: Path) -> list:
+    return [r["number"] for r in _ledger(root) if r["kind"] == "attempt"]
+
+
+def _grant(root: Path, *terms: str) -> str:
+    cli.main(["grant", str(root), "h001", *terms])
+    return [r for r in _ledger(root) if r["kind"] == "grant"][-1]["id"]
+
+
+def test_an_agent_run_needs_a_round_the_owner_granted(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    cli.main(
+        [
+            "hypothesis", "add", str(direction), "--title", "other",
+            "--file", str(example_dir / "hypothesis.md"),
+        ]
+    )  # fmt: skip
+    cli.main(
+        [
+            "scaffold",
+            str(direction),
+            "h002",
+            "--initial",
+            str(example_dir / "initial.py"),
+        ]
+    )
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    for argv, refusal in (
+        (["h001"], "needs a round the owner granted"),
+        (["h001", "--grant", "g009"], "no grant g009"),
+        (["h002", "--grant", grant], "h002 is not in grant"),
+    ):
+        with pytest.raises(SystemExit, match=refusal):
+            cli.main(["run", str(direction), *argv])
+    # Nor can the agent grant itself a round.
+    with pytest.raises(SystemExit, match="the owner's to give"):
+        cli.main(
+            ["grant", str(direction), "h002", "--attempts", "1", "--max-cost", "1"]
+        )
+    assert work_entries(direction) == [] and _attempts(direction) == []
+    assert not [e for e, _ in _log(direction) if e in ("run", "run-failed")]
+    nb = Notebook.load(direction)
+    assert [h.status for h in nb.hypotheses] == [Status.selected, Status.selected]
+
+
+def test_a_round_ends_when_its_attempts_are_used(direction: Path, monkeypatch) -> None:
+    grant = _grant(direction, "--attempts", "2", "--max-cost", "0.5")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(rows=1))
+    for _ in range(2):
+        cli.main(["run", str(direction), "h001", "--grant", grant])
+        _until(lambda: not work_entries(direction))
+    # Taking the last attempt pauses the round, before the agent asks again.
+    assert [e for e, _ in _log(direction)].count("round-paused") == 1
+    for _ in range(2):
+        with pytest.raises(SystemExit, match="this round is over"):
+            cli.main(["run", str(direction), "h001", "--grant", grant])
+    assert _attempts(direction) == [1, 2]
+    ends = [note for event, note in _log(direction) if event == "run"]
+    taken = [re.search(r"grant g\d+ attempt (\d) of 2", note) for note in ends]
+    assert [t.group(1) for t in taken] == ["1", "2"]
+    # Said once, however often the agent asks again.
+    assert [e for e, _ in _log(direction)].count("round-paused") == 1
+
+
+@pytest.mark.parametrize(
+    "passthrough, refusal",
+    [
+        (["--set", "evo.max_api_costs=9"], "not the agent's to set"),
+        (["--set=evo.max_api_costs=9"], "not the agent's to set"),
+        # shinka_run's parser would take this prefix for --set.
+        (["--se", "evo.max_api_costs=9"], "only --set"),
+        (["--set", "db.num_islands=3"], "not among grant"),
+        (["--max-proposal-jobs", "8"], "only --set"),
+        (["--set", "evo.llm_models=not json"], "Invalid JSON"),
+    ],
+)
+def test_an_agent_run_passes_only_settings_its_grant_allows(
+    direction: Path, monkeypatch, passthrough, refusal
+) -> None:
+    allow = ("--allow", "evo.llm_models")
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5", *allow)
+    monkeypatch.setenv(AGENT_ENV, "1")
+    with pytest.raises(SystemExit, match=refusal):
+        cli.main(["run", str(direction), "h001", "--grant", grant, "--", *passthrough])
+    assert _attempts(direction) == [] and work_entries(direction) == []
+
+
+def test_allowed_settings_and_the_exact_cap_reach_shinka_run(
+    direction: Path, monkeypatch
+) -> None:
+    allow = ("--allow", "evo.llm_models")
+    # However small, the owner's cap reaches shinka_run as given.
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "1e-7", *allow)
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(rows=1))
+    models = 'evo.llm_models=["gpt-5-mini"]'
+    cli.main(["run", str(direction), "h001", "--grant", grant, "--", "--set", models])
+    _until(lambda: not work_entries(direction))
+    (argv,) = _asked(direction)
+    assert argv[-4:-2] == ["--set", models]
+    assert _stops_at(argv) == 1e-7
+
+
+def test_a_grant_refuses_settings_that_defeat_what_is_frozen(direction: Path) -> None:
+    for key in (
+        "evo.max_api_costs",
+        "job.eval_program_path",
+        "db.db_path",
+        "evo.no_such_field",
+    ):
+        with pytest.raises(SystemExit, match=re.escape(key)):
+            cli.main(
+                [
+                    "grant", str(direction), "h001", "--attempts", "1",
+                    "--max-cost", "1", "--allow", key,
+                ]
+            )  # fmt: skip
+    assert _ledger(direction) == []
+
+
+def test_a_grant_run_stops_at_its_cap_or_at_the_budget_left(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    with Notebook.edit(direction) as nb:
+        nb.budget_usd = 1.5
+    # The owner's own run spent $0.70 on e01.
+    _plan(monkeypatch, e01=dict(rows=1, cost=0.7))
+    cli.main(["run", str(direction), "h001"])
+    _second_experiment(direction, example_dir)
+    _second_experiment(direction, example_dir)
+    grant = _grant(direction, "--attempts", "3", "--max-cost", "0.5")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(hang=True), e02=dict(hang=True))
+    # e01 resumes its database, whose $0.70 shinka_run counts toward the cap.
+    cli.main(["run", str(direction), "h001", "--eid", "e01", "--grant", grant])
+    _until(lambda: len(_asked(direction)) == 2)
+    assert _stops_at(_asked(direction)[-1]) == pytest.approx(0.7 + 0.5)
+    # e01's run may still spend $0.50 of the $0.80 left, so e02 gets $0.30.
+    cli.main(["run", str(direction), "h001", "--eid", "e02", "--grant", grant])
+    _until(lambda: _asked(direction, "e02"))
+    assert _stops_at(_asked(direction, "e02")[-1]) == pytest.approx(0.3)
+    # Nothing is left for e03, and the refusal takes no attempt.
+    with pytest.raises(SystemExit, match="no room"):
+        cli.main(["run", str(direction), "h001", "--eid", "e03", "--grant", grant])
+    assert _attempts(direction) == [1, 2]
+
+
+def test_a_grant_run_waits_while_a_run_with_no_stop_point_spends_the_budget(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    with Notebook.edit(direction) as nb:
+        nb.budget_usd = 1.0
+    _second_experiment(direction, example_dir)
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    # The owner's own run, with no cap of the grant's kind.
+    _plan(monkeypatch, e01=dict(hang=True))
+    cli.main(["run", str(direction), "h001", "--eid", "e01", "--detach"])
+    monkeypatch.setenv(AGENT_ENV, "1")
+    with pytest.raises(SystemExit, match="no stop point"):
+        cli.main(["run", str(direction), "h001", "--eid", "e02", "--grant", grant])
+    assert _attempts(direction) == []
+
+
+def test_a_manual_run_keeps_its_own_cap_and_says_it_was_manual(
+    direction: Path, monkeypatch
+) -> None:
+    _plan(monkeypatch, e01=dict(rows=1))
+    cli.main(["run", str(direction), "h001", "--", "--set", "evo.max_api_costs=0.25"])
+    (argv,) = _asked(direction)
+    assert _stops_at(argv) == 0.25
+    (note,) = [note for event, note in _log(direction) if event == "run"]
+    assert "manual run, run " in note
+
+
+def test_a_changed_ledger_stops_grant_runs_but_not_manual_ones(
+    direction: Path, monkeypatch
+) -> None:
+    grant = _grant(direction, "--attempts", "2", "--max-cost", "0.5")
+    _plan(monkeypatch, e01=dict(rows=1))
+    # Outside the agent environment a grant run waits, like any manual run.
+    cli.main(["run", str(direction), "h001", "--grant", grant])
+    records = _ledger(direction)
+    for changed in (
+        # The attempt taken back.
+        [r for r in records if r["kind"] != "attempt"],
+        # More attempts than granted.
+        [dict(r, attempts=5) if r["kind"] == "grant" else r for r in records],
+    ):
+        (direction / LEDGER).write_text(json.dumps(changed))
+        with pytest.raises(SystemExit, match="does not match the run log"):
+            cli.main(["run", str(direction), "h001", "--grant", grant])
+    cli.main(["run", str(direction), "h001"])
+    assert [e for e, _ in _log(direction) if e == "run"] == ["run", "run"]
+
+
+def test_a_grant_run_refuses_run_settings_changed_since_the_grant(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    grant = _grant(direction, "--attempts", "2", "--max-cost", "0.5")
+    settings = direction / "experiments" / "h001" / "e01" / "task" / "shinka.yaml"
+    settings.write_text(settings.read_text() + "db:\n  num_islands: 9\n")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    with pytest.raises(SystemExit, match="run settings changed"):
+        cli.main(["run", str(direction), "h001", "--grant", grant])
+    # An experiment scaffolded since runs as scaffold wrote it, and only so.
+    _second_experiment(direction, example_dir)
+    other = settings.parents[2] / "e02" / "task" / "shinka.yaml"
+    scaffolded = other.read_text()
+    other.write_text(scaffolded + "job:\n  eval_program_path: elsewhere.py\n")
+    with pytest.raises(SystemExit, match="run settings changed"):
+        cli.main(["run", str(direction), "h001", "--eid", "e02", "--grant", grant])
+    other.write_text(scaffolded)
+    _plan(monkeypatch, e02=dict(rows=1))
+    cli.main(["run", str(direction), "h001", "--eid", "e02", "--grant", grant])
+    _until(lambda: not work_entries(direction))
+    assert _attempts(direction) == [1]
+
+
+def test_each_probe_is_logged_when_it_starts(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    def broken(*_args, **_kwargs):
+        raise RuntimeError("the evaluation broke")
+
+    monkeypatch.setattr(cli, "run_quant_eval", broken)
+    program = str(example_dir / "initial.py")
+    for flag in ("", "1"):
+        monkeypatch.setenv(AGENT_ENV, flag)
+        with pytest.raises(RuntimeError):
+            cli.main(["probe", str(direction), "h001", program])
+    probes = [note for event, note in _log(direction) if event == "probe"]
+    assert probes == ["initial.py, manual", "initial.py, agent"]
+    assert Notebook.load(direction).get("h001").experiments[0].n_probed == 2
+
+
+def test_an_agent_run_goes_to_the_background(direction: Path, monkeypatch) -> None:
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(wait=5))
+    cli.main(["run", str(direction), "h001", "--grant", grant])
+    # It returned at once: the run goes on, owned by its supervisor.
+    (entry,) = work_entries(direction)
+    assert entry["pid"] != os.getpid()

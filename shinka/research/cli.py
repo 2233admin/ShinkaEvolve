@@ -10,10 +10,11 @@ import os
 import subprocess
 import tempfile
 import sys
+import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
-from shinka.research import library
+from shinka.research import grants, library
 from shinka.research.notebook import (
     RESULTS_LOG,
     DataSplit,
@@ -81,7 +82,8 @@ PROGRAM_TEMPLATE = """# Research program
 - USD per experiment: <...>; per direction: set by `init --budget-usd`
 
 ## Autonomy
-- Autonomy: checkpoints   # or "autonomous": run until the budget is spent
+- Autonomy: checkpoints   # or "autonomous": run until the budget is spent;
+  # or "authorized-round": finish the round the owner granted, then pause
 
 ## Library
 - Sources for this direction are in ../library/raw/ (papers, clips, notes, links.md)
@@ -172,6 +174,34 @@ def direction_spend(root: Path, nb: Notebook) -> Tuple[float, bool]:
     return sum(c.recorded_usd for c in costs), all(c.known for c in costs)
 
 
+def _held(root: Path, live: List[Dict[str, Any]]) -> float:
+    """What grant runs in progress may still spend: each stops at its cap."""
+    held = 0.0
+    for w in live:
+        origin = w.get("origin") or {}
+        if "cap" in origin:
+            results = experiment_dir(root, w["hypothesis"], w["experiment"]) / "results"
+            now = run_cost(results).recorded_usd
+            held += max(0.0, origin["cost_before"] + origin["cap"] - now)
+    return held
+
+
+def cmd_grant(args: argparse.Namespace) -> None:
+    if grants.in_agent_env():
+        sys.exit(
+            "a round grant is the owner's to give: from a terminal without "
+            f"{grants.AGENT_ENV}, or from the workbench"
+        )
+    root = Path(args.dir).resolve()
+    try:
+        grant = grants.add_grant(
+            root, args.hids, args.attempts, args.max_cost, args.allow, args.note
+        )
+    except grants.Refused as refused:
+        sys.exit(str(refused))
+    print(grants.terms(grant))
+
+
 # The evolution command a run starts; the lease keeps the full command, so a
 # detached supervisor runs exactly what was checked here.
 SHINKA_RUN = ["shinka_run"]
@@ -184,6 +214,12 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         sys.exit(
             "headless/* mutation models are not allowed: they can read OOS metrics"
         )
+    agent = grants.in_agent_env()
+    if agent and args.grant is None:
+        sys.exit(
+            "an agent run needs a round the owner granted: `run --grant <id>` "
+            "(`shinka_research grant` records one)"
+        )
     root = Path(args.dir).resolve()
     # A run that ended unobserved is recorded first, so its leftover running
     # mark does not pass for this run's earlier status.
@@ -192,15 +228,14 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     with Notebook.edit(root) as nb:
         _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-        if any(
-            (w["hypothesis"], w["experiment"]) == (hyp.id, exp.id)
-            for w in live_work(root)
-        ):
+        live = live_work(root)
+        if any((w["hypothesis"], w["experiment"]) == (hyp.id, exp.id) for w in live):
             sys.exit(
                 f"{hyp.id}/{exp.id} already has a run in progress; two runs would "
                 "write the same programs.sqlite"
             )
         verify_experiment(root, nb, hyp.id, exp)
+        spent = 0.0
         if nb.budget_usd is not None:
             spent, known = direction_spend(root, nb)
             if spent >= nb.budget_usd:
@@ -216,20 +251,69 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                 )
         exp_dir = experiment_dir(root, hyp.id, exp.id)
         results_dir = exp_dir / "results"
+        work = uuid.uuid4().hex
+        origin: Dict[str, Any] = {"env": "agent" if agent else "manual"}
+        passthrough = extra
+        if args.grant is not None:
+            # Every refusal comes before the attempt is taken, and the attempt
+            # before the lease, so no run goes without one.
+            try:
+                grant, used, tokens = grants.check_run(
+                    root, args.grant, hyp.id, exp.id, extra, live
+                )
+            except grants.Refused as refused:
+                sys.exit(str(refused))
+            cap = grant["max_cost"]
+            if nb.budget_usd is not None:
+                # A run with no stop point (the owner's own, say) may spend any
+                # of what is left, so nothing can be held for this one.
+                open_ended = [w for w in live if "cap" not in (w.get("origin") or {})]
+                if open_ended:
+                    w = open_ended[0]
+                    sys.exit(
+                        f"{w['hypothesis']}/{w['experiment']} has a run in progress "
+                        "with no stop point, so the direction budget cannot hold room "
+                        "for a grant run; it waits until that run ends"
+                    )
+                # Rounded so the subtraction's float noise reads as no room.
+                left = round(nb.budget_usd - spent - _held(root, live), 9)
+                cap = min(cap, left)
+                if cap <= 0:
+                    sys.exit(
+                        f"the direction budget has no room for a grant run: "
+                        f"${spent:.2f} of ${nb.budget_usd:.2f} spent, the rest held "
+                        "by grant runs in progress"
+                    )
+            # shinka_run counts what the experiment's database already spent
+            # toward its cap when it resumes it.
+            cost_before = run_cost(results_dir).recorded_usd
+            stops_at = cost_before + cap
+            passthrough = [part for token in tokens for part in ("--set", token)]
+            passthrough += ["--set", f"evo.max_api_costs={stops_at!r}"]
+            origin.update(
+                grant=grant["id"],
+                attempt=used + 1,
+                of=grant["attempts"],
+                cap=cap,
+                cost_before=cost_before,
+            )
+            grants.take_attempt(
+                root, grant, used + 1, hyp.id, exp.id, work, cap, stops_at
+            )
         cmd = [
             *SHINKA_RUN,
             "--task-dir", str(exp_dir / "task"),
             "--results_dir", str(results_dir),
             "--num_generations", str(args.num_generations),
             "--config-fname", SHINKA_CONFIG_FILENAME,
-            *extra,
+            *passthrough,
         ]  # fmt: skip
         # The lease, with the checks that allowed it: confirm cannot freeze the
         # trial count while this run adds trials, a second run of this
         # experiment is refused, and the run's end is recorded from it. A run
         # joining another live run of the hypothesis shares its baseline, so the
         # hypothesis goes back to the status it had before any of them.
-        joined = next((w for w in live_work(root) if w["hypothesis"] == hyp.id), None)
+        joined = next((w for w in live if w["hypothesis"] == hyp.id), None)
         baseline = (
             {k: joined[k] for k in ("previous_status", "previous_verdict", "before")}
             if joined
@@ -241,17 +325,20 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                 "before": hypothesis_evaluated(root, hyp),
             }
         )
-        work = register_work(
+        register_work(
             root,
             hyp.id,
             exp.id,
+            work_id=work,
             cmd=cmd,
+            origin=origin,
             evaluated_before=count_evaluated(results_dir),
             **baseline,
         )
         hyp.status, hyp.verdict = Status.running, None
 
-    if args.detach:
+    # An agent's run outlives the window or page that asked for it.
+    if args.detach or agent:
         try:
             supervisor = subprocess.Popen(
                 [sys.executable, "-m", "shinka.research.runs", str(root), work],
@@ -303,12 +390,16 @@ def cmd_probe(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     # Probing is a manual search step and a trial for the DSR from the moment it
     # starts, so one that fails or is killed is counted too, and a lockbox
-    # opened meanwhile has already frozen it.
-    with Notebook.edit(root) as nb:
-        _not_confirming(nb)
-        hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-        verify_experiment(root, nb, hyp.id, exp)
-        exp.n_probed += 1
+    # opened meanwhile has already frozen it. The run log records it in the same
+    # lock, so the log and the count agree.
+    with file_lock(lock_path(root)):
+        with Notebook.edit(root) as nb:
+            _not_confirming(nb)
+            hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+            verify_experiment(root, nb, hyp.id, exp)
+            exp.n_probed += 1
+        who = "agent" if grants.in_agent_env() else "manual"
+        append_log(root, hyp.id, exp.id, "probe", f"{Path(args.program).name}, {who}")
     cfg = load_config(experiment_dir(root, hyp.id, exp.id) / "task")
     with (
         tempfile.TemporaryDirectory() as tmp,
@@ -776,6 +867,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Keep running after this window closes; `watch` records an end "
         "nothing else saw",
     )
+    s.add_argument(
+        "--grant",
+        help="The owner's round grant this run takes an attempt from; required "
+        f"where {grants.AGENT_ENV} is set, where runs also always detach",
+    )
     s.set_defaults(func=cmd_run, takes_extra=True)
 
     s = sub.add_parser(
@@ -842,6 +938,27 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("status", help="Show the notebook")
     s.add_argument("dir")
     s.set_defaults(func=cmd_status)
+
+    s = sub.add_parser(
+        "grant",
+        help="Grant the agent one round: attempts, a per-run cap and the settings "
+        "it may choose (the owner's, never from the agent environment)",
+    )
+    s.add_argument("dir")
+    s.add_argument("hids", nargs="+", metavar="hid")
+    s.add_argument("--attempts", type=int, required=True)
+    s.add_argument(
+        "--max-cost", type=float, required=True, help="USD each run may spend"
+    )
+    s.add_argument(
+        "--allow",
+        action="append",
+        default=[],
+        metavar="NS.FIELD",
+        help="A shinka_run --set key the agent may choose (repeatable)",
+    )
+    s.add_argument("--note", default="")
+    s.set_defaults(func=cmd_grant)
 
     s = sub.add_parser(
         "watch",
