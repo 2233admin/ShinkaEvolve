@@ -11,14 +11,14 @@
 | 状态层 | `shinka_research`（文件锁） | 笔记本原子保存；运行租约（pid、进程创建时间、假设与实验、轮次、开始时间）；轮次授权账本；封存段批准记录；尝试次数；运行日志 |
 | 运行监管 | `shinka_research run --detach` 与 `watch` | 运行脱离启动它的窗口；`watch` 幂等对账：进程已死时按今天 `finally` 的逻辑恢复状态、计数并写一条事件，两个 `watch` 同时运行也只写一次 |
 | 研究数据服务 | `ui.py`，仍只读 | 增加 Host 校验；新增只读接口提供运行日志、授权账本、待决事项与 Agent 状态 |
-| 本机 Agent 服务 | 新的独立进程与端口 | 网页的全部写入：对话轮次与批准；网页开着时定时运行 `watch` |
+| 本机 Agent 服务 | 新的独立进程与端口 | 网页的全部写入：对话轮次与批准；以 RPC 驱动无界面 omp 并提供宿主工具；网页开着时定时运行 `watch` |
 | 终端 | Tern 里的 omp | 同一技能；一个定时 shell 任务运行 `watch`，只在有变化时唤醒模型 |
 
 ## 决定
 
 ### 规则落在 CLI，提示词只作说明
 
-两个 Agent 以同一个系统用户运行，都有 shell。真正的控制点只有两个：`shinka_research` 内部的检查，以及 omp 对危险命令的审批规则。因此：
+两个 Agent 以同一个系统用户运行。终端 Agent 有 shell；网页 Agent 没有通用 shell，只能调用 Agent 服务提供的宿主工具（《对话适配》，4.1）。真正的控制点是 `shinka_research` 内部的检查，网页 Agent 另有服务端宿主工具的检查作为第二道防线。因此：
 
 - **Agent 执行环境。** Agent 服务启动 omp 时设置 `SHINKA_RESEARCH_AGENT`；终端 omp 按使用说明在同一标记下运行。带标记时：
   - `run` 必须带 `--grant`，指向一条尚有尝试余量的轮次授权，并在锁内扣减尝试次数；授权用完即“本轮结束、暂停”。授权由 `grant` 命令记下（在 Agent 执行环境中拒绝），列明一个或多个假设（尝试次数合计，一份授权就是一轮）、尝试次数、单次费用上限、Agent 可设的 `--set` 键，并记下当时各实验 `shinka.yaml` 的哈希。所有拒绝都在扣减之前；先写尝试记录再登记租约，崩溃时最多损失一次尝试（已扣减却没有运行），不会有不记尝试的运行。取用最后一次尝试时运行日志记一次 `round-paused`，之后的请求被拒绝。Agent 发起的 `run` 一律转入后台（`--detach`）。
@@ -27,7 +27,7 @@
 - **手动用法不变。** 不带标记时，所有者手动执行的 `run`（含任意 `--set`）与 `confirm --yes` 保持现有行为，运行日志记为手动运行，让所有者能看出 Agent 会话期间是否有人绕开授权。手动运行、`finish_run` 与 `watch` 都不读账本，账本损坏不影响它们；运行的结束事件在运行编号之前写明 `manual run` 或所用授权与尝试（`agent run, grant g001 attempt 1 of 2, …`）。`--grant` 在没有标记的环境里同样按授权规则执行。`probe` 在计数的同一次加锁中写一条 `probe` 事件（程序名与 agent/manual，不含分数）。
 - `authorized-round` 是新增的程序模式：Agent 在授权范围内跑完这一轮，不在每个检查点停下，授权用完即暂停。原 `autonomous` 与 `checkpoints` 模式及其对手动使用的含义保留（所有者 2026-10-20：原有功能一项不删）；技能说明补充一句：在 Agent 执行环境中，任何模式下的运行都受授权账本约束。
 
-**残余风险，如实写明：** 同一系统用户下有 shell 的 Agent 能去掉标记、走手动路径，也能伪造任何文件，账本与记录不防篡改。能做到的是让绕开与篡改可被发现：冻结数据与评估器已有哈希校验（`cli.py:153`），授权与尝试记录只追加，`run` 启动前核对，手动运行单独记日志。核对的做法：账本 `ledger.json` 整文件原子写入；每条授权的条款同时写入 `results.tsv`（先写日志），授权运行的结束事件写明所用尝试，`run` 启动前把账本与运行日志、进行中的租约对照，删掉尝试记录或改动授权条款都会让授权运行拒绝启动；把两份文件一起改仍能伪造，去掉标记的 Agent 给出的授权与所有者给的无从区分。omp 的审批规则是第二道防线：`notebook.json`、`results.tsv`、`ledger.json`、`.work.json`、`experiments/**/task/`、`library/raw/` 禁止直接编辑；去掉标记的命令、直接调用 `shinka_run`，以及 `grant`、`approve`、`confirm` 类命令需所有者审批。
+**残余风险，如实写明：** 同一系统用户下有 shell 的 Agent 能去掉标记、走手动路径，也能伪造任何文件，账本与记录不防篡改。能做到的是让绕开与篡改可被发现：冻结数据与评估器已有哈希校验（`cli.py:153`），授权与尝试记录只追加，`run` 启动前核对，手动运行单独记日志。核对的做法：账本 `ledger.json` 整文件原子写入；每条授权的条款同时写入 `results.tsv`（先写日志），授权运行的结束事件写明所用尝试，`run` 启动前把账本与运行日志、进行中的租约对照，删掉尝试记录或改动授权条款都会让授权运行拒绝启动；把两份文件一起改仍能伪造，去掉标记的 Agent 给出的授权与所有者给的无从区分。第二道防线只防误操作，不是隔离。网页 Agent 的宿主工具不经 shell 启动 `shinka_research`，标记与 PATH 由服务设置，子命令有白名单（没有 `grant`、`approve`），写文件只限白名单目录，所以去掉标记、直接调用 `shinka_run`、直接编辑 `notebook.json`、`results.tsv`、`ledger.json`、`.work.json`、`experiments/**/task/`、`library/raw/` 在网页 Agent 里做不到；但 `probe` 会执行 Agent 写的种子代码，代码本身仍能做任何事。终端 Agent 有 shell，而 omp 的 `bash.patterns` 只管内置的 `bash` 工具：所有者终端里的 shell 工具是扩展提供的 `exec_command`，实测不受它约束，`eval` 也不受（4.1），所以终端一侧只有技能说明与事后核对。原写法“去掉标记、直接调用 `shinka_run` 与 `grant`、`approve`、`confirm` 类命令需所有者审批”据此改为网页 Agent 中做不到（2026-10-21，待所有者确认）。
 
 ### 两份对话，一份状态
 
@@ -45,18 +45,21 @@
 
 ### 对话适配
 
-Agent 服务以无界面方式启动 omp，经 omp 自带的 RPC（`--mode rpc`）或 ACP（`--mode acp`）转发对话。选哪一种由一次不发提示词、不调用模型的握手实测决定：记录能否在 Windows 子进程下启动、是否加载项目技能与审批规则、审批请求能否转给网页。优先不引入新依赖；实测证明必须引入时，在本设计中补写理由，并保证核心安装与 `shinka_research ui` 不受影响。
+Agent 服务以 RPC 启动无界面 omp：`omp --mode rpc --no-ui --no-extensions --tools read,grep,glob,find,web_search --config <覆盖文件>`。对话仍由 omp 承担；研究操作经 `set_host_tools` 注册的宿主工具回到服务执行：`shinka_research`（参数数组，服务用 venv 的 `python -m shinka.research.cli` 不经 shell 启动，子命令白名单，`--dir` 限在工作区内，拒绝含 NUL 或换行的参数）、`write_research_file`（Windows 路径规范化后只允许白名单目录与 `.md`、`.py`），再补 `shinka_models` 与查看最佳程序的只读工具，免得 Agent 借 `probe` 做分析而虚增试验数。覆盖文件由服务每次启动时写在工作区之外：`skills.customDirectories` 指向仓库的 `skills/`（默认不加载项目技能）；`autolearn.enabled: false`（否则 Agent 会写所有者的全局记忆与技能）；显式给出 `tools.approvalMode: yolo`；`tools.approval.write: deny`；会话目录由服务自有。`--no-ui` 下需要审批的调用直接失败，不转给网页；网页的批准卡片只来自 Agent 的申请（4.2）。不引入新依赖：协议只用标准库。
+
+握手实测（2026-10-21，不发提示词，零花费；判据、脚本与逐帧记录在 `E:/projects/ShinkaEvolve-runs/handshake-20261021/`）：RPC 与 ACP 都能作为 Windows 管道子进程在 0.2–2.8 秒内就绪，关 stdin 后退出码 0、不留进程；默认不加载项目技能，覆盖文件能加载；覆盖文件里的数组整体替换全局值（`bash.patterns` 只剩覆盖项，所有者的 14 条全局拒绝规则消失）；`--tools` 只筛内置工具，扩展工具全部保留；所有者的会话没有内置 `bash`，扩展的 `exec_command` 不受 `bash.patterns` 约束；`--no-extensions` 恢复 `bash`；上面的启动行加两件宿主工具后，工具只剩 `find`、`glob`、`grep`、`read`、`web_search`、宿主工具与只写设备的 `write`，技能仍在，没有界面帧。审批请求的形态只有文档依据：RPC 是按按钮文字识别的通用 `select`，ACP 只有 bash 是带类型的 `session/request_permission`。事先写下的决定性判据是审批请求的形态，但两种候选最终都不转发审批，真正区分它们的是 RPC 有宿主工具：第二道防线因此落在服务的 Python 代码里，能用 pytest 测；ACP 方案只能靠命令文字规则，`python -m shinka.cli.run`、`env -u` 与脚本都能绕过。方案经 discuss:steady 两轮与 discuss:divergent 审查。未实测：模型发起的 `host_tool_call` 往返，作为 4.2 的第一道关，用无凭据独立 profile 下的本地桩模型测，不花费用，不通过就退回 ACP 加 `bash` 与拒绝规则的方案；带消息的会话重启后能否恢复（空会话实测不能：RPC 不落盘，ACP 的 `session/list` 为空、`session/load` 报找不到）。网页 Agent 是否需要执行任意脚本（pandas、git、装包）由所有者决定；需要的话它也能改写账本，只能事后发现。
 
 ## 验证（不花模型费用）
 
 - 用 PATH 上的假 `shinka_run`（写入数据库行、睡眠、非零退出、挂起）测试：关掉终端后后台运行继续；运行被强杀后 `watch` 恢复状态并只写一次失败事件，两个 `watch` 同时运行仍只写一次；没有授权时 `run` 拒绝；超过尝试次数的一次被拒绝；没有批准记录时 `confirm` 拒绝；并发 `save` 不丢更新；篡改冻结文件或账本后 `run` 拒绝启动。
 - 终端：定时 shell 任务在关闭并重开后补查一次，期间不触发模型。
-- Agent 服务：不发提示词的启动与恢复；令牌、Origin、Host 与批准接口的真实 HTTP 回归测试。
+- Agent 服务：不发提示词的启动与恢复；宿主工具往返用本地桩模型；令牌、Origin、Host 与批准接口的真实 HTTP 回归测试。
 - 网页：用演示工作区加夹具账本（暂停中、待决、卡住、封存段申请）做交互实测。
 - 端到端：假 `shinka_run` 加脚本化的对话适配跑完整流程（两端发起与批准、封存段批准、关窗后继续、重开补查与提醒）。所有者授权模型与费用后的真实运行是可选的所有者验收，不是完成条件。
 
 ## 风险
 
 - Windows 上关闭 Tern 会结束整个控制台进程组；后台运行需要以新进程组脱离启动。
-- omp 无界面模式是否加载与终端相同的技能和审批规则，握手实测前未证实。
+- 宿主工具往返与带消息会话的重启恢复只有文档依据，4.2 先实测（《对话适配》）。
+- 无界面 omp 带着所有者的全局系统提示（实测系统提示含所有者个人编码助手的规则），网页 Agent 的人设与上下文在 4.2 定。
 - `os.replace` 在 Windows 上遇到读者打开文件时可能失败，原子保存需要重试。
