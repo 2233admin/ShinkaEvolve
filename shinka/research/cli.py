@@ -14,6 +14,8 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, Iterator, List, Optional
 
+import yaml
+
 from shinka.research import grants, library
 from shinka.research.notebook import (
     RESULTS_LOG,
@@ -207,6 +209,39 @@ def cmd_approve(args: argparse.Namespace) -> None:
 # detached supervisor runs exactly what was checked here.
 SHINKA_RUN = ["shinka_run"]
 
+# The model lists shinka_run calls. evo.task_sys_msg holds the hypothesis text,
+# which may name a headless/ model without configuring one.
+MODEL_FIELDS = (
+    "llm_models",
+    "meta_llm_models",
+    "novelty_llm_models",
+    "prompt_llm_models",
+)
+
+
+def _headless_models(task_dir: Path) -> List[str]:
+    """The headless/* models the task's shinka.yaml configures, read as
+    shinka_run reads it; a file it cannot read is left to shinka_run, which
+    refuses it."""
+    from shinka.cli.run import _field_types
+    from shinka.cli.run_config import load_optional_yaml_config
+
+    try:
+        parsed, _ = load_optional_yaml_config(
+            task_dir=task_dir,
+            config_fname=SHINKA_CONFIG_FILENAME,
+            allowed_field_types=_field_types(),
+        )
+    except (OSError, ValueError, yaml.YAMLError):
+        return []
+    found = []
+    for name in MODEL_FIELDS:
+        models = parsed["evo"].get(name) or []
+        if isinstance(models, str):
+            models = [models]
+        found += [m for m in models if isinstance(m, str) and m.startswith("headless/")]
+    return found
+
 
 def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
     if any("headless/" in a for a in extra):
@@ -236,6 +271,13 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                 "write the same programs.sqlite"
             )
         verify_experiment(root, nb, hyp.id, exp)
+        task_dir = experiment_dir(root, hyp.id, exp.id) / "task"
+        headless = _headless_models(task_dir)
+        if headless:
+            sys.exit(
+                "headless/* mutation models are not allowed: they can read OOS "
+                f"metrics ({', '.join(headless)} in {task_dir / SHINKA_CONFIG_FILENAME})"
+            )
         spent = 0.0
         if nb.budget_usd is not None:
             spent, known = direction_spend(root, nb, live)

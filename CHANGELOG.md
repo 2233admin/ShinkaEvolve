@@ -203,6 +203,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   total from the server and lists the rest as other charges, and the compare
   spend curve ends at the run total. A results directory holding only
   generation 0 now resumes instead of running its seed again.
+- Fixed `shinka_research run` accepting a `headless/*` model configured in the
+  experiment's `task/shinka.yaml`: only `--set` arguments were checked, so a
+  headless CLI agent, which works inside the results directory beside the
+  out-of-sample metrics, could still mutate a research run. The four model
+  lists (`llm_models`, `meta_llm_models`, `novelty_llm_models`,
+  `prompt_llm_models`, under `evo` or `evo_config`) are now read as
+  `shinka_run` reads them and refused before any grant attempt is taken;
+  hypothesis text that merely mentions a headless model still runs.
 - Fixed the restored run list painting the prompt-evolution count in white on
   a near-white chip.
 - Fixed the Research workbench's trial counts while a run is in progress: the

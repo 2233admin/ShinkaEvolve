@@ -16,10 +16,11 @@ from pathlib import Path
 
 import psutil
 import pytest
+import yaml
 
 from shinka.research import cli
 from shinka.research.grants import AGENT_ENV, LEDGER
-from shinka.research.notebook import RESULTS_LOG, Notebook, Status
+from shinka.research.notebook import RESULTS_LOG, Notebook, Status, experiment_dir
 from shinka.research.runs import watch
 from shinka.research.state import hand_over, live_work, register_work, work_entries
 
@@ -344,6 +345,38 @@ def test_a_foreground_run_still_waits_and_records_its_end(
     assert _ends(direction) == ["run"]
     assert work_entries(direction) == []
     assert Notebook.load(direction).get("h001").experiments[0].n_evaluated == 2
+
+
+def _task_config(root: Path) -> Path:
+    return experiment_dir(root, "h001", "e01") / "task" / "shinka.yaml"
+
+
+def test_a_headless_model_in_the_task_config_is_refused(direction: Path) -> None:
+    # A headless CLI agent works inside results_dir, next to the holdout's
+    # metrics; configured in shinka.yaml it is as refused as passed by --set.
+    settings = _task_config(direction)
+    scaffolded = yaml.safe_load(settings.read_text(encoding="utf-8"))["evo"]
+    for namespace in ("evo", "evo_config"):
+        for field in cli.MODEL_FIELDS:
+            models = {field: ["gpt-5-mini", "headless/claude"]}
+            settings.write_text(
+                yaml.safe_dump({namespace: {**scaffolded, **models}}), encoding="utf-8"
+            )
+            with pytest.raises(SystemExit, match="headless/claude"):
+                cli.main(["run", str(direction), "h001"])
+    assert _ends(direction) == [] and work_entries(direction) == []
+
+
+def test_a_hypothesis_that_only_mentions_a_headless_model_runs(
+    direction: Path, monkeypatch
+) -> None:
+    settings = _task_config(direction)
+    config = yaml.safe_load(settings.read_text(encoding="utf-8"))
+    config["evo"]["task_sys_msg"] += "\nCompare against headless/claude."
+    settings.write_text(yaml.safe_dump(config), encoding="utf-8")
+    _plan(monkeypatch, e01=dict(rows=1))
+    cli.main(["run", str(direction), "h001"])
+    assert _ends(direction) == ["run"]
 
 
 # ---- Round grants (2.3) -----------------------------------------------------
