@@ -28,9 +28,15 @@
 - **WHEN** 某运行含一个没有价目的 headless 调用
 - **THEN** 该运行的总费用显示为“—”，含它的合计以 `≥` 标为下限，不把它当作零
 
+#### Scenario: 合计计入费用未知运行已记录的部分
+
+- **WHEN** 某运行有一个没有价目的 headless 调用，另有已记录的嵌入与提示词进化费用
+- **THEN** `/get_database_stats` 的 `total_cost` 为 `null`，`recorded_cost` 为已记录的嵌入与提示词进化费用之和
+- **AND** 运行列表的合计计入这笔 `recorded_cost` 并以 `≥` 标为下限；统计读取失败的运行同样让合计成为下限
+
 ### Requirement: 运行费用只有一个口径
 
-运行费用 SHALL 在预算检查、Agent 授权运行的上限、研究工作区接口、方向快照、运行统计（`/get_database_stats`）、运行器续跑时载入的已花费用与浏览器中的分析页和比较页按同一规则计算（`shinka.database.cost`，研究层经 `rundb.run_cost` 使用）。计入三部分，任何合计都含全部三部分：非岛副本的程序（`_is_island_copy`、`_spawned_island` 都不为真）的 `api_costs`、`embed_cost`、`novelty_cost`、`meta_cost`；没有成为程序的已付费工作，即 `attempt_log` 中状态为 `failed` 或 `discarded`、`node_kind` 为 `failed_proposal`（耗尽尝试的提案）、`discarded_proposal`（运行到达目标后丢弃的多余提案）或 `failed_prompt_evolution`（没有存下提示词的提示词进化）的事件，每条各计一次，同一代以后再失败是又一笔；`prompts.sqlite` 中提示词进化的 `llm.cost`。元分析的费用记在触发它的程序上，失败的元分析已付的步骤同样记入；结尾总结记在最佳程序上，最佳程序是岛副本时记在其原程序上。字段缺失或为 null 时按记录的 0 计，因为运行器只为执行过的步骤写费用；出现的值 MUST 是有限且不小于 0 的数，否则费用未知；元数据不是合法 JSON、headless 模型带 `headless_pricing_unknown`（其 `api_costs` 不计入金额，与 `dbase.py` 遥测一致）、或状态为 `failed`、`discarded` 的事件读不出文字的 `node_kind`（null、非法、空对象）时同样未知。运行器写不进数据库、或无法得知金额的已付费用（目标清理时仍挂起而被取消的提案、超时被取消的结尾总结）MUST 在结果目录留下 `cost-unrecorded.json`，此后该运行的合计一律未知，直到缺的这笔费用补记进持久的记录；只删除该文件不算补记。已知的部分照常求和，未知只让该部分成为下限；`/get_database_stats` 对未知的部分返回 `null`。设有预算的方向在花费未知时 MUST 拒绝开始新运行，因为下限不能证明预算仍有余量；Agent 的授权运行在该实验花费未知时同样 MUST 拒绝，不论方向有无预算，因为运行器从同一个下限起算上限。
+运行费用 SHALL 在预算检查、Agent 授权运行的上限、研究工作区接口、方向快照、运行统计（`/get_database_stats`）、运行器续跑时载入的已花费用与浏览器中的分析页和比较页按同一规则计算（`shinka.database.cost`，研究层经 `rundb.run_cost` 使用）。计入三部分，任何合计都含全部三部分：非岛副本的程序（`_is_island_copy`、`_spawned_island` 都不为真）的 `api_costs`、`embed_cost`、`novelty_cost`、`meta_cost`；没有成为程序的已付费工作，即 `attempt_log` 中状态为 `failed` 或 `discarded`、`node_kind` 为 `failed_proposal`（耗尽尝试的提案）、`discarded_proposal`（运行到达目标后丢弃的多余提案）或 `failed_prompt_evolution`（没有存下提示词的提示词进化）的事件，每条各计一次，同一代以后再失败是又一笔；`prompts.sqlite` 中提示词进化的 `llm.cost`。元分析的费用记在触发它的程序上，失败的元分析已付的步骤同样记入；结尾总结记在最佳程序上，最佳程序是岛副本时记在其原程序上。字段缺失或为 null 时按记录的 0 计，因为运行器只为执行过的步骤写费用；出现的值 MUST 是有限且不小于 0 的数，否则费用未知；元数据不是合法 JSON、headless 模型带 `headless_pricing_unknown`（其 `api_costs` 不计入金额，与 `dbase.py` 遥测一致）、或状态为 `failed`、`discarded` 的事件读不出文字的 `node_kind`（null、非法、空对象）时同样未知。运行器写不进数据库、或无法得知金额的已付费用（目标清理时仍挂起而被取消的提案、超时被取消的结尾总结）MUST 在结果目录留下 `cost-unrecorded.json`，此后该运行的合计一律未知，直到缺的这笔费用补记进持久的记录；只删除该文件不算补记。已知的部分照常求和，未知只让该部分成为下限；`/get_database_stats` 对未知的部分返回 `null`，并 MUST 以 `recorded_cost` 给出该运行已记录的全部费用（两部分都已知时即其合计，否则为下限），跨运行的合计按 `recorded_cost` 求和。设有预算的方向在花费未知时 MUST 拒绝开始新运行，因为下限不能证明预算仍有余量；Agent 的授权运行在该实验花费未知时同样 MUST 拒绝，不论方向有无预算，因为运行器从同一个下限起算上限。
 
 #### Scenario: 真实运行没有元分析费用字段
 

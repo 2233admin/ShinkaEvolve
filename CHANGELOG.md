@@ -211,6 +211,13 @@ All notable changes to `shinka-evolve` are documented in this file.
   `prompt_llm_models`, under `evo` or `evo_config`) are now read as
   `shinka_run` reads them and refused before any grant attempt is taken;
   hypothesis text that merely mentions a headless model still runs.
+- Fixed run list totals that dropped what an unknown-cost run had recorded:
+  `/get_database_stats` sent `null` for the unknown part and nothing else, so
+  the workbench's `≥` total counted such a run's priced charges as zero and
+  the restored `/analysis/index.html` showed `—` for the whole total. Run
+  statistics now carry `recorded_cost` (everything the run recorded: its cost
+  when known, otherwise a lower bound); both run lists sum it and mark the
+  total `≥` when a run's cost is unknown or its statistics could not be read.
 - Fixed the restored run list painting the prompt-evolution count in white on
   a near-white chip.
 - Fixed the Research workbench's trial counts while a run is in progress: the

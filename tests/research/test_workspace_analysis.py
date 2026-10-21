@@ -278,6 +278,35 @@ def test_run_statistics_leave_unrecorded_prompt_cost_unknown(tmp_path: Path) -> 
     assert stats["total_cost"] is not None
 
 
+def test_run_statistics_keep_what_an_unpriced_run_recorded(tmp_path: Path) -> None:
+    # The headless call has no price, so the run's cost is unknown; its embed
+    # charge and prompt evolution are recorded and bound the cost from below.
+    root = tmp_path / "workspace"
+    path = root / "ordinary" / "programs.sqlite"
+    _write_program_database(path, "unpriced", -0.5)
+    unpriced = {
+        "model_name": "headless/agent",
+        "headless_pricing_unknown": True,
+        "api_costs": 12.0,
+        "embed_cost": 0.25,
+    }
+    with sqlite3.connect(path) as conn:
+        conn.execute("UPDATE programs SET metadata = ?", (json.dumps(unpriced),))
+    with sqlite3.connect(path.with_name("prompts.sqlite")) as conn:
+        conn.execute("CREATE TABLE system_prompts (id TEXT, metadata TEXT)")
+        conn.execute(
+            "INSERT INTO system_prompts VALUES (?, ?)",
+            ("evolved", json.dumps({"llm": {"cost": 0.5}})),
+        )
+    with _workspace_server(root) as base:
+        stats = _json(
+            base, "get_database_stats", db_path="workspace/ordinary/programs.sqlite"
+        )
+    assert stats["total_cost"] is None
+    assert stats["prompt_evo_cost"] == pytest.approx(0.5)
+    assert stats["recorded_cost"] == pytest.approx(0.75)
+
+
 def test_snapshot_analysis_links_open_the_correct_experiment(workspace) -> None:
     root, expected = workspace
     with _workspace_server(root) as base:

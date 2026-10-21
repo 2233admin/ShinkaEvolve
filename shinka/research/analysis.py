@@ -277,10 +277,13 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
         except (OSError, sqlite3.Error):
             self._send_read_error("Unable to read run statistics")
             return
-        # Unpriced or malformed entries leave a total unknown, never zero.
+        # Unpriced or malformed entries leave a total unknown, never zero. What
+        # the run did record is sent as well, so a total over runs can count it
+        # toward its lower bound.
         self._stats_costs = (
             cost.programs_usd if cost.programs_known else None,
             cost.prompts_usd if cost.prompts_known else None,
+            cost.recorded_usd,
         )
         try:
             return super().handle_get_database_stats(db_path)
@@ -296,7 +299,7 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
     def send_json_response(self, data):
         costs = getattr(self, "_stats_costs", None)
         if costs is not None and "total_cost" in data:
-            data["total_cost"], data["prompt_evo_cost"] = costs
+            data["total_cost"], data["prompt_evo_cost"], data["recorded_cost"] = costs
         return super().send_json_response(data)
 
     def handle_get_plots(self, db_path: str, generation: str, program_id: str):

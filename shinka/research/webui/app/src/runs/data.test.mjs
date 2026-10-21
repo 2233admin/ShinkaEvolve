@@ -6,7 +6,7 @@ import { afterRead, compareRuns, groupRuns, matchesRun, runCost, runKind, runLab
 
 const exp = (dir, h, e) => ({ path: `workspace/${dir}/experiments/${h}/${e}/results/programs.sqlite`, name: `${dir}/experiments/${h}/${e}/results`, task: dir })
 const ordinary = (task, run) => ({ path: `runs/${task}/${run}/programs.sqlite`, name: `${task}/${run}`, task })
-const stats = (o) => ({ program_count: 10, correct_count: 8, best_score: 0.5, max_generation: 3, gens_since_improvement: 1, total_cost: 1, prompt_evo_cost: 0.5, prompt_count: 2, has_prompt_evo: true, total_runtime_seconds: 60, last_update: 100, ...o })
+const stats = (o) => ({ program_count: 10, correct_count: 8, best_score: 0.5, max_generation: 3, gens_since_improvement: 1, total_cost: 1, prompt_evo_cost: 0.5, recorded_cost: 1.5, prompt_count: 2, has_prompt_evo: true, total_runtime_seconds: 60, last_update: 100, ...o })
 
 test('a workspace run is an experiment only under one of its directions', () => {
   const dirs = new Set(['d1'])
@@ -47,10 +47,10 @@ test('totals count what has arrived and turn the cost into a lower bound for the
   const a = ordinary('t', 'a')
   const b = ordinary('t', 'b')
   const c = ordinary('t', 'c')
-  const s = new Map([[a.path, read({ best_score: 0.4 })], [b.path, read({ total_cost: null, best_score: 0.7, correct_count: 10 })]])
+  const s = new Map([[a.path, read({ best_score: 0.4 })], [b.path, read({ total_cost: null, recorded_cost: 3.5, best_score: 0.7, correct_count: 10 })]])
   const t = runTotals([a, b, c], s)
-  // The unpriced run's prompt cost (0.5) still counts toward the lower bound.
-  assert.deepEqual([t.runs, t.programs, t.valid, t.failed, t.cost, t.partial, t.peak], [3, 20, 18, 2, 2, 2, 0.7])
+  // The unpriced run's recorded spend (its priced charges and its prompts, 3.5) still counts toward the lower bound.
+  assert.deepEqual([t.runs, t.programs, t.valid, t.failed, t.cost, t.partial, t.peak], [3, 20, 18, 2, 5, 2, 0.7])
 })
 
 test('a read that fails after one that succeeded keeps the numbers in the totals and makes the cost a lower bound, counted once', () => {
@@ -61,10 +61,10 @@ test('a read that fails after one that succeeded keeps the numbers in the totals
     return [t.programs, t.cost, t.partial]
   }
   const first = new Map([[a.path, afterRead(undefined, stats({}))], [b.path, afterRead(undefined, stats({ total_cost: null }))]])
-  assert.deepEqual(sums(first), [20, 2, 1])
+  assert.deepEqual(sums(first), [20, 3, 1])
   const second = new Map([[a.path, afterRead(first.get(a.path), null)], [b.path, afterRead(first.get(b.path), null)]])
   // The same numbers, now a lower bound; the unpriced run already was one and still counts once.
-  assert.deepEqual(sums(second), [20, 2, 2])
+  assert.deepEqual(sums(second), [20, 3, 2])
   // A run that has never been read has no numbers to keep.
   assert.deepEqual(afterRead(undefined, null), { stats: null, failed: true })
 })

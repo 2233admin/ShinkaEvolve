@@ -30,7 +30,7 @@
 | `/?view=compare&runs=<run>&runs=<run>…&metric=…` | 多运行比较（award-redesign 5.2），至少 2 个运行：所选指标（缺省为累计最佳，`metric` 为 `program_count` 或 `correct_count` 时为程序数或有效程序数）按代与按累计花费的阶梯曲线，指向或用 ← → 读取各运行在该处的数值；跨运行排行榜（每个运行至多 4 个有效程序，合起来取前 8 名）与运行级指标。曲线与旧比较页逐点一致：花费按时间顺序累计程序与提示词进化费用，遇到未计价的调用后曲线止于此，超过 200 点时抽样。运行分属多个任务时，得分曲线、排行榜与最佳只在同一任务内比较，计数与费用仍放在一起。每个运行读 `/get_programs_summary`、`/get_database_stats`，有提示词进化时再读 `/get_system_prompts`，随外壳每 30 秒的自动刷新重读 |
 | `/?view=run&run=<run>&tab=…&program=…&pane=…&gen=…` | 实验分析；研究入口另带 `direction`、`hypothesis` 作为返回上下文。原生视图（award-redesign 6.1）完成前另带恢复页的面板 `left_tab/right_tab/meta_section`，`tab/pane/gen` 只随链接保留 |
 | `/?view=library&page=log` 或 `page=wiki/<name>` | 共享资料库（award-redesign 4.3）：索引、日志与每个 wiki 页面都是可分享的链接，待整理的原始资料在页首说明；无 `page` 为索引，不存在的页面显示索引并注明缺页。正文是 markdown-it（`html: false`）渲染的净化 Markdown，`[[页面]]` 在工作台任何正文里都链接到这一路由，其他链接在新标签页打开 |
-| `/list_databases`、`/get_database_stats?db_path=…` | 授权范围内的真实程序库与只读统计；费用记录不全时 `total_cost=null`，不能当成免费 |
+| `/list_databases`、`/get_database_stats?db_path=…` | 授权范围内的真实程序库与只读统计；费用记录不全时 `total_cost=null`（或 `prompt_evo_cost=null`），不能当成免费；`recorded_cost` 是该运行已记录的全部费用，两部分都已知时即其合计，否则为下限，跨运行的合计按它求和并标 `≥` |
 | `/get_system_prompts?db_path=…` | 不存在提示库时返回 `[]`；已有提示库损坏或缺表时返回明确的 500 JSON 错误，不能伪装为无提示数据 |
 | `/analysis/index.html`、`/compare.html`、`/viz_tree.html` | 自研运行浏览、比较及完整分析；由研究层维护构建产物。运行列表与比较已由工作台原生绘制，旧页面按 award-redesign 7.1 保留到能力组删除 |
 

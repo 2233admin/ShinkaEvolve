@@ -728,16 +728,26 @@
             }
         }
 
+        // The recorded spend over the runs once every run has answered: a lower
+        // bound, marked ≥, when a run's cost is unknown or its statistics could
+        // not be read, as in the workbench's run list.
+        function globalCostText(answered, runCount) {
+            if (answered.length < runCount) return '—';
+            const read = answered.filter(stats => !stats.error);
+            const total = read.reduce((sum, stats) => sum + (Number.isFinite(stats.recorded_cost) ? stats.recorded_cost : 0), 0);
+            const partial = read.length < answered.length
+                || read.some(stats => totalRecordedCost(stats) === null || !Number.isFinite(stats.recorded_cost));
+            return `${partial ? '≥ ' : ''}$${total.toFixed(2)}`;
+        }
+
         function updateGlobalStats() {
             const activeStats = Object.values(statsCache).filter(stats => !stats.error);
             const validScores = activeStats.map(s => s.best_score).filter(Number.isFinite);
-            const totalCost = activeStats.reduce((a, b) => a + (b.total_cost || 0) + (b.prompt_evo_cost || 0), 0);
             const totalPrograms = activeStats.reduce((a, b) => a + b.program_count, 0);
-            const costsKnown = activeStats.every(s => Number.isFinite(s.total_cost) && Number.isFinite(s.prompt_evo_cost));
 
             document.getElementById('global-exp-count').textContent = allDatabases.length;
             document.getElementById('global-peak-score').textContent = validScores.length ? Math.max(...validScores).toFixed(2) : '—';
-            document.getElementById('global-total-cost').textContent = activeStats.length === allDatabases.length && costsKnown ? `$${totalCost.toFixed(2)}` : '—';
+            document.getElementById('global-total-cost').textContent = globalCostText(Object.values(statsCache), allDatabases.length);
             document.getElementById('global-total-programs').textContent = activeStats.length === allDatabases.length ? totalPrograms.toLocaleString() : '—';
         }
 

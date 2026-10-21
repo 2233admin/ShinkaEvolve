@@ -133,3 +133,36 @@ def test_analysis_prompt_total_stays_unknown_after_a_failed_read(
         "console.log(JSON.stringify(promptCostTotal()));",
     )
     assert got == (None if expected is None else pytest.approx(expected))
+
+
+PRICED = {"total_cost": 1.0, "prompt_evo_cost": 0.5, "recorded_cost": 1.5}
+
+
+@pytest.mark.parametrize(
+    ("answered", "runs", "expected"),
+    [
+        ([PRICED], 1, "$1.50"),
+        # An unpriced run adds what it recorded, and the total is a lower bound.
+        (
+            [
+                PRICED,
+                {"total_cost": None, "prompt_evo_cost": 0.5, "recorded_cost": 2.25},
+            ],
+            2,
+            "≥ $3.75",
+        ),
+        # A run whose statistics could not be read is in no figure.
+        ([PRICED, {"error": True}], 2, "≥ $1.50"),
+        # Until every run has answered there is no total yet.
+        ([PRICED], 2, "—"),
+    ],
+)
+def test_run_list_total_counts_an_unknown_run_as_a_lower_bound(
+    answered: list, runs: int, expected: str
+) -> None:
+    got = _run(
+        "index.html",
+        ("totalRecordedCost", "globalCostText"),
+        f"console.log(JSON.stringify(globalCostText({json.dumps(answered)}, {runs})));",
+    )
+    assert got == expected

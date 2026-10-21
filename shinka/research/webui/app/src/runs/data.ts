@@ -15,6 +15,8 @@ export type RunStats = {
   total_cost: number | null
   /** Prompt evolution's recorded cost; null when a prompt has no price. */
   prompt_evo_cost: number | null
+  /** Everything the run recorded, both parts: its cost when both are known, otherwise a lower bound. */
+  recorded_cost: number
   prompt_count: number
   has_prompt_evo: boolean
   total_runtime_seconds: number | null
@@ -129,9 +131,9 @@ export function runTotals(runs: RunEntry[], stats: ReadonlyMap<string, StatsEntr
     t.failed += s.program_count - s.correct_count
     t.prompts += s.prompt_count
     if (s.best_score !== null && (t.peak === null || s.best_score > t.peak)) t.peak = s.best_score
-    // An unpriced part leaves the run's cost unknown; its recorded part still counts toward the lower bound.
+    // An unpriced part leaves the run's cost unknown; what it recorded still counts toward the lower bound.
     if (entry.failed || runCost(s) === null) t.partial += 1
-    t.cost += (s.total_cost ?? 0) + (s.prompt_evo_cost ?? 0)
+    t.cost += s.recorded_cost
     t.runtime += s.total_runtime_seconds ?? 0
   }
   return t
