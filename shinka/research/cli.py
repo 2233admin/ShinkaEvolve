@@ -211,7 +211,7 @@ SHINKA_RUN = ["shinka_run"]
 
 # The model lists shinka_run calls. evo.task_sys_msg holds the hypothesis text,
 # which may name a headless/ model without configuring one.
-MODEL_FIELDS = (
+_MODEL_FIELDS = (
     "llm_models",
     "meta_llm_models",
     "novelty_llm_models",
@@ -220,26 +220,31 @@ MODEL_FIELDS = (
 
 
 def _headless_models(task_dir: Path) -> List[str]:
-    """The headless/* models the task's shinka.yaml configures, read as
-    shinka_run reads it; a file it cannot read is left to shinka_run, which
-    refuses it."""
-    from shinka.cli.run import _field_types
-    from shinka.cli.run_config import load_optional_yaml_config
-
+    """The headless/* models the task's shinka.yaml configures in either of
+    shinka_run's names for that section (``evo``, ``evo_config``). A file that
+    does not parse is left to shinka_run, which refuses it."""
     try:
-        parsed, _ = load_optional_yaml_config(
-            task_dir=task_dir,
-            config_fname=SHINKA_CONFIG_FILENAME,
-            allowed_field_types=_field_types(),
+        loaded = yaml.safe_load(
+            (task_dir / SHINKA_CONFIG_FILENAME).read_text(encoding="utf-8")
         )
-    except (OSError, ValueError, yaml.YAMLError):
+    except (OSError, yaml.YAMLError):
+        return []
+    if not isinstance(loaded, dict):
         return []
     found = []
-    for name in MODEL_FIELDS:
-        models = parsed["evo"].get(name) or []
-        if isinstance(models, str):
-            models = [models]
-        found += [m for m in models if isinstance(m, str) and m.startswith("headless/")]
+    for section in (loaded.get("evo"), loaded.get("evo_config")):
+        if not isinstance(section, dict):
+            continue
+        for name in _MODEL_FIELDS:
+            models = section.get(name) or []
+            if isinstance(models, str):
+                models = [models]
+            if isinstance(models, list):
+                found += [
+                    m
+                    for m in models
+                    if isinstance(m, str) and m.startswith("headless/")
+                ]
     return found
 
 

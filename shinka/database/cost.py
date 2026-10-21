@@ -3,7 +3,9 @@
 The runner's resume base (``ShinkaEvolveRunner._get_total_api_costs``) and the
 readers that total a run (``shinka.research.rundb.run_cost``: the research
 budget, grants, workspace and run statistics) use these queries, so a resumed
-run stops where its budget says and every page shows the same total.
+run stops where its budget says and the research workbench shows one total.
+The upstream analysis UI (``shinka_visualize``), console summaries and W&B
+still total a run their own way.
 
 A run is charged for its evaluated programs, the paid work that never became
 one, and its prompt evolution:
@@ -193,15 +195,19 @@ def prompt_spend(conn: sqlite3.Connection) -> Spend:
 
 
 def mark_unrecorded(results_dir: Path, charge: Dict[str, Any]) -> None:
-    """Record, atomically, that a paid charge of this run did not reach its
-    database. Repeated failures keep the latest charge; any marker makes the
-    run's total unknown. Raises when the disk takes no write either."""
+    """Record, durably and atomically, that a paid charge of this run did not
+    reach its database. Repeated failures keep the latest charge; any marker
+    makes the run's total unknown. Raises when the disk takes no write either."""
     target = Path(results_dir) / UNRECORDED
     temporary = target.with_name(f".{target.name}.{os.getpid()}.tmp")
-    temporary.write_text(
-        json.dumps({"time": time.time(), **charge}, sort_keys=True, default=str),
-        encoding="utf-8",
-    )
+    with open(temporary, "w", encoding="utf-8") as handle:
+        handle.write(
+            json.dumps({"time": time.time(), **charge}, sort_keys=True, default=str)
+        )
+        handle.flush()
+        # On disk before it can replace anything: a marker lost to a crash
+        # would let the run's total read as complete.
+        os.fsync(handle.fileno())
     os.replace(temporary, target)
 
 

@@ -357,7 +357,13 @@ def test_a_headless_model_in_the_task_config_is_refused(direction: Path) -> None
     settings = _task_config(direction)
     scaffolded = yaml.safe_load(settings.read_text(encoding="utf-8"))["evo"]
     for namespace in ("evo", "evo_config"):
-        for field in cli.MODEL_FIELDS:
+        # Named here, not read from the guard, so dropping one from it fails.
+        for field in (
+            "llm_models",
+            "meta_llm_models",
+            "novelty_llm_models",
+            "prompt_llm_models",
+        ):
             models = {field: ["gpt-5-mini", "headless/claude"]}
             settings.write_text(
                 yaml.safe_dump({namespace: {**scaffolded, **models}}), encoding="utf-8"

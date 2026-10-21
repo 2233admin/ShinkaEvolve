@@ -160,8 +160,9 @@ class RunCost(NamedTuple):
 
 def run_cost(results_dir: Path, db_name: str = DB_FILENAME) -> RunCost:
     """LLM spend of a run. The budget, grants, the workspace, the run
-    statistics and the runner's resume base all use this one rule, so a run
-    never shows two costs."""
+    statistics and the runner's resume base all use this one rule, so the
+    research layer never shows two costs for a run (the upstream analysis UI,
+    console summaries and W&B keep their own totals)."""
     results_dir = Path(results_dir)
     programs = Spend(0.0, True)
     if (results_dir / db_name).exists():

@@ -588,6 +588,8 @@ NOT_NOTHING = {
     "inf": float("inf"),
     "string": "x",
     "negative": -B,
+    # Too large for a float: telling it from zero must not overflow.
+    "huge int": 10**400,
 }
 
 

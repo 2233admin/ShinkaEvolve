@@ -742,12 +742,13 @@ class ShinkaEvolveRunner:
 
         # A charge of nothing needs no durable record; any other amount, one
         # that is not a finite number included (a bool compares equal to 0 but
-        # is not an amount), must not vanish.
+        # is not an amount), must not vanish. Equality alone tells zero apart:
+        # NaN and infinity are unequal to 0, and an int too large for a float
+        # would overflow a finiteness check.
         def nothing(value: Any) -> bool:
             return value is None or (
                 isinstance(value, (int, float))
                 and not isinstance(value, bool)
-                and math.isfinite(value)
                 and value == 0
             )
 
