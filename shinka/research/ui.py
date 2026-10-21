@@ -23,7 +23,7 @@ from typing import Any, Dict, List, Optional, Tuple
 import numpy as np
 
 from .analysis import ANALYSIS_PATHS, AnalysisHandler, confined as _confined
-from . import library, rundb
+from . import library, rounds, rundb
 from .notebook import (
     NOTEBOOK_FILENAME,
     RESULTS_LOG,
@@ -248,6 +248,9 @@ def snapshot(root: Path, events: int = 50) -> Dict[str, Any]:
         "probes": probes,
         "events": _events(root, nb, events),
         "library": _library(root.parent),
+        # The agent's rounds, runs, lockbox approvals and what waits on the
+        # owner (research-agent 3.2); it reports what it cannot read.
+        "rounds": rounds.overview(root),
     }
 
 
@@ -346,6 +349,7 @@ def workspace_snapshot(root: Path) -> Dict[str, Any]:
                 "budget_usd": nb.budget_usd,
                 "lockbox_opened": nb.data.opened if nb.data else None,
                 "evidence": evidence,
+                "rounds": rounds.summary(rounds.overview(direction)),
                 "error": None,
             }
         except (OSError, ValueError, sqlite3.Error) as error:

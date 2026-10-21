@@ -77,6 +77,7 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | `shinka/research/state.py` | 方向的目录锁与原子替换；运行租约（`.work.json`：命令、监管进程与 `shinka_run` 子进程的 pid 与启动时间） |
 | `shinka/research/runs.py` | 运行的结束只记一次：前台命令、后台监管进程（`run --detach`）或 `watch` 谁先到谁记 |
 | `shinka/research/grants.py` | 所有者给 Agent 的批准（`ledger.json`）：轮次授权与已用尝试、封存段批准与其消耗；Agent 执行环境（`SHINKA_RESEARCH_AGENT`）中 `run` 的授权、尝试、参数白名单与费用上限，`confirm` 的封存段批准；账本与 `results.tsv` 对照，手改后授权的运行与开封拒绝 |
+| `shinka/research/rounds.py` | Agent 轮次的只读视图（工作台、`brief` 与 Agent 服务共用）：每份授权的尝试与运行状态、进行中的运行、封存段批准、待决事项与轮次状态；方向预算的已花与进行中授权运行的余量（`run` 用同一规则） |
 | `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
 | `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |

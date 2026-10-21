@@ -53,6 +53,8 @@ _NEVER = {
     "evo.num_generations": "`run --num-generations` sets it",
     "evo.init_program_path": "it would replace the scaffolded seed",
     "job.eval_program_path": "it would bypass the frozen evaluator",
+    "job.extra_cmd_args": "its arguments follow the frozen evaluator's own and "
+    "can replace them",
     "db.db_path": "trials and spend would leave the experiment's results",
     "job.python_executable": "it would choose the interpreter that evaluates",
     "job.conda_env": "it would choose the interpreter that evaluates",
@@ -98,10 +100,23 @@ def _digest(configs: Dict[str, str]) -> str:
     return hashlib.sha256(text).hexdigest()[:12]
 
 
-def _log_rows(root: Path) -> List[Tuple[str, str, str, str, str]]:
+def log_rows(root: Path) -> List[Tuple[str, str, str, str, str]]:
+    """(time, hypothesis, experiment, event, note) of every run-log line."""
     path = Path(root) / RESULTS_LOG
     rows = path.read_text().splitlines()[1:] if path.exists() else []
     return [tuple((row.split("\t", 4) + [""] * 5)[:5]) for row in rows]
+
+
+def ended_attempts(
+    rows: List[Tuple[str, str, str, str, str]],
+) -> Dict[str, Tuple[str, str]]:
+    """The grant runs whose end is logged: (grant, end event) by run id."""
+    ended = {}
+    for _time, _hid, _eid, event, note in rows:
+        found = _ATTEMPT_NOTE.search(note) if event in ("run", "run-failed") else None
+        if found:
+            ended[found.group(3)] = (found.group(1), event)
+    return ended
 
 
 def _check_allow(keys: Iterable[str]) -> List[str]:
@@ -149,7 +164,7 @@ def add_grant(
                 task = experiment_dir(root, hid, exp.id) / "task"
                 configs[f"{hid}/{exp.id}"] = file_sha256(task / SHINKA_CONFIG_FILENAME)
         records = load(root)
-        rows = _log_rows(root)
+        rows = log_rows(root)
         # Numbered from the log, which only grows, so an id is never reused.
         number = 1 + sum(1 for row in rows if row[3] == "grant")
         grant = {
@@ -178,57 +193,58 @@ class Ledger(NamedTuple):
     uses: Dict[str, Dict[str, Any]]
 
 
-def _verify(
-    root: Path, records: List[Dict[str, Any]], live: List[Dict[str, Any]]
+def verify(
+    root: Path, records: List[Dict[str, Any]], leases: List[Dict[str, Any]]
 ) -> Ledger:
-    """The ledger against the run log and the live leases; raises on the first
-    mismatch."""
+    """The ledger against the run log and the run leases; raises on the first
+    mismatch. Read the leases before the ledger: a run writes its attempt
+    before its lease, so a lease read first always finds its attempt."""
     changed = f"{Path(root) / LEDGER} does not match the run log"
+    rows = log_rows(root)
     stated = {}
-    for _time, _hid, _eid, event, note in _log_rows(root):
+    for _time, _hid, _eid, event, note in rows:
         if event in ("grant", "approval"):
             stated[note.split(":", 1)[0]] = note
     ledger = Ledger({}, {}, {}, {})
-    for record in records:
-        kind = record.get("kind")
-        if kind == "grant":
-            gid = record["id"]
-            if gid in ledger.grants or stated.get(gid) != terms(record):
-                raise Refused(f"{changed} at grant {gid}; ask the owner")
-            ledger.grants[gid] = record
-            ledger.attempts[gid] = []
-        elif kind == "attempt":
-            taken = ledger.attempts.get(record["grant"])
-            if taken is None or record["number"] != len(taken) + 1:
-                raise Refused(f"{changed} at an attempt of {record['grant']}")
-            taken.append(record)
-        elif kind == "approval":
-            aid = record["id"]
-            if aid in ledger.approvals or stated.get(aid) != approval_terms(record):
-                raise Refused(f"{changed} at approval {aid}; ask the owner")
-            ledger.approvals[aid] = record
-        elif kind == "approval-used":
-            aid = record["approval"]
-            if aid not in ledger.approvals or aid in ledger.uses:
-                raise Refused(f"{changed} at a use of approval {aid}")
-            ledger.uses[aid] = record
-        else:
-            raise Refused(f"{changed}: a record of unknown kind")
+    try:
+        for record in records:
+            kind = record.get("kind")
+            if kind == "grant":
+                gid = record["id"]
+                if gid in ledger.grants or stated.get(gid) != terms(record):
+                    raise Refused(f"{changed} at grant {gid}; ask the owner")
+                ledger.grants[gid] = record
+                ledger.attempts[gid] = []
+            elif kind == "attempt":
+                taken = ledger.attempts.get(record["grant"])
+                if taken is None or record["number"] != len(taken) + 1:
+                    raise Refused(f"{changed} at an attempt of {record['grant']}")
+                taken.append(record)
+            elif kind == "approval":
+                aid = record["id"]
+                if aid in ledger.approvals or stated.get(aid) != approval_terms(record):
+                    raise Refused(f"{changed} at approval {aid}; ask the owner")
+                ledger.approvals[aid] = record
+            elif kind == "approval-used":
+                aid = record["approval"]
+                if aid not in ledger.approvals or aid in ledger.uses:
+                    raise Refused(f"{changed} at a use of approval {aid}")
+                ledger.uses[aid] = record
+            else:
+                raise Refused(f"{changed}: a record of unknown kind")
+    except (AttributeError, KeyError, TypeError) as error:
+        raise Refused(f"{changed}: a record without its fields ({error!r})")
     for gid, taken in ledger.attempts.items():
         if len(taken) > ledger.grants[gid]["attempts"]:
             raise Refused(f"{changed}: {gid} has more attempts than it allows")
     works = {
         (a["grant"], a["work"]) for taken in ledger.attempts.values() for a in taken
     }
-    ran = []
-    for _time, _hid, _eid, event, note in _log_rows(root):
-        found = _ATTEMPT_NOTE.search(note) if event in ("run", "run-failed") else None
-        if found:
-            ran.append((found.group(1), found.group(3)))
+    ran = [(gid, work) for work, (gid, _event) in ended_attempts(rows).items()]
     ran += [
         (w["origin"]["grant"], w["id"])
-        for w in live
-        if w.get("origin", {}).get("grant")
+        for w in leases
+        if (w.get("origin") or {}).get("grant")
     ]
     for gid, work in ran:
         if (gid, work) not in works:
@@ -269,7 +285,7 @@ def _passthrough(extra: List[str], grant: Dict[str, Any]) -> List[str]:
     return tokens
 
 
-def _settings_kept(root: Path, grant: Dict[str, Any], hid: str, eid: str) -> bool:
+def settings_kept(root: Path, grant: Dict[str, Any], hid: str, eid: str) -> bool:
     """Whether the experiment's shinka.yaml is as the grant found it, or, for an
     experiment scaffolded since, as scaffold writes it (the task's message)."""
     path = experiment_dir(root, hid, eid) / "task" / SHINKA_CONFIG_FILENAME
@@ -292,7 +308,7 @@ def check_run(
     lock, before anything is taken. Returns the grant, the attempts it has
     used and the settings to pass. A grant with none left pauses the round:
     the refusal is logged once."""
-    ledger = _verify(root, load(root), live)
+    ledger = verify(root, load(root), live)
     grants, attempts = ledger.grants, ledger.attempts
     grant = grants.get(grant_id)
     if grant is None:
@@ -312,7 +328,7 @@ def check_run(
             f"grant {grant_id}'s {grant['attempts']} attempts are used: this round is "
             "over, and the next needs the owner's grant"
         )
-    if not _settings_kept(root, grant, hid, eid):
+    if not settings_kept(root, grant, hid, eid):
         raise Refused(
             f"{experiment_dir(root, hid, eid) / 'task' / SHINKA_CONFIG_FILENAME}: run "
             f"settings changed since grant {grant_id}; under a grant they come from "
@@ -356,7 +372,7 @@ def _log_paused(root: Path, grant: Dict[str, Any], hid: str, eid: str) -> None:
     """A grant with every attempt taken pauses its round; the run log says so
     once."""
     gid = grant["id"]
-    for _time, _hid, _eid, event, note in _log_rows(root):
+    for _time, _hid, _eid, event, note in log_rows(root):
         if event == "round-paused" and note.startswith(f"{gid}:"):
             return
     append_log(
@@ -380,7 +396,7 @@ def add_approval(root: Path, note: str = "") -> Dict[str, Any]:
         if nb.data.opened:
             raise Refused("the lockbox was already opened")
         records = load(root)
-        number = 1 + sum(1 for row in _log_rows(root) if row[3] == "approval")
+        number = 1 + sum(1 for row in log_rows(root) if row[3] == "approval")
         approval = {
             "kind": "approval",
             "id": f"a{number:03d}",
@@ -399,7 +415,7 @@ def use_approval(root: Path, approval_id: str, opening: str) -> None:
     ``opening``; under the lock that records the opening, before it is saved,
     so the lockbox never opens on an approval left unspent."""
     records = load(root)
-    ledger = _verify(root, records, live_work(root))
+    ledger = verify(root, records, live_work(root))
     if approval_id not in ledger.approvals:
         raise Refused(
             f"no lockbox approval {approval_id}: opening the lockbox needs the "
@@ -424,7 +440,7 @@ def use_approval(root: Path, approval_id: str, opening: str) -> None:
 def check_opened_by(root: Path, approval_id: str, opening: str) -> None:
     """Whether ``approval_id`` is the approval spent on the opening that
     started at ``opening``: finishing that opening carries it."""
-    use = _verify(root, load(root), live_work(root)).uses.get(approval_id)
+    use = verify(root, load(root), live_work(root)).uses.get(approval_id)
     if use is None or use["opening"] != opening:
         raise Refused(
             f"approval {approval_id} did not open this lockbox (opened {opening}); "

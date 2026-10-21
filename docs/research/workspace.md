@@ -22,8 +22,8 @@
 
 | 入口 | 输出或行为 |
 | --- | --- |
-| `GET /api/workspace` | `{name, directions, library, events}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志和共享库，证据数字与方向快照同一算法；不返回假设正文或验证段、封存段数字 |
-| `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数 |
+| `GET /api/workspace` | `{name, directions, library, events}`；摘要读 Notebook、各实验运行库的试验与费用、事件日志和共享库，证据数字与方向快照同一算法；每个方向另有 `rounds: {state, pending}`（下一行 `rounds` 的状态与待决事项数）；不返回假设正文或验证段、封存段数字 |
+| `GET /api/snapshot?direction=<id>` | 既有方向快照形状和服务端可见性过滤，`trial_points` 每点带程序编号 `program`；必须恰有一个非空方向参数。`rounds` 是 Agent 的轮次（research-agent 3.2，`shinka/research/rounds.py`，`brief` 读同一份）：`grants`（每份授权的条款、已取尝试数与每次尝试的运行：`running`、`starting` 尝试已写而租约还没写（`run` 先写尝试，60 秒内算正在启动）、`unrecorded` 进程已无而结束未记、`ended` 带结束事件、`lost` 尝试已取而运行一直没登记）、`running`（进行中的运行，`env` 为 agent 或 manual）、`approvals`（封存段批准，`used` 为它打开的开封时间，所有者手动开封后未用的记为 `moot`）、`pending`（`unrecorded`、`lost`（这次尝试没有结果，也不挡本轮结束）、`round-over` 一份授权的尝试都已取完、运行都已记下或已丢失且之后没有涉及同一假设的新授权、`stuck` Agent 用不了一份尚有余量的授权的原因：`budget`、`budget-unknown`、`open-ended`、`settings`、`lockbox-unfinished` 附开封所用的批准、`ledger` 与 `unreadable`），每项带一条 `do` 说明该做什么，目录写作 `<dir>`；`state` 依次取 `unknown`（账本或方向文件读不了）、`blocked`、`running`（有 Agent 的运行在跑或正在启动）、`waiting`（有 `round-over`）、`open`、`idle`。只给列出的字段：没有进程号、命令、路径，也没有租约为恢复状态保存的旧判词证据。Agent 自己的申请还没有记录处（research-agent design.md） |
 | `/?view=directions`（`/` 同） | 研究方向首页（award-redesign 4.1）：数据句标题、合计小字、可排序方向表与合计行、动态栏；只读 `/api/workspace` 与 `/list_databases`，不逐方向请求 `/api/snapshot` |
 | `/?view=direction&direction=<id>&hypothesis=<hid>` | 方向研究报告（award-redesign 4.2）：假设表、所选假设的主张与全文、试验与噪声线、检查台账、判词与封存段确认与实验、时间线和可筛选的事件；只读所开方向的 `/api/snapshot` |
 | `/?view=runs&q=…&kind=…&sort=…&select=<run>…` | 全部运行（award-redesign 5.1）：按评估器分组——研究实验（`workspace/` 下属于某个方向的运行）按方向、普通运行按任务；`kind` 为 `ordinary` 或 `experiment` 时只列该类，`sort` 为 `name`、`score` 或 `cost`，缺省按最近更新；每个勾选的运行一个 `select`，被检索或类型隐藏的运行仍保持勾选。统计逐个读 `/get_database_stats`（每批 4 个），随外壳每 10 秒的自动刷新重读；分组折叠沿用旧列表的 `localStorage['collapsed-task-<任务>']` |
@@ -42,7 +42,7 @@
 
 方向报告按论证顺序排列：假设表 → 主张 → 试验与噪声线 → 检查台账，1440 宽及以上判词、封存段确认结果与实验在右栏，更窄时排在台账之后，再接时间线与事件。试验图横轴是整个方向的已评估程序序号，噪声线与失败带由图表自己画；点按试验点，或聚焦图表后用左右方向键选中再按 Enter，打开该实验分析并显示该程序代码。实验的“进入分析”打开判词所依据的程序（`skeptic.program_id`，或判词证据中属于该实验的 `program_id`），尚无检查时打开本实验得分最高的程序。验证段数字只在判词之后出现，封存段数字只在确认之后出现。排序、正文展开与事件筛选按方向记在本次访问的内存里：从分析页后退、或在同一页切回该方向时原样恢复，刷新后重置；滚动位置由浏览器恢复，所以图表高度不依赖测量结果。
 
-ID 是一个真实目录名，不限 ASCII。服务端只解码查询一次，拒绝斜杠、反斜杠、点路径、绝对路径及驱动器形式，并校验规范路径仍是工作区的直接子目录。中文、空格、`+`、`%`、`#`、`&` 等合法名字可以往返；未知或越界 ID 返回 404，缺失、空值、重复参数返回 400，存在但无法读取的数据返回明确的 500 错误。
+ID 是一个真实目录名，不限 ASCII。服务端只解码查询一次，拒绝斜杠、反斜杠、点路径、绝对路径及驱动器形式，并校验规范路径仍是工作区的直接子目录。中文、空格、`+`、`%`、`#`、`&` 等合法名字可以往返；未知或越界 ID 返回 404，缺失、空值、重复参数返回 400，存在但无法读取的数据返回明确的 500 错误。例外是 `rounds`：账本与运行日志对不上、账本或租约读不了时，快照照常返回，`rounds` 报 `state: unknown` 与一条 `ledger` 或 `unreadable` 待决事项，只给原因代码，不转述含路径的拒绝文字。
 
 UI 在原始工作区/方向授权根下校验规范文件目标：资料库根不能搬到工作区外，库内正文、清单与原始资料不能读出资料库；方向的 notebook、假设正文、事件和实验结果不能读入相邻方向。实验根先相对方向校验，结果目录及数据库叶子再相对实验根校验。分析适配层同时校验查询派生的提示库、meta、plot 和失败提案目标。静态越界链接明确失败；该预检查不防御并发替换链接的恶意本机进程。
 

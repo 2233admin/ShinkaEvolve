@@ -80,7 +80,8 @@ All notable changes to `shinka-evolve` are documented in this file.
   once, by whichever of the waiting command, the background supervisor or
   `watch` gets there first; one experiment runs once at a time, overlapping
   runs of a hypothesis share the status they restore, and only when none of
-  them added a program.
+  them added a program. A run killed while creating its database is recorded
+  too, as adding nothing.
 - Added round grants for the research agent: `shinka_research grant <dir>
   <hid>... --attempts N --max-cost USD [--allow NS.FIELD]` records the owner's
   approval of one round, and where `SHINKA_RESEARCH_AGENT` is set every `run`
@@ -96,6 +97,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   `shinka_research approve`: the opening spends it in the same lock, `--yes`
   alone is refused, and an interrupted opening is finished only with the
   approval that opened it; a manual `confirm --yes` is unchanged.
+- Added a read-only view of the agent's rounds to the Research workspace API
+  and to `shinka_research brief`: each grant's attempts and the state of their
+  runs (running, ended, ended without a record, or lost), the runs in
+  progress, lockbox approvals, and what waits on the owner (a round over, an
+  unrecorded end, a lost attempt, a grant the agent cannot use and why, an
+  unfinished opening, a ledger that does not match the run log), each with
+  what to do, plus the round's state. It names no process, command or path
+  and none of the validation figures a run keeps for its end.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.

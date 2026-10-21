@@ -24,7 +24,13 @@ from shinka.research.notebook import (
     append_log,
     experiment_dir,
 )
-from shinka.research.rundb import best_score, count_evaluated, run_cost
+from shinka.research.rundb import (
+    DB_FILENAME,
+    best_score,
+    count_evaluated,
+    has_programs,
+    run_cost,
+)
 from shinka.research.state import (
     alive,
     attach_worker,
@@ -49,7 +55,8 @@ def _run_key(entry: Dict[str, Any]) -> str:
     return f"run {entry['id']}"
 
 
-def _end_logged(root: Path, entry: Dict[str, Any]) -> bool:
+def end_logged(root: Path, entry: Dict[str, Any]) -> bool:
+    """Whether the run log already has the end of the run ``entry`` leases."""
     path = Path(root) / RESULTS_LOG
     rows = path.read_text().splitlines()[1:] if path.exists() else []
     key = _run_key(entry)
@@ -67,6 +74,19 @@ def hypothesis_evaluated(root: Path, hyp: Hypothesis) -> int:
         count_evaluated(experiment_dir(root, hyp.id, e.id) / "results")
         for e in hyp.experiments
     )
+
+
+def unbuilt(results: Path) -> bool:
+    """A database a run created and was killed, or is caught, before giving
+    tables."""
+    return (results / DB_FILENAME).exists() and not has_programs(results)
+
+
+def _evaluated_so_far(results: Path) -> int:
+    """count_evaluated, except that the database of a run killed while creating
+    it holds no programs: its end is recorded all the same. Only reconciling
+    a dead run reads it so; damaged stores stay errors elsewhere."""
+    return 0 if unbuilt(results) else count_evaluated(results)
 
 
 def finish_run(
@@ -90,7 +110,7 @@ def finish_run(
         with Notebook.edit(root) as nb:
             hyp = nb.get(hid)
             exp = next(e for e in hyp.experiments if e.id == eid)
-            exp.n_evaluated = count_evaluated(results)
+            exp.n_evaluated = _evaluated_so_far(results)
             # Overlapping runs of a hypothesis share one baseline: it goes back
             # to its earlier status only when the last of them fails and none
             # added a program, and only while still marked running (another
@@ -99,17 +119,31 @@ def finish_run(
                 w["hypothesis"] == hid and w["id"] != work_id and alive(w)
                 for w in work_entries(root)
             )
-            idle = hypothesis_evaluated(root, hyp) == entry["before"]
+            total = sum(
+                _evaluated_so_far(experiment_dir(root, hid, e.id) / "results")
+                for e in hyp.experiments
+            )
+            idle = total == entry["before"]
             if code != 0 and not others and idle and hyp.status is Status.running:
                 hyp.status = Status(entry["previous_status"])
                 previous = entry["previous_verdict"]
                 hyp.verdict = None if previous is None else Verdict(**previous)
         event = "run" if code == 0 else "run-failed"
-        if not _end_logged(root, entry):
-            best = best_score(results)
-            cost = run_cost(results)
+        if not end_logged(root, entry):
+            built = not unbuilt(results)
+            best = best_score(results) if built else None
+            cost = run_cost(results) if built else None
             origin = entry.get("origin") or {}
-            own = cost.recorded_usd - origin.get("cost_before", 0.0)
+            own = (
+                0.0
+                if cost is None
+                else cost.recorded_usd - origin.get("cost_before", 0.0)
+            )
+            spend = (
+                "n/a"
+                if cost is None
+                else f"{'' if cost.known else '>='}${cost.recorded_usd:.2f}"
+            )
             # Who started it goes before the run key, which ends the note.
             append_log(
                 root, hid, eid, event,
@@ -117,7 +151,7 @@ def finish_run(
                 + f"{exp.n_evaluated - before} new programs, "
                 f"{exp.n_evaluated} total, best IS score "
                 f"{'n/a' if best is None else f'{best:.3f}'}, "
-                f"spend {'' if cost.known else '>='}${cost.recorded_usd:.2f}, "
+                f"spend {spend}, "
                 + origin_note(origin, own)
                 + _run_key(entry),
             )  # fmt: skip

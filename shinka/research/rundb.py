@@ -11,6 +11,20 @@ from urllib.parse import quote
 DB_FILENAME = "programs.sqlite"
 
 
+def has_programs(results_dir: Path) -> bool:
+    """Whether the results database exists with its programs table. A run
+    creates the file before its tables, so one caught or killed in between has
+    neither; the readers below still treat that as an error, as for any
+    damaged store, and only reconciling a dead run reads it as empty."""
+    if not (Path(results_dir) / DB_FILENAME).exists():
+        return False
+    ((n,),) = _query(
+        results_dir,
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'programs'",
+    )
+    return bool(n)
+
+
 def count_evaluated(results_dir: Path) -> int:
     """Programs actually evaluated, excluding administrative island copies."""
     if not (Path(results_dir) / DB_FILENAME).exists():

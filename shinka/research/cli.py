@@ -12,7 +12,7 @@ import tempfile
 import sys
 import uuid
 from pathlib import Path
-from typing import Any, Dict, Iterator, List, Optional, Tuple
+from typing import Any, Dict, Iterator, List, Optional
 
 from shinka.research import grants, library
 from shinka.research.notebook import (
@@ -43,6 +43,7 @@ from shinka.research.scaffold import (
     scaffold_experiment,
     verify_experiment,
 )
+from shinka.research.rounds import direction_spend, held, overview
 from shinka.research.runs import (
     RUN_LOG,
     detached,
@@ -163,29 +164,6 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     print(task_dir)
 
 
-def direction_spend(root: Path, nb: Notebook) -> Tuple[float, bool]:
-    """Recorded LLM spend (USD) across every experiment of the direction and
-    whether all of it is priced; unpriced calls make it a lower bound."""
-    costs = [
-        run_cost(experiment_dir(root, h.id, e.id) / "results")
-        for h in nb.hypotheses
-        for e in h.experiments
-    ]
-    return sum(c.recorded_usd for c in costs), all(c.known for c in costs)
-
-
-def _held(root: Path, live: List[Dict[str, Any]]) -> float:
-    """What grant runs in progress may still spend: each stops at its cap."""
-    held = 0.0
-    for w in live:
-        origin = w.get("origin") or {}
-        if "cap" in origin:
-            results = experiment_dir(root, w["hypothesis"], w["experiment"]) / "results"
-            now = run_cost(results).recorded_usd
-            held += max(0.0, origin["cost_before"] + origin["cap"] - now)
-    return held
-
-
 @contextlib.contextmanager
 def _refused() -> Iterator[None]:
     """A refusal from the owner's approvals ends the command with its reason."""
@@ -259,7 +237,7 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
         verify_experiment(root, nb, hyp.id, exp)
         spent = 0.0
         if nb.budget_usd is not None:
-            spent, known = direction_spend(root, nb)
+            spent, known = direction_spend(root, nb, live)
             if spent >= nb.budget_usd:
                 sys.exit(
                     f"direction budget exhausted: {'' if known else '>='}${spent:.2f} "
@@ -296,7 +274,7 @@ def cmd_run(args: argparse.Namespace, extra: List[str]) -> None:
                         "for a grant run; it waits until that run ends"
                     )
                 # Rounded so the subtraction's float noise reads as no room.
-                left = round(nb.budget_usd - spent - _held(root, live), 9)
+                left = round(nb.budget_usd - spent - held(root, live), 9)
                 cap = min(cap, left)
                 if cap <= 0:
                     sys.exit(
@@ -752,7 +730,7 @@ def cmd_brief(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     lib = library.library_root(root)
-    spent, known = direction_spend(root, nb)
+    spent, known = direction_spend(root, nb, live_work(root))
     budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
     out = [f"# Brief: {nb.direction}", ""]
     trials = _trial_count(root, nb)
@@ -776,6 +754,25 @@ def cmd_brief(args: argparse.Namespace) -> None:
             if ev:
                 line += f" ({ev})"
         out.append(line)
+    # The same reading of the rounds the workbench shows.
+    view = overview(root)
+    out += ["", f"## Agent rounds ({view['state']})", ""]
+    for r in view["grants"]:
+        out.append(
+            f"- {r['id']}: {' '.join(r['hypotheses'])}, {r['used']} of "
+            f"{r['attempts']} attempts taken, each stops at ${r['max_cost']:g}"
+        )
+    for item in view["pending"]:
+        about = ", ".join(
+            f"{key} {' '.join(value) if isinstance(value, list) else value}"
+            for key, value in item.items()
+            if key not in ("kind", "do") and value is not None
+        )
+        out.append(
+            f"- pending {item['kind']}{f' ({about})' if about else ''}: {item['do']}"
+        )
+    if not view["grants"] and not view["pending"]:
+        out.append("(no round granted yet)")
     log_path = root / RESULTS_LOG
     if log_path.exists():
         recent = log_path.read_text().splitlines()[1:][-args.recent :]

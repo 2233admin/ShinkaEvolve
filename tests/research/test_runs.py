@@ -20,7 +20,8 @@ import pytest
 from shinka.research import cli
 from shinka.research.grants import AGENT_ENV, LEDGER
 from shinka.research.notebook import RESULTS_LOG, Notebook, Status
-from shinka.research.state import live_work, work_entries
+from shinka.research.runs import watch
+from shinka.research.state import hand_over, live_work, register_work, work_entries
 
 FAKE_SHINKA_RUN = """
 import json, os, sqlite3, sys, time
@@ -69,6 +70,18 @@ from pathlib import Path
 from shinka.research.runs import watch
 
 watch(Path(sys.argv[1]))
+"""
+
+# An agent's run in a window of its own, for two to race for one attempt.
+RACE = """
+import sys
+from shinka.research import cli
+
+cli.SHINKA_RUN = [sys.executable, sys.argv[2]]
+try:
+    cli.main(["run", sys.argv[1], "h001", "--eid", sys.argv[3], "--grant", "g001"])
+except SystemExit as refused:
+    print("refused:", refused.code)
 """
 
 
@@ -279,6 +292,29 @@ def test_a_detached_run_that_cannot_start_leaves_no_lease(
     assert Notebook.load(direction).get("h001").status is Status.selected
 
 
+def test_a_run_killed_while_creating_its_database_is_still_recorded(
+    direction: Path,
+) -> None:
+    # A run that died after creating programs.sqlite and before its tables.
+    work = register_work(
+        direction, "h001", "e01", cmd=[], evaluated_before=0,
+        previous_status="selected", previous_verdict=None, before=0,
+    )  # fmt: skip
+    results = direction / "experiments" / "h001" / "e01" / "results"
+    results.mkdir(parents=True, exist_ok=True)
+    (results / "programs.sqlite").write_bytes(b"")
+    ended = subprocess.Popen([sys.executable, "-c", "pass"])
+    ended.wait()
+    hand_over(direction, work, ended.pid)
+    with Notebook.edit(direction) as nb:
+        nb.get("h001").status = Status.running
+    assert watch(direction) == ["h001/e01: run-failed"]
+    assert work_entries(direction) == []
+    (note,) = [note for event, note in _log(direction) if event == "run-failed"]
+    assert note.startswith("ended unobserved, 0 new programs") and "spend n/a" in note
+    assert Notebook.load(direction).get("h001").status is Status.selected
+
+
 def test_a_foreground_run_still_waits_and_records_its_end(
     direction: Path, monkeypatch
 ) -> None:
@@ -363,6 +399,31 @@ def test_an_agent_run_needs_a_round_the_owner_granted(
     assert [h.status for h in nb.hypotheses] == [Status.selected, Status.selected]
 
 
+def test_two_agent_runs_racing_for_the_last_attempt_start_one_run(
+    direction: Path, example_dir: Path, fake: Path, monkeypatch
+) -> None:
+    # Two experiments, so neither is refused for running the same one.
+    _second_experiment(direction, example_dir)
+    _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(rows=1), e02=dict(rows=1))
+    racers = [
+        subprocess.Popen(
+            [sys.executable, "-c", RACE, str(direction), str(fake), eid],
+            stdout=subprocess.PIPE,
+            text=True,
+        )
+        for eid in ("e01", "e02")
+    ]
+    said = [racer.communicate(timeout=120)[0] for racer in racers]
+    assert [r.returncode for r in racers] == [0, 0]
+    refusals = [out for out in said if "this round is over" in out]
+    assert len(refusals) == 1, said
+    _until(lambda: not work_entries(direction))
+    assert _attempts(direction) == [1]
+    assert [e for e, _ in _log(direction)].count("run") == 1
+
+
 def test_a_round_ends_when_its_attempts_are_used(direction: Path, monkeypatch) -> None:
     grant = _grant(direction, "--attempts", "2", "--max-cost", "0.5")
     monkeypatch.setenv(AGENT_ENV, "1")
@@ -426,6 +487,7 @@ def test_a_grant_refuses_settings_that_defeat_what_is_frozen(direction: Path) ->
     for key in (
         "evo.max_api_costs",
         "job.eval_program_path",
+        "job.extra_cmd_args",
         "db.db_path",
         "evo.no_such_field",
     ):
