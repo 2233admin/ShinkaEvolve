@@ -53,6 +53,10 @@ Agent 服务以 RPC 启动无界面 omp：`omp --mode rpc --no-ui --no-extension
 
 握手实测（2026-10-21，不发提示词，零花费；判据、脚本与逐帧记录在 `E:/projects/ShinkaEvolve-runs/handshake-20261021/`）：RPC 与 ACP 都能作为 Windows 管道子进程在 0.2–2.8 秒内就绪，关 stdin 后退出码 0、不留进程；默认不加载项目技能，覆盖文件能加载；覆盖文件里的数组整体替换全局值（`bash.patterns` 只剩覆盖项，所有者的 14 条全局拒绝规则消失）；`--tools` 只筛内置工具，扩展工具全部保留；所有者的会话没有内置 `bash`，扩展的 `exec_command` 不受 `bash.patterns` 约束；`--no-extensions` 恢复 `bash`；上面的启动行加两件宿主工具后，工具只剩 `find`、`glob`、`grep`、`read`、`web_search`、宿主工具与只写设备的 `write`，技能仍在，没有界面帧。审批请求的形态只有文档依据：RPC 是按按钮文字识别的通用 `select`，ACP 只有 bash 是带类型的 `session/request_permission`。事先写下的决定性判据是审批请求的形态，但按最终配置两种方案都不把审批交给网页（ACP 方案显式 `yolo`、只留拒绝规则，RPC 方案用 `--no-ui` 让需要审批的调用直接失败；这是方案的选择，不是传输做不到），真正区分它们的是 RPC 有宿主工具：第二道防线因此落在服务的 Python 代码里，能用 pytest 测；ACP 方案只能靠命令文字规则，`python -m shinka.cli.run`、`env -u` 与脚本都能绕过。宿主工具只实测到注册被接受。方案经 discuss:steady 两轮与 discuss:divergent 审查。未比较的候选：Claude Agent SDK，文档写明宿主回调 `canUseTool` 逐次批准工具调用与进程内自定义工具，正是事先写下的审批形态；是否纳入待所有者定（tasks.md 4.1）。未实测：模型发起的 `host_tool_call` 往返，作为 4.2 的第一道关，用无凭据独立 profile 下的本地桩模型测，不花费用，不通过就退回 ACP 加 `bash` 与拒绝规则的方案；带消息的会话重启后能否恢复（空会话实测不能：RPC 不落盘，ACP 的 `session/list` 为空、`session/load` 报找不到）。网页 Agent 是否需要执行任意脚本（pandas、git、装包）由所有者决定；需要的话它也能改写账本，只能事后发现。
 
+### 终端定时查看（4.3）
+
+终端 Agent 由 omp 的定时 shell 任务唤醒：`shinka_research watch <dir> --since terminal` 先照旧补记进程已无的运行，再列出这个读者在运行日志里还没读过的消息，有就以 3 退出；任务设 `wakeOn=failure`，所以只有新消息（或 `watch` 自身失败）才发起一次模型回合，其余时候不花模型费用。消息只取 Agent 自己没造成的事件：所有者的 `grant`、`approval` 与任何运行的结束（`run`、`run-failed`）。运行正常结束时由监管进程自己记下结束，`watch` 无可补记，所以只看 `watch` 的补记输出会漏掉最常见的消息。读者读到哪里（读过的完整行数与最后一行）存在 `<dir>/.watch/<名字>.json`，只由 `brief --since` 在打印之后推进，`watch` 从不推进：唤醒没送到 Agent（会话在 shell 任务与模型回合之间关闭、模型出错）时下一次照样报告；位置丢失或日志被手改时全部事件重新算作消息，只会重复、不会漏。网页 Agent（4.2）用同一个 `rounds.news()` 与自己的读者名。方案经 discuss:steady 与 discuss:divergent 审查。没有采用对 `overview()` 的结果做差异比较：读不出时的问题视图会清空授权与批准，Agent 自己的动作（启动授权运行占用预算余量、用掉最后一次尝试、消耗批准）也会改变结果，都造成误唤醒。也没有采用只按时间窗取近期事件：终端关着期间的消息在重开后就看不到了。
+
 ## 验证（不花模型费用）
 
 - 用 PATH 上的假 `shinka_run`（写入数据库行、睡眠、非零退出、挂起）测试：关掉终端后后台运行继续；运行被强杀后 `watch` 恢复状态并只写一次失败事件，两个 `watch` 同时运行仍只写一次；没有授权时 `run` 拒绝；超过尝试次数的一次被拒绝；没有批准记录时 `confirm` 拒绝；并发 `save` 不丢更新；篡改冻结文件或账本后 `run` 拒绝启动。
@@ -69,3 +73,4 @@ Agent 服务以 RPC 启动无界面 omp：`omp --mode rpc --no-ui --no-extension
 - 上游运行器的两个问题，费用口径的实测中发现，未修：续跑后已承诺费用重复计入时会提前锁住“到达上限”，运行空转到卡住检测才再发起提案（22 次实测中 8 次）；上一次运行最后几代失败留下了代目录时，续跑认领这几代失败而卡住，授权运行白白用掉一次尝试。
 - 无界面 omp 带着所有者的全局系统提示（实测系统提示含所有者个人编码助手的规则），网页 Agent 的人设与上下文在 4.2 定。
 - `os.replace` 在 Windows 上遇到读者打开文件时可能失败，原子保存需要重试。
+- 终端重开后的补查依赖 omp 定时任务的 `missedWindow: catch_up_one`（技能里显式写明）；omp 以初始提示启动时会话开始的补查会被跳过，之后是否由定时器补上没有实测。实测只到定时任务以 `--since` 跑一次无消息的 `watch`（退出码 0，不唤醒模型）；Tern 中关闭并重开后的补查要所有者实测一次，无界面 RPC 会话的启动与 Tern 不同，不能代替。以 3 退出的唤醒会发起真实模型回合，没有实测，依据是 discuss:steady 引用的定时任务源码（`pi-schedule/src/prompt.ts`：唤醒提示带退出码与输出），本仓库没有核对。

@@ -124,6 +124,14 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Added DeepSeek V4 Flash and V4 Pro pricing entries to the DeepSeek LLM pricing catalog.
 - Added controls to reduce evaluation stdout bloat: `JobConfig.eval_verbose` suppresses framework evaluation progress output, and `DatabaseConfig.max_stdout_log_chars` can persist only the tail of `stdout_log` metadata while keeping full logs on disk. Thanks @marcopirazzini.
 - Added SLURM support for `numeric_threads_per_job`, applying numeric-library thread caps consistently across local and SLURM evaluation jobs. Thanks @marcopirazzini.
+- Added `shinka_research watch <dir> --since NAME` and `brief <dir> --since NAME`
+  so a scheduled shell job can wake a research agent only on news: the owner's
+  grants and lockbox approvals and the end of any run, which `watch` alone
+  never reported for a run that recorded its own end. `watch --since` exits 3
+  while there is news NAME has not read and never marks it read; `brief
+  --since` lists it and marks it read once printed (`<dir>/.watch/NAME.json`),
+  so a wake that never reached the agent is reported again. The research skill
+  documents the terminal job (`wakeOn=failure`, `missedWindow=catch_up_one`).
 
 ### Changed
 

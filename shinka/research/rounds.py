@@ -18,10 +18,10 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple
 
 from shinka.research import grants
-from shinka.research.notebook import Notebook, experiment_dir
+from shinka.research.notebook import RESULTS_LOG, Notebook, experiment_dir
 from shinka.research.rundb import run_cost
 from shinka.research.runs import end_logged, unbuilt
-from shinka.research.state import alive, work_entries
+from shinka.research.state import alive, read_text, work_entries
 
 
 def direction_spend(
@@ -356,3 +356,38 @@ def _problem(
 def summary(view: Dict[str, Any]) -> Dict[str, Any]:
     """The workspace overview's part of it."""
     return {"state": view["state"], "pending": len(view["pending"])}
+
+
+# Run-log events an agent did not cause and should hear about: the owner's
+# grants and lockbox approvals, and every run's end (a run that ends normally
+# records its own end, so `watch` alone would never see it). The agent's own
+# steps (scaffold, probe, skeptic, verdict, confirm, round-paused) are not news
+# to it, and starting a run writes no event.
+NEWS_EVENTS = ("grant", "approval", "run", "run-failed")
+
+
+def news(
+    root: Path, cursor: Optional[Dict[str, Any]]
+) -> Tuple[List[str], Dict[str, Any]]:
+    """The news events of the run log after ``cursor`` (``None``: from the
+    start), and the cursor at the end of what was read. A cursor is the number
+    of complete event lines read and the last of them; when the log no longer
+    has that line there (rewritten by hand), every event is news again, so a
+    lost or stale cursor can only repeat news, never hide it."""
+    path = Path(root) / RESULTS_LOG
+    # After the header; the last piece has no newline yet: empty, or a line
+    # still being written, left for the next read.
+    rows = read_text(path).split("\n")[1:-1] if path.exists() else []
+    seen = 0
+    if cursor is not None:
+        count, last = cursor.get("rows"), cursor.get("last")
+        if (
+            isinstance(count, int)
+            and 0 < count <= len(rows)
+            and rows[count - 1] == last
+        ):
+            seen = count
+    fresh = [
+        row for row in rows[seen:] if (row.split("\t") + [""] * 4)[3] in NEWS_EVENTS
+    ]
+    return fresh, {"rows": len(rows), "last": rows[-1] if rows else None}

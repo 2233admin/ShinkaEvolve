@@ -695,3 +695,104 @@ def test_an_agent_run_goes_to_the_background(direction: Path, monkeypatch) -> No
     # It returned at once: the run goes on, owned by its supervisor.
     (entry,) = work_entries(direction)
     assert entry["pid"] != os.getpid()
+
+
+# ---- News for the scheduled watch (4.3) -------------------------------------
+
+
+def _watch(root: Path, name: str = "terminal") -> int:
+    """`watch --since NAME`'s exit status: 3 when there is news."""
+    try:
+        cli.main(["watch", str(root), "--since", name])
+    except SystemExit as stopped:
+        return stopped.code
+    return 0
+
+
+def test_watch_reports_news_until_a_brief_reads_it(
+    direction: Path, monkeypatch, capsys
+) -> None:
+    # The scaffold is the agent's own step, not news.
+    assert _watch(direction) == 0
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    cli.main(["approve", str(direction)])
+    capsys.readouterr()
+    assert _watch(direction) == 3
+    out = capsys.readouterr().out
+    assert f"grant: {grant}" in out and "approval: a001" in out
+    # A wake that never reached the agent is reported again; a workspace
+    # names the direction.
+    assert _watch(direction.parent) == 3
+    assert "direction: " in capsys.readouterr().out
+    cli.main(["brief", str(direction), "--since", "terminal"])
+    brief = capsys.readouterr().out
+    assert "## News since the last brief (terminal)" in brief and grant in brief
+    assert _watch(direction) == 0 and capsys.readouterr().out == ""
+    # The agent's own grant run: starting it (and the round-paused it logs) is
+    # no news; its end is.
+    monkeypatch.setenv(AGENT_ENV, "1")
+    _plan(monkeypatch, e01=dict(wait=3))
+    cli.main(["run", str(direction), "h001", "--grant", grant])
+    assert "round-paused" in [event for event, _ in _log(direction)]
+    assert _watch(direction) == 0
+    _until(lambda: _ends(direction) == ["run"])
+    capsys.readouterr()
+    assert _watch(direction) == 3
+    assert " run h001/e01: " in capsys.readouterr().out
+
+
+def test_each_consumer_reads_its_news_on_its_own(direction: Path, capsys) -> None:
+    _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    cli.main(["brief", str(direction), "--since", "terminal"])
+    assert _watch(direction, "terminal") == 0
+    assert _watch(direction, "web") == 3
+
+
+def test_a_rewritten_run_log_makes_every_event_news_again(
+    direction: Path, capsys
+) -> None:
+    grant = _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    cli.main(["brief", str(direction), "--since", "terminal"])
+    log = direction / RESULTS_LOG
+    log.write_text(log.read_text().replace(f"{grant}:", "g999:"))
+    capsys.readouterr()
+    assert _watch(direction) == 3
+    assert "grant: g999" in capsys.readouterr().out
+
+
+def test_a_log_line_still_being_written_waits_for_its_newline(
+    direction: Path,
+) -> None:
+    cli.main(["brief", str(direction), "--since", "terminal"])
+    log = direction / RESULTS_LOG
+    with log.open("a") as f:
+        f.write("2026-10-21T00:00:00+00:00\t\t\tgrant\tg9")
+    assert _watch(direction) == 0
+    with log.open("a") as f:
+        f.write("99: written\n")
+    assert _watch(direction) == 3
+
+
+def test_a_consumer_name_is_a_plain_word(direction: Path) -> None:
+    for name in ("../ledger", "Terminal", ""):
+        with pytest.raises(SystemExit) as refused:
+            cli.main(["watch", str(direction), "--since", name])
+        assert refused.value.code == 2
+
+
+def test_a_cursor_that_cannot_be_read_is_a_failure_not_news(direction: Path) -> None:
+    # Read as "nothing read yet", an I/O fault would wake the agent on every
+    # tick; as a failure it reaches the job's failure handling.
+    (direction / ".watch" / "terminal.json").mkdir(parents=True)
+    with pytest.raises(OSError):
+        cli.main(["watch", str(direction), "--since", "terminal"])
+
+
+def test_a_cursor_that_is_not_json_repeats_the_news_once(direction: Path) -> None:
+    _grant(direction, "--attempts", "1", "--max-cost", "0.5")
+    seen = direction / ".watch" / "terminal.json"
+    seen.parent.mkdir()
+    seen.write_text("not a cursor")
+    assert _watch(direction) == 3
+    cli.main(["brief", str(direction), "--since", "terminal"])
+    assert _watch(direction) == 0

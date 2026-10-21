@@ -49,7 +49,7 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
   `evo.max_api_costs`: the run stops at the grant's cap or at the budget left.
   When the grant's attempts are taken (`round-paused` in `results.tsv`), the
   round is over: finish its runs, report, and put the next round to the
-  human. Never edit `ledger.json`, `.work.json`, `notebook.json`,
+  human. Never edit `ledger.json`, `.work.json`, `.watch/`, `notebook.json`,
   `results.tsv` or a task's `shinka.yaml` by hand, never call `shinka_run`
   directly, and never unset the flag.
 - **The lockbox is the human's.** Never run `confirm` unless the human says to
@@ -160,6 +160,26 @@ shinka_research run <dir> <hid> --grant <id> --num-generations 40 -- \
 A further attempt on the same experiment resumes it, so give it a higher
 `--num-generations` or it ends at once and the attempt is spent.
 
+To keep watch from the terminal between rounds, read the direction once with
+`shinka_research brief <dir> --since terminal`, then schedule a shell job that
+wakes you only on news (the human's grants and lockbox approvals, and the end
+of any run). Shell jobs run under Git Bash on Windows, so give the console
+script's absolute path, and allow for the 120 s `watch` may wait for the
+direction's lock:
+```
+schedule action=create kind=shell every=10m timeoutMs=180000 wakeOn=failure
+  missedWindow=catch_up_one
+  command="<repo>/.venv/Scripts/shinka_research.exe watch <dir> --since terminal"
+  failurePrompt="Exit 3: there is news for <dir>. Run `shinka_research brief
+  <dir> --since terminal` and act within the current round. Any other exit:
+  watch itself failed; tell the human, and disable this job if it fails again."
+```
+`watch --since` exits 3 while there is news you have not read and never marks
+it read; `brief --since` lists it and marks it read once printed, so a wake
+that never reached you is reported again on the next tick. With
+`missedWindow=catch_up_one`, a job missed while the session was closed runs
+once when it opens again.
+
 ### 5. Ablate (stage 4)
 Remove one component of the best program at a time and score each variant:
 `shinka_research probe <dir> <hid> ablation_x.py`. Record what carries the
@@ -217,8 +237,9 @@ research started.
 ```
 <dir>/program.md            human: direction, constraints, budget, autonomy
 <dir>/notebook.json         hypotheses, statuses, experiments, verdicts, budget
-<dir>/results.tsv           one line per event (scaffold, run, probe, skeptic, verdict, confirm, grant, round-paused)
+<dir>/results.tsv           one line per event (scaffold, run, probe, skeptic, verdict, confirm, grant, approval, round-paused)
 <dir>/ledger.json           the human's round grants and the attempts taken from them
+<dir>/.watch/<name>.json    what `brief --since <name>` has read of results.tsv
 <dir>/hypotheses/<hid>.md
 <dir>/experiments/<hid>/<eid>/{task,results,skeptic.md,best_program.py}
 <dir>/data/dev.csv          development data (the lockbox tail is not in it)

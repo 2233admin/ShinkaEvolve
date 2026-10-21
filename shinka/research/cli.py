@@ -7,6 +7,7 @@ import contextlib
 import io
 import json
 import os
+import re
 import subprocess
 import tempfile
 import sys
@@ -46,7 +47,7 @@ from shinka.research.scaffold import (
     scaffold_experiment,
     verify_experiment,
 )
-from shinka.research.rounds import direction_spend, held, overview
+from shinka.research.rounds import direction_spend, held, news, overview
 from shinka.research.runs import (
     RUN_LOG,
     detached,
@@ -63,6 +64,7 @@ from shinka.research.state import (
     lock_path,
     record_exit,
     register_work,
+    read_text,
 )
 
 PROGRAM_TEMPLATE = """# Research program
@@ -782,9 +784,12 @@ def _lockbox(split: DataSplit) -> str:
 
 
 def cmd_brief(args: argparse.Namespace) -> None:
-    """Digest for the researcher agent before proposing the next round."""
+    """Digest for the researcher agent before proposing the next round. With
+    ``--since``, it also lists the news that consumer has not read and marks it
+    read, after printing it."""
     root = Path(args.dir)
     nb = Notebook.load(root)
+    fresh, cursor = news(root, _seen(root, args.since)) if args.since else ([], None)
     lib = library.library_root(root)
     spent, known = direction_spend(root, nb, live_work(root))
     budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
@@ -799,6 +804,9 @@ def cmd_brief(args: argparse.Namespace) -> None:
         f"- Library: {len(library.wiki_pages(lib))} wiki pages, "
         f"{len(pend)} raw sources not compiled yet ({lib})"
     )
+    if args.since:
+        out += ["", f"## News since the last brief ({args.since})", ""]
+        out += [f"- {_news_line(row)}" for row in fresh] or ["(none)"]
     out += ["", "## Hypotheses", ""]
     if not nb.hypotheses:
         out.append("(none yet)")
@@ -835,6 +843,47 @@ def cmd_brief(args: argparse.Namespace) -> None:
         out += ["", f"## Last {len(recent)} events ({RESULTS_LOG})", ""]
         out += [f"    {line}" for line in recent]
     print("\n".join(out))
+    if args.since:
+        # Only once printed: a brief that never reached its reader leaves the
+        # news unread, so the next watch reports it again.
+        seen = _seen_path(root, args.since)
+        seen.parent.mkdir(exist_ok=True)
+        atomic_write_text(seen, json.dumps(cursor))
+
+
+# Each news consumer's cursor into the run log (`brief --since NAME`).
+WATCH_DIR = ".watch"
+
+
+def _consumer(name: str) -> str:
+    """A news consumer's name, which names its cursor file."""
+    if not re.fullmatch(r"[a-z0-9][a-z0-9-]{0,31}", name):
+        raise argparse.ArgumentTypeError(
+            f"{name!r}: use lowercase letters, digits and dashes, e.g. terminal"
+        )
+    return name
+
+
+def _seen_path(root: Path, name: str) -> Path:
+    return Path(root) / WATCH_DIR / f"{name}.json"
+
+
+def _seen(root: Path, name: str) -> Optional[Dict[str, Any]]:
+    """A consumer's cursor: none when it has not read any yet, or when its
+    file is not a cursor (repeats news rather than hiding it; the next brief
+    rewrites it). Any other read error propagates: reported as news it would
+    wake the agent on every tick, while as a failure it reaches the job's
+    failure handling."""
+    try:
+        cursor = json.loads(read_text(_seen_path(root, name)))
+    except (FileNotFoundError, ValueError):
+        return None
+    return cursor if isinstance(cursor, dict) else None
+
+
+def _news_line(row: str) -> str:
+    time, hid, eid, event, note = (row.split("\t") + [""] * 5)[:5]
+    return f"{time} {event}" + (f" {hid}/{eid}" if hid else "") + f": {note}"
 
 
 def _evaluated(root: Path, hid: str, eid: str) -> int:
@@ -861,16 +910,29 @@ def cmd_status(args: argparse.Namespace) -> None:
 
 
 def cmd_watch(args: argparse.Namespace) -> None:
-    """Prints one line per run whose end it recorded, and nothing otherwise."""
+    """Prints one line per run whose end it recorded, and nothing otherwise.
+    With ``--since``, it prints instead the news that consumer has not read
+    with ``brief --since`` and exits 3 when there is any; it never marks news
+    read, so a wake that never reached the agent is reported again."""
     path = Path(args.dir).resolve()
     if Notebook.path(path).exists():
         roots, named = [path], False
     else:
         roots = [d for d in sorted(path.iterdir()) if Notebook.path(d).exists()]
         named = True
+    unread = False
     for root in roots:
-        for line in watch(root):
+        recorded = watch(root)
+        lines = (
+            [_news_line(row) for row in news(root, _seen(root, args.since))[0]]
+            if args.since
+            else recorded
+        )
+        for line in lines:
             print(f"{root.name}: {line}" if named else line)
+        unread = unread or bool(lines and args.since)
+    if unread:
+        sys.exit(3)
 
 
 def cmd_ui(args: argparse.Namespace) -> None:
@@ -1020,6 +1082,12 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("brief", help="Digest of the direction for the next round")
     s.add_argument("dir")
     s.add_argument("--recent", type=int, default=15)
+    s.add_argument(
+        "--since",
+        type=_consumer,
+        metavar="NAME",
+        help="also list the news consumer NAME has not read, and mark it read",
+    )
     s.set_defaults(func=cmd_brief)
 
     s = sub.add_parser("status", help="Show the notebook")
@@ -1062,6 +1130,13 @@ def build_parser() -> argparse.ArgumentParser:
         "(a direction, or every direction of a workspace)",
     )
     s.add_argument("dir")
+    s.add_argument(
+        "--since",
+        type=_consumer,
+        metavar="NAME",
+        help="print the news consumer NAME has not read with `brief --since` "
+        "(owner grants and approvals, run ends) and exit 3 if there is any",
+    )
     s.set_defaults(func=cmd_watch)
 
     s = sub.add_parser("ui", help="Read-only research UI in the browser")
