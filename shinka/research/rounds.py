@@ -358,11 +358,12 @@ def summary(view: Dict[str, Any]) -> Dict[str, Any]:
     return {"state": view["state"], "pending": len(view["pending"])}
 
 
-# Run-log events an agent did not cause and should hear about: the owner's
-# grants and lockbox approvals, and every run's end (a run that ends normally
-# records its own end, so `watch` alone would never see it). The agent's own
-# steps (scaffold, probe, skeptic, verdict, confirm, round-paused) are not news
-# to it, and starting a run writes no event.
+# Run-log events an agent waiting between steps must hear about, because they
+# happen without it: the owner's grants and lockbox approvals, and every run's
+# end, its own runs' included (a run that ends normally records its own end,
+# so `watch` alone would never see it). The agent's own steps (scaffold, probe,
+# skeptic, verdict, confirm, round-paused) are not news to it, and starting a
+# run writes no event.
 NEWS_EVENTS = ("grant", "approval", "run", "run-failed")
 
 

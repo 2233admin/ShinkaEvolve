@@ -178,7 +178,8 @@ schedule action=create kind=shell every=10m timeoutMs=180000 wakeOn=failure
 it read; `brief --since` lists it and marks it read once printed, so a wake
 that never reached you is reported again on the next tick. With
 `missedWindow=catch_up_one`, a job missed while the session was closed runs
-once when it opens again.
+once at the next session start, unless omp was started with an initial
+prompt, which skips that firing; the next tick then reports the news.
 
 ### 5. Ablate (stage 4)
 Remove one component of the best program at a time and score each variant:

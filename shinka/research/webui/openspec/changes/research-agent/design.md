@@ -55,7 +55,7 @@ Agent 服务以 RPC 启动无界面 omp：`omp --mode rpc --no-ui --no-extension
 
 ### 终端定时查看（4.3）
 
-终端 Agent 由 omp 的定时 shell 任务唤醒：`shinka_research watch <dir> --since terminal` 先照旧补记进程已无的运行，再列出这个读者在运行日志里还没读过的消息，有就以 3 退出；任务设 `wakeOn=failure`，所以只有新消息（或 `watch` 自身失败）才发起一次模型回合，其余时候不花模型费用。消息只取 Agent 自己没造成的事件：所有者的 `grant`、`approval` 与任何运行的结束（`run`、`run-failed`）。运行正常结束时由监管进程自己记下结束，`watch` 无可补记，所以只看 `watch` 的补记输出会漏掉最常见的消息。读者读到哪里（读过的完整行数与最后一行）存在 `<dir>/.watch/<名字>.json`，只由 `brief --since` 在打印之后推进，`watch` 从不推进：唤醒没送到 Agent（会话在 shell 任务与模型回合之间关闭、模型出错）时下一次照样报告；位置丢失或日志被手改时全部事件重新算作消息，只会重复、不会漏。网页 Agent（4.2）用同一个 `rounds.news()` 与自己的读者名。方案经 discuss:steady 与 discuss:divergent 审查。没有采用对 `overview()` 的结果做差异比较：读不出时的问题视图会清空授权与批准，Agent 自己的动作（启动授权运行占用预算余量、用掉最后一次尝试、消耗批准）也会改变结果，都造成误唤醒。也没有采用只按时间窗取近期事件：终端关着期间的消息在重开后就看不到了。
+终端 Agent 由 omp 的定时 shell 任务唤醒：`shinka_research watch <dir> --since terminal` 先照旧补记进程已无的运行，再列出这个读者在运行日志里还没读过的消息，有就以 3 退出；任务设 `wakeOn=failure`，所以只有新消息（或 `watch` 自身失败）才发起一次模型回合，其余时候不花模型费用。消息只取 Agent 等待时会发生、必须通知它的事件：所有者的 `grant`、`approval` 与任何运行的结束（`run`、`run-failed`，Agent 自己发起的运行也算，结束发生在它等待的时候）；Agent 自己的步骤（`scaffold`、`probe`、`skeptic`、`verdict`、`confirm`、`round-paused`）不算，启动运行不写事件。运行正常结束时由监管进程自己记下结束，`watch` 无可补记，所以只看 `watch` 的补记输出会漏掉最常见的消息。读者读到哪里（读过的完整行数与最后一行）存在 `<dir>/.watch/<名字>.json`，只由 `brief --since` 在打印之后推进，`watch` 从不推进：唤醒没送到 Agent（会话在 shell 任务与模型回合之间关闭、模型出错）时下一次照样报告；位置丢失或日志被手改时全部事件重新算作消息，只会重复、不会漏。网页 Agent（4.2）用同一个 `rounds.news()` 与自己的读者名。方案经 discuss:steady 与 discuss:divergent 审查。没有采用对 `overview()` 的结果做差异比较：读不出时的问题视图会清空授权与批准，Agent 自己的动作（启动授权运行占用预算余量、用掉最后一次尝试、消耗批准）也会改变结果，都造成误唤醒。也没有采用只按时间窗取近期事件：终端关着期间的消息在重开后就看不到了。
 
 ## 验证（不花模型费用）
 
