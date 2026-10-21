@@ -138,11 +138,12 @@ def test_the_view_tells_each_run_and_what_waits_on_the_owner(direction: Path) ->
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
         query = urllib.parse.urlencode({"direction": direction.name})
-        served = _get(base, f"/api/snapshot?{query}")["rounds"]
+        snapshot = _get(base, f"/api/snapshot?{query}")
         (row,) = _get(base, "/api/workspace")["directions"]
     finally:
         server.shutdown()
         server.server_close()
+    served = snapshot["rounds"]
     assert served["state"] == "running"
     assert [r["state"] for r in served["grants"][0]["runs"]] == [
         "ended", "running", "unrecorded",
@@ -152,6 +153,9 @@ def test_the_view_tells_each_run_and_what_waits_on_the_owner(direction: Path) ->
     # Nothing a lease keeps for itself: its held-out evidence, process or paths.
     for leaked in (str(HELD_OUT), '"pid"', '"cmd"', str(direction)):
         assert leaked not in text
+    # The timeline tells who ran it, without the key that records it once.
+    (ended,) = [e for e in snapshot["events"] if e["event"] == "run"]
+    assert ended["note"].endswith("$0.00 of $0.5")
 
 
 def test_a_ledger_that_does_not_match_the_log_is_reported_without_details(

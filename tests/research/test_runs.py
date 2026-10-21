@@ -292,6 +292,27 @@ def test_a_detached_run_that_cannot_start_leaves_no_lease(
     assert Notebook.load(direction).get("h001").status is Status.selected
 
 
+def test_the_commands_late_hand_over_leaves_the_supervisor_in_charge(
+    direction: Path,
+) -> None:
+    work = register_work(
+        direction, "h001", "e01", cmd=[], evaluated_before=0,
+        previous_status="selected", previous_verdict=None, before=0,
+    )  # fmt: skip
+    sleep = [sys.executable, "-c", "import time; time.sleep(60)"]
+    supervisor, launcher = subprocess.Popen(sleep), subprocess.Popen(sleep)
+    try:
+        # The supervisor takes the run over before the command that started it
+        # gets to hand it over.
+        hand_over(direction, work, supervisor.pid)
+        hand_over(direction, work, launcher.pid, replacing=os.getpid())
+        assert work_entries(direction)[0]["pid"] == supervisor.pid
+    finally:
+        for process in (supervisor, launcher):
+            process.kill()
+            process.wait()
+
+
 def test_a_run_killed_while_creating_its_database_is_still_recorded(
     direction: Path,
 ) -> None:
@@ -568,6 +589,17 @@ def test_a_changed_ledger_stops_grant_runs_but_not_manual_ones(
         [r for r in records if r["kind"] != "attempt"],
         # More attempts than granted.
         [dict(r, attempts=5) if r["kind"] == "grant" else r for r in records],
+        # The same terms with a value of the wrong type.
+        [dict(r, attempts="2") if r["kind"] == "grant" else r for r in records],
+        # An attempt without its run.
+        [
+            {k: v for k, v in r.items() if k != "work"} if r["kind"] == "attempt" else r
+            for r in records
+        ],
+        # A run id that cannot be one: a list.
+        [dict(r, work=[r["work"]]) if r["kind"] == "attempt" else r for r in records],
+        # Not a list of records at all.
+        {"grants": records},
     ):
         (direction / LEDGER).write_text(json.dumps(changed))
         with pytest.raises(SystemExit, match="does not match the run log"):

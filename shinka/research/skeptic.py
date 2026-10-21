@@ -181,21 +181,30 @@ def _oos_returns(
     return rets.iloc[:cut], rets.iloc[cut:]
 
 
+def trial_count(root: Path, nb: Notebook) -> int:
+    """The direction's trials as the DSR counts them: every evaluated program
+    in the run databases plus every probe. A run in progress counts as it goes;
+    the notebook's copy is written only once it returns. `brief` and `status`
+    report this same count."""
+    return sum(
+        rundb.count_evaluated(experiment_dir(root, h.id, e.id) / "results") + e.n_probed
+        for h in nb.hypotheses
+        for e in h.experiments
+    )
+
+
 def direction_trials(root: Path, nb: Notebook, ppy: float) -> tuple[int, float]:
     """(number of trials, variance of per-period trial Sharpe) for the whole
     direction: every evaluated program plus every probe."""
     scores: List[float] = []
-    n_trials = 0
     for h in nb.hypotheses:
         for e in h.experiments:
-            n_trials += e.n_probed
             rd = experiment_dir(root, h.id, e.id) / "results"
             if (rd / rundb.DB_FILENAME).exists():
                 scores.extend(rundb.correct_scores(rd))
-                n_trials += rundb.count_evaluated(rd)
     per_period = np.asarray(scores) / math.sqrt(ppy)
     var_trials = float(per_period.var(ddof=1)) if len(per_period) > 1 else 0.0
-    return max(n_trials, 1), var_trials
+    return max(trial_count(root, nb), 1), var_trials
 
 
 def _experiment_pbo(

@@ -35,6 +35,7 @@ from shinka.research.skeptic import (
     confirm_target,
     decide,
     render_report,
+    trial_count,
 )
 from shinka.research.scaffold import (
     SHINKA_CONFIG_FILENAME,
@@ -733,7 +734,7 @@ def cmd_brief(args: argparse.Namespace) -> None:
     spent, known = direction_spend(root, nb, live_work(root))
     budget = f" of ${nb.budget_usd:.2f}" if nb.budget_usd is not None else ""
     out = [f"# Brief: {nb.direction}", ""]
-    trials = _trial_count(root, nb)
+    trials = trial_count(root, nb)
     out.append(f"- Trials so far: {trials} (raise the bar for 'supported')")
     out.append(f"- LLM spend: {'' if known else '>='}${spent:.2f}{budget}")
     if nb.data:
@@ -785,22 +786,11 @@ def _evaluated(root: Path, hid: str, eid: str) -> int:
     return count_evaluated(experiment_dir(root, hid, eid) / "results")
 
 
-def _trial_count(root: Path, nb: Notebook) -> int:
-    """Every evaluated program in the run databases plus every probe, as the
-    skeptic counts trials for the DSR; a run in progress counts as it goes,
-    while the notebook's copy is written only once it returns."""
-    return sum(
-        _evaluated(root, h.id, e.id) + e.n_probed
-        for h in nb.hypotheses
-        for e in h.experiments
-    )
-
-
 def cmd_status(args: argparse.Namespace) -> None:
     root = Path(args.dir)
     nb = Notebook.load(root)
     print(f"Direction: {nb.direction}")
-    print(f"Total trials: {_trial_count(root, nb)}")
+    print(f"Total trials: {trial_count(root, nb)}")
     if nb.data:
         print(
             f"Lockbox: {_lockbox(nb.data)} (from {nb.data.lockbox_start}, "

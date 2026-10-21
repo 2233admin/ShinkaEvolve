@@ -9,6 +9,7 @@ never receives data it must not show.
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 import urllib.parse
 import webbrowser
@@ -104,6 +105,11 @@ def _body(root: Path, hid: str) -> str:
     return path.read_text() if path.exists() else ""
 
 
+# The key a run's end event ends with, there so the end is recorded once; it
+# means nothing to a reader of the timeline.
+_RUN_KEY = re.compile(r",? run [0-9a-f]{32}$")
+
+
 def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, Any]]:
     path = _confined(root, root / RESULTS_LOG)
     if not path.exists():
@@ -112,6 +118,8 @@ def _events(root: Path, nb: Notebook, limit: int) -> List[Dict[str, Any]]:
     rows = []
     for line in path.read_text().splitlines()[1:][-limit:]:
         time, hid, eid, event, note = (line.split("\t", 4) + [""] * 5)[:5]
+        if event in ("run", "run-failed"):
+            note = _RUN_KEY.sub("", note)
         # skeptic and verdict notes quote validation figures; a re-run clears
         # the verdict, so an old verdict note must hide again too. The page
         # words the withheld note in the reader's language.

@@ -110,8 +110,9 @@ def overview(root: Path) -> Dict[str, Any]:
         if view["problem"] == "mismatch":
             # A run may have started or ended between two reads.
             view = _overview(Path(root))
-    except sqlite3.Error:
-        # A results database it cannot read, such as a damaged one.
+    except (sqlite3.Error, OSError, ValueError, KeyError, TypeError):
+        # A file it cannot read, or one of an unexpected shape: a damaged
+        # results database, a grant naming a hypothesis the notebook lacks.
         return _problem("unreadable", "files", [])
     return view
 

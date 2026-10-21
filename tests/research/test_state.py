@@ -11,11 +11,12 @@ import sys
 import threading
 from pathlib import Path
 
+import psutil
 import pytest
 
 from shinka.research import cli
 from shinka.research.notebook import Experiment, Notebook, Status
-from shinka.research.state import atomic_write_text, file_lock
+from shinka.research.state import alive, atomic_write_text, file_lock
 
 WRITER = """
 import json, sys
@@ -220,3 +221,35 @@ def test_a_challenge_that_raced_another_change_records_nothing(
     assert nb.get("h001").status is Status.running
     assert nb.get("h001").experiments[0].skeptic is None
     assert not (root / "experiments" / "h001" / "e01" / "skeptic.md").exists()
+
+
+class _Inaccessible:
+    def __init__(self, pid: int) -> None:
+        self.pid = pid
+
+    def create_time(self) -> float:
+        raise psutil.AccessDenied(self.pid)
+
+
+class _Zombie:
+    def __init__(self, pid: int) -> None:
+        self.pid = pid
+
+    def create_time(self) -> float:
+        return 5.0
+
+    def status(self) -> str:
+        return psutil.STATUS_ZOMBIE
+
+
+def test_a_run_whose_process_cannot_be_inspected_is_not_taken_for_over(
+    monkeypatch,
+) -> None:
+    # So confirm keeps the lockbox sealed while it may still be adding trials.
+    monkeypatch.setattr(psutil, "Process", _Inaccessible)
+    assert alive({"pid": 1234, "created": 5.0})
+
+
+def test_a_finished_process_not_yet_reaped_is_over(monkeypatch) -> None:
+    monkeypatch.setattr(psutil, "Process", _Zombie)
+    assert not alive({"pid": 1234, "created": 5.0})

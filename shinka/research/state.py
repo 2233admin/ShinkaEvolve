@@ -207,8 +207,8 @@ def attach_worker(root: Path, work_id: str, pid: int) -> None:
     """Add a process doing the work: it may go on adding trials after the
     command that registered the work is gone. On Windows it is usually a
     launcher (a console script's .exe, a venv's python.exe) with the
-    interpreter behind it; a launcher waits for that interpreter and takes it
-    down when killed, so the launcher's pid stands for both."""
+    interpreter behind it; the launcher waits while its interpreter runs, so
+    its pid is alive for as long as the run is."""
     try:
         worker = {"pid": pid, "created": psutil.Process(pid).create_time()}
     except psutil.Error:
@@ -222,14 +222,21 @@ def attach_worker(root: Path, work_id: str, pid: int) -> None:
 
 
 def alive(entry: Dict[str, Any]) -> bool:
-    """Whether any process of a work entry is still running."""
+    """Whether any process of a work entry is still running. A process that
+    cannot be inspected counts as running, so a run is never taken for over
+    (and its trials frozen) while it may still be adding to them; a zombie,
+    already finished but not yet reaped, does not."""
 
     def running(process: Dict[str, Any]) -> bool:
         try:
-            started = psutil.Process(process["pid"]).create_time()
-        except psutil.Error:
+            handle = psutil.Process(process["pid"])
+            if abs(handle.create_time() - process["created"]) >= 1.0:
+                return False  # the pid now belongs to another process
+            return handle.status() != psutil.STATUS_ZOMBIE
+        except psutil.NoSuchProcess:
             return False
-        return abs(started - process["created"]) < 1.0
+        except psutil.Error:
+            return True
 
     return any(running(p) for p in [entry, *entry.get("workers", [])])
 

@@ -232,23 +232,24 @@ def verify(
                 ledger.uses[aid] = record
             else:
                 raise Refused(f"{changed}: a record of unknown kind")
-    except (AttributeError, KeyError, TypeError) as error:
+        for gid, taken in ledger.attempts.items():
+            if len(taken) > ledger.grants[gid]["attempts"]:
+                raise Refused(f"{changed}: {gid} has more attempts than it allows")
+        works = {
+            (a["grant"], a["work"]) for taken in ledger.attempts.values() for a in taken
+        }
+        ran = [(gid, work) for work, (gid, _event) in ended_attempts(rows).items()]
+        ran += [
+            (w["origin"]["grant"], w["id"])
+            for w in leases
+            if (w.get("origin") or {}).get("grant")
+        ]
+        for gid, work in ran:
+            if (gid, work) not in works:
+                raise Refused(f"{changed}: a run of {gid} has no attempt in the ledger")
+    except (AttributeError, KeyError, TypeError, ValueError) as error:
+        # A record of the wrong shape, or with a value of the wrong type.
         raise Refused(f"{changed}: a record without its fields ({error!r})")
-    for gid, taken in ledger.attempts.items():
-        if len(taken) > ledger.grants[gid]["attempts"]:
-            raise Refused(f"{changed}: {gid} has more attempts than it allows")
-    works = {
-        (a["grant"], a["work"]) for taken in ledger.attempts.values() for a in taken
-    }
-    ran = [(gid, work) for work, (gid, _event) in ended_attempts(rows).items()]
-    ran += [
-        (w["origin"]["grant"], w["id"])
-        for w in leases
-        if (w.get("origin") or {}).get("grant")
-    ]
-    for gid, work in ran:
-        if (gid, work) not in works:
-            raise Refused(f"{changed}: a run of {gid} has no attempt in the ledger")
     return ledger
 
 
@@ -287,13 +288,26 @@ def _passthrough(extra: List[str], grant: Dict[str, Any]) -> List[str]:
 
 def settings_kept(root: Path, grant: Dict[str, Any], hid: str, eid: str) -> bool:
     """Whether the experiment's shinka.yaml is as the grant found it, or, for an
-    experiment scaffolded since, as scaffold writes it (the task's message)."""
+    experiment scaffolded since, as scaffold writes it (the task's message). A
+    file gone, unreadable or of another shape is not as granted."""
     path = experiment_dir(root, hid, eid) / "task" / SHINKA_CONFIG_FILENAME
     kept = grant["configs"].get(f"{hid}/{eid}")
-    if kept is not None:
-        return file_sha256(path) == kept
-    config = yaml.safe_load(path.read_text()) or {}
-    return set(config) <= {"evo"} and set(config.get("evo") or {}) <= {"task_sys_msg"}
+    try:
+        if kept is not None:
+            return file_sha256(path) == kept
+        config = yaml.safe_load(path.read_text())
+    except (OSError, UnicodeDecodeError, yaml.YAMLError):
+        return False
+    if config is None:
+        config = {}
+    if not isinstance(config, dict):
+        return False
+    evo = config.get("evo") or {}
+    return (
+        isinstance(evo, dict)
+        and set(config) <= {"evo"}
+        and set(evo) <= {"task_sys_msg"}
+    )
 
 
 def check_run(
