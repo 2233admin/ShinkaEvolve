@@ -132,6 +132,14 @@ All notable changes to `shinka-evolve` are documented in this file.
   --since` lists it and marks it read once printed (`<dir>/.watch/NAME.json`),
   so a wake that never reached the agent is reported again. The research skill
   documents the terminal job (`wakeOn=failure`, `missedWindow=catch_up_one`).
+- Added a "Lesson for the skill" section to the research report template: at
+  most one lesson per round about how to work rather than about the market
+  (when it applies, the lesson, the `results.tsv` events that show it, and a
+  confidence), or "None". It is a candidate for the owner to review, not an
+  adopted rule: the research skill instructs the agent not to act on a lesson
+  from an earlier report (guidance only, not enforced in code), and the owner
+  decides whether the skill changes. Adapted from google-research/harness2's
+  lesson entries, without its automatic adoption.
 
 ### Changed
 

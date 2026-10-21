@@ -25,3 +25,6 @@
 
 ## Next hypotheses
 <Ranked, each following from a verdict above.>
+
+## Lesson for the skill
+<At most one lesson from this round about how to work, not about the market (that belongs in finding pages): when it applies, the lesson, the `results.tsv` events that show it, and your confidence (low / medium / high). Write "None" when the round taught nothing. It is a candidate for the human to review, not an adopted rule.>

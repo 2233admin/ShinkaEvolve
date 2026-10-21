@@ -210,7 +210,11 @@ you can, list what needs the human, and
 `shinka_research library log <dir> lint "<summary>"`.
 
 ### 9. Report, then next round
-Write `REPORT.md` (template: `templates/report.md`). **Checkpoint** (unless
+Write `REPORT.md` (template: `templates/report.md`). Its last section holds at
+most one lesson from this round about how to work, not about the market (that
+belongs in finding pages), with the `results.tsv` events that show it. It is
+for the human to review, not a rule: never act on a lesson from an earlier
+report; the human decides whether this skill changes. **Checkpoint** (unless
 autonomous, or until the granted round is over in authorized-round mode).
 Then `brief` again: new hypotheses should follow from verdicts
 and the wiki. Every experiment raises the trial count and the bar for
