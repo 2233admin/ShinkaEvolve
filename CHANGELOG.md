@@ -86,10 +86,12 @@ All notable changes to `shinka-evolve` are documented in this file.
   <hid>... --attempts N --max-cost USD [--allow NS.FIELD]` records the owner's
   approval of one round, and where `SHINKA_RESEARCH_AGENT` is set every `run`
   needs `--grant`, takes one of its attempts, always runs in the background,
-  passes `shinka_run` only the `--set` keys the grant allows and stops at the
-  smaller of the grant's cap and the direction budget left after the stops of
-  grant runs in progress (counted on top of what a resumed experiment already
-  spent). A used-up grant pauses the round, logged once. Grants and attempts
+  passes `shinka_run` only the `--set` keys the grant allows and is capped at
+  the smaller of the grant's cap and the direction budget left after the caps
+  of grant runs in progress (counted on top of what a resumed experiment
+  already spent; a soft cap: shinka_run stops proposing once committed cost
+  reaches it, and work in flight still finishes). A used-up grant pauses the
+  round, logged once. Grants and attempts
   live in `ledger.json`, checked against `results.tsv`, so a ledger changed by
   hand stops grant runs; manual runs are unchanged and their end events say
   "manual run", and `probe` now logs each probe when it starts. Opening the
