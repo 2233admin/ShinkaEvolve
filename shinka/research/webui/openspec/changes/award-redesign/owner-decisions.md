@@ -69,4 +69,14 @@
 | 组件路线 | A：react-aria-components 1.22.1 取代 Carbon React，只提供交互与无障碍行为，外观全部来自项目 token 与项目样式。这改变了 `brief.md:28`「Carbon 只承担交互与无障碍行为」；`brief.md` 与 `direction-preview.json` 哈希绑定，原文不改，以本节为准 |
 | 提示条与术语提示 | Carbon `InlineNotification` 换成项目组件 `Notice`（静态 `role="status"`，无关闭按钮），`DefinitionTooltip` 换成 react-aria 的 `Tooltip`；没有代码使用的 Carbon Charts 一并移除 |
 | 管线许可证检查（默认） | 管线 component fit 读不到 react-aria 的许可证是管线缺陷：按 svg-d3 的先例在克隆仓库修复，再快进合入本机检出并保留其中未提交的改动 |
-| 手机检查器抽屉（默认） | 上拉把手与点按「展开」两种方式都支持，依据已评审的 `hifi/captures/phone-analysis.png`（同时画了把手与按钮）；在 6.1 实现 |
+| 手机检查器抽屉（默认） | 上拉把手与点按「展开」两种方式都支持，依据已评审的 `hifi/captures/phone-analysis.png`（同时画了把手与按钮）；在 6.1 实现。同日随手机一并取消，见下节 |
+
+## 手机（2026-10-22）
+
+所有者在 6.1 开工前说明「手机用不到」。
+
+| 事项 | 决定 |
+|---|---|
+| 手机 | 不再做手机专用的设计、实现与验收，验收宽度为 1920、1440、1024。这取代 `brief.md:23,52` 的 390 宽与 OD-1、OD-16 的手机部分（`brief.md` 哈希绑定，原文不改），也取代 research-agent 中 Agent 页的手机样稿与 390 宽检查 |
+| 检查器 | 6.1 只做桌面右栏，不做手机底部抽屉 |
+| 已有的窄屏布局（默认） | 保留不删，也不再验收；删除要另改多个页面并重新回归 |
