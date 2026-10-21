@@ -1,4 +1,4 @@
-import { DefinitionTooltip } from '@carbon/react'
+import { Definition } from '../Definition'
 import type { KeyboardEvent, ReactNode } from 'react'
 import { untagged } from '../demo'
 import { Glyph } from '../design/icons'
@@ -98,10 +98,8 @@ export function HypothesisTable({ hypotheses, direction, selected, onSelect }: P
                 {h.verdict ? (
                   fmt(oos)
                 ) : (
-                  // autoAlign positions the definition against the viewport, so the table's scroll box never clips it.
-                  <DefinitionTooltip definition={t('term.tbd')} openOnHover autoAlign>
-                    —
-                  </DefinitionTooltip>
+                  // The definition opens in a portal placed against the viewport, so the table's scroll box never clips it.
+                  <Definition definition={t('term.tbd')}>—</Definition>
                 )}
               </span>
               <span role="cell" className="num mono faint">{h.verdict ? when(h.verdict.created) : '—'}</span>

@@ -5,7 +5,7 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 - **Language.** Interface copy is Chinese. Commands, ids, file names and `SHINKA RESEARCH` stay in Latin. Put a space between Chinese and a Latin word or number only where the source copy does (`有 2 份资料待整理`, `Sharpe`).
 - **Voice.** Plain statements of fact, no first person, no exclamation marks, no apology, no blame. Say what is missing and the command that fixes it: 还没有试验——用 `shinka_research run` 跑实验。 Empty states are one muted sentence, never an illustration.
 - **Notice titles** end with a full-width colon and the subtitle follows: 读取失败：, 还没有假设：, 有 2 份资料待整理：, 还没出结论：.
-- **Terms.** Explain every statistical term once, in place, with `Term` (a Carbon definition tooltip) and the definitions in `terms.ts`; the sentence must still read without the tooltip. The names are fixed: 样本内, 验证段, 封存段, 试验数, 噪声线, Sharpe, DSR, PBO, 子区间, 买入持有.
+- **Terms.** Explain every statistical term once, in place, with `Term` (a definition tooltip, `components/Term`) and the definitions in `terms.ts`; the sentence must still read without the tooltip. The names are fixed: 样本内, 验证段, 封存段, 试验数, 噪声线, Sharpe, DSR, PBO, 子区间, 买入持有.
 - **Status words** are fixed and always paired with their symbol: 待跑, 已选, 运行中, 待判定, 成立, 否定, 未定, 已确认, 未确认, 放弃.
 - **Numbers.** Set ids and figures in `data-cell` or `data-sm` (mono, tabular). Sharpe and scores two decimals, DSR three, PBO two, fractions as whole percents, money `$0.00`, time `YYYY-MM-DD HH:MM` (UTC). A missing figure is `—`, never `0`, `N/A` or blank.
 - **Casing.** Section labels are set in `label-section` and `label-spec` (mono, `letter-spacing: .08em`); write them in plain case, the style does the rest. Commands, ids and file names are always in `<code class="mono">`.
@@ -23,7 +23,7 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 - **States.** Hover: Carbon's own step to `hover`. Selected: `selected` for a tree node or time region, `raised` plus a 2px `accent` inset bar for a table row. Focus: a 2px `accent` outline (3:1 on `base`, `raised` and `hover`). Disabled: Carbon's default, set in `muted`. Withheld: `—` with a tooltip.
 - **Motion.** None of our own; only the libraries' micro-transitions. See MOTION.md.
 - **The two libraries.** Astro UXDS 8.0 owns the signal layer: `rux-status`, `rux-timeline`, `rux-log`. Carbon 1.118 owns the content: `DataTable`, `Tabs`, `DefinitionTooltip`, `InlineNotification`, `TreeView`, `StructuredList` and `Tile` for blocks, `Tag`, Carbon Charts for plots. Astro's tabs, accordion and notification are not used (their accent use is too loud); neither is `rux-classification-marking`. Do not hand-draw a component a library already provides; map its variables in `bundle.css` instead. The app shell is the exception: task 2.3 drew it natively (below).
-- **Theme switch.** The app sets `data-theme` on `<html>` (`app/src/design/theme.ts`) and the Carbon `Theme` (`g100` for dark, `white` for light); `body.light-theme` is set for Astro. Colours come from `app/src/design/tokens.css`.
+- **Theme switch.** The app sets `data-theme` on `<html>` (`app/src/design/theme.ts`); `body.light-theme` is set for Astro. Colours come from `app/src/design/tokens.css`.
 
 ## Iconography
 
@@ -42,5 +42,6 @@ Shinka Research's read-only console is an ink-black ops-spec sheet: rules and ke
 ## Using the package
 
 - The app reads its tokens from `app/src/design/tokens.css` (award-redesign task 2.1); `tokens.json` and the previews here still describe the previous system until task 7.2 rewrites this package. The app imports `components/bundle.css` for the screens tasks 4–6 have not replaced yet.
+- The app has not used Carbon since 2026-10-22 (the owner's component route A): react-aria-components supplies the behaviour of `Term`, `Notice` is a project component, and both take their looks from the tokens through `app/src/design/base.css`. Until task 7.2, the Carbon rules in `bundle.css` and the Carbon parts of this page describe the previews only.
 - The shell is native since task 2.3 (`app/src/shell/`): rail with section counts and the direction list, top bar with breadcrumb, “最后更新” refresh, theme and language switches, Ctrl K palette, and on phones a bottom tab bar with a settings sheet. Its styles are `app/src/shell/shell.css`; the old Astro status bar and its preview are gone.
 - Previews load the pinned library builds (Astro Web Components 8.0.0, `@carbon/styles` 1.117.0) from a CDN inside a CSS layer, so `bundle.css` always wins over library defaults; offline they stay readable through the `:not(:defined)` fallbacks at the end of `bundle.css`.

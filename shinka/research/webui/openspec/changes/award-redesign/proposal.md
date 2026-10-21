@@ -5,7 +5,7 @@
 ## What Changes
 
 - 用 3 个在同一份演示数据上真实渲染的方向样稿重新比较视觉方向，由所有者选择；其中一个是运维规格台的升级版。选定后重写 `DESIGN.md`、`MOTION.md` 与 `design-system/`。
-- **BREAKING（设计系统）**：移除 Astro UXDS；Carbon 只保留表格、页签、弹层、提示等交互与无障碍行为，外观、图表与数据呈现由新设计系统负责。
+- **BREAKING（设计系统）**：移除 Astro UXDS 与 Carbon；交互与无障碍行为由 react-aria-components 提供（所有者 2026-10-22 选定），外观、图表与数据呈现由新设计系统负责。
 - 研究页原生重做：研究方向总览首页（状态、证据、预算与封存段一屏可读）、方向与假设研究报告（主张 → 试验与噪声线 → 检查台账 → 判词）、共享资料库。
 - **BREAKING（分析入口）**：分析从 iframe 旧页面迁为原生视图，按要回答的问题重组为谱系、进展、解空间、对比四个联动视图和一个常驻程序检查器；运行列表与多运行比较同样原生重做。旧 `/viz_tree.html`、`/analysis/*` 页面与 `?analysis=` 投影在对应能力组通过对照后删除，不保留兼容跳转（AGENTS.md：不维护向后兼容）。
 - 合并旧视图前由所有者审阅能力对照表；旧视图能回答的每个问题在新界面中都有去处并经实测。
@@ -26,7 +26,7 @@
 
 ## Impact
 
-- 前端：`shinka/research/webui/app/src/**` 重写；`shinka/research/webui/analysis/**`、`app/src/analysis/**`、`vite.analysis.config.ts` 在各能力组通过对照后删除；`app/package.json` 依赖按工具链计划调整（移除 `@astrouxds/astro-web-components`，图表与 3D 依赖由工具链计划决定）。
+- 前端：`shinka/research/webui/app/src/**` 重写；`shinka/research/webui/analysis/**`、`app/src/analysis/**`、`vite.analysis.config.ts` 在各能力组通过对照后删除；`app/package.json` 依赖按工具链计划调整（移除 `@astrouxds/astro-web-components`；Carbon 的三个包已换成 `react-aria-components`；图表与 3D 依赖由工具链计划决定）。
 - 服务：`shinka/research/ui.py` 提供新路由；`shinka/research/analysis.py` 只在需要时增加只读聚合接口。
 - 测试与文档：`tests/research/` 中与旧页面路由相关的回归随迁移更新；`docs/research/workspace.md`、`DESIGN.md`、`MOTION.md`、`design-system/` 更新。
 - 不变：研究引擎、评估器、notebook 格式、CLI 语义、读取权限与 PDF 停用边界。

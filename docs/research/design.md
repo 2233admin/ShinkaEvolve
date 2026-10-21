@@ -174,7 +174,7 @@ research/<direction-slug>/
 决定：
 - 入口 `shinka_research ui <工作区目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/workspace`（方向摘要与共享资料库）、`/api/snapshot?direction=<目录名>`（单方向快照）和构建好的前端，不改上游。方向以原生链接进入并返回工作区；每个实验的进化细节仍跳转到限定该方向的上游 viz_tree（隐藏 private 指标）。完整目录、身份与错误契约见 [workspace.md](workspace.md)。
 - 前端在 `shinka/research/webui/app/`（Vite + React 19 + TypeScript），构建到 `webui/dist/`（不入库，`pnpm build` 生成）。照 Optuna Dashboard：Python 端只读文件、出 JSON，界面是单独打包的前端。
-- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。
+- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。2026-10-19 起由 award-redesign 重做为暗场仪器方向；2026-10-22 所有者选定组件路线 A，Carbon 换成只管交互与无障碍的 react-aria-components，外观全部来自项目 token（`shinka/research/webui/openspec/changes/award-redesign/owner-decisions.md` › 组件路线）。
 - 只读。选中/放弃假设、出结论、confirm 仍走 CLI；confirm 永远不进 UI（不可逆操作不做成一次点击）。
 - 页面：工作区（方向列表）、方向（头部状态条、假设表、前沿图、流水、报告）、资料库（index、wiki、`[[链接]]`、待编译、log）。
 - 前沿图：方向内所有试验的样本内分数按时间排开，叠加"N 个纯噪声试验的期望最大值"门槛线（与质疑者同一近似：方差取试验样本内分数）。试得越多线越高，直观表达多重检验代价。

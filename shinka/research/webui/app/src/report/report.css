@@ -28,7 +28,7 @@
 .hpick::after { content: ''; position: absolute; inset: 0; }
 .hpick:focus-visible { outline: none; }
 .hrow:has(.hpick:focus-visible) { outline: var(--focus-ring); outline-offset: -2px; }
-.hrow .cds--popover-container { position: relative; z-index: 1; }
+.hrow .term-box { position: relative; z-index: 1; }
 .hstat { display: inline-flex; gap: 6px; align-items: center; }
 .hsort { display: inline-flex; gap: 4px; align-items: end; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
 .hsort:hover { color: var(--text); }

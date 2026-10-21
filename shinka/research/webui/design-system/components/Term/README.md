@@ -8,8 +8,8 @@ A term is a word the page explains in place: a dotted underline that shows a pla
 
 ## Built from
 
-- Carbon `DefinitionTooltip` (`openOnHover`) wrapping the word: a `button.cds--definition-term` inside a `cds--popover-container` with a high-contrast popover (`cds--popover--high-contrast`, caret, bottom). It is keyboard-focusable and opens on focus as well.
-- bundle.css makes terms inside table headers and spec-sheet keys inherit their parent's font, so a term never changes the type of the label it sits in; `.cds--popover-container` is capped at 100% so a term cannot widen its cell.
+- `app/src/Definition.tsx`: a react-aria-components `TooltipTrigger` with no open or close delay, around a `Button` (`.term`) that wraps the word and a `Tooltip` (`.term-pop`) placed below it with an 8px offset. It opens on hover and keyboard focus and closes on Escape, blur and press; react-aria never opens a tooltip on touch, so a tap opens it. The tooltip renders in a portal placed against the viewport, so a scrolling table never clips it.
+- `app/src/design/base.css` keeps the metrics of the Carbon definition term and high-contrast popover the app used until 2026-10-22: a 1px dotted `stroke` underline that turns `text` on hover, the 2px `text` focus ring, and a popover at most 11rem wide, `text` ground with `bg` type at 14/20, with a caret. The term takes its label's font size and family, so it never changes the type of the label it sits in; in the report and run tables it sits above the row's full-row link.
 
 ## Definitions
 

@@ -1,4 +1,5 @@
-import { DefinitionTooltip, InlineNotification } from '@carbon/react'
+import { Definition } from '../Definition'
+import { Notice } from '../Notice'
 import { useEffect, useReducer, useRef, type ReactNode } from 'react'
 import { untagged } from '../demo'
 import { directionState, STATE_LOOK } from '../direction'
@@ -68,13 +69,9 @@ function StatCells({ stats }: { stats: RunStats }) {
       </span>
       <span role="cell" className="num mono">
         {stats.has_prompt_evo ? (
-          <DefinitionTooltip
-            definition={stats.prompt_evo_cost === null ? t('runs.promptUnknown') : t('runs.promptCost', { cost: money(stats.prompt_evo_cost) })}
-            openOnHover
-            autoAlign
-          >
+          <Definition definition={stats.prompt_evo_cost === null ? t('runs.promptUnknown') : t('runs.promptCost', { cost: money(stats.prompt_evo_cost) })}>
             {int(stats.prompt_count)}
-          </DefinitionTooltip>
+          </Definition>
         ) : (
           <span className="faint">—</span>
         )}
@@ -125,14 +122,7 @@ export function RunList({ data, route, go }: Props) {
   if (!data.listed) return <p className="muted">{t('runs.loading')}</p>
   if (runs === null)
     return (
-      <InlineNotification
-        kind="error"
-        statusIconDescription={t('icon.error')}
-        lowContrast
-        hideCloseButton
-        title={t('runs.listError')}
-        subtitle={t('runs.listErrorHint', { error: data.runsError ?? '' })}
-      />
+      <Notice kind="error" label={t('icon.error')} title={t('runs.listError')} subtitle={t('runs.listErrorHint', { error: data.runsError ?? '' })} />
     )
 
   const entries = data.workspace?.directions ?? []

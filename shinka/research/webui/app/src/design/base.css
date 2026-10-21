@@ -1,0 +1,68 @@
+/* What the views got from @carbon/styles until react-aria-components replaced Carbon (2026-10-22): the Meyer
+   reset, Carbon's body and type defaults (h1-h6, p, strong, code, em) and link colour, so every view keeps its look. */
+html, body, div, span, iframe, h1, h2, h3, h4, h5, h6, p, blockquote, pre, a, abbr, cite, code, del, dfn, em, img, ins, kbd, q, s,
+samp, small, strong, sub, sup, var, b, u, i, dl, dt, dd, ol, ul, li, fieldset, form, label, legend, table, caption, tbody, tfoot,
+thead, tr, th, td, article, aside, canvas, details, figure, figcaption, footer, header, menu, nav, output, section, summary, time,
+mark {
+  padding: 0;
+  border: 0;
+  margin: 0;
+  font: inherit;
+  font-feature-settings: 'liga' 1;
+  font-size: 100%;
+  vertical-align: baseline;
+}
+button, select, input, textarea { border-radius: 0; font-family: inherit; }
+article, aside, details, figcaption, figure, footer, header, menu, nav, section { display: block; }
+body { line-height: 1; font-weight: 400; -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; text-rendering: optimizeLegibility; }
+ol, ul { list-style: none; }
+blockquote, q { quotes: none; }
+table { border-collapse: collapse; border-spacing: 0; }
+html { box-sizing: border-box; font-size: 100%; }
+*, *::before, *::after { box-sizing: inherit; }
+code { font-family: var(--font-mono); }
+strong { font-weight: 600; }
+em { font-style: italic; }
+a { color: var(--text); }
+h1 { font-size: 2.625rem; font-weight: 300; line-height: 1.199; }
+h2 { font-size: 2rem; font-weight: 400; line-height: 1.25; }
+h3 { font-size: 1.75rem; font-weight: 400; line-height: 1.28572; }
+h4 { font-size: 1.25rem; font-weight: 400; line-height: 1.4; }
+h5 { font-size: 1rem; font-weight: 600; line-height: 1.5; }
+h6 { font-size: 0.875rem; font-weight: 600; line-height: 1.42857; letter-spacing: 0.16px; }
+p { font-size: 1rem; font-weight: 400; line-height: 1.5; }
+
+/* ---- Notice (design-system Notice): the low-contrast Carbon notice's metrics, coloured from the tokens ---- */
+.notice { position: relative; display: flex; flex-wrap: wrap; width: 100%; min-width: 18rem; max-width: 18rem; min-height: 3rem; border-left: 3px solid var(--muted); background: var(--hover); color: var(--text); }
+.notice::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-width: 1px 1px 1px 0; border-style: solid; border-color: var(--muted); filter: opacity(0.4); pointer-events: none; }
+.notice--error { border-left-color: var(--signal); background: var(--notice-error-bg); }
+.notice--error::before { border-color: var(--signal); }
+.notice-details { display: flex; flex-grow: 1; margin: 0 3rem 0 0.8125rem; }
+.notice-icon { flex-shrink: 0; margin: 0.875rem 1rem 0 0; fill: var(--muted); }
+.notice--error .notice-icon { fill: var(--signal); }
+.notice-text { display: flex; flex-wrap: wrap; padding: 0.9375rem 0; }
+.notice-title, .notice-sub { font-size: 0.875rem; line-height: 1.28572; letter-spacing: 0.16px; }
+.notice-title { margin-right: 0.25rem; font-weight: 600; }
+.notice-sub { font-weight: 400; word-break: break-word; }
+@media (min-width: 42rem) {
+  .notice { flex-wrap: nowrap; max-width: 38rem; }
+  .notice-details { margin: 0 0.8125rem; }
+}
+@media (min-width: 66rem) { .notice { max-width: 46rem; } }
+@media (min-width: 99rem) { .notice { max-width: 52rem; } }
+
+/* ---- Term (design-system Term): the metrics of Carbon's definition term and its high-contrast tooltip ---- */
+.term-box { display: inline-block; max-width: 100%; }
+.term {
+  display: inline-block; width: 100%; margin: 0; padding: 0; border: 0; border-bottom: 1px dotted var(--stroke); border-radius: 0; appearance: none;
+  background: none; color: var(--text); font-family: inherit; font-size: 100%; text-align: start; vertical-align: baseline; cursor: pointer;
+}
+.term:hover { border-bottom-color: var(--text); }
+.term[data-focus-visible] { outline: var(--focus-ring); outline-offset: 2px; }
+.term-pop {
+  max-width: 11rem; padding: 0.5rem 1rem; border-radius: 2px; background: var(--text); color: var(--bg);
+  font: 400 0.875rem/1.42857 var(--font-sans); letter-spacing: 0.16px; word-break: break-word;
+}
+.term-pop::before { content: ''; position: absolute; left: 50%; margin-left: -5px; border: 5px solid transparent; }
+.term-pop[data-placement='bottom']::before { top: -10px; border-bottom-color: var(--text); }
+.term-pop[data-placement='top']::before { bottom: -10px; border-top-color: var(--text); }

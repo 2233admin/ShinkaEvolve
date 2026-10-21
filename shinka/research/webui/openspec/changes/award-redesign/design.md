@@ -4,7 +4,7 @@
 
 - 所有者 2026-10-19 在 `direction-previews/index.html`（sha256 `16f2f641…e368`）上选定 A · 暗场仪器为底，吸收 B 的按岛分道谱系、进展小图组与首页数据句标题；默认深色并交付浅色；全站中英切换；研究方向与全部运行各一页；17 项能力决定见 `owner-decisions.md`。
 - 管线产物：`direction-preview.json`（selection ready；比较已在 brief 试验范围的事实更正后重新绑定 `brief.md`，决定与样稿不变）、`direction-lock.json`（`directionLockHash` `fcfd7d37…eab2`）、`component-fit-matrix.json`（按新锁校验通过；13 项能力的实现路线都是 `provider:project-dom`，即项目自有 DOM 实现。矩阵把动作记为 `reuse`，但项目里目前没有可复用的组件文件，这些组件在实现阶段新写）、`design-system-decision.json`（custom，`shinka-research-instrument`）、`toolchain-plan.json` 与 `toolchain-probe.json`（`targetRoot` `app`，svg-d3 `d3=7.9.0`）。
-- Carbon React 1.118 不在管线组件目录内，只作为已安装的行为依赖放在项目自有组件内部（锁的 `behaviourDependency` 约束）；Astro UXDS 移除。
+- 组件行为依赖：所有者 2026-10-22 选定路线 A（`owner-decisions.md` › 组件路线），react-aria-components 1.22.1 取代 Carbon React，放在项目自有组件内部，只提供交互与无障碍行为，外观只来自项目 token；Carbon React、Carbon 样式与 Carbon Charts 已从 `app/package.json` 移除，Astro UXDS 随 7.1 移除。管线的方向锁（`behaviourDependency`）与组件适配矩阵仍记 Carbon，待管线许可证检查的修复合入后按新依赖重生成。
 
 ## 设计系统
 
@@ -81,7 +81,7 @@
 
 分析页共享一个选择模型：`{ run, tab, program, generations, filters, pane }`，全部写入 URL。任一视图选中程序只更新检查器，并在其他视图高亮同一程序及其祖先路径，不切换当前视图（OD-11）。顶栏下的运行条（运行路径、程序、有效、失败、代数、岛数、费用）在四个视图中相同。谱系与进展共用代数轴和同一个代数滑杆组件（上一代、下一代、回放）；回放只在点击播放时按代步进，到最后一代停止（OD-8）。
 
-检查器标签页：代码、差异、评估（输出与图像，失败明确标注）、LLM 记录、元分析总结（OD-3），以及纯文本下载（OD-12）。桌面为右侧栏（≥1440 宽 440px，1024–1439 宽 380px），手机为底部抽屉：轻点先以摘要高度弹出，上拉看完整标签页（OD-16）。
+检查器标签页：代码、差异、评估（输出与图像，失败明确标注）、LLM 记录、元分析总结（OD-3），以及纯文本下载（OD-12）。桌面为右侧栏（≥1440 宽 440px，1024–1439 宽 380px），手机为底部抽屉：轻点先以摘要高度弹出，上拉把手或点按「展开」看完整标签页（OD-16；两种方式并存，见 `owner-decisions.md` › 组件路线）。
 
 ## 四个分析视图
 
@@ -110,7 +110,7 @@
 ## 无障碍与国际化
 
 - 键盘：Tab 顺序与视觉顺序一致；表格行可用方向键移动、回车进入；Ctrl K 打开命令面板；Esc 关闭浮层与抽屉；焦点环用 `text` 色 2px 外描边。
-- Carbon React 提供表格、页签、浮层、提示与展开组件的 ARIA 与键盘行为；外观全部由项目 token 覆盖。
+- react-aria-components 提供页签、术语提示、浮层与对话框等交互组件的 ARIA 与键盘行为；外观全部来自项目 token 与项目样式，不加载组件库样式。
 - 中英切换覆盖全部界面文字、状态词、日期说明与图表标注；研究内容（假设标题、日志正文、LLM 输出）保持原文。默认语言暂按 grill.md:10 取中文，待所有者在高保真评审时确认。
 
 ## 数据接口

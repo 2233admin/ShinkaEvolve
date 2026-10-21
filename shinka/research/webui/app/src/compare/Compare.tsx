@@ -1,4 +1,4 @@
-import { InlineNotification } from '@carbon/react'
+import { Notice } from '../Notice'
 import { bisectCenter, curveStepAfter, line, max, scaleLinear } from 'd3'
 import { useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { untagged } from '../demo'
@@ -299,7 +299,7 @@ export function Compare({ data, route, go }: Props) {
     return (
       <>
         {heading}
-        <InlineNotification kind="info" statusIconDescription={t('icon.info')} lowContrast hideCloseButton title={t('cmp.none')} subtitle={t('cmp.noneHint')} />
+        <Notice kind="info" label={t('icon.info')} title={t('cmp.none')} subtitle={t('cmp.noneHint')} />
         <p className="cto">
           <a className="btn" href={routeHref({ ...ALL_RUNS, select: paths })}>{t('cmp.toRuns')}</a>
         </p>
@@ -311,19 +311,12 @@ export function Compare({ data, route, go }: Props) {
     return (
       <>
         {heading}
-        <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('runs.listError')} subtitle={t('runs.listErrorHint', { error: data.runsError ?? '' })} />
+        <Notice kind="error" label={t('icon.error')} title={t('runs.listError')} subtitle={t('runs.listErrorHint', { error: data.runsError ?? '' })} />
       </>
     )
   }
   const failed = read.error !== null && (
-    <InlineNotification
-      kind="error"
-      statusIconDescription={t('icon.error')}
-      lowContrast
-      hideCloseButton
-      title={t('cmp.readFailed')}
-      subtitle={read.runs === null ? read.error : t('cmp.stale', { error: read.error })}
-    />
+    <Notice kind="error" label={t('icon.error')} title={t('cmp.readFailed')} subtitle={read.runs === null ? read.error : t('cmp.stale', { error: read.error })} />
   )
   if (read.runs === null || curves === null) {
     return (

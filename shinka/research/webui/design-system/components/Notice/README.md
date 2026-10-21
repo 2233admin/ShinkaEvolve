@@ -9,7 +9,8 @@ A notice tells the reader what is wrong, missing or withheld, in one line, with 
 
 ## Built from
 
-- Carbon `InlineNotification` with `kind` (`error`, `info`, `warning`), `lowContrast`, `hideCloseButton`, `title`, `subtitle`. bundle.css maps the info ground to `hover`, the edges and icons to `err`, `warn` and `muted`, and removes the width cap (`max-width: none`).
+- `app/src/Notice.tsx`: a `div.notice` with `role="status"`, the icon named by `label` (Carbon's InformationFilled or ErrorFilled at 20px, kept as paths), the title, then the subtitle or the children. `kind` is `info` or `error`.
+- `app/src/design/base.css` keeps the metrics of Carbon's low-contrast `InlineNotification`, which the app used until 2026-10-22: a 3px left edge, a 1px frame at 40% opacity, at least 48px tall, title 600 and subtitle 400 at 14px, and Carbon's width caps (18rem; 38rem from 42rem wide, 46rem from 66rem, 52rem from 99rem). Info has a `hover` ground with a `muted` edge and icon; error has a `notice-error-bg` ground (Carbon's `#262626` dark and `#fff1f1` light, kept as a token) with a `signal` edge and icon. The library page widens notices to 1000px.
 - Empty states: `p.muted` (13px, `muted`); commands in `<code class="mono">`.
 
 ## Copy in use

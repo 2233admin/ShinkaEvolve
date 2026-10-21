@@ -40,7 +40,7 @@
 .rlink::after { content: ''; position: absolute; inset: 0; }
 .rlink:focus-visible { outline: none; }
 .rrow:has(.rlink:focus-visible) { outline: var(--focus-ring); outline-offset: -2px; }
-.rrow .cds--popover-container { position: relative; z-index: 1; }
+.rrow .term-box { position: relative; z-index: 1; }
 .rstate { grid-column: 3 / -1; display: inline-flex; gap: 6px; align-items: center; font-size: 12px; }
 .rstale { position: relative; z-index: 1; display: inline-flex; gap: 5px; align-items: center; margin-top: 2px; font: 400 11.5px/16px var(--font-sans); }
 .rempty { display: inline-flex; gap: 6px; align-items: center; color: var(--faint); font-family: var(--font-sans); }

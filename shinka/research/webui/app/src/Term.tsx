@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { DefinitionTooltip } from '@carbon/react'
+import { Definition } from './Definition'
 import type { CopyKey } from './i18n/copy'
 import { useCopy } from './i18n/lang'
 
@@ -8,9 +8,7 @@ export type TermKey = { [K in CopyKey]: K extends `term.${infer T}` ? T : never 
 export function Term({ k, children }: { k: TermKey; children: ReactNode }) {
   const { t } = useCopy()
   return (
-    <DefinitionTooltip definition={t(`term.${k}`)} openOnHover>
-      {children}
-    </DefinitionTooltip>
+    <Definition definition={t(`term.${k}`)}>{children}</Definition>
   )
 }
 

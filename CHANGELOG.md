@@ -154,9 +154,15 @@ All notable changes to `shinka-evolve` are documented in this file.
   bound in issue #180. Thanks @htmai-880.
 - Removed the automatic Claude Code Review pull-request workflow.
 - Moved the Research workbench to one token stylesheet
-  (`app/src/design/tokens.css`) for the dark default and light themes, with
-  Carbon styled from the same tokens; the remembered theme now applies before
-  the first paint.
+  (`app/src/design/tokens.css`) for the dark default and light themes; the
+  remembered theme now applies before the first paint.
+- Replaced Carbon in the Research workbench with react-aria-components 1.22.1:
+  glossary terms and table definitions open a react-aria tooltip (also on a
+  tap), and notices are a project component with Carbon's low-contrast look.
+  `@carbon/react`, `@carbon/styles` and the unused `@carbon/charts-react` are
+  gone, and the workbench stylesheet shrinks from 1.28 MB to 64 kB. Carbon's
+  stylesheet also fetched IBM Plex Mono from IBM's CDN; the semibold figures now
+  use a bundled copy instead.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and

@@ -59,3 +59,14 @@
 | 内置对话 Agent | 新需求，职责与边界待与所有者对齐；对齐前不并入本变更 |
 
 所有者没有逐项回答交付高保真时列出的其余待定事项：默认语言、费用字段缺失按 0、预算遇未知费用时拒绝新运行、深浅×中英×宽度帧矩阵延后到 7.3、不足半美分的金额写法、最佳程序标记色、手机主题与语言开关位置、模型后验的位置、恢复管线委派、“进展”中的成功率。这些事项仍待确认。tasks.md 3.0 已实现的费用规则保持现状；其余按样稿所画实现，所有者改动时随之调整。
+
+## 组件路线（2026-10-22）
+
+所有者看过组件来源对照原型与术语提示决定性切片（`E:/projects/ShinkaEvolve-runs/wheels-proto-20261020/evidence/findings.md`，经 discuss:steady 与 discuss:divergent 两轮复核）后回答「A」，同一回答接受了随问题标出的两项默认做法。
+
+| 事项 | 决定 |
+|---|---|
+| 组件路线 | A：react-aria-components 1.22.1 取代 Carbon React，只提供交互与无障碍行为，外观全部来自项目 token 与项目样式。这改变了 `brief.md:28`「Carbon 只承担交互与无障碍行为」；`brief.md` 与 `direction-preview.json` 哈希绑定，原文不改，以本节为准 |
+| 提示条与术语提示 | Carbon `InlineNotification` 换成项目组件 `Notice`（静态 `role="status"`，无关闭按钮），`DefinitionTooltip` 换成 react-aria 的 `Tooltip`；没有代码使用的 Carbon Charts 一并移除 |
+| 管线许可证检查（默认） | 管线 component fit 读不到 react-aria 的许可证是管线缺陷：按 svg-d3 的先例在克隆仓库修复，再快进合入本机检出并保留其中未提交的改动 |
+| 手机检查器抽屉（默认） | 上拉把手与点按「展开」两种方式都支持，依据已评审的 `hifi/captures/phone-analysis.png`（同时画了把手与按钮）；在 6.1 实现 |

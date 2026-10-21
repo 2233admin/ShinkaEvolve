@@ -49,7 +49,7 @@
 
 ## 7. 删除与收尾
 
-- [ ] 7.1 按能力组删除旧入口与代码（旧 iframe 工作台、`/viz_tree.html`、`/analysis/*`、`vite.analysis.config.ts`、Astro、Plotly、Chart.js 与 Carbon Charts）。每组只在能力对照表逐行实测通过后删除，不保留兼容跳转；任何一行复现不了，该组旧实现保留并报告所有者（所有者 2026-10-20：原有功能一项不删）。
+- [ ] 7.1 按能力组删除旧入口与代码（旧 iframe 工作台、`/viz_tree.html`、`/analysis/*`、`vite.analysis.config.ts`、Astro、Plotly 与 Chart.js；Carbon 的三个包含已无人使用的 Carbon Charts，已于 2026-10-22 随组件路线 A 移除）。每组只在能力对照表逐行实测通过后删除，不保留兼容跳转；任何一行复现不了，该组旧实现保留并报告所有者（所有者 2026-10-20：原有功能一项不删）。
 - [ ] 7.2 改写根目录 `DESIGN.md`、`MOTION.md` 与 `design-system/`（含深浅主题的 token、组件状态与图表族预览页），更新 `docs/research/workspace.md`。
 - [ ] 7.3 验收：1920/1440/1024/390 宽 × 深浅 × 中英截图实看；axe 无严重问题；控制台零错误；本机测量 LCP、INP 与包体；3D 代码块未进入首屏请求；`pytest -q tests/research` 与仓库门禁。
 - [ ] 7.4 恢复管线 `state.json` 的所有者交付与评审委派，运行管线交付门禁；所有者验收绑定最终版本。

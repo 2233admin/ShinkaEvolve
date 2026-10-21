@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { InlineNotification, Theme } from '@carbon/react'
+import { Notice } from './Notice'
 import { AnalysisWorkspace } from './AnalysisWorkspace'
 import { Compare } from './compare/Compare'
 import { DEMO_TAG, untagged } from './demo'
@@ -146,14 +146,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
 
   // The first load failed: say why. A later failure keeps the data and shows in the top bar.
   const readError = data.updated === null && data.error !== null && (
-    <InlineNotification
-      kind="error"
-      statusIconDescription={t('icon.error')}
-      lowContrast
-      hideCloseButton
-      title={t('error.read')}
-      subtitle={t('error.readHint', { error: data.error })}
-    />
+    <Notice kind="error" label={t('icon.error')} title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
   )
   const loading = <p className="muted">{t('state.loading')}</p>
 
@@ -172,11 +165,11 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
             {snap && <DirectionMeta snap={snap} entry={summary && summary.error === null ? summary : null} />}
           </header>
           {data.error !== null && snap === null
-            ? <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
+            ? <Notice kind="error" label={t('icon.error')} title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
             : snap === null
               ? loading
               : snap.hypotheses.length === 0
-                ? <InlineNotification kind="info" statusIconDescription={t('icon.info')} lowContrast hideCloseButton title={t('empty.hypotheses')} subtitle={t('empty.hypothesesHint')} />
+                ? <Notice kind="info" label={t('icon.info')} title={t('empty.hypotheses')} subtitle={t('empty.hypothesesHint')} />
                 : current && (
                   // One report per direction: its remembered sort, filter and open sections are read on mount.
                   <Report
@@ -221,7 +214,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
 
   const analysis = route.view === 'run'
   return (
-    <Theme theme={light ? 'white' : 'g100'}>
+    <>
       <a className="skip" href="#content">{t('shell.skip')}</a>
       <div className="shell">
         <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
@@ -243,6 +236,6 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       </div>
       <TabBar route={route} data={shown} />
       <Palette open={palette} onClose={() => setPalette(false)} items={items} />
-    </Theme>
+    </>
   )
 }

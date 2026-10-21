@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { InlineNotification } from '@carbon/react'
+import { Notice } from './Notice'
 import { Rich, useCopy, type Lang } from './i18n/lang'
 import { framePath, HostError, projectedHref, type HostedRoute } from './legacyFrame'
 import { PARTS } from './Term'
@@ -86,7 +86,7 @@ export function AnalysisWorkspace({ route, light, onProject, onRunList }: Props)
   return (
     <section aria-label={t('an.section')}>
       <p className="analysis-context"><Rich k="an.context" parts={PARTS} /></p>
-      {message && <InlineNotification kind="error" statusIconDescription={t('icon.error')} lowContrast hideCloseButton title={t('an.readError')} subtitle={message} />}
+      {message && <Notice kind="error" label={t('icon.error')} title={t('an.readError')} subtitle={message} />}
       <div className="analysis-scroll">
         <iframe ref={frame} className="analysis-frame" title={t('an.section')} src={src} onLoad={connect} />
       </div>

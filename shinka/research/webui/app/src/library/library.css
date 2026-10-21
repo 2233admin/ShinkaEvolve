@@ -2,8 +2,8 @@
    header, measure and rules; colours come from design/tokens.css. */
 
 .shell .page.library-page { max-width: none; padding: 24px 32px 64px; font: var(--type-body); }
-.library-page .cds--inline-notification { max-width: 1000px; margin-top: 16px; }
-.library-page .cds--inline-notification + .cds--inline-notification { margin-top: 8px; }
+.library-page .notice { max-width: 1000px; margin-top: 16px; }
+.library-page .notice + .notice { margin-top: 8px; }
 .lib-pending { display: grid; gap: 2px; }
 .lib-none { margin-top: 20px; }
 

@@ -1,4 +1,4 @@
-import { InlineNotification } from '@carbon/react'
+import { Notice } from '../Notice'
 import { useLayoutEffect, useRef, type ReactNode } from 'react'
 import { Rich, useCopy } from '../i18n/lang'
 import { Markdown } from '../Markdown'
@@ -68,17 +68,17 @@ export function Library({ lib, page }: Props) {
       {header}
       {lib.pending.length > 0 && (
         // Raw sources waiting to be compiled are work in progress, not a fault: an info notice, never the signal.
-        <InlineNotification kind="info" statusIconDescription={t('icon.info')} lowContrast hideCloseButton title={t('lib.pending', { n: lib.pending.length })}>
+        <Notice kind="info" label={t('icon.info')} title={t('lib.pending', { n: lib.pending.length })}>
           <span className="lib-pending">
             <span className="mono" translate="no">{shown}</span>
             <span><Rich k="lib.pendingHint" parts={PARTS} /></span>
           </span>
-        </InlineNotification>
+        </Notice>
       )}
       {missing !== null && (
-        <InlineNotification kind="info" statusIconDescription={t('icon.info')} lowContrast hideCloseButton title={t('lib.missing')}>
+        <Notice kind="info" label={t('icon.info')} title={t('lib.missing')}>
           <span className="mono" translate="no">{missing}</span>
-        </InlineNotification>
+        </Notice>
       )}
       <div className="lib">
         <nav className="lib-nav" aria-label={t('lib.pages')} ref={strip}>
