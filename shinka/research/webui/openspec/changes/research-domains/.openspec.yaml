@@ -1,0 +1,6 @@
+schema: spec-driven
+created: 2026-10-22
+goal: Shinka Research becomes a domain-general framework in which the research
+  agent explores any direction whose experiments run as programs; the agent
+  drafts each evaluator, the owner approves it before it is frozen, and each
+  domain plugs in its own data handling and verdict rules
