@@ -29,6 +29,7 @@ from shinka.research.rundb import (
     best_score,
     count_evaluated,
     has_programs,
+    roll_back_dead_writer,
     run_cost,
 )
 from shinka.research.state import (
@@ -106,6 +107,9 @@ def finish_run(
         code = entry.get("exit_code", code)
         hid, eid = entry["hypothesis"], entry["experiment"]
         results = experiment_dir(root, hid, eid) / "results"
+        # The run's writer is gone: killed or exited, it may have left a
+        # transaction open that read-only readers cannot get past.
+        roll_back_dead_writer(results)
         before = entry["evaluated_before"]
         with Notebook.edit(root) as nb:
             hyp = nb.get(hid)

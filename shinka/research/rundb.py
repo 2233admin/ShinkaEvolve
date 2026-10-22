@@ -44,6 +44,21 @@ def count_evaluated(results_dir: Path) -> int:
     return int(n)
 
 
+def roll_back_dead_writer(results_dir: Path) -> None:
+    """Roll back the transaction a killed run left open. A writer killed in
+    rollback-journal mode (a run's database is only switched to WAL after it is
+    created) leaves a hot journal, and every read-only connection then fails
+    with "attempt to write a readonly database"; a read-write connection rolls
+    it back on its first read. Only for a run none of whose writers lives; a
+    missing database stays missing (``mode=rw`` never creates one)."""
+    db = Path(results_dir) / DB_FILENAME
+    if not (db.is_file() and Path(f"{db}-journal").is_file()):
+        return
+    uri = f"file:{quote(str(db.resolve()), safe='')}?mode=rw"
+    with closing(sqlite3.connect(uri, uri=True)) as conn:
+        conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchall()
+
+
 def _connect(
     results_dir: Path, filename: str = DB_FILENAME
 ) -> "closing[sqlite3.Connection]":

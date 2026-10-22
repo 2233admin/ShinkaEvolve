@@ -21,6 +21,7 @@ import yaml
 from shinka.research import cli
 from shinka.research.grants import AGENT_ENV, LEDGER
 from shinka.research.notebook import RESULTS_LOG, Notebook, Status, experiment_dir
+from shinka.research.rundb import has_programs
 from shinka.research.runs import watch
 from shinka.research.state import hand_over, live_work, register_work, work_entries
 
@@ -230,6 +231,46 @@ def test_a_killed_run_is_recorded_once_by_two_watches(
     assert work_entries(direction) == []
     # It added nothing, so the hypothesis is back where it was.
     assert Notebook.load(direction).get("h001").status is Status.selected
+
+
+# A writer killed mid-transaction while the database is in rollback-journal
+# mode, as a run's is between its creation and its switch to WAL.
+OPEN_TRANSACTION = """
+import sqlite3, sys, time
+conn = sqlite3.connect(sys.argv[1], isolation_level=None)
+conn.execute("PRAGMA cache_size = 1")  # spill to the file, so the journal is hot
+conn.execute("BEGIN")
+for i in range(20000):
+    conn.execute("INSERT INTO programs (id) VALUES (?)", ("x" * 200,))
+print("open", flush=True)
+time.sleep(600)
+"""
+
+
+def test_watch_records_a_run_killed_with_a_transaction_open(
+    direction: Path, monkeypatch
+) -> None:
+    _plan(monkeypatch, e01=dict(hang=True))
+    cli.main(["run", str(direction), "h001", "--detach"])
+    db = direction / "experiments" / "h001" / "e01" / "results" / "programs.sqlite"
+    _until(
+        lambda: work_entries(direction)[0].get("workers") and has_programs(db.parent)
+    )
+    _kill(direction)
+    writer = subprocess.Popen(
+        [sys.executable, "-c", OPEN_TRANSACTION, str(db)],
+        stdout=subprocess.PIPE, text=True,
+    )  # fmt: skip
+    assert writer.stdout.readline().strip() == "open"
+    writer.kill()
+    writer.wait()
+    assert Path(f"{db}-journal").exists()
+
+    assert watch(direction) == ["h001/e01: run-failed"]
+    assert work_entries(direction) == []
+    # The killed transaction added nothing, and every reader opens the store.
+    assert Notebook.load(direction).get("h001").experiments[0].n_evaluated == 0
+    cli.main(["brief", str(direction)])
 
 
 def _second_experiment(direction: Path, example_dir: Path) -> None:
