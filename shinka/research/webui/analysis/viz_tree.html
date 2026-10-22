@@ -18655,7 +18655,7 @@ console.error("[DEBUG] Error in processData:", error);
 
     // ===== i18n System =====
     var _i18n = { en: null, zh: null };
-    var _currentLang = localStorage.getItem('shinka-lang') || 'zh';
+    var _currentLang = localStorage.getItem('shinka-lang') === 'zh' ? 'zh' : 'en';
 
     async function loadI18n() {
         try {

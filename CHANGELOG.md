@@ -239,6 +239,9 @@ All notable changes to `shinka-evolve` are documented in this file.
   refused at once; it does not open while a run is still adding trials, since
   every trial counts toward the DSR. A probe now counts as a trial when it
   starts, so one that fails or is killed is counted too.
+- Changed the Research workbench's default language to English (owner,
+  2026-10-22), including the restored analysis page; a browser that chose
+  Chinese keeps it.
 
 ### Fixed
 

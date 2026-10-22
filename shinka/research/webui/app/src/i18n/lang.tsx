@@ -6,12 +6,12 @@ export type Lang = 'zh' | 'en'
 // Shared with the recovered analysis pages (analysis/accessibility.js and viz_tree.html read the same key).
 export const LANG_KEY = 'shinka-lang'
 
-/** The remembered language; Chinese is the default and anything unreadable falls back to it. */
+/** The remembered language; English is the default (owner, 2026-10-22) and anything unreadable falls back to it. */
 export function storedLang(): Lang {
   try {
-    return localStorage.getItem(LANG_KEY) === 'en' ? 'en' : 'zh'
+    return localStorage.getItem(LANG_KEY) === 'zh' ? 'zh' : 'en'
   } catch {
-    return 'zh'
+    return 'en'
   }
 }
 
@@ -29,7 +29,7 @@ export function useLangState(): [Lang, (lang: Lang) => void] {
   // The analysis page's own 中/EN button writes the same key from its frame.
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === LANG_KEY) setLang(e.newValue === 'en' ? 'en' : 'zh')
+      if (e.key === LANG_KEY) setLang(e.newValue === 'zh' ? 'zh' : 'en')
     }
     window.addEventListener('storage', onStorage)
     return () => window.removeEventListener('storage', onStorage)
@@ -37,7 +37,7 @@ export function useLangState(): [Lang, (lang: Lang) => void] {
   return [lang, setLang]
 }
 
-const LangContext = createContext<Lang>('zh')
+const LangContext = createContext<Lang>('en')
 export const LangProvider = LangContext.Provider
 
 type Vars = Record<string, string | number>

@@ -34,7 +34,7 @@ The theme and language switches at the top act on the whole page, so each chart 
 ## Content fundamentals
 
 - **Language.**
-  - Every interface string is in both Chinese and English (`app/src/i18n/copy.ts`); research content stays as written.
+  - Every interface string is in both English (the default) and Chinese (`app/src/i18n/copy.ts`); research content stays as written.
   - Commands, IDs, file names and Sharpe, DSR and PBO stay in Latin in both languages.
   - Chinese copy puts a space between Chinese and a Latin word or a number where the copy table does (`有 2 份资料待整理`).
 - **Voice.**

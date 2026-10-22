@@ -1,7 +1,8 @@
 import english from '../../../analysis/i18n_en.json'
 import chinese from '../../../analysis/i18n_zh.json'
 
-let language = localStorage.getItem('shinka-lang') === 'en' ? 'en' : 'zh'
+// English unless Chinese was chosen (owner, 2026-10-22), as in the shell (i18n/lang.tsx).
+let language = localStorage.getItem('shinka-lang') === 'zh' ? 'zh' : 'en'
 const dictionaries = { en: english, zh: chinese }
 const keys = new Map()
 for (const dictionary of Object.values(dictionaries)) {
@@ -52,7 +53,7 @@ function enhance(root) {
   }
 }
 window.shinkaSetLanguage = (value) => {
-  language = value === 'en' ? 'en' : 'zh'
+  language = value === 'zh' ? 'zh' : 'en'
   document.documentElement.lang = language
   enhance(document.body)
 }

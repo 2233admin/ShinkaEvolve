@@ -166,5 +166,5 @@ document.addEventListener('DOMContentLoaded', () => {
   document.querySelectorAll('input:not([type="checkbox"]):not([type="range"]), select').forEach((control) => {
     if (!control.labels?.length && !control.hasAttribute('aria-label')) control.setAttribute('aria-label', control.placeholder || control.title || control.id.replaceAll('-', ' '))
   })
-  document.documentElement.lang = localStorage.getItem('shinka-lang') || 'zh'
+  document.documentElement.lang = localStorage.getItem('shinka-lang') === 'zh' ? 'zh' : 'en'
 })

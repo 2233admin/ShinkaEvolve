@@ -74,7 +74,7 @@ A dark-field instrument for reading research evidence. Near-black grounds, hairl
 - a direction report runs claim → trials against the noise line → check ledger → verdict;
 - a run's analysis has four views (Lineage, Progress, Solution space, Contest) and one resident program inspector.
 
-Dark is the default and a light theme ships beside it. The whole interface switches between Chinese and English. There is no dedicated phone design or acceptance; the existing narrow layout remains, and the accepted widths are 1920, 1440 and 1024.
+Dark is the default and a light theme ships beside it. The whole interface switches between English (the default) and Chinese. There is no dedicated phone design or acceptance; the existing narrow layout remains, and the accepted widths are 1920, 1440 and 1024.
 
 The page is read-only. Every component is the project's own DOM, SVG or D3. react-aria-components supplies only interaction and accessibility behaviour; no component library styles are loaded. Usage rules are in `design-system/README.md`; the live preview is `design-system/preview.html` (`pnpm design` in `app/`).
 
