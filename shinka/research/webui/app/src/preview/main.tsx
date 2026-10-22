@@ -1,0 +1,20 @@
+import { createRoot } from 'react-dom/client'
+import '@fontsource-variable/inter'
+import '@fontsource/ibm-plex-mono/400.css'
+import '@fontsource/ibm-plex-mono/500.css'
+import '@fontsource/ibm-plex-mono/600.css'
+// The same stylesheets in the same order as the app (src/main.tsx), then the preview's own frame.
+import '../design/base.css'
+import '../design/tokens.css'
+import '../app.css'
+import '../shell/shell.css'
+import '../overview/overview.css'
+import '../report/report.css'
+import '../library/library.css'
+import '../runs/runs.css'
+import '../compare/compare.css'
+import '../run/run.css'
+import './preview.css'
+import { Preview } from './Preview'
+
+createRoot(document.getElementById('root')!).render(<Preview />)

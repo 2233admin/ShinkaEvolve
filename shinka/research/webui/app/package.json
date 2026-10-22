@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "design": "vite --config vite.design.config.ts",
     "build": "tsc -b && vite build && vite build --config vite.analysis.config.ts",
     "typecheck": "tsc -b --noEmit"
   },

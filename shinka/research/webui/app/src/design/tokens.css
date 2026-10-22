@@ -52,7 +52,7 @@
   --font-mono: 'IBM Plex Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
 
   /* Type scale: size / line height, weight on the role. */
-  --type-headline: 600 30px/40px var(--font-sans);
+  --type-headline: 600 28px/40px var(--font-sans);
   --type-title: 590 26px/34px var(--font-sans);
   --type-section: 590 15px/22px var(--font-sans);
   --type-body: 400 13px/20px var(--font-sans);
@@ -75,25 +75,17 @@
   --focus-ring: 2px solid var(--text);
 }
 
-/* Legacy names used by screens that tasks 4-6 replace; removed with them in task 7.1. */
+/* The restored analysis page's names (app/src/analysis/workbench.css, viz_tree.html), kept for it under owner
+   decision A (solution space and contest stay on that page); the native views use only the tokens above. */
 :root,
 [data-theme='dark'] {
   --ink: var(--text);
   --base: var(--bg);
   --accent: var(--signal-graphic);
   --accent-text: var(--signal);
-  --accent-hover: var(--signal);
-  --on-accent: #0a0a0b;
   --ok: #9cd1ac;
   --warn: #e5c06f;
   --err: #ffa095;
-  --space-16: 64px;
-  --page-max: 1480px;
-  --side-width: 420px;
-  --spec-key-width: 110px;
-  --library-nav-width: 240px;
-  --stripe-height: 8px;
-  --radius-none: 0px;
 }
 
 [data-theme='light'] {

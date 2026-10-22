@@ -212,6 +212,13 @@ All notable changes to `shinka-evolve` are documented in this file.
   addresses now answer 404 and are not redirected. The restored analysis page
   (`/viz_tree.html`) stays for Solution space and Contest. The unused Astro UXDS
   package (`@astrouxds/astro-web-components`) is no longer a dependency.
+- Rewrote the Research workbench design package for the dark-field instrument
+  design: `DESIGN.md`, `MOTION.md` and `design-system/README.md` describe the
+  shipped interface, and `design-system/preview.html` (`pnpm design`) renders
+  the app's own components (tokens of both themes, view tabs, notices, the
+  direction report, Lineage and Progress) on demo data. The old Astro/Carbon
+  `tokens.json`, `bundle.css` and component previews are gone; the rules the app
+  still used moved into `app/src/design/base.css`.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and

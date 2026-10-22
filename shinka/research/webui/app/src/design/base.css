@@ -66,3 +66,33 @@ p { font-size: 1rem; font-weight: 400; line-height: 1.5; }
 .term-pop::before { content: ''; position: absolute; left: 50%; margin-left: -5px; border: 5px solid transparent; }
 .term-pop[data-placement='bottom']::before { top: -10px; border-bottom-color: var(--text); }
 .term-pop[data-placement='top']::before { bottom: -10px; border-top-color: var(--text); }
+
+/* ---- Page ground and shared small pieces (moved from the retired design-system/components/bundle.css, same order) ---- */
+html, body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font-sans); }
+.muted { color: var(--muted); }
+.mono { font-family: var(--font-mono); }
+.num { font-variant-numeric: tabular-nums; }
+/* Beats `.small`: a muted paragraph (empty, loading and error lines) reads at 13/1.7. */
+p.muted { font: 13px/1.7 var(--font-sans); margin: 0; }
+code { font-family: var(--font-mono); font-size: .92em; }
+
+/* ---- Markdown (library pages, hypothesis bodies, meta notes): only rules and type, no filled blocks ---- */
+.md { font: 13px/1.75 var(--font-sans); overflow-wrap: anywhere; }
+.md > :first-child { margin-top: 0; }
+.md > :last-child { margin-bottom: 0; }
+.md h1, .md h2, .md h3, .md h4 { font-family: var(--font-sans); font-weight: 600; line-height: 1.4; margin: 1.4em 0 .5em; }
+.md h1 { font-size: 20px; } .md h2 { font-size: 16px; } .md h3, .md h4 { font-size: 14px; }
+.md p, .md ul, .md ol, .md blockquote, .md pre, .md table { margin: 0 0 .9em; }
+.md ul, .md ol { padding-left: 1.4em; }
+/* Links keep the text colour with a quiet underline: the signal orange is reserved for limits and failures. */
+.md a { color: var(--text); text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 3px; }
+.md a:hover { text-decoration-color: var(--text); }
+.md code { font-family: var(--font-mono); font-size: 12px; border-bottom: 1px solid var(--line); }
+.md pre { padding: 10px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; }
+.md pre code { border: 0; }
+.md blockquote { margin-left: 0; padding-left: var(--space-3); border-left: 2px solid var(--line-strong); color: var(--muted); }
+.md hr { border: 0; border-top: 1px solid var(--line); margin: 1.2em 0; }
+.md table { border-collapse: collapse; display: block; overflow-x: auto; }
+.md th, .md td { text-align: left; padding: 6px var(--space-3) 6px 0; border-bottom: 1px solid var(--line); }
+.md th { font: 500 11px/1.4 var(--font-mono); letter-spacing: .08em; color: var(--muted); border-bottom-color: var(--line-strong); }
+.md p, .md li, .md td, .md th, .md blockquote { font-size: inherit; line-height: inherit; letter-spacing: inherit; }

@@ -90,7 +90,7 @@
 | 解空间（6.4）与对比（6.5） | A：两者由恢复的原分析页承载，不做原生视图 |
 | 视图页签（代理默认，所有者 2026-10-22「你想做就做」） | 顶栏页签为谱系、进展、解空间、对比四个。解空间与对比在同一外壳内打开恢复页并带上当前程序，URL 没给面板时分别落在聚类（`clusters-view`）与程序排名表（`table-view`），在恢复页内换面板时页签不变；运行条「原分析工作台」打开不归属任何视图的恢复页。discuss:steady 与 discuss:divergent 都反对按恢复页面板反推页签（Pareto 点按会把面板切到进化树，「原分析工作台」会被反推回原页签）；对比默认落在排名表而非对决，依据 OD-2 的排行榜。1024 宽与 1280 宽英文的运行页顶栏放不下四个页签时，工具换到第二行 |
 | 未完成的原生解空间 | 停放在分支 `research/space-native-wip`（`1998066`，二维散点、三维、相似度、MAP 与多样性的组件和纯函数测试），不并入 `research/award-redesign` |
-| 删除范围（7.1） | 恢复页 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 及 Plotly、Chart.js、JSZip 保留；只删已无入口的 `/analysis/index.html`、`/analysis/compare.html` 与未被引用的 Astro UXDS 依赖 |
+| 删除范围（7.1） | 恢复页 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 及 Plotly、Chart.js、JSZip 保留；只删已无入口的 `/analysis/index.html`、`/compare.html` 与未被引用的 Astro UXDS 依赖 |
 
 决定 A 下，恢复页与原生规则不同、以恢复页为准的地方（规格 `run-analysis-ui` 已按此写明例外），以及因此不再交付的原定能力：
 

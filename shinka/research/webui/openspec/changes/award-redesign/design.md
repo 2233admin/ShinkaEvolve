@@ -34,7 +34,7 @@
 ### 字体与数字
 
 - 界面 Inter Variable，数字、编号与代码 IBM Plex Mono，均本地打包；中文回退 PingFang SC、Microsoft YaHei、Noto Sans SC。
-- 字号：页面标题 26/34（590），数据句标题 30/40（600），区块标题 15/22（590），正文 13/20，小字 12/18，数字 12–13 tabular 右对齐。
+- 字号：页面标题 26/34（590），数据句标题 28/40（600，与 `hifi/build.mjs` › `.dsent` 一致；1024 以下 21/32），区块标题 15/22（590），正文 13/20，小字 12/18，数字 12–13 tabular 右对齐。
 - 格式：分数与 Sharpe 两位小数，DSR 三位，金额 `$0.00`，时间 `YYYY-MM-DD HH:MM` 并标注 UTC，缺失 `—`，明确记录的零显示为零。负号用减号 U+2212；差值按显示精度相减，使“较父代”与两侧显示值一致；不足半分的金额显示 `<$0.01`（待所有者确认）。含费用未知运行的合计前加 `≥`，表示下限。`≥`、`≤` 取系统字体，因为打包的拉丁子集没有这两个字形。
 
 ### 空间与形状
@@ -122,7 +122,7 @@
 
 ## 迁移与删除
 
-按能力组替换：首页与报告 → 全部运行与比较 → 谱系 → 进展 → 资料库。全部运行与比较页整页替换，旧的 `/analysis/index.html`、`/analysis/compare.html` 已随 7.1 删除。分析页的谱系与进展是原生视图；解空间与对比按所有者决定 A（2026-10-22，`owner-decisions.md` › 解空间与对比）长期留在恢复的原分析工作台：它们的视图页签在同一外壳内打开恢复页的对应面板并带上当前程序，运行条的「原分析工作台」打开整个恢复页。因此 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 与它们用到的 Plotly、Chart.js、JSZip 保留；7.1 只删除已无入口的部分（`/analysis/index.html`、`/analysis/compare.html` 及其服务端路由与构建入口、未被引用的 Astro UXDS 依赖），不保留兼容跳转。恢复页内的行为以恢复页为准，与原生规则不同之处列在 `owner-decisions.md` › 解空间与对比。
+按能力组替换：首页与报告 → 全部运行与比较 → 谱系 → 进展 → 资料库。全部运行与比较页整页替换，旧的 `/analysis/index.html`、`/compare.html` 已随 7.1 删除。分析页的谱系与进展是原生视图；解空间与对比按所有者决定 A（2026-10-22，`owner-decisions.md` › 解空间与对比）长期留在恢复的原分析工作台：它们的视图页签在同一外壳内打开恢复页的对应面板并带上当前程序，运行条的「原分析工作台」打开整个恢复页。因此 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 与它们用到的 Plotly、Chart.js、JSZip 保留；7.1 只删除已无入口的部分（`/analysis/index.html`、`/compare.html` 及其服务端路由与构建入口、未被引用的 Astro UXDS 依赖），不保留兼容跳转。恢复页内的行为以恢复页为准，与原生规则不同之处列在 `owner-decisions.md` › 解空间与对比。
 
 ## 风险
 

@@ -53,9 +53,9 @@
 .rgroup-toggle { display: inline-flex; gap: 8px; align-items: center; min-width: 0; padding: 2px 4px 2px 0; border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer; }
 .rgroup-toggle b { font-weight: 500; overflow-wrap: anywhere; }
 .rgroup-toggle:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
-.rchev { display: inline-flex; color: var(--muted); transition: transform .15s; }
+/* State changes are instant (design.md › 动效): the chevron turns without a transition. */
+.rchev { display: inline-flex; color: var(--muted); }
 .rchev.is-shut { transform: rotate(-90deg); }
-@media (prefers-reduced-motion: reduce) { .rchev { transition: none; } }
 .rgroup-meta { font-size: 12px; }
 .rnomatch { margin: 0; padding: 16px 12px; }
 .rnone { padding: 24px 0; }

@@ -1,0 +1,21 @@
+/* The preview page's own frame only; everything inside a section is the app's CSS. */
+.pv { max-width: 1440px; margin: 0 auto; padding: 32px; font: var(--type-body); }
+.pv-head h1 { font: var(--type-title); margin: 0 0 4px; }
+.pv-sec { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line-strong); }
+.pv-sec > h2 { font: var(--type-section); margin: 0 0 16px; }
+.pv-sec h3 { font: 500 13px/20px var(--font-sans); margin: 20px 0 8px; color: var(--muted); }
+.pv-theme h4 { font: 500 12px/18px var(--font-mono); margin: 16px 0 6px; color: var(--muted); }
+.pv-themes { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.pv-theme { padding: 16px; background: var(--bg); color: var(--text); border: 1px solid var(--line-strong); }
+.pv-theme > h3 { margin-top: 0; text-transform: uppercase; }
+.pv-table { border-collapse: collapse; }
+.pv-table td, .pv-table th { padding: 3px 12px 3px 0; text-align: left; font-weight: 400; border-bottom: 1px solid var(--line); }
+.pv-swatch { display: inline-block; width: 28px; height: 16px; border: 1px solid var(--line-strong); vertical-align: middle; }
+.pv-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-top: 8px; }
+.pv-space { display: inline-block; height: 12px; background: var(--stroke); }
+.pv-box { padding: 6px 12px; border: 1px solid var(--line-strong); background: var(--raised); }
+.pv-btn { padding: 4px 10px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--raised); color: var(--text); cursor: pointer; }
+.pv-btn:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.pv-tabs { display: flex; height: 52px; border-bottom: 1px solid var(--line); }
+.pv-stack { display: grid; gap: 12px; justify-items: start; }
+.pv-canvas { height: 720px; margin-top: 16px; border: 1px solid var(--line); display: flex; flex-direction: column; }

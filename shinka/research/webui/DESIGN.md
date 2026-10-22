@@ -1,79 +1,59 @@
 ---
 version: alpha
-name: Shinka Research 运维规格台
-description: Read-only research console for Shinka Research, set as an ink-black ops-spec sheet built from Astro UXDS and Carbon components. Tokens below are generated from design-system/tokens.json (dark theme shown; the light theme Technical Paper is in the same file); usage rules, guidelines and live previews live in design-system/.
+name: Shinka Research 暗场仪器
+description: Read-only research workbench for Shinka Research, drawn as a dark-field instrument with the app's own components. The values below are the dark theme as defined in app/src/design/tokens.css, the only source of values; the light theme is in the same file. Usage rules and the live preview are in design-system/.
 colors:
-  primary: "#efeee8"
-  ink: "#efeee8"
-  muted: "#a9a8a0"
-  base: "#0b0b0a"
-  raised: "#141413"
-  hover: "#1c1c1a"
-  selected: "#232320"
-  line: "#2c2c29"
-  line-strong: "#6e6e68"
-  accent: "#f45d22"
-  accent-hover: "#ff7a3e"
-  accent-text: "#f45d22"
-  on-accent: "#0b0b0a"
-  ok: "#9cd1ac"
-  warn: "#e5c06f"
-  err: "#ffa095"
+  primary: "#ededef"
+  bg: "#0a0a0b"
+  rail: "#0e0e10"
+  raised: "#16161a"
+  hover: "#1c1c21"
+  selected: "#232329"
+  text: "#ededef"
+  muted: "#a1a1aa"
+  faint: "#8a8a93"
+  signal: "#f2622e"
+  signal-graphic: "#f2622e"
+  stroke: "#6d6d76"
+  grid: "#34343b"
+  notice-error-bg: "#262626"
+  ramp-0: "#606066"
+  ramp-1: "#f1f1f3"
 typography:
-  title-page:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
+  headline:
+    fontFamily: "'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
     fontSize: 28px
     fontWeight: 600
-    lineHeight: 1.3
-  title-card:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
-    fontSize: 18px
-    fontWeight: 600
-    lineHeight: 1.4
-  heading-reading:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
-    fontSize: 16px
-    fontWeight: 600
-    lineHeight: 1.4
-  text-reading:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
+    lineHeight: 40px
+  title:
+    fontFamily: "'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
+    fontSize: 26px
+    fontWeight: 590
+    lineHeight: 34px
+  section:
+    fontFamily: "'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
+    fontSize: 15px
+    fontWeight: 590
+    lineHeight: 22px
+  body:
+    fontFamily: "'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
     fontSize: 13px
     fontWeight: 400
-    lineHeight: 1.75
-  text-field:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
-    fontSize: 13px
-    fontWeight: 400
-    lineHeight: 1.5
-  text-note:
-    fontFamily: "'Inter Variable', 'PingFang SC', 'Noto Sans SC', sans-serif"
+    lineHeight: 20px
+  small:
+    fontFamily: "'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif"
     fontSize: 12px
     fontWeight: 400
-    lineHeight: 1.7
-  label-section:
-    fontFamily: "'IBM Plex Mono', 'PingFang SC', monospace"
-    fontSize: 11px
-    fontWeight: 500
-    lineHeight: 1
-    letterSpacing: 0.08em
-  label-spec:
-    fontFamily: "'IBM Plex Mono', 'PingFang SC', monospace"
-    fontSize: 11px
-    fontWeight: 500
-    lineHeight: 1.4
-    letterSpacing: 0.08em
-  data-cell:
-    fontFamily: "'IBM Plex Mono', 'PingFang SC', monospace"
-    fontSize: 14px
-    fontWeight: 400
-    lineHeight: 1.2857
-  data-sm:
-    fontFamily: "'IBM Plex Mono', 'PingFang SC', monospace"
+    lineHeight: 18px
+  data:
+    fontFamily: "'IBM Plex Mono', 'PingFang SC', 'Microsoft YaHei', monospace"
     fontSize: 12px
     fontWeight: 400
-    lineHeight: 1.5
+    lineHeight: 18px
 rounded:
-  radius-none: 0px
+  radius-panel: 0px
+  radius-control: 6px
+  radius-float: 8px
 spacing:
   space-1: 4px
   space-2: 8px
@@ -82,98 +62,156 @@ spacing:
   space-5: 20px
   space-6: 24px
   space-8: 32px
-  space-16: 64px
-  page-max: 1480px
-  side-width: 420px
-  spec-key-width: 110px
-  library-nav-width: 240px
-  stripe-height: 8px
+  space-10: 40px
 ---
 
-# Shinka Research 运维规格台
+# Shinka Research 暗场仪器
 
 ## Overview
 
-An ops-spec sheet for a research workspace and each direction: spec-sheet key–value blocks, rules instead of filled panels,
-orange index stripes under the top bar, and orange used only for limits and signals (the sealed
-lockbox, the noise line, the selected-row mark, actions). Default theme is neutral ink-black; the
-switchable light theme is Technical Paper. The signal layer (top bar, status symbols, timeline, event
-log) is Astro UXDS 8.0; the content layer (tables, tabs, tooltips, notices, tree, charts) is Carbon
-1.118. The usage rules are `design-system/README.md`; read it before building any page.
+A dark-field instrument for reading research evidence. Near-black grounds, hairline rules and one signal orange. Every page answers a question with data:
+- the directions overview opens with a data-sentence title;
+- a direction report runs claim → trials against the noise line → check ledger → verdict;
+- a run's analysis has four views (Lineage, Progress, Solution space, Contest) and one resident program inspector.
+
+Dark is the default and a light theme ships beside it. The whole interface switches between Chinese and English. There is no dedicated phone design or acceptance; the existing narrow layout remains, and the accepted widths are 1920, 1440 and 1024.
+
+The page is read-only. Every component is the project's own DOM, SVG or D3. react-aria-components supplies only interaction and accessibility behaviour; no component library styles are loaded. Usage rules are in `design-system/README.md`; the live preview is `design-system/preview.html` (`pnpm design` in `app/`).
 
 ## Colors
 
-Ink on ink-black in the dark theme, ink on paper in the light theme, three status colours (`ok`,
-`warn`, `err`) and one orange (`accent`, with `accent-text` for text and `accent-hover`). The values
-above are the dark theme; the light theme and every token's use and its contrast on each ground it sits
-on are in `design-system/tokens.json` (`color`, `usage`, `contrast`).
+All values live in `app/src/design/tokens.css`; the front matter repeats the dark theme.
+- **Grounds:** `bg`, `rail`, `raised`, `hover` and `selected`.
+- **Text:** `text`, `muted` and `faint`.
+- **Rules:** `line` and `line-strong` (white or black at 8% and 16%). They separate regions and never carry information alone.
+- **Graphics:** `stroke` for axes, input and checkbox borders and the selected segment of a switch; `grid` for auxiliary grid lines. The score ramp `ramp-0` → `ramp-1` shades lineage marks.
+
+**Contrast requirements**, worked out with the WCAG 2.x relative-luminance formula on every ground:
+- body and small text reach at least 4.5:1;
+- axes, borders, selection marks and data marks reach at least 3:1.
+
+| Token | Dark | Light |
+|---|---|---|
+| `text` | 13.36–16.93 | 14.36–17.72 |
+| `faint` | from 4.57 | from 4.61 |
+| `signal` | 4.88–6.18 | text `#b83e0b` 4.56–5.63, graphics `#e3550c` 3.05–3.77 |
+
+The preview recomputes these figures from the cascade.
+
+**Signal orange** marks evidence that needs attention, and nothing else: the part of a best record above the noise line, the best program's ancestry, an overspent budget, a failed evaluation. There is no second accent, no decorative gradient and no glass.
+
+**Restored-page aliases.** The names `ink`, `base`, `accent`, `accent-text`, `ok`, `warn` and `err` exist only for the restored analysis page, which keeps serving Solution space and Contest (owner decision A); the native views never use them.
 
 ## Typography
 
-Inter for text and IBM Plex Mono for ids, figures, keys and section labels; CJK falls back to PingFang
-SC and Noto Sans SC. Styles and their uses: `design-system/tokens.json` `type`.
+- Inter Variable for the interface; IBM Plex Mono for numbers, IDs and code. Both fonts are bundled locally.
+- Chinese text falls back to PingFang SC, Microsoft YaHei and Noto Sans SC.
+- Roles are the `--type-*` tokens: headline 28/40 (600) for the data-sentence title, title 26/34, section 15/22, body 13/20 and small 12/18. The title and section roles use weight 590.
+- Numbers use tabular figures and are right-aligned.
+- Scores and Sharpe ratios have two decimals and DSR has three; money is `$0.00`.
+- Time is `YYYY-MM-DD HH:MM` marked UTC.
+- A missing value is `—`; a recorded zero shows as zero.
+- A total that includes runs of unknown cost starts with `≥`, because it is a lower bound.
+- The minus sign is U+2212.
 
 ## Layout
 
-A page of at most `page-max` with a grid of table, trial chart, timeline and events beside a sticky
-`side-width` spec card; stacked below 900px. All corners are square. Rules and breakpoints:
-`design-system/README.md` › Visual foundations.
+The shell is a left rail with three parts: the directions overview, all runs, and the library with the list of directions. Above the content sits a top bar holding:
+- the breadcrumb and view tabs;
+- the "last updated" indicator and the auto-refresh pause;
+- the theme and language switches;
+- the Ctrl K command palette.
 
-The workspace uses a Carbon table of real direction summaries, not a card grid. A direction link opens
-a new document; its breadcrumb returns to the workspace. Both views reuse the same library reader.
-Directory identity, empty/error states and read-only navigation follow
-[`docs/research/workspace.md`](../../../docs/research/workspace.md).
+Routing is by query parameters (`?view=directions|direction|runs|compare|run|library`). Every selection is written to the URL, so direct links, refresh and Back restore the same state.
 
-The unified workspace keeps research directions as its home, independent ordinary runs under “全部运行”,
-and the shared library. Full experiment analysis reuses this fork's self-developed workbench from
-`b31db504f9ca9616b5d4c8ca523cdcfdab26d8ab`, not the white upstream viewer. The owned analysis build
-shares the tokens, local fonts, theme and keyboard conventions, while retaining its original chart
-engines and document-local state inside a same-origin frame. Research links preserve the originating
-direction and hypothesis; browser history and direct URLs preserve the analysis selection.
+| Width | Layout |
+|---|---|
+| ≥1920 | Rail expanded; content up to 1600px; inspector 440px |
+| 1440 | Same; content follows the width |
+| 1024 | Rail narrows to a labelled strip; inspector 380px; the home side column moves below the content. Where the run page's top bar cannot hold the four view tabs, its tools move to a second row and the run name does not wrap |
 
-Generic `combined_score` is diagnostic, not corrected research evidence. The direction's trial chart
-keeps its direction-wide noise benchmark; generic generation/cost plots do not borrow that horizontal
-axis or invent a null model for unrelated tasks. Failed evaluations do not enter best-score frontiers,
-and absent measurements remain missing. The implementation and rendered quality criteria are in
-`design/changes/unified-analysis/qa.md`; awards are a craft reference, not a certification.
+On spacing and shape:
+- spacing follows a 4px baseline (4, 8, 12, 16, 20, 24, 32, 40);
+- controls have 6px corners and floating layers 8px;
+- tables, panels, cards and code or log blocks stay square, separated by hairlines rather than shadows.
 
+## Elevation & Depth
+
+Flat. Regions are separated by `line` hairlines and whitespace, never by shadows. A selected row rises to `selected` with a 2px `text` bar on its left edge; a pressed toggle gets `raised` with a 1px `stroke` inset ring. Floating layers sit above the page on `raised` with a `line-strong` border and an 8px radius:
+- chart read-outs;
+- the lineage panel;
+- dialogs;
+- the command palette.
+
+Dialogs and the palette dim the page behind them to 50% black. The palette alone also carries a soft drop shadow (`0 16px 48px`, 40% black), so it reads as the topmost layer. Definition popovers are inverted instead: `bg` text on a `text` ground with 2px corners, the metrics of the Carbon tooltip the app used before.
+
+## Shapes
+
+Status is a shape plus a word, never colour alone:
+- **Hypothesis states** use circles. The words are fixed: 待跑, 已选, 运行中, 待判定, 成立, 否定, 未定, 已确认, 未确认, 放弃. In English they are queued, selected, running, challenged, supported, refuted, inconclusive, confirmed, unconfirmed, dropped.
+- **Direction states** use squares:
+  - in progress: a square with a filled inner square;
+  - concluded: a filled square with a tick;
+  - new: a dashed square;
+  - over budget: a square with an arrow, in signal orange.
+- **Events:**
+  - ＋ set up;
+  - ■ run finished;
+  - ✕ run failed (signal orange);
+  - ◇ skeptic check;
+  - ◆ verdict;
+  - △ probe;
+  - an open lock for the lockbox confirmation.
+- **Lineage marks** show the patch type: init ◆, full ●, diff ■, cross ✚, fix ▲.
+- **Runs** on one chart are told apart by shape plus line style: ● solid, □ dashed, ▲ dotted.
 
 ## Components
 
-Ten components, each with guidelines and a live preview under `design-system/components/`: TopBar,
-HypothesisTable, SpecCard, CheckLedger, TrialChart, Timeline, EventStream, LibraryReader, Term and
-Notice. The shared stylesheet, which also maps the tokens onto Astro and Carbon, is
-`design-system/components/bundle.css`.
+All components live in the app, and the preview renders them on demo data:
+- **Shell** (`app/src/shell/`): rail, top bar, view tabs, palette and modal.
+- **Directions overview** (`overview/`): data-sentence title and a sortable direction table with a shared evidence scale.
+- **Report** (`report/`): `HypothesisTable`, `TrialChart`, `Ledger`, `Verdict`/`LockboxResults`/`Experiments`, `Timeline` and `Events`.
+- **Runs** (`runs/`) and **Compare** (`compare/`).
+- **Run analysis** (`run/`): `Lineage`, `Progress`, `Scrubber`, `Inspector` and `LineagePanel`.
+- **Shared** (`Notice`, `Definition`/`Term`, `Markdown`), with styles in `design/base.css`.
+- **Restored analysis page** (`AnalysisWorkspace`, `legacyFrame.ts`): hosted for Solution space and Contest.
+
+Charts follow one grammar:
+- the noise line is drawn by the chart itself;
+- charts that are compared share a scale and label its ticks;
+- trial and generation axes have integer ticks only;
+- failed evaluations sit in a separate band below the score axis, are counted, and never enter best or frontier;
+- anything shown on hover can also be read in the inspector by click or focus.
 
 ## Do's and Don'ts
 
-See `design-system/README.md` › Rules that protect the research: read-only, a noise line beside every
-best score, validation evidence only after a verdict, lockbox figures only after confirmation. Orange is
-for limits and signals only; take ready-made Astro and Carbon pieces instead of drawing components.
+- Do keep the page read-only. Controls only navigate, switch theme or language, refresh, or pause the automatic refresh.
+- Do show validation figures only after a verdict, and lockbox figures only after confirmation. Before that the cell is `—` with the note 出结论后显示.
+- Do put the direction's noise line beside every research best score. Generic analysis shows `combined_score` for diagnosis only and never invents a null model.
+- Do mark state with shape plus word, and use the signal orange only for the four signals above.
+- Don't introduce a colour outside `tokens.css` (the black scrim and the palette's shadow are the only literals), add a decorative shadow or gradient, animate an entrance, or load a component library's styles.
+- Don't add a control that writes research state, confirms a hypothesis or opens the lockbox.
 
 ## Product Context
 
-Shinka Research (fork 2233admin/ShinkaEvolve) turns a research direction into hypotheses tested by
-evolution against a frozen evaluator, with skeptic statistics and a one-time lockbox. Readers are the
-owner and people the owner shares results with. See `docs/research/design.md` §7.3 and
-`design/changes/research-ui/decisions/grill.md`.
+Shinka Research (fork 2233admin/ShinkaEvolve) turns a research direction into hypotheses. Evolution tests them against a frozen evaluator, with skeptic statistics and a one-time lockbox. The readers are the owner and the people the owner shares results with. The research contract is `docs/research/design.md` §7.3; the page contract is `docs/research/workspace.md`.
 
 ## Source Decisions
 
-Change: `design/changes/research-ui`. The owner first picked the notebook direction (2026-10-17), then
-chose direction B, ops-spec (运维规格台), and asked for ready-made component libraries rather than
-hand-built components.
+Change: `openspec/changes/award-redesign`.
 
-Adopted: Neo-Industrial structure for the sheet (spec-sheet key–value blocks, rules, orange index
-stripes, orange only for limits and signals); Astro UXDS 8.0 for the signal layer and Carbon 1.118 for
-content, split as in `design/changes/research-ui/component-selection/README.md` (owner-approved
-2026-10-18); a neutral ink-black dark theme instead of the Operations Dark green-grey, per the owner
-2026-10-18; the light theme Technical Paper; Inter and IBM Plex Mono; Claude's Design System format for
-the package (usage-noted tokens, usage-rule README, per-component guidelines with live previews,
-cover); autoresearch's frontier plot; BRAIN's explicit pass/fail tests.
+On 2026-10-19 the owner chose direction A, 暗场仪器 (dark-field instrument), on `direction-previews/index.html`. A absorbed three things from B:
+- island-laned lineage;
+- progress small multiples;
+- the data-sentence home title.
 
-Rejected: the paper-notebook direction (serif, paper colours, hand-drawn components) and its package;
-the other previewed directions (night ledger, tape archive); a shared component library with
-KatanaConsole, which stays a separate project with its own libraries; Astro tabs, accordion and
-notification, and `rux-classification-marking`; W&B auto-generated panels, MLflow evidence-free stage
-labels, card grids, any control that writes research state.
+The owner also set four product rules: dark default with a light theme, a full Chinese and English switch, and separate pages for directions and all runs. The high-fidelity mock-ups were approved on 2026-10-20 (`hifi/index.html`), together with the rule that no existing capability is removed. On 2026-10-22 the owner made three more decisions:
+- react-aria-components replaced Carbon and Astro UXDS as behaviour-only dependencies (component route A);
+- dedicated phone design and acceptance were dropped, keeping the existing narrow layout;
+- Solution space and Contest stay on the restored analysis page (decision A).
+
+All of these are recorded in `owner-decisions.md`.
+
+Adopted: direction A's dark grounds, hairline rules and single signal orange; B's island-laned lineage, progress small multiples and data-sentence title; Inter Variable and IBM Plex Mono; react-aria-components for behaviour only; shape-plus-word status; the noise line drawn by every research chart.
+
+Rejected: the previous ops-spec sheet (运维规格台) and its Astro UXDS and Carbon components; card grids; a second accent colour; animated chart entrances; any control that writes research state.

@@ -46,7 +46,7 @@
 
 ## P5 · 研究层前端（只读）
 - [x] 视觉方向与组件选型（design-pipeline）：ops-spec，Astro UXDS × Carbon，所有者确认
-- [x] 设计系统包与 DESIGN.md 改到选定方向（tokens.json 是唯一值来源，界面直接读它）
+- [x] 设计系统包与 DESIGN.md 改到选定方向（tokens.json 是唯一值来源，界面直接读它）；2026-10-22 award-redesign 7.2 起改为暗场仪器，值的唯一来源是 `shinka/research/webui/app/src/design/tokens.css`，tokens.json 删除
 - [x] `shinka_research ui <工作区目录>`：工作区方向列表、方向页和共享资料库；方向支持深链接、刷新与返回（[契约](workspace.md)，GitHub #12）
 - [x] 可见性测试：未出结论不露验证段证据（含质疑者事件说明），未 confirm 不露 lockbox 数字
 - [x] 页面按研究进度换内容：试验图（噪声线）、实验时间线、资料库页，跳转上游 viz_tree
