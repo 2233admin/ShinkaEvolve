@@ -1,7 +1,7 @@
 // The compare page's curves, costs and leads (award-redesign 5.2); node strips the TypeScript types.
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { byGeneration, byGroup, bySpend, crossBoard, groupBoards, groupLeads, leads, MAX_POINTS, metricOf, programCost, seriesStyle, stackLabels, stripDomain, valueAt } from './series.ts'
+import { byGeneration, byGroup, bySpend, crossBoard, groupBoards, groupLeads, leads, MAX_POINTS, metricOf, programCost, scoreOf, seriesStyle, stackLabels, stripDomain, valueAt } from './series.ts'
 
 const program = (id, generation, score, extra = {}) => ({
   id,
@@ -21,6 +21,13 @@ test('by generation each metric accumulates, failures never raise the best, and 
   assert.deepEqual(xy(byGeneration(programs, 'correct_count')), [[0, 1], [9, 2], [10, 4]])
   // Until a program is valid the best has no value, so its curve starts later.
   assert.deepEqual(xy(byGeneration([program('f', 0, null), program('g', 1, 0.3)], 'best_score')), [[1, 0.3]])
+})
+
+test('only true, 1 and "true" pass an evaluation; a "false" string scores and counts as a failure', () => {
+  const as = (correct) => ({ id: String(correct), generation: 0, correct, combined_score: 0.9 })
+  assert.deepEqual([true, 1, 'true'].map((c) => scoreOf(as(c))), [0.9, 0.9, 0.9])
+  assert.deepEqual([false, 0, 'false', '1', null, undefined].map((c) => scoreOf(as(c))), [null, null, null, null, null, null])
+  assert.deepEqual(xy(byGeneration([as(1), as('false'), as(true)], 'correct_count')), [[0, 2]])
 })
 
 test('by spend programs and prompts charge in time order and a late prompt moves the end to the total', () => {

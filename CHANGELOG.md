@@ -163,6 +163,22 @@ All notable changes to `shinka-evolve` are documented in this file.
   gone, and the workbench stylesheet shrinks from 1.28 MB to 64 kB. Carbon's
   stylesheet also fetched IBM Plex Mono from IBM's CDN; the semibold figures now
   use a bundled copy instead.
+- Drew a run's analysis natively in the Research workbench, starting with
+  Lineage: island lanes on a generation axis with patch-type shapes, the failure
+  band, the best program's ancestry (ties all marked) and the selected program's
+  ancestry across islands; zoom, pan and a score-axis range; a generation
+  scrubber with replay; prompt-version and meta-analysis tracks; a legend and an
+  island list that fold away; and a resizable panel with the global
+  conclusions, the prompt evolution tree and each
+  version's programs, island populations and migrations, the best path with each
+  step's diff, and the most fertile parents with mutation size. A resident
+  inspector beside it shows the selected program's code, diff (against its parent
+  or the initial program), evaluation, LLM record and meta-analysis summary, with
+  plain-text downloads. Progress, solution space and contest stay on the restored
+  page, opened in the same shell on the current program from the run bar
+  (`tab=legacy`). Private metrics are never shown, and a `correct` of `'false'`
+  is a failure everywhere. Long program names, file names and direction titles
+  wrap instead of being cut, in the breadcrumb too.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and

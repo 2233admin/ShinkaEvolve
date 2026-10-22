@@ -83,12 +83,16 @@ a.railitem:hover, .railitem.is-on { background: var(--hover); color: var(--text)
 
 /* ---- Top bar ---- */
 .top {
-  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px; height: 52px;
+  position: sticky; top: 0; z-index: 10; display: flex; align-items: center; gap: 24px; min-height: 52px;
   padding: 0 20px 0 28px; border-bottom: 1px solid var(--line); background: var(--bg);
 }
 .crumbs { min-width: 0; }
 .crumbs ol { display: flex; align-items: center; gap: 8px; margin: 0; padding: 0; list-style: none; white-space: nowrap; color: var(--muted); font-size: 13px; }
-.crumbs li { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.crumbs li { display: flex; flex: none; align-items: center; gap: 8px; }
+/* Only data (a direction's title, a run's name) gives way; the section and page names keep their words. */
+.crumbs li:has(> [translate='no']) { flex: 0 1 auto; min-width: 0; }
+/* Such a name wraps rather than being cut, and the top bar grows to hold it. */
+.crumbs li:has(> [translate='no']) > .trunc { white-space: normal; overflow-wrap: anywhere; line-height: 16px; }
 .crumbs li + li::before { content: '/'; color: var(--faint); }
 .crumbs a { max-width: 300px; color: var(--muted); text-decoration: none; }
 .crumbs a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }

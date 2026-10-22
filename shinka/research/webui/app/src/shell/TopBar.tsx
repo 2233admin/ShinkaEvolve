@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { Glyph, Icon, Mark } from '../design/icons'
 import type { ThemeName } from '../design/theme'
 import { when } from '../format'
@@ -93,15 +93,17 @@ type Props = {
   data: ShellData
   /** Demo data: on phones, where the rail is hidden, the top bar carries the DEMO mark. */
   demo: boolean
-  /** False while a restored analysis page with its own refresh switch fills the page (until task 6.1). */
+  /** False while the restored analysis page, with its own refresh switch, fills the page. */
   liveToggle: boolean
+  /** The page's view tabs (a run's analysis views), after the breadcrumb. */
+  tabs?: ReactNode
   theme: ThemeName
   onTheme: (theme: ThemeName) => void
   onLang: (lang: Lang) => void
   onSearch: () => void
 }
 
-export function TopBar({ crumbs, data, demo, liveToggle, theme, onTheme, onLang, onSearch }: Props) {
+export function TopBar({ crumbs, data, demo, liveToggle, tabs, theme, onTheme, onLang, onSearch }: Props) {
   const { lang, t } = useCopy()
   const [settings, setSettings] = useState(false)
   const tools = (
@@ -146,6 +148,7 @@ export function TopBar({ crumbs, data, demo, liveToggle, theme, onTheme, onLang,
           ))}
         </ol>
       </nav>
+      {tabs}
       {demo && <span className="demo top-demo" title={t('shell.demo')}>DEMO</span>}
       <div className="tools">{tools}</div>
       <button type="button" className="top-button top-search" aria-label={t('shell.search')} aria-keyshortcuts="Control+K" onClick={onSearch}>

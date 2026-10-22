@@ -178,6 +178,18 @@ const ICONS = {
     box: 12,
     body: <path d="M3.5 4.5l2.5 2.5 2.5-2.5" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
   },
+  prev: {
+    box: 12,
+    body: <path d="M7.5 2.5L4 6l3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />,
+  },
+  next: {
+    box: 12,
+    body: <path d="M4.5 2.5L8 6l-3.5 3.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />,
+  },
+  download: {
+    box: 14,
+    body: <path d="M7 2v7m-3-3l3 3 3-3M2.5 11.5h9" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />,
+  },
 } satisfies Record<string, { box: number; body: ReactNode }>
 
 export type IconName = keyof typeof ICONS

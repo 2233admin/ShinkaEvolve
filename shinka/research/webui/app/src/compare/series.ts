@@ -16,7 +16,7 @@ export type ProgramSummary = {
   id: string
   generation?: number | null
   timestamp?: number | null
-  correct?: boolean | number | null
+  correct?: boolean | number | string | null
   combined_score?: number | null
   metadata?: Record<string, unknown> | null
 }
@@ -53,9 +53,15 @@ export function programCost(p: ProgramSummary): number | null {
   return values.some((v) => v === null) ? null : values.reduce((sum: number, v) => sum + (v as number), 0)
 }
 
+/**
+ * The one rule for a passed evaluation (capability matrix D-3): true, 1 or 'true', as the legacy tree
+ * read it; a string 'false' is a failure, not a truthy pass (D-L01b).
+ */
+export const isCorrect = (p: ProgramSummary): boolean => p.correct === true || p.correct === 1 || p.correct === 'true'
+
 /** A valid score: a correct program's finite combined_score. */
 export const scoreOf = (p: ProgramSummary): number | null =>
-  p.correct && typeof p.combined_score === 'number' && Number.isFinite(p.combined_score) ? p.combined_score : null
+  isCorrect(p) && typeof p.combined_score === 'number' && Number.isFinite(p.combined_score) ? p.combined_score : null
 
 type Tally = { best: number | null; programs: number; correct: number }
 
@@ -63,7 +69,7 @@ const tally = (): Tally => ({ best: null, programs: 0, correct: 0 })
 
 function count(t: Tally, p: ProgramSummary) {
   t.programs += 1
-  if (p.correct) t.correct += 1
+  if (isCorrect(p)) t.correct += 1
   const score = scoreOf(p)
   if (score !== null) t.best = t.best === null ? score : Math.max(t.best, score)
 }

@@ -37,11 +37,11 @@ export function experimentProgram(h: Hypothesis, experiment: Experiment, points:
   return best?.program ?? null
 }
 
-/** An experiment's analysis with one program open on its code, keeping the research context that Back returns to. */
+/** An experiment's analysis with one program open in the inspector's code, keeping the research context that Back returns to. */
 export function programHref(analysisUrl: string, program: string): string {
   const route = parseRoute(new URL(analysisUrl, 'http://shell').search)
   if (route.view !== 'run') return analysisUrl
-  return routeHref({ ...route, program, pane: 'code', panels: route.panels.filter(([key]) => key !== 'right_tab') })
+  return routeHref({ ...route, tab: null, program, pane: 'code', panels: [] })
 }
 
 export type Step = { n: number; best: number; bar: number }

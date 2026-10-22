@@ -13,12 +13,20 @@ export type Route =
   | {
       view: 'run'
       run: string
-      /** lineage | progress | space | contest, the inspector pane and the generation: drawn from task 6.1, kept until then. */
+      /** The analysis view: lineage, progress, space or contest, or `legacy` for the restored page (see `analysisView`). */
       tab: string | null
       program: string | null
+      /** The inspector pane: code, diff, evaluation, llm or meta; absent is code. */
       pane: string | null
+      /** The last generation the views show (the generation scrubber); absent is the newest. */
       gen: string | null
-      /** The restored analysis page's own panels (left_tab, right_tab, meta_section) until task 6.1 replaces it. */
+      /** The lineage panel's open section: conclusions, prompts, migrations, path or offspring; absent is closed. */
+      panel: string | null
+      /** The prompt version open in the lineage panel (L02-S1). */
+      prompt: string | null
+      /** The meta-analysis update the conclusions show, by its processed count (R03-C1); absent is the latest. */
+      meta: string | null
+      /** The restored analysis page's own panels (left_tab, right_tab, meta_section) until task 7.1 removes it. */
       panels: [string, string][]
       /** The research an experiment's analysis returns to; absent for an ordinary run. */
       direction: string | null
@@ -29,6 +37,26 @@ export type Route =
 export type RunRoute = Extract<Route, { view: 'run' }>
 
 export const RUN_PANELS = ['left_tab', 'right_tab', 'meta_section']
+
+/** The analysis views in their tab order, and those drawn natively so far (design.md › 迁移与删除). */
+export const ANALYSIS_VIEWS = ['lineage', 'progress', 'space', 'contest'] as const
+export const SHIPPED_VIEWS: readonly string[] = ['lineage']
+export type AnalysisView = 'lineage' | 'legacy'
+
+/**
+ * Which page a run's URL opens. A shipped view draws natively; `legacy`, a view not shipped yet, and a
+ * URL that only names the restored page's own panels open the restored page; anything else is Lineage.
+ */
+export function analysisView(route: RunRoute): AnalysisView {
+  const { tab } = route
+  if (tab === 'legacy') return 'legacy'
+  if (tab !== null && SHIPPED_VIEWS.includes(tab)) return 'lineage'
+  if (tab !== null && (ANALYSIS_VIEWS as readonly string[]).includes(tab)) return 'legacy'
+  return tab === null && route.panels.length > 0 ? 'legacy' : 'lineage'
+}
+
+/** The same run and selection in another view: a native view drops the restored page's own panels. */
+export const viewRoute = (route: RunRoute, tab: string): RunRoute => ({ ...route, tab, panels: tab === 'legacy' ? route.panels : [] })
 
 export const ALL_RUNS: Extract<Route, { view: 'runs' }> = { view: 'runs', q: '', kind: '', sort: '', select: [] }
 
@@ -55,6 +83,9 @@ export function parseRoute(search: string): Route {
         program: one('program'),
         pane: one('pane'),
         gen: one('gen'),
+        panel: one('panel'),
+        prompt: one('prompt'),
+        meta: one('meta'),
         panels: RUN_PANELS.flatMap((key) => p.getAll(key).map((value): [string, string] => [key, value])),
         direction: one('direction'),
         hypothesis: one('hypothesis'),
@@ -92,6 +123,9 @@ export function routeHref(route: Route): string {
       put('program', route.program)
       put('pane', route.pane)
       put('gen', route.gen)
+      put('panel', route.panel)
+      put('prompt', route.prompt)
+      put('meta', route.meta)
       put('direction', route.direction)
       put('hypothesis', route.hypothesis)
       for (const [key, value] of route.panels) p.append(key, value)
@@ -112,6 +146,9 @@ export function runRoute(run: string, context: { direction: string; hypothesis: 
     program: null,
     pane: null,
     gen: null,
+    panel: null,
+    prompt: null,
+    meta: null,
     panels: [],
     direction: context?.direction ?? null,
     hypothesis: context?.hypothesis ?? null,

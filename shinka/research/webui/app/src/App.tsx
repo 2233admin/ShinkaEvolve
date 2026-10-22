@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Notice } from './Notice'
-import { AnalysisWorkspace } from './AnalysisWorkspace'
 import { Compare } from './compare/Compare'
 import { DEMO_TAG, untagged } from './demo'
 import { DirectionMeta } from './DirectionMeta'
@@ -11,14 +10,15 @@ import { Report } from './report/Report'
 import { RunList } from './runs/RunList'
 import { Palette, type PaletteItem } from './shell/Palette'
 import { Rail, TabBar } from './shell/Rail'
-import { ALL_RUNS, routeHref, runRoute, type Route } from './shell/route'
+import { ALL_RUNS, analysisView, routeHref, runRoute, type Route } from './shell/route'
 import { TopBar, Updated, type Crumb } from './shell/TopBar'
 import { useMatches } from './shell/useMatches'
 import { useRouter } from './shell/useRouter'
 import { REFRESH_MS, RUNS_REFRESH_MS, useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
+import { RunPage, ViewTabs } from './run/RunPage'
 
-// Each page's own layout; the hosted analysis page takes the full width.
+// Each page's own layout; a run's analysis takes the full width and height.
 const PAGE_CLASS: Record<Route['view'], string> = {
   directions: 'home-page',
   direction: 'report-page',
@@ -198,13 +198,16 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
       break
     case 'run':
       page = (
-        <>
-          <header className="page-head">
-            <h1>{t('head.runs')}</h1>
-            <p className="muted">{t('lede.runs')}</p>
-          </header>
-          <AnalysisWorkspace key={`${entry}:${reload}`} route={route} light={light} onProject={sync} onRunList={() => go(routeHref(ALL_RUNS))} />
-        </>
+        <RunPage
+          route={route}
+          data={shown}
+          name={(names.get(route.run) ?? route.run).replace(/\/results$/, '')}
+          go={go}
+          sync={sync}
+          light={light}
+          frameKey={`${entry}:${reload}`}
+          onRunList={() => go(routeHref(ALL_RUNS))}
+        />
       )
       break
     case 'library':
@@ -213,6 +216,8 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   }
 
   const analysis = route.view === 'run'
+  // The restored page has its own refresh switch; the native views follow the shell's.
+  const legacy = route.view === 'run' && analysisView(route) === 'legacy'
   return (
     <>
       <a className="skip" href="#content">{t('shell.skip')}</a>
@@ -223,7 +228,8 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
             crumbs={crumbs}
             data={shown}
             demo={demo}
-            liveToggle={!analysis}
+            liveToggle={!legacy}
+            tabs={route.view === 'run' ? <ViewTabs route={route} /> : undefined}
             theme={theme}
             onTheme={setTheme}
             onLang={onLang}
