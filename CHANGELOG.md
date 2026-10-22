@@ -255,6 +255,13 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Fixed
 
+- Fixed `shinka_research watch` (and a run's own end) failing with "attempt to
+  write a readonly database" when a run was killed with a transaction open
+  while its databases were still in rollback-journal mode: the hot journal
+  kept every read-only reader out. Recording the run's end now rolls back
+  such journals first (`rundb.roll_back_dead_writer`), in `programs.sqlite`
+  and `prompts.sqlite`, for the ended run and for the hypothesis's other
+  experiments that have no live run; it never creates a missing database.
 - Fixed the Research workbench issues found in the 7.3 acceptance:
   - the restored page's PCA plot was blank in the dark theme, because opaque
     Plotly layers covered the data;

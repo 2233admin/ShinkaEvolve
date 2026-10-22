@@ -29,6 +29,7 @@ from shinka.research.rundb import (
     best_score,
     count_evaluated,
     has_programs,
+    roll_back_dead_writer,
     run_cost,
 )
 from shinka.research.state import (
@@ -107,18 +108,26 @@ def finish_run(
         hid, eid = entry["hypothesis"], entry["experiment"]
         results = experiment_dir(root, hid, eid) / "results"
         before = entry["evaluated_before"]
+        # Experiments whose writers are gone (this run's, and any other no
+        # live work holds) may keep a transaction a kill left open, which
+        # read-only readers cannot get past; one with a live run is left alone.
+        live = {
+            w["experiment"]
+            for w in work_entries(root)
+            if w["hypothesis"] == hid and w["id"] != work_id and alive(w)
+        }
         with Notebook.edit(root) as nb:
             hyp = nb.get(hid)
+            for e in hyp.experiments:
+                if e.id not in live:
+                    roll_back_dead_writer(experiment_dir(root, hid, e.id) / "results")
             exp = next(e for e in hyp.experiments if e.id == eid)
             exp.n_evaluated = _evaluated_so_far(results)
             # Overlapping runs of a hypothesis share one baseline: it goes back
             # to its earlier status only when the last of them fails and none
             # added a program, and only while still marked running (another
             # command may have moved it on meanwhile).
-            others = any(
-                w["hypothesis"] == hid and w["id"] != work_id and alive(w)
-                for w in work_entries(root)
-            )
+            others = bool(live)
             total = sum(
                 _evaluated_so_far(experiment_dir(root, hid, e.id) / "results")
                 for e in hyp.experiments

@@ -2,6 +2,8 @@
 
 动手前的问题已全部由所有者回答（`proposal.md` › 所有者决定）。2.5 的工作台合并确认与所有者凭据依赖 research-agent 的 4.2、5.1；在那之前 2.x 只按命令行验收。第 5 节的许愿与不联网的防茧房（5.1–5.3）不依赖其他各节，已先做；联网部分（5.4）所有者 2026-10-23 定为随 Agent 一起做：「许愿搞定就ok联网跟agent有关系」，并选择“许愿 + 不联网的防茧房”先做。
 
+5.1–5.3 经 PR #30 以合并提交 `526587e` 并入 main（分支提交 `94fe2bd`，管线已按它登记交付）。所有者 2026-10-23 授权自动合并：「你自动合并吧 合并了 保证项目能用就收口」。合并后在 main 上整套 `pytest -q tests/research` 出现一次 `test_a_killed_run_is_recorded_once_by_two_watches` 失败：运行在结果库仍是回滚日志模式时带着未提交事务被杀，留下热日志，只读读取一律报 “attempt to write a readonly database”。修复经 PR #31：记录运行结束前，先对结束的运行以及同一假设下没有活着的运行的其他实验，回滚 `programs.sqlite` 与 `prompts.sqlite` 的热日志（`rundb.roll_back_dead_writer`，以 `mode=rw` 打开，不新建库）；回归测试 `test_watch_records_a_run_killed_with_a_transaction_open`。
+
 ## 1. 核心与领域分开
 
 - [ ] 1.1 方向的领域：`init --domain`（缺省 `quant`，另有 `open`、`math`），写进笔记本后不能改；现有方向读取时视为 `quant`；`program.md` 模板按领域生成。检查：在一个方向里脚手架另一个领域的实验被拒绝。
