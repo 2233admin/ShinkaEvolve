@@ -67,7 +67,8 @@ export function useShellData(direction: string | null, every = REFRESH_MS): Shel
       ([workspace, snap]) =>
         setLoaded({ workspace, snap: snap === 'missing' ? null : snap, snapFor: direction, missing: snap === 'missing', updated: new Date(), error: null }),
       (e: unknown) => {
-        if (!signal.aborted) setLoaded((s) => ({ ...s, error: e instanceof Error ? e.message : String(e) }))
+        // A failure says nothing about whether the direction exists, so an earlier 404 does not outlive it.
+        if (!signal.aborted) setLoaded((s) => ({ ...s, missing: false, error: e instanceof Error ? e.message : String(e) }))
       },
     )
     // The research pages never wait for the run list.

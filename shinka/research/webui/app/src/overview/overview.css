@@ -10,7 +10,7 @@
 .cmd { display: block; max-width: 640px; margin: 14px 0; padding: 10px; border: 1px solid var(--line-strong); background: var(--rail); font: 400 11.5px/18px var(--font-mono); white-space: pre-wrap; }
 .cmd .arg { white-space: nowrap; }
 
-.dsent { margin: 0; max-width: 880px; font: 600 28px/40px var(--font-sans); letter-spacing: -.015em; text-wrap: balance; }
+.dsent { margin: 0; max-width: 880px; font: var(--type-headline); letter-spacing: -.015em; text-wrap: balance; }
 .dsent a { white-space: nowrap; color: inherit; text-decoration: underline; text-decoration-color: var(--stroke); text-decoration-thickness: 1px; text-underline-offset: 7px; }
 .dsent a.is-signal { color: var(--signal); text-decoration-color: currentColor; }
 .dsub { margin: 8px 0 0; max-width: 820px; font: var(--type-body); color: var(--muted); }
