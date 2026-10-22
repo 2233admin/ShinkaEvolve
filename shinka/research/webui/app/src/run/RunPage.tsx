@@ -51,7 +51,7 @@ type Props = {
 export function RunPage({ route, data, name, go, sync, light, frameKey, onRunList }: Props) {
   const { t } = useCopy()
   const view = analysisView(route)
-  const read = useRunData(route.run, data.runs)
+  const read = useRunData(route.run, data.runs, data.listed)
   const run = read.data
   const programs = useMemo(() => run?.programs ?? [], [run])
   const byId = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])

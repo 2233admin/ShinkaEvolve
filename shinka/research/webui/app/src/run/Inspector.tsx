@@ -117,7 +117,8 @@ export function Inspector({ run, program, missing, programs, byId, best, pane, o
   const code = detail.data?.code ?? null
   const file = codeFileName(detail.data ?? program)
   const found = summary?.file ? summary : null
-  const reason = failureReason(program)
+  // The details carry fields the summary may leave out, so the reason is read from them once they arrive.
+  const reason = failureReason(detail.data ?? program)
 
   let download = null
   if (pane === 'code' && code) {

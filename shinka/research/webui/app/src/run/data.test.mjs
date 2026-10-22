@@ -38,8 +38,9 @@ const p = (id, generation, score, extra = {}) => ({
   migration_history: extra.migrations ?? [],
 })
 
-test('a failed program’s reason is its feedback, else the last line it wrote to stderr; a valid one has none', () => {
+test('a failed program’s reason is the runner’s failure reason, else its feedback, else the last line it wrote to stderr; a valid one has none', () => {
   const failed = (extra) => ({ id: 'f', correct: false, combined_score: 0, ...extra })
+  assert.equal(failureReason(failed({ text_feedback: 'feedback', metadata: { failure_reason: ' Patch generation failed before evaluation ', stderr_log: 'other' } })), 'Patch generation failed before evaluation')
   assert.equal(failureReason(failed({ text_feedback: ' look-ahead detected ', metadata: { stderr_log: 'Traceback\nValueError: x\n' } })), 'look-ahead detected')
   assert.equal(failureReason(failed({ metadata: { stderr_log: 'Traceback (most recent call last)\n  File "a.py"\nValueError: bad shape\n\n' } })), 'ValueError: bad shape')
   assert.equal(failureReason(failed({})), null)

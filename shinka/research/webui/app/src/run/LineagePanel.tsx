@@ -39,6 +39,8 @@ import { runQuery, saveText, shownText, useJson } from './useRunData'
 
 const WIDTH_KEY = 'shinka-lineage-panel'
 const MIN_WIDTH = 320
+// The comparison page's three patterns plus dash-dot, so the usual four islands each get their own line.
+const ISLAND_DASHES = [...DASHES, '8 3 1.5 3']
 
 function storedWidth(): number {
   try {
@@ -353,7 +355,7 @@ function Population({ programs }: { programs: RunProgram[] }) {
       ))}
       {series.map((s, k) => (
         <g key={String(s.island)}>
-          <path d={s.counts.map((n, g) => `${g ? 'L' : 'M'}${x(g).toFixed(1)},${y(n).toFixed(1)}`).join('')} fill="none" stroke="var(--text)" strokeWidth={1.4} strokeDasharray={DASHES[k % DASHES.length]} />
+          <path d={s.counts.map((n, g) => `${g ? 'L' : 'M'}${x(g).toFixed(1)},${y(n).toFixed(1)}`).join('')} fill="none" stroke="var(--text)" strokeWidth={1.4} strokeDasharray={ISLAND_DASHES[k % ISLAND_DASHES.length]} />
           <text x={W - m.r + 6} y={ends[k] + 3.5} className="axis">{s.island === null ? t('ra.noIsland') : t('ra.island', { k: s.island })} · {int(s.counts[s.counts.length - 1] ?? 0)}</text>
         </g>
       ))}

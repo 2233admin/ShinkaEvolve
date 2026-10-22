@@ -19,7 +19,7 @@ const opened = {
   program: 'p-1',
   pane: 'diff',
   gen: '12',
-  panel: 'prompts',
+  panel: 'conclusions',
   prompt: 'q-3',
   meta: '140',
 }

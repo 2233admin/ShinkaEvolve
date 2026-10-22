@@ -68,13 +68,14 @@ export const privateMetrics = (p: RunProgram): 'hidden' | 'none' =>
   p.private_metrics_hidden === true || Object.keys(p.private_metrics ?? {}).length > 0 ? 'hidden' : 'none'
 
 /**
- * Why a failed evaluation failed, for the inspector's header (S-14): the evaluator's feedback, else the
- * last line it wrote to stderr; nothing for a valid program.
+ * Why a failed program failed, for the inspector's header (S-14), in the restored page's order: the
+ * runner's recorded failure reason (a proposal that never reached evaluation), else the evaluator's
+ * feedback, else the last line written to stderr; nothing for a valid program.
  */
 export function failureReason(p: RunProgram): string | null {
   if (scoreOf(p) !== null) return null
-  const feedback = text(p.text_feedback)?.trim()
-  if (feedback) return feedback
+  const recorded = text(p.metadata?.failure_reason)?.trim() || text(p.text_feedback)?.trim()
+  if (recorded) return recorded
   const stderr = text(p.metadata?.stderr_log)?.trim().split('\n').filter((line) => line.trim()).at(-1)
   return stderr?.trim() ?? null
 }

@@ -27,14 +27,15 @@ export const runQuery = (run: string, extra: Record<string, string> = {}) => new
 type Read = { key: string; data: RunData | null; error: string | null }
 
 /**
- * A run's programs, statistics, prompt versions and meta-analysis files, read again whenever the shell
- * lists the runs again, so the page follows the automatic refresh and its pause. A failed read keeps
- * the data shown before and says why.
+ * A run's programs, statistics, prompt versions and meta-analysis files. The first read waits only for
+ * the shell's first run listing to finish, whatever its outcome, so a run link still opens when the
+ * listing fails; the run is read again whenever the shell lists the runs again, so the page follows the
+ * automatic refresh and its pause. A failed read keeps the data shown before and says why.
  */
-export function useRunData(run: string, listing: RunEntry[] | null): { data: RunData | null; error: string | null } {
+export function useRunData(run: string, listing: RunEntry[] | null, listed: boolean): { data: RunData | null; error: string | null } {
   const [read, setRead] = useState<Read>({ key: run, data: null, error: null })
   useEffect(() => {
-    if (listing === null) return
+    if (!listed) return
     const controller = new AbortController()
     const { signal } = controller
     const q = runQuery(run)
@@ -61,7 +62,7 @@ export function useRunData(run: string, listing: RunEntry[] | null): { data: Run
       },
     )
     return () => controller.abort()
-  }, [run, listing])
+  }, [run, listing, listed])
   return read.key === run ? read : { data: null, error: null }
 }
 
