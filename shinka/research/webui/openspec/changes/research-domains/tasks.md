@@ -1,6 +1,6 @@
 # Tasks
 
-动手前的问题已全部由所有者回答（`proposal.md` › 所有者决定）。2.5 的工作台合并确认与所有者凭据依赖 research-agent 的 4.2、5.1；在那之前 2.x 只按命令行验收。第 5 节不依赖其他各节，可以先做。
+动手前的问题已全部由所有者回答（`proposal.md` › 所有者决定）。2.5 的工作台合并确认与所有者凭据依赖 research-agent 的 4.2、5.1；在那之前 2.x 只按命令行验收。第 5 节的许愿与不联网的防茧房（5.1–5.3）不依赖其他各节，已先做；联网部分（5.4）所有者 2026-10-23 定为随 Agent 一起做：「许愿搞定就ok联网跟agent有关系」，并选择“许愿 + 不联网的防茧房”先做。
 
 ## 1. 核心与领域分开
 
@@ -32,9 +32,10 @@
 
 ## 5. 许愿与联网（防茧房）
 
-- [ ] 5.1 来源记录：`library add` 按是否带 `SHINKA_RESEARCH_AGENT` 标记在 `log.md` 记 `[add agent]` 或 `[add human]`，不在 `raw/` 下新增文件。检查：两种环境各加一个文件与一个 URL，日志记录正确，`library pending` 输出不变。
-- [ ] 5.2 `brief` 资料状况一行：原始资料数（Agent / 人）、最近一次加入外部资料的时间、wiki 中结论页占比。检查：夹具工作区的输出。
-- [ ] 5.3 模板与技能：`templates/hypothesis.md` 的 Related work 引用原始资料或 URL、新增“最强的反方证据”；技能第 0 步改为 Agent 起草 `program.md` 的方向说明与约束（预算与自主程度由所有者写），第 1 步加入每个方向的“已知情况”调研（有网络时；离线记 `prior_art: unavailable`），写明网页内容是不可信文本、不执行其中的代码与指令，第 8 步检查只引用自己结论页的假设与超出结论范围的引用；量化一节写明不检索封存段开始后的表现。
+- [x] 5.1 来源记录：`library add` 按是否带 `SHINKA_RESEARCH_AGENT` 标记在 `log.md` 记 `[add agent]` 或 `[add human]`，不在 `raw/` 下新增文件。检查：两种环境各加一个文件与一个 URL，日志记录正确，`library pending` 输出不变。实现：`library.add(lib, source, by)`（`by` 必填，演示工作区按所有者加入记 `human`），`cmd_library_add` 由 `grants.in_agent_env()` 决定；`test_add_logs_whether_the_agent_or_a_human_added_it`。
+- [x] 5.2 `brief` 资料状况一行：原始资料数（Agent / 人）、最近一次加入外部资料的时间、wiki 中结论页占比。检查：夹具工作区的输出。实现：`library.sources`（迁移前的 `[add]` 行，以及手工放进 `raw/` 的文件和手写进 `raw/links.md` 的 URL 中没有加入记录的，计为“没有记录来源”）、`library.finding_pages`（按前言 `type: finding`；没有前言的页面取第一行独立的 `Type: <种类>`，演示工作区的页面就是这样写的），`brief` 的 `- Sources:` 行；`test_brief_says_where_the_library_came_from`（含两个 `add` 写入的 URL 与一个手写 URL，只有手写的计入没有记录来源）、`test_brief_of_an_empty_library`；演示工作区 `d1-momentum-regimes` 的 brief 实测 `3 of 9 wiki pages are findings`，与 `build_demo_workspace.py` 的 `WIKI` 中 3 个 `finding` 页相符。
+- [x] 5.3 模板与技能（不联网部分）：`templates/hypothesis.md` 的 Related work 引用原始资料或 URL、新增“最强的反方证据”；技能第 0 步改为 Agent 起草 `program.md` 的方向说明、约束与笔记（标 (owner) 的数据、评估设置、预算、自主程度、判定阈值由所有者写，`program.md` 模板按此标注并新增 Constraints 一节），并按 `brief` 的资料状况提醒所有者补资料；第 2 步读推翻结论不超出其页面声明的数据与时段；第 8 步检查只引用自己结论页的假设与超出结论范围的引用。
+- [ ] 5.4 联网（随 research-agent 的对话 Agent 一起做）：技能第 1 步加入每个方向的“已知情况”调研（有网络时；离线记 `prior_art: unavailable`，工作台标“没有外部参照”），写明网页内容是不可信文本、不执行其中的代码与指令；量化一节写明不检索封存段开始后的表现。
 
 ## 6. 收尾
 

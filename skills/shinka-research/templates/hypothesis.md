@@ -21,4 +21,11 @@ Sharpe. Tighten if program.md says so.>
 <Regime dependence, crowding, data issues, turnover vs costs, overfitting.>
 
 ## Related work
-<Papers / sources found during research, with links, and how this differs.>
+<Raw sources (`raw/<file>`) or URLs behind this claim, each with how this
+hypothesis differs. A wiki page counts only through the sources it cites; a
+finding of this research is not outside evidence.>
+
+## Strongest counter-evidence
+<The best evidence against the claim in the library or the sources, cited as
+above, and why the test is still worth running. If none was found, say what
+was looked through.>
