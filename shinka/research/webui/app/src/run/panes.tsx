@@ -22,6 +22,16 @@ export function breakable(name: string): ReactNode[] {
   return name.split(/(?<=_)/).flatMap((part, i) => (i === 0 ? [part] : [<wbr key={i} />, part]))
 }
 
+/** A program's name and short id; a click opens it in the inspector. */
+export function ProgramButton({ p, onSelect }: { p: RunProgram; onSelect: (id: string) => void }) {
+  return (
+    <button type="button" className="ilink" title={`${nameOf(p)} · ${p.id}`} onClick={() => onSelect(p.id)}>
+      <span className="mono pname" translate="no">{breakable(nameOf(p))}</span>
+      <span className="mono faint">{p.id.slice(0, 8)}</span>
+    </button>
+  )
+}
+
 function Failed({ title, error }: { title: string; error: string }) {
   const { t } = useCopy()
   return (

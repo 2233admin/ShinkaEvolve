@@ -6,7 +6,7 @@ import { useWidth } from '../design/useWidth'
 import { fmt, int, money, pct } from '../format'
 import { useCopy } from '../i18n/lang'
 import { runCost, runtimeText, type RunStats } from '../runs/data'
-import { generationOf, islandOf, lanesOf, lineOf, type Prompt, type RunProgram } from './data'
+import { generationOf, islandOf, lanesOf, LINE_PATTERNS, lineOf, type Prompt, type RunProgram } from './data'
 import { costTotals, generationRows, modelRows, posteriorSeries, type GenerationRow } from './progressData'
 import { DiagnosticsSection, MetricsSection, RuntimeSection, SpendSection } from './ProgressSections'
 import { Scrubber } from './Scrubber'
@@ -316,7 +316,7 @@ export function Progress({ programs, byId, upTo, maxGen, selected, onSelect, pro
                       fill="none"
                       stroke="var(--muted)"
                       strokeWidth={1.1}
-                      strokeDasharray={[...DASHES, '8 3 1.5 3'][k % 4]}
+                      strokeDasharray={LINE_PATTERNS[k % LINE_PATTERNS.length]}
                     />
                   ))}
                 <path d={line<GenerationRow>().curve(curveStepAfter).defined((r) => r.cumulative !== null).x((r) => x(r.generation)).y((r) => yScore(r.cumulative as number))(shown) ?? ''} fill="none" stroke="var(--text)" strokeWidth={1.8} />

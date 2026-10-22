@@ -3,7 +3,10 @@
  * ancestry, the island lanes, meta-analysis files, prompt versions and the lineage panel's tables.
  * Plain functions, so node can test them directly.
  */
-import { isCorrect, scoreOf, type ProgramSummary } from '../compare/series.ts'
+import { DASHES, isCorrect, scoreOf, type ProgramSummary } from '../compare/series.ts'
+
+/** Line patterns: the comparison page's three plus dash-dot, so four series (the usual four islands) each get their own. */
+export const LINE_PATTERNS = [...DASHES, '8 3 1.5 3']
 
 export type Migration = { generation?: number | null; from?: number | null; to?: number | null; timestamp?: number | null }
 

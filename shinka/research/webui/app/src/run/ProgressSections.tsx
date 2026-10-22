@@ -1,6 +1,6 @@
 import { curveStepAfter, line, scaleLinear } from 'd3'
 import { Component, useId, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { bySpend, DASHES, programCost, scoreOf, stackLabels } from '../compare/series'
+import { bySpend, isIslandCopy, programCost, scoreOf, stackLabels } from '../compare/series'
 import { useWidth } from '../design/useWidth'
 import { fmt, int, money, pct } from '../format'
 import type { CopyKey } from '../i18n/copy'
@@ -8,8 +8,8 @@ import { useCopy } from '../i18n/lang'
 import { Notice } from '../Notice'
 import { runCost, runtimeText, type RunStats } from '../runs/data'
 import { generationAvgCost, modelLabels as costLabels, modelPatchCost, type ComboCost } from './costs'
-import { generationOf, nameOf, type Prompt, type RunProgram } from './data'
-import { Offspring } from './LineagePanel'
+import { generationOf, LINE_PATTERNS, nameOf, type Prompt, type RunProgram } from './data'
+import { Offspring } from './Offspring'
 import { byComputeTime, byWallTime, metricKeys, metricSeries, promptCost, type GenerationRow } from './progressData'
 import { llmStats, modelLabels, mutationStats, noveltyLlmStats, noveltyMutationStats, resampleLlmStats, resampleMutationStats, type ModelStats, type PatchTypeStat, type Tally } from './success'
 import {
@@ -31,7 +31,6 @@ import { codeBloat, correctnessRates, improvementRates, type RateSeries } from '
 
 // ---- A chart that fills its box: pixel width, so labels keep their size at every page width ----
 
-const PATTERNS = [...DASHES, '8 3 1.5 3']
 const STAGE_FILL: Record<Stage, string> = { sampling: 'var(--muted)', evaluation: 'var(--text)', postprocess: 'var(--stroke)' }
 const STAGE_KEY: Record<Stage, CopyKey> = { sampling: 'rp.stage.sampling', evaluation: 'rp.stage.evaluation', postprocess: 'rp.stage.postprocess' }
 
@@ -77,8 +76,10 @@ type XYProps = {
 function XYChart({ label, height = 168, x: xd, y: yd, series = [], dots = [], bars = [], xFormat, yFormat, xTitle, selected, onPick, read, stops, ends, exactY }: XYProps) {
   const { t } = useCopy()
   const [at, setAt] = useState<number | null>(null)
-  // Marks outside an entered score range are cut at the plot's edge, not drawn over the axes.
+  // A score chart's range is exact, so marks outside it are cut at the plot's edge rather than drawn
+  // over the axes; other charts keep a few pixels so the marks on their edge stay whole.
   const clip = `xy-clip-${useId().replace(/:/g, '')}`
+  const pad = exactY ? 0 : 6
   return (
     <Sized>
       {(width) => {
@@ -148,7 +149,7 @@ function XYChart({ label, height = 168, x: xd, y: yd, series = [], dots = [], ba
               ))}
               <defs>
                 <clipPath id={clip}>
-                  <rect x={m.l - 6} y={m.t - 6} width={Math.max(0, width - m.l - m.r + 12)} height={Math.max(0, height - m.b - m.t + 12)} />
+                  <rect x={m.l - pad} y={m.t - pad} width={Math.max(0, width - m.l - m.r + 2 * pad)} height={Math.max(0, height - m.b - m.t + 2 * pad)} />
                 </clipPath>
               </defs>
               <g clipPath={`url(#${clip})`}>
@@ -285,11 +286,12 @@ export function SpendSection({ programs, prompts, stats, zeroCost, scoreRange }:
   const spend = useMemo(() => bySpend({ programs, prompts, stats }, 'best_score'), [programs, prompts, stats])
   const time = useMemo(() => byComputeTime(programs), [programs])
   const total = runCost(stats)
-  // An empty curve has one of two causes: no valid program, or a total already unknown at the first valid one.
+  // An empty curve has one of two causes: no valid program, or a total that became unknown before the
+  // curve's first point. The spend curve counts island copies (bySpend); compute time skips them (byComputeTime).
   const anyValid = programs.some((p) => scoreOf(p) !== null)
   if (zeroCost) {
     const pts = time.points
-    if (pts.length === 0) return <p className="small muted">{t(anyValid ? 'rp.computeUnknown' : 'rp.noValidScore')}</p>
+    if (pts.length === 0) return <p className="small muted">{t(programs.some((p) => !isIslandCopy(p) && scoreOf(p) !== null) ? 'rp.computeUnknown' : 'rp.noValidScore')}</p>
     return (
       <Card title={t('rp.computeTitleFull')} note={time.complete ? t('rp.zeroCostNote') : t('rp.computeStopped', { v: runtimeText(lastOf(pts)?.x ?? 0) })} wide>
         <XYChart
@@ -461,7 +463,7 @@ export function RuntimeSection({ programs, rows, selected, onSelect, scoreRange 
             label={t('rp.occTitle')}
             x={range}
             y={[0, top]}
-            series={curves.map((c, k) => ({ key: c.stage, points: c.points.map((p) => [p.t, p.value] as [number, number]), stroke: STAGE_FILL[c.stage], dash: PATTERNS[k % PATTERNS.length], step: true, width: 1.3 }))}
+            series={curves.map((c, k) => ({ key: c.stage, points: c.points.map((p) => [p.t, p.value] as [number, number]), stroke: STAGE_FILL[c.stage], dash: LINE_PATTERNS[k % LINE_PATTERNS.length], step: true, width: 1.3 }))}
             xFormat={(v) => runtimeText(v)}
             yFormat={(v) => (percent ? `${int(v)}%` : int(v))}
             xTitle={t('rp.wallAxis')}
@@ -661,7 +663,7 @@ function RateChart({ title, series }: { title: string; series: RateSeries }) {
   const maxGen = Math.max(1, ...all.map((p) => p.generation))
   const lines: Series[] = [
     { key: 'all', label: t('rp.overall'), points: series.overall.map((p) => [p.generation, p.value]), width: 1.8 },
-    ...series.byType.map((s, k) => ({ key: s.type, label: s.type, points: s.points.map((p) => [p.generation, p.value] as [number, number]), stroke: 'var(--muted)', dash: PATTERNS[(k + 1) % PATTERNS.length], width: 1.1 })),
+    ...series.byType.map((s, k) => ({ key: s.type, label: s.type, points: s.points.map((p) => [p.generation, p.value] as [number, number]), stroke: 'var(--muted)', dash: LINE_PATTERNS[(k + 1) % LINE_PATTERNS.length], width: 1.1 })),
   ]
   const gens = [...new Set(series.overall.map((p) => p.generation))]
   return (
@@ -863,7 +865,7 @@ function DiagnosticsCharts({ programs, onSelect }: DiagnosticsProps) {
                 label: k < 4 ? comboName(c) : undefined,
                 points: c.points.flatMap((p) => (p.value === null ? [] : [[p.generation, p.value] as [number, number]])),
                 stroke: k < 4 ? 'var(--muted)' : 'var(--stroke)',
-                dash: k < 4 ? PATTERNS[(k + 1) % PATTERNS.length] : undefined,
+                dash: k < 4 ? LINE_PATTERNS[(k + 1) % LINE_PATTERNS.length] : undefined,
                 width: k < 4 ? 1.1 : 0.8,
               })),
             ]}
