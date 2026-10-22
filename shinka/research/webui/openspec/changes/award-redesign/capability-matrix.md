@@ -244,7 +244,7 @@ Payload facts that matter for the mapping:
 
 | ID | Kind | Item | Cite | Destination |
 |---|---|---|---|---|
-| L08-Q1 | Q | Which LLM is the ensemble favouring, and how did model posteriors shift over generations? (lines or stacked) | VT:11299-11373, 11440-11446, 11501-11680 | CON — OD-4 |
+| L08-Q1 | Q | Which LLM is the ensemble favouring, and how did model posteriors shift over generations? (lines or stacked) | VT:11299-11373, 11440-11446, 11501-11680 | PRG (per-generation trajectory) / CON (average posterior) — OD-4 |
 | L08-Q2 | Q | Per model: programs generated, success rate, latest posterior (model overview cards). | VT:11436-11499 | CON |
 | L08-Q3 | Q | Model comparison table: programs, success rate, average posterior, total cost. | VT:11453, 11683-11740 | CON |
 | L08-Q4 | Q | `[INFERENCE]` Cumulative programs per model (computed for the cards). | VT:11375-11396 | CON |
@@ -423,17 +423,17 @@ Every plot below is computed client-side from summaries. Each has its own "No �
 | R09-Q1 | Q | Program Correctness Rate: rolling %, overall and per patch type. | VT:2544-2545, 14304-14377, 15980-16043 | PRG |
 | R09-Q2 | Q | Program Improvement Rate [P vs. C]: rolling %, per patch type. | VT:2548-2549, 14379-14475, 16045-16108 | PRG |
 | R09-Q3 | Q | Lines of Code across Generations (code bloat). | VT:2552-2553, 14209-14248, 15774-15858 | PRG |
-| R09-Q4 | Q | Mutation Size vs Improvement. | VT:2556-2557, 14250-14302, 15860-15978 | LIN — OD-6 |
-| R09-Q5 | Q | Novelty Success Rates: success rate per LLM, success vs failures per patch type. | VT:2559-2570, 13871-14006, 15156, 15409 | CON — OD-4/6 |
-| R09-Q6 | Q | Resample Success Rates (same pair). | VT:2572-2583, 14008-14144, 15527, 15653 | CON — OD-4/6 |
-| R09-Q7 | Q | Patch Success Rate per LLM and per patch type. | VT:2585-2596, 13731-13869, 14783, 15045 | CON — OD-4/6 |
-| R09-Q8 | Q | Patch Improvement Rate per LLM and per patch type. | VT:2598-2609, 14914, 15100 | CON — OD-4/6 |
+| R09-Q4 | Q | Mutation Size vs Improvement. | VT:2556-2557, 14250-14302, 15860-15978 | LIN; also in the PRG diagnostics block — OD-6 |
+| R09-Q5 | Q | Novelty Success Rates: success rate per LLM, success vs failures per patch type. | VT:2559-2570, 13871-14006, 15156, 15409 | PRG (diagnostics) — OD-6 |
+| R09-Q6 | Q | Resample Success Rates (same pair). | VT:2572-2583, 14008-14144, 15527, 15653 | PRG (diagnostics) — OD-6 |
+| R09-Q7 | Q | Patch Success Rate per LLM and per patch type. | VT:2585-2596, 13731-13869, 14783, 15045 | PRG (diagnostics) — OD-6 |
+| R09-Q8 | Q | Patch Improvement Rate per LLM and per patch type. | VT:2598-2609, 14914, 15100 | PRG (diagnostics) — OD-6 |
 | R09-Q9 | Q | Cost by Model vs Patch Type (heatmap). | VT:2611-2613, 14490-14718, 16219-16330 | PRG (cost) — OD-6 |
 | R09-Q10 | Q | Average Cost Across Generations. | VT:2615-2617, 16331 | PRG |
-| R09-Q11 | Q | Parent Lineage: Offspring Count & Improvements (most fertile parents: total vs improving children). | VT:2619-2621, 14146-14207, 15711-15772 | LIN |
-| R09-E1 | E | "No data available. Please load a database." (only in the code-bloat slot); error banner "Error computing analysis statistics". | VT:17496-17502, 17536-17545 | PRG/LIN/CON |
-| SEC-R09 | SEC | Lineage-fertility hover interpolates `p.name`, `patchType` and `modelName` **unescaped** into Plotly hover. | VT:15734-15737 | carry-over: LIN |
-| D-R09 | D | Two sub-plots are both titled "Improvement Rate" under "Patch Improvement Rate". | VT:2602, 2606 | carry-over: CON |
+| R09-Q11 | Q | Parent Lineage: Offspring Count & Improvements (most fertile parents: total vs improving children). | VT:2619-2621, 14146-14207, 15711-15772 | LIN; also in the PRG diagnostics block — OD-6 |
+| R09-E1 | E | "No data available. Please load a database." (only in the code-bloat slot); error banner "Error computing analysis statistics". | VT:17496-17502, 17536-17545 | PRG/LIN |
+| SEC-R09 | SEC | Lineage-fertility hover interpolates `p.name`, `patchType` and `modelName` **unescaped** into Plotly hover. | VT:15734-15737 | carry-over: LIN, PRG (the diagnostics block reuses the Lineage component) |
+| D-R09 | D | Two sub-plots are both titled "Improvement Rate" under "Patch Improvement Rate". | VT:2602, 2606 | carry-over: PRG |
 | DEAD-R09 | D | Renderers with no caller and no DOM target: novelty LLM improvement (15282), novelty improvement by patch type (15467), cost efficiency per generation (16110), search dynamics by cluster (17426 plus `computeSearchDynamicsStats` 14720). | as cited | OD-19 |
 
 ### R10 Throughput 吞吐 — `throughput` (VT:2459, 2625-2665; driver VT:17389-17424)
@@ -593,9 +593,9 @@ All eight items need per-program `metadata.{pipeline,sampling,evaluation,postpro
 |---|---|
 | **RPT Report** | P03-Q1, P04 (OD-14), P05, P06, P07, P08, P09, P10; experiment deep links P09-Q2. |
 | **LIN Lineage** | L01 (tree), L02 (prompt evolution), L07 (islands), L09 (path), R09-Q4 (mutation size, OD-6), R09-Q11 (lineage fertility). |
-| **PRG Progress** | L04 (metrics), L10-Q1/Q2/Q4 (cost), R01 (overview, five charts), R09-Q1/Q2/Q3/Q9/Q10, R10 (throughput, all 8). |
+| **PRG Progress** | L04 (metrics), L08-Q1 (posterior trajectory, OD-4), L10-Q1/Q2/Q4 (cost), R01 (overview, five charts), R09-Q1/Q2/Q3/Q5..Q10 (one diagnostics block, OD-6, which also shows R09-Q4/Q11 from Lineage so that it holds all 11 plots), R10 (throughput, all 8). |
 | **SOL Solution space** | L05 (embed), L06 (clusters 2D+3D, OD-1), L11 (MAPs), L13 (diversity). |
-| **CON Contest** | R02 (Pareto), L12 (battle, model vs model), L08 (ensembling, OD-4), L10-Q3 (model cost-efficiency, OD-4), R09-Q5..Q8 (operator/model success, OD-4/6), L03 (program ranking, OD-2), S-06 (top-N ZIP), P02 (multi-run compare, OD-5). |
+| **CON Contest** | R02 (Pareto), L12 (battle, model vs model), L08 (ensembling, OD-4; the per-generation trajectory is in PRG), L10-Q3 (model cost-efficiency, OD-4), L03 (program ranking, OD-2), S-06 (top-N ZIP), P02 (multi-run compare, OD-5). |
 | **INS Program inspector** | S-14 header, R04 Node, R05 Code (+copy/download), R06 Diff (parent/initial), R07 Evaluation (stdout/stderr/plots), R08 LLM. It is the click target of L01-C4, L02-Q4, L03-C4, L04-C2, L05-C3, L06-C1, L07-C2, L09-C1, L11-C3, R01-C2, R02-C2. Hover previews L01-C5. |
 | **RUN Runs list/compare** | P01, P02 (OD-5), P03-Q2 disclaimer, P12 URL contract, S-01, S-07..S-10, S-13. |
 | **LIB Library** | P11, P03-C2 pending tag. |
@@ -611,7 +611,7 @@ All eight items need per-program `metadata.{pipeline,sampling,evaluation,postpro
 | D-2 | **Cost totals disagree**: Meta includes prompt-evo cost; Cost tab excludes it; run list includes it; compare excludes it; per-hypothesis spend comes from `rundb.total_cost`. | VT:5597-5603 vs 11763-11766; IX:705-708 vs CP:507-511; UI:60, 276-280 | One cost definition, OD-9. |
 | D-3 | **"Best program" computed in 8+ places with different rules**: only the Tree uses strict `correct === true/'true'/1` (VT:4760-4762, 5103). Path, MAPs, Battle, Meta best, Embed best, Clusters, the Programs ranking and ZIP all use truthy `d.correct`, with differing null/NaN checks and tie-breaks (Clusters includes all correct programs with non-null score; Programs drops correct-but-null). | VT:4760-4767; 10631-10634; 11045; 12010-12013; 5566-5578; 8552-8557; 12352-12377; 8116-8126; 13610 | Single shared selector in the rebuild (carry-over constraint). |
 | D-4 | **Runtime**: Meta score-vs-runtime and cumulative runtime charts; Throughput runtime timeline and occupancy; Cost zero-cost mode (compute time). | VT:7348, 7734-7800; 17389-17424; 11778-11790 | Progress: keep Throughput as the runtime home; fold Meta runtime charts into it. |
-| D-5 | **Model comparisons in 5 places**: Battle (score distribution, win rate), Ensembling (posteriors, success, cost), Analysis patch/novelty/resample success per LLM, Cost $/Δscore per model, Analysis cost heatmap model × patch. | VT:11991-12340; 11289-11751; 14783, 15156, 15527; 11940-11987; 16219 | Contest "models" lens, OD-4. |
+| D-5 | **Model comparisons in 5 places**: Battle (score distribution, win rate), Ensembling (posteriors, success, cost), Analysis patch/novelty/resample success per LLM, Cost $/Δscore per model, Analysis cost heatmap model × patch. | VT:11991-12340; 11289-11751; 14783, 15156, 15527; 11940-11987; 16219 | Contest "models" lens for battle, ensembling and cost per model, OD-4; the per-LLM success rates and the model × patch cost heatmap stay with the other Analysis plots in the Progress diagnostics block, OD-6. |
 | D-6 | **Embedding geometry 4 ways**: Embed cosine matrix; Clusters PCA 2D/3D; Diversity PCA-2D per generation plus pairwise distance; MAPs behaviour grid. | VT:8498-9079; 12342-12536; 13307-13588; 10929-11287 | Solution space with modes; OD-1 for 3D. |
 | D-7 | **Generation scrubbers 4 ways**: MAPs generation slider; Diversity generation slider; Scratchpad meta-update slider; Tree animate. | VT:2317, 11004-11011; 13468-13555; 2490, 3077-3096; 2187, 5191-5283 | `[INFERENCE]` One shared generation scrubber per surface; OD-8. |
 | D-8 | **Diffs 3 ways**: Diff tab parent/initial; Path diff chain; prompt diff vs parent. | VT:6503-6603; 10769-10830; 18407-18560 | Inspector owns the program diff; Lineage path reuses the inspector diff component; prompt diff stays in Lineage. |

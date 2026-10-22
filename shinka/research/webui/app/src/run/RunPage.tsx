@@ -13,6 +13,8 @@ import { bestOf, bestPrompts, generationOf, islandOf, metaUpdates, type RunProgr
 import { Inspector, paneOf, type Pane } from './Inspector'
 import { Lineage, PANEL_SECTIONS, type PanelSection } from './Lineage'
 import { LineagePanel } from './LineagePanel'
+import { Progress } from './Progress'
+import { noiseByGeneration } from './progressData'
 import { Scrubber } from './Scrubber'
 import { useRunData } from './useRunData'
 
@@ -28,7 +30,7 @@ export function ViewTabs({ route }: { route: RunRoute }) {
     <nav className="vtabs" aria-label={t('ra.views')}>
       {SHIPPED_VIEWS.map((tab) => (
         <a key={tab} href={routeHref(viewRoute(route, tab))} aria-current={view === tab ? 'page' : undefined}>
-          {t('ra.view.lineage')}
+          {t(tab === 'progress' ? 'ra.view.progress' : 'ra.view.lineage')}
         </a>
       ))}
     </nav>
@@ -47,7 +49,7 @@ type Props = {
   onRunList: () => void
 }
 
-/** One run's analysis (6.1, 6.2): the run bar, then Lineage with the resident inspector, or the restored page. */
+/** One run's analysis (6.1–6.3): the run bar, then Lineage or Progress with the resident inspector, or the restored page. */
 export function RunPage({ route, data, name, go, sync, light, frameKey, onRunList }: Props) {
   const { t } = useCopy()
   const view = analysisView(route)
@@ -60,6 +62,9 @@ export function RunPage({ route, data, name, go, sync, light, frameKey, onRunLis
   const updates = useMemo(() => metaUpdates(run?.metaFiles ?? [], programs), [run, programs])
   const promptBest = useMemo(() => bestPrompts(run?.prompts ?? []), [run])
   const [canvas, size] = useSize<HTMLElement>()
+  // The direction's noise line along this run, when the run is one of the open direction's experiments.
+  const snap = data.snap
+  const noise = useMemo(() => (snap ? noiseByGeneration(snap.trial_points, new Set(programs.map((p) => p.id))) : new Map<number, number>()), [snap, programs])
 
   const replace = (next: RunRoute) => go(routeHref(next), { replace: true })
   const select = (id: string) => replace({ ...route, program: id })
@@ -155,37 +160,48 @@ export function RunPage({ route, data, name, go, sync, light, frameKey, onRunLis
         maxWidth={Math.max(360, size.width - 200)}
       />
     )
+    const count = programs.filter((p) => generationOf(p) <= upTo).length
+    const onGen = (g: number) => replace({ ...route, gen: g === maxGen ? null : String(g) })
     body = (
       <div className="analysis">
-        <section className="canvas" ref={canvas} aria-label={t('ra.view.lineage')}>
-          <Lineage
-            programs={programs}
-            byId={byId}
-            upTo={upTo}
-            maxGen={maxGen}
-            selected={shown}
-            onSelect={select}
-            prompts={run.prompts}
-            promptsError={run.promptsError}
-            hasPromptEvo={run.stats.has_prompt_evo}
-            bestPrompts={promptBest}
-            updates={updates}
-            metaError={run.metaError}
-            panel={panel}
-            onPanel={openPanel}
-            panelNode={lanePanel}
-            scrubber={
-              <Scrubber
-                max={maxGen}
-                value={upTo}
-                onChange={(g) => replace({ ...route, gen: g === maxGen ? null : String(g) })}
-                count={programs.filter((p) => generationOf(p) <= upTo).length}
-                left={LANE_LEFT}
-                right={LANE_RIGHT}
-              />
-            }
-          />
-        </section>
+        {view === 'progress' ? (
+          <section className="canvas" ref={canvas} aria-label={t('ra.view.progress')}>
+            <Progress
+              programs={programs}
+              byId={byId}
+              upTo={upTo}
+              maxGen={maxGen}
+              selected={shown}
+              onSelect={select}
+              prompts={run.prompts}
+              promptsError={run.promptsError}
+              stats={run.stats}
+              noise={noise}
+              scrub={{ max: maxGen, value: upTo, onChange: onGen, count }}
+            />
+          </section>
+        ) : (
+          <section className="canvas" ref={canvas} aria-label={t('ra.view.lineage')}>
+            <Lineage
+              programs={programs}
+              byId={byId}
+              upTo={upTo}
+              maxGen={maxGen}
+              selected={shown}
+              onSelect={select}
+              prompts={run.prompts}
+              promptsError={run.promptsError}
+              hasPromptEvo={run.stats.has_prompt_evo}
+              bestPrompts={promptBest}
+              updates={updates}
+              metaError={run.metaError}
+              panel={panel}
+              onPanel={openPanel}
+              panelNode={lanePanel}
+              scrubber={<Scrubber max={maxGen} value={upTo} onChange={onGen} count={count} left={LANE_LEFT} right={LANE_RIGHT} />}
+            />
+          </section>
+        )}
         <Inspector
           run={route.run}
           program={shown}

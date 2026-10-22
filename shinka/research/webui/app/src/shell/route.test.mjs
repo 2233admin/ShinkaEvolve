@@ -53,13 +53,14 @@ test('a missing or unknown part opens a page that exists', () => {
   assert.deepEqual(at('/?view=run'), ALL_RUNS)
 })
 
-test('a run opens Lineage natively and every view not drawn yet on the restored page', () => {
+test('a run opens Lineage and Progress natively and every view not drawn yet on the restored page', () => {
   assert.equal(analysisView(runRoute(B)), 'lineage')
   assert.equal(analysisView({ ...runRoute(B), tab: 'lineage' }), 'lineage')
+  assert.equal(analysisView({ ...runRoute(B), tab: 'progress' }), 'progress')
   assert.equal(analysisView({ ...runRoute(B), tab: 'nowhere' }), 'lineage')
   assert.equal(analysisView({ ...runRoute(B), tab: 'legacy' }), 'legacy')
-  // Progress, solution space and contest still live on the restored page (tasks 6.3–6.5).
-  for (const tab of ['progress', 'space', 'contest']) assert.equal(analysisView({ ...runRoute(B), tab }), 'legacy')
+  // Solution space and contest still live on the restored page (tasks 6.4–6.5).
+  for (const tab of ['space', 'contest']) assert.equal(analysisView({ ...runRoute(B), tab }), 'legacy')
   // A link written before the native views names only the restored page's panels: it keeps opening there.
   assert.equal(analysisView({ ...runRoute(B), panels: [['left_tab', 'clusters']] }), 'legacy')
 })

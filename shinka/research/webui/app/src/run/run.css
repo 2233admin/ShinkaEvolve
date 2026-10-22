@@ -248,3 +248,55 @@
 .dialog-head h2 { flex: 1; min-width: 0; margin: 0; font-size: 15px; font-weight: 500; }
 .dialog-body h3 { margin: 4px 0 0; font-size: 12px; font-weight: 500; color: var(--muted); }
 .dialog .code { max-height: 50vh; border: 1px solid var(--line); }
+
+/* ---- Progress: five panels on one generation axis, then the model table and the disclosures (hifi › progressView) ---- */
+.progress { position: relative; flex: 1; min-height: 0; overflow: hidden auto; padding-bottom: 28px; }
+.progress-view > .vbar .legend { font-size: 12px; }
+.pgroup { position: relative; outline: none; }
+.pgroup:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.pgroup svg { display: block; cursor: pointer; }
+.pm { border-bottom: 1px solid var(--line); }
+.pmhead { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; padding: 7px 28px 0 20px; }
+.pmhead b { font-size: 13px; font-weight: 500; }
+.pmhead .legend { margin: 0; gap: 2px 12px; }
+.pmhead .toggle { margin-left: auto; }
+.legend .sw { width: 10px; height: 10px; }
+.legend .sw.is-ring { border: 1.5px solid var(--signal-graphic); }
+.legend .ln.is-thin { border-top: 1px solid var(--stroke); }
+.ptip { max-width: min(420px, 90%); }
+.pscrub { border-bottom: 1px solid var(--line); }
+.models { padding: 14px 28px 0 20px; }
+.models h3 { margin: 0 0 8px; font-size: 14px; font-weight: 500; }
+.mtable { min-width: 560px; font-size: 12.5px; }
+.leadmark { margin-right: 4px; font-size: 9px; font-style: normal; color: var(--text); }
+.mnote { margin: 10px 0 0; }
+.pdisc { margin: 12px 28px 0 20px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); }
+.pdisc > summary { display: flex; gap: 8px; align-items: center; padding: 10px 12px; color: var(--muted); cursor: pointer; list-style: none; }
+.pdisc > summary::-webkit-details-marker { display: none; }
+.pdisc > summary b { font-weight: 500; color: var(--text); }
+.pdisc > summary .faint { margin-left: auto; }
+.pdisc > summary .icon { transform: rotate(-90deg); }
+.pdisc[open] > summary .icon { transform: none; }
+.pdisc > summary:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.pdisc-body { padding: 4px 12px 16px; border-top: 1px solid var(--line); }
+/* Two charts to a row (OD-6 pairs them) where the canvas allows, one below that. */
+.pcards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px 24px; margin-top: 12px; }
+@media (min-width: 1440px) {
+  .pcards { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.pcard { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.pcard.is-wide { grid-column: 1 / -1; }
+.pcard h4 { margin: 0; font-size: 13px; font-weight: 500; }
+.pcard h5, .pcard h3 { margin: 4px 0 0; font-size: 12px; font-weight: 500; color: var(--muted); }
+.pcard-head { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.pcard .legend { margin: 0; }
+.xy { position: relative; outline: none; }
+.xy:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.xy svg { display: block; }
+.psum { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px 16px; margin: 0; }
+.psum div { display: grid; gap: 2px; }
+.psum dt { color: var(--faint); font-size: 12px; }
+.psum dd { margin: 0; font-size: 15px; }
+.hbars li { grid-template-columns: 72px minmax(0, 1fr) auto; grid-template-areas: 'gen bar note'; }
+.heat th { color: var(--muted); }
+.heat td { white-space: nowrap; }

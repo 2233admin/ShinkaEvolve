@@ -630,8 +630,8 @@ function MutationChart({ points, onSelect }: { points: MutationPoint[]; onSelect
   )
 }
 
-/** R09-Q11 and R09-Q4: the most fertile parents, and mutation size against the change in score. */
-function Offspring({ programs, onSelect }: { programs: RunProgram[]; onSelect: (id: string) => void }) {
+/** R09-Q11 and R09-Q4: the most fertile parents, and mutation size against the change in score (also in Progress › 诊断, OD-6). */
+export function Offspring({ programs, onSelect }: { programs: RunProgram[]; onSelect: (id: string) => void }) {
   const { t } = useCopy()
   const { top, deadEnds } = useMemo(() => fertility(programs), [programs])
   const points = useMemo(() => mutationPoints(programs), [programs])

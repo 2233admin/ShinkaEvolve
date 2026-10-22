@@ -40,8 +40,8 @@ export const RUN_PANELS = ['left_tab', 'right_tab', 'meta_section']
 
 /** The analysis views in their tab order, and those drawn natively so far (design.md › 迁移与删除). */
 export const ANALYSIS_VIEWS = ['lineage', 'progress', 'space', 'contest'] as const
-export const SHIPPED_VIEWS: readonly string[] = ['lineage']
-export type AnalysisView = 'lineage' | 'legacy'
+export const SHIPPED_VIEWS = ['lineage', 'progress'] as const
+export type AnalysisView = (typeof SHIPPED_VIEWS)[number] | 'legacy'
 
 /**
  * Which page a run's URL opens. A shipped view draws natively; `legacy`, a view not shipped yet, and a
@@ -50,7 +50,8 @@ export type AnalysisView = 'lineage' | 'legacy'
 export function analysisView(route: RunRoute): AnalysisView {
   const { tab } = route
   if (tab === 'legacy') return 'legacy'
-  if (tab !== null && SHIPPED_VIEWS.includes(tab)) return 'lineage'
+  const shipped = SHIPPED_VIEWS.find((view) => view === tab)
+  if (shipped) return shipped
   if (tab !== null && (ANALYSIS_VIEWS as readonly string[]).includes(tab)) return 'legacy'
   return tab === null && route.panels.length > 0 ? 'legacy' : 'lineage'
 }

@@ -174,11 +174,25 @@ All notable changes to `shinka-evolve` are documented in this file.
   step's diff, and the most fertile parents with mutation size. A resident
   inspector beside it shows the selected program's code, diff (against its parent
   or the initial program), evaluation, LLM record and meta-analysis summary, with
-  plain-text downloads. Progress, solution space and contest stay on the restored
-  page, opened in the same shell on the current program from the run bar
+  plain-text downloads. Solution space and contest stay on the restored page,
+  opened in the same shell on the current program from the run bar
   (`tab=legacy`). Private metrics are never shown, and a `correct` of `'false'`
   is a failure everywhere. Long program names, file names and direction titles
   wrap instead of being cut, in the breadcrumb too.
+- Drew a run's Progress natively (`tab=progress`): five panels on one
+  generation axis — the cumulative best with the median, every valid score, the
+  direction's noise line and the bracket by which the record clears it (by
+  island on request); cost split into model calls, meta-analysis and prompt
+  evolution with its running total, or compute time when a run records no spend;
+  one × per failed program; programs per generation; and model posteriors —
+  over the shared scrubber, then each model's programs, success rate, best,
+  mean, cost and latest posterior. Below them four sections open on request:
+  every public metric's running minimum or maximum, the best score against
+  spend (saying why the curve ends where it does), runtime and throughput
+  (score against wall-clock time, compute time per generation, the worker-slot
+  timeline, occupancy, completions per minute, stage durations and
+  utilisation), and the eleven analysis plots of the old page in pairs, where a
+  computation that fails is reported in place of the plots.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and
