@@ -6,6 +6,13 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Added
 
+- Added research domains: `shinka_research init --domain quant|open|math`
+  writes the direction's domain into `notebook.json` once (directions without
+  one read as `quant`), generates `program.md` per domain (`open` and `math`
+  have no data, evaluator or threshold sections) and `scaffold` refuses an
+  experiment outside a `quant` direction. A notebook naming an unknown domain
+  raises `UnknownDomain` and the workbench shows the error on that direction
+  only.
 - Added source origins to the Research library: `shinka_research library add`
   logs `[add agent]` when `SHINKA_RESEARCH_AGENT` is set and `[add human]`
   otherwise (a cooperation marker, not proof), and `brief` gains a `Sources:`

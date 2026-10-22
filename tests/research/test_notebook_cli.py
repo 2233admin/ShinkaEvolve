@@ -1,10 +1,12 @@
+import json
 import sqlite3
 from contextlib import closing
 from pathlib import Path
 
 import pytest
+from pydantic import ValidationError
 
-from shinka.research import cli
+from shinka.research import cli, domains
 from shinka.research.notebook import Notebook, Status, Verdict
 from shinka.research.scaffold import verify_experiment
 
@@ -32,6 +34,61 @@ def test_init_and_hypothesis(tmp_path: Path, example_dir: Path) -> None:
 
     cli.main(["hypothesis", "status", str(root), "h001", "dropped"])
     assert Notebook.load(root).get("h001").status is Status.dropped
+
+
+def test_a_direction_without_a_domain_reads_as_quant(
+    tmp_path: Path, example_dir: Path
+) -> None:
+    root = _init(tmp_path, example_dir)
+    path = Notebook.path(root)
+    written = json.loads(path.read_text())
+    assert written["domain"] == "quant"
+    del written["domain"]
+    path.write_text(json.dumps(written))
+    assert Notebook.load(root).domain == "quant"
+
+
+@pytest.mark.parametrize("domain", ["open", "math"])
+def test_non_quant_direction_has_no_quant_program_and_refuses_quant_scaffold(
+    tmp_path: Path, example_dir: Path, bars_csv: Path, domain: str
+) -> None:
+    root = tmp_path / "direction"
+    cli.main(["init", str(root), "--direction", "Pack circles", "--domain", domain])
+    cli.main(
+        [
+            "hypothesis", "add", str(root), "--title", "greedy",
+            "--file", str(example_dir / "hypothesis.md"),
+        ]
+    )  # fmt: skip
+    nb = Notebook.load(root)
+    assert nb.domain == domain
+    with pytest.raises(ValidationError):
+        nb.domain = "quant"
+    program = (root / "program.md").read_text()
+    assert "Pack circles" in program
+    assert "Sharpe" not in program and "Lockbox" not in program
+
+    with pytest.raises(SystemExit, match=f"{domain} direction"):
+        cli.main(
+            [
+                "scaffold", str(root), "h001",
+                "--initial", str(example_dir / "initial.py"),
+                "--data", str(bars_csv),
+            ]
+        )  # fmt: skip
+    nb = Notebook.load(root)
+    assert nb.data is None and nb.get("h001").experiments == []
+    assert not (root / "experiments").exists()
+
+
+def test_unknown_domain_is_refused(tmp_path: Path) -> None:
+    root = tmp_path / "direction"
+    with pytest.raises(SystemExit):
+        cli.main(["init", str(root), "--direction", "x", "--domain", "physics"])
+    root.mkdir()
+    Notebook.path(root).write_text(json.dumps({"direction": "x", "domain": "physics"}))
+    with pytest.raises(domains.UnknownDomain, match="physics"):
+        Notebook.load(root)
 
 
 def test_scaffold_freezes_evaluator(

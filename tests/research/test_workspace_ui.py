@@ -374,13 +374,20 @@ def test_workspace_summaries_and_selection_isolate_directions_and_errors(
     corrupt = workspace / "broken"
     corrupt.mkdir()
     (corrupt / "notebook.json").write_text("{not valid JSON", encoding="utf-8")
+    # A notebook from a later version, naming a domain this one does not know.
+    future = workspace / "future"
+    future.mkdir()
+    (future / "notebook.json").write_text(
+        json.dumps({"direction": "Future fixture", "domain": "physics"}),
+        encoding="utf-8",
+    )
     expected_library = _shared_library(workspace)
 
     with _server(workspace) as base:
         overview = _get(base, "/api/workspace")
         assert overview["library"] == expected_library
         rows = {row["id"]: row for row in overview["directions"]}
-        assert set(rows) == {"alpha", "beta", "broken"}
+        assert set(rows) == {"alpha", "beta", "broken", "future"}
         assert rows["alpha"]["hypotheses"] == 1
         assert rows["beta"]["hypotheses"] == 2
         assert rows["alpha"]["trials"] == 2
@@ -391,6 +398,8 @@ def test_workspace_summaries_and_selection_isolate_directions_and_errors(
         assert rows["beta"]["lockbox_opened"] is None
         assert rows["broken"]["error"] is not None
         assert {"hypotheses", "trials", "spend_usd"}.isdisjoint(rows["broken"])
+        assert rows["future"]["error"] == "UnknownDomain"
+        assert "hypotheses" not in rows["future"]
         serialized = json.dumps(overview)
         assert HELD_OUT not in serialized
         assert "987.654" not in serialized
@@ -404,6 +413,7 @@ def test_workspace_summaries_and_selection_isolate_directions_and_errors(
         assert alpha_snapshot["library"] == expected_library
 
         _assert_error(base, _snapshot_path("broken"), 500)
+        _assert_error(base, _snapshot_path("future"), 500)
         beta_snapshot = _get(base, _snapshot_path("beta"))
         assert beta_snapshot["direction"] == "Beta fixture"
         assert len(beta_snapshot["hypotheses"]) == 2

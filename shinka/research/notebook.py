@@ -20,6 +20,7 @@ from typing import Any, Dict, Iterator, List, Literal, Optional
 
 from pydantic import BaseModel, Field
 
+from . import domains
 from .state import atomic_write_text, file_lock, lock_path, read_text
 
 NOTEBOOK_FILENAME = "notebook.json"
@@ -139,6 +140,8 @@ class Hypothesis(BaseModel):
 
 class Notebook(BaseModel):
     direction: str
+    # Written by `init`, never changed; notebooks from before domains read as quant.
+    domain: str = Field(default=domains.DEFAULT, frozen=True)
     created: str = Field(default_factory=_now)
     budget_usd: Optional[float] = None
     data: Optional[DataSplit] = None
@@ -155,7 +158,9 @@ class Notebook(BaseModel):
         p = cls.path(root)
         if not p.exists():
             raise FileNotFoundError(f"No research notebook at {p}; run `init` first")
-        return cls.model_validate_json(read_text(p))
+        nb = cls.model_validate_json(read_text(p))
+        domains.check(nb.domain)
+        return nb
 
     def save(self, root: Path) -> None:
         """Replace the notebook in one step. Writers that may run alongside
