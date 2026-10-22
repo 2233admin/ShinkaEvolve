@@ -6,12 +6,12 @@
 
 ## 1. 核心与领域分开
 
-- [ ] 1.1 方向的领域：`init --domain`（缺省 `quant`，另有 `open`、`math`），写进笔记本后不能改；现有方向读取时视为 `quant`；`program.md` 模板按领域生成。检查：在一个方向里脚手架另一个领域的实验被拒绝。
+- [x] 1.1 方向的领域：`init --domain`（缺省 `quant`，另有 `open`、`math`），写进笔记本后不能改；现有方向读取时视为 `quant`；`program.md` 模板按领域生成。检查：在一个方向里脚手架另一个领域的实验被拒绝。实现：`shinka/research/domains/`（`NAMES`、`check`、`program`；`quant` 用原模板逐字不变，`open` 与 `math` 共用只含方向、约束、预算、自主程度、审批规则、资料库与笔记的模板，圆填充专属内容留给 3.1）；`Notebook.domain` 缺省 `quant`、`frozen=True`；`scaffold` 在非 `quant` 方向退出且不留实验目录（`1.5` 前它只会建量化实验）。测试 `test_a_direction_without_a_domain_reads_as_quant`、`test_non_quant_direction_has_no_quant_program_and_refuses_quant_scaffold`（`open`、`math` 各一次，含改领域被拒绝）。
 - [ ] 1.2 实验计划：实验记录新增可选的冻结计划字段（旧字段保留）；`verify_experiment` 按计划逐个文件校验，包括生成的包装器。检查：改动计划中任一文件后 `run`、`probe`、`skeptic`、`verdict` 都拒绝并指出文件。
 - [ ] 1.3 核心评估包装器：候选在 `python -I` 子进程里运行（Windows 上包进 Job Object，退出时连同子进程一起结束）、约定只写产物；候选退出后检查器在另一个进程只读产物，输出 `metrics.json` / `correct.json`；`cmd_probe` 改走包装器。确认：终止候选进程树，把检查器与产物复制进以哈希命名的只读目录、核对后只从副本加载，产物只用 JSON 或 `numpy.load(allow_pickle=False)` 解析，在新进程里校验。经验型结论与做不到上述条件的结论在工作台标“未沙箱”（操作系统沙箱所有者定为以后再做）。检查：候选改动检查器函数或自报得分不影响得分；运行中改动检查器文件后确认被拒绝；候选留下的子进程在确认前已结束。
 - [ ] 1.4 判定规则：核心规则集合（`dsr_pbo`、`reach_target`、`counterexample`、`holdout_vs_baseline`）带版本，判定只看冻结的种类与参数；`reach_target` 的参数含 `on_budget_exhausted`（`refuted` / `insufficient`）；对话原文存为 `rationale`，不参与判定；没有计划的旧实验标为“未冻结（旧）”并照旧接受命令行阈值。检查：规则边界单元测试（含预算用完未达到时 `refuted` 判推翻、`insufficient` 判证据不足）；旧实验用原命令行阈值重新质疑，结论与迁移前相同。
 - [ ] 1.5 量化迁移为预设：`prepare_data`、任务提示、评估器模板、`dsr_pbo` 与封存段确认归入量化预设；`file_sha256` 移到 `state.py`；`_not_confirming`、`brief`、`status`、`add_approval`、`rounds` 按能力处理（`design.md` › 必须一起改的量化写死处）。封存段开封的每个目标带自己计划的阈值，已开封未完成的旧记录继续用顶层阈值。检查：`pytest -q tests/research` 除新增测试外全部照旧通过；演示工作区的 `/api/snapshot` 除新增字段外逐字段相同。
-- [ ] 1.6 未知领域：报 `ValueError` 子类，工作台只让该方向显示错误。
+- [x] 1.6 未知领域：报 `ValueError` 子类，工作台只让该方向显示错误。实现：`domains.UnknownDomain(ValueError)`，`Notebook.load` 校验；`init --domain` 只接受已知名字。测试 `test_unknown_domain_is_refused`；`test_workspace_summaries_and_selection_isolate_directions_and_errors` 加入 `domain: physics` 的方向，`/api/workspace` 该行 `error` 为 `UnknownDomain`、其他方向照常，其 `/api/snapshot` 返回 500。
 
 ## 2. 检查器提案与批准（决定 A）
 

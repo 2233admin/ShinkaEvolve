@@ -17,7 +17,7 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import yaml
 
-from shinka.research import grants, library
+from shinka.research import domains, grants, library
 from shinka.research.notebook import (
     RESULTS_LOG,
     DataSplit,
@@ -67,52 +67,6 @@ from shinka.research.state import (
     read_text,
 )
 
-PROGRAM_TEMPLATE = """# Research program
-
-<!-- The owner gives the wish (`init --direction`) and the budget. The agent
-drafts Direction, Constraints and Notes; sections marked (owner) are the
-owner's alone: the agent never writes them. -->
-
-## Direction
-{direction}
-<agent: what the wish asks, in testable terms, and what answer would settle it>
-
-## Constraints
-<agent: what the research must not do or assume (instruments, horizons, data,
-methods); the owner corrects them>
-
-## Data (owner)
-- File: <absolute path to CSV with timestamp + close (+ other columns)>
-- Instrument, bar size, period: <...>
-- Periods per year: <252 for daily equities, 365 for daily crypto, ...>
-
-## Evaluator settings (owner)
-- Costs: <bps per unit turnover>
-- Lockbox fraction: 0.2 (sealed at the first scaffold, opened once by `confirm`)
-- Validation fraction of the development data: 0.3, in-sample folds: 3
-
-## Budget (owner)
-- Max hypotheses per round: <n>
-- Generations per experiment: <stage 2 / stage 3>
-- USD per experiment: <...>; per direction: set by `init --budget-usd`
-
-## Autonomy (owner)
-- Autonomy: checkpoints   # or "autonomous": run until the budget is spent;
-  # or "authorized-round": finish the round the owner granted, then pause
-
-## Library
-- Sources for this direction are in ../library/raw/ (papers, clips, notes, links.md)
-
-## Verdict thresholds (owner)
-- supported: DSR >= 0.95, >= 2/3 of validation sub-periods positive, PBO <= 0.5,
-  beats buy-and-hold
-- refuted: out-of-sample Sharpe <= 0
-- otherwise: inconclusive
-
-## Notes for the researcher agent
-<agent: prior knowledge, ideas to avoid, things to prioritise; the owner may add>
-"""
-
 
 def cmd_init(args: argparse.Namespace) -> None:
     root = Path(args.dir)
@@ -120,11 +74,13 @@ def cmd_init(args: argparse.Namespace) -> None:
     with file_lock(lock_path(root)):
         if Notebook.path(root).exists():
             sys.exit(f"{root} already has a notebook")
-        Notebook(direction=args.direction, budget_usd=args.budget_usd).save(root)
+        Notebook(
+            direction=args.direction, domain=args.domain, budget_usd=args.budget_usd
+        ).save(root)
     library.ensure(library.library_root(root))
     program = root / "program.md"
     if not program.exists():
-        program.write_text(PROGRAM_TEMPLATE.format(direction=args.direction))
+        program.write_text(domains.program(args.domain, args.direction))
     print(root)
 
 
@@ -156,6 +112,11 @@ def cmd_scaffold(args: argparse.Namespace) -> None:
     # The experiment number and the sealed split are allocated here, so the
     # whole scaffold holds the direction's lock.
     with Notebook.edit(root) as nb:
+        if nb.domain != domains.QUANT:
+            sys.exit(
+                f"{root} is a {nb.domain} direction; `scaffold` builds quant "
+                "experiments only"
+            )
         _not_confirming(nb)
         split = prepare_data(
             root,
@@ -983,6 +944,13 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--direction", required=True)
     s.add_argument(
         "--budget-usd", type=float, help="Stop runs once LLM spend hits this"
+    )
+    s.add_argument(
+        "--domain",
+        choices=domains.NAMES,
+        default=domains.DEFAULT,
+        help="What kind of research; written once, never changed "
+        "(open: no preset, the agent drafts everything)",
     )
     s.set_defaults(func=cmd_init)
 

@@ -107,6 +107,11 @@ events. When most sources are yours, none was added for a long time, or
 findings outnumber other pages, the library is mostly feeding on itself: say
 so in the checkpoint and ask the human for sources.
 
+`--domain` is written once and never changes: `quant` (the default, and what
+directions from before domains read as), `open` (no preset) or `math`. Only
+`quant` directions can `scaffold` experiments so far; an `open` or `math`
+`program.md` has no data, evaluator or threshold sections.
+
 ### 1. Compile the library, then research
 1. `shinka_research library pending <dir>` lists new or changed raw sources.
    For each: read it (fetch every URL in `links.md`), then create or update
