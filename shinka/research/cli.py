@@ -69,39 +69,48 @@ from shinka.research.state import (
 
 PROGRAM_TEMPLATE = """# Research program
 
+<!-- The owner gives the wish (`init --direction`) and the budget. The agent
+drafts Direction, Constraints and Notes; sections marked (owner) are the
+owner's alone: the agent never writes them. -->
+
 ## Direction
 {direction}
+<agent: what the wish asks, in testable terms, and what answer would settle it>
 
-## Data
+## Constraints
+<agent: what the research must not do or assume (instruments, horizons, data,
+methods); the owner corrects them>
+
+## Data (owner)
 - File: <absolute path to CSV with timestamp + close (+ other columns)>
 - Instrument, bar size, period: <...>
 - Periods per year: <252 for daily equities, 365 for daily crypto, ...>
 
-## Evaluator settings
+## Evaluator settings (owner)
 - Costs: <bps per unit turnover>
 - Lockbox fraction: 0.2 (sealed at the first scaffold, opened once by `confirm`)
 - Validation fraction of the development data: 0.3, in-sample folds: 3
 
-## Budget
+## Budget (owner)
 - Max hypotheses per round: <n>
 - Generations per experiment: <stage 2 / stage 3>
 - USD per experiment: <...>; per direction: set by `init --budget-usd`
 
-## Autonomy
+## Autonomy (owner)
 - Autonomy: checkpoints   # or "autonomous": run until the budget is spent;
   # or "authorized-round": finish the round the owner granted, then pause
 
 ## Library
 - Sources for this direction are in ../library/raw/ (papers, clips, notes, links.md)
 
-## Verdict thresholds
+## Verdict thresholds (owner)
 - supported: DSR >= 0.95, >= 2/3 of validation sub-periods positive, PBO <= 0.5,
   beats buy-and-hold
 - refuted: out-of-sample Sharpe <= 0
 - otherwise: inconclusive
 
 ## Notes for the researcher agent
-<prior knowledge, ideas to avoid, things to prioritise>
+<agent: prior knowledge, ideas to avoid, things to prioritise; the owner may add>
 """
 
 
@@ -748,8 +757,9 @@ def _library(path: str) -> Path:
 
 def cmd_library_add(args: argparse.Namespace) -> None:
     lib = _library(args.dir)
+    by = "agent" if grants.in_agent_env() else "human"
     for source in args.sources:
-        print(library.add(lib, source).relative_to(lib).as_posix())
+        print(library.add(lib, source, by).relative_to(lib).as_posix())
 
 
 def cmd_library_pending(args: argparse.Namespace) -> None:
@@ -783,6 +793,18 @@ def _lockbox(split: DataSplit) -> str:
     return "OPENED" if split.opened else "sealed"
 
 
+def _sources_line(lib: Path) -> str:
+    """Where the library's knowledge comes from: only shown, never enforced."""
+    src = library.sources(lib)
+    added = f"{src.agent} added by the agent, {src.human} by people"
+    if src.unrecorded:
+        added += f", {src.unrecorded} with no recorded origin"
+    last = f"last added {src.last_added}" if src.last_added else "none added yet"
+    pages = len(library.wiki_pages(lib))
+    findings = len(library.finding_pages(lib))
+    return f"- Sources: {added}; {last}; {findings} of {pages} wiki pages are findings"
+
+
 def cmd_brief(args: argparse.Namespace) -> None:
     """Digest for the researcher agent before proposing the next round. With
     ``--since``, it also lists the news that consumer has not read and marks it
@@ -804,6 +826,7 @@ def cmd_brief(args: argparse.Namespace) -> None:
         f"- Library: {len(library.wiki_pages(lib))} wiki pages, "
         f"{len(pend)} raw sources not compiled yet ({lib})"
     )
+    out.append(_sources_line(lib))
     if args.since:
         out += ["", f"## News since the last brief ({args.since})", ""]
         out += [f"- {_news_line(row)}" for row in fresh] or ["(none)"]

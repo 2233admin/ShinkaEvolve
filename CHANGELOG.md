@@ -6,6 +6,16 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Added
 
+- Added source origins to the Research library: `shinka_research library add`
+  logs `[add agent]` when `SHINKA_RESEARCH_AGENT` is set and `[add human]`
+  otherwise (a cooperation marker, not proof), and `brief` gains a `Sources:`
+  line with sources added by the agent and by people, those with no recorded
+  origin, the last add and how many wiki pages are findings. The research
+  skill now has the agent draft `program.md`'s Direction, Constraints and
+  Notes from the owner's wish while the (owner) sections stay the owner's;
+  hypotheses cite raw sources or URLs and state the strongest counter-evidence;
+  the library lint checks hypotheses that cite only this research's findings
+  and findings used outside their declared data and period.
 - Added a unified read-only Research workspace with independent ordinary runs,
   comparison links and the fork's redesigned full experiment analysis workbench.
   Research links retain direction/hypothesis context, while analysis URLs retain

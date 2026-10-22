@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from shinka.research import cli, library
+from shinka.research import cli, grants, library
 from shinka.research.notebook import RESULTS_LOG, Notebook
 from shinka.research.rundb import RunCost, run_cost
 
@@ -56,6 +56,74 @@ def test_add_pending_compiled_cycle(tmp_path: Path, example_dir: Path, capsys) -
     cli.main(["library", "log", str(root), "lint", "no contradictions found"])
     log = (lib / "log.md").read_text()
     assert "[compiled] raw/paper.md" in log and "[lint] no contradictions" in log
+
+
+def test_add_logs_whether_the_agent_or_a_human_added_it(
+    tmp_path: Path, example_dir: Path, monkeypatch
+) -> None:
+    root = _init(tmp_path, example_dir)
+    lib = tmp_path / "library"
+    mine, theirs = tmp_path / "mine.md", tmp_path / "theirs.md"
+    mine.write_text("owner's note\n")
+    theirs.write_text("agent's clip\n")
+    monkeypatch.delenv(grants.AGENT_ENV, raising=False)
+    cli.main(["library", "add", str(root), str(mine), "https://example.org/a"])
+    monkeypatch.setenv(grants.AGENT_ENV, "1")
+    cli.main(["library", "add", str(root), str(theirs), "https://example.org/b"])
+
+    adds = [
+        line.split(" ", 2)[2]
+        for line in (lib / "log.md").read_text().splitlines()
+        if "[add " in line
+    ]
+    assert adds == [
+        "[add human] raw/mine.md", "[add human] https://example.org/a",
+        "[add agent] raw/theirs.md", "[add agent] https://example.org/b",
+    ]  # fmt: skip
+    # the origin lives in the log only: raw/ holds the sources and nothing else
+    assert library.pending(lib) == ["raw/links.md", "raw/mine.md", "raw/theirs.md"]
+
+
+def test_brief_says_where_the_library_came_from(
+    tmp_path: Path, example_dir: Path, capsys
+) -> None:
+    root = _init(tmp_path, example_dir)
+    lib = tmp_path / "library"
+    with (lib / "log.md").open("a") as f:
+        f.write("- 2026-01-01T00:00:00+00:00 [add] raw/old.md\n")  # before origins
+        f.write("- 2026-02-01T00:00:00+00:00 [add human] https://example.org/a\n")
+        f.write("- 2026-03-01T00:00:00+00:00 [add agent] raw/clip.md\n")
+        f.write("- 2026-03-02T00:00:00+00:00 [add agent] https://example.org/b\n")
+        f.write("- 2026-03-03T00:00:00+00:00 [lint] nothing\n")
+    for name in ("old.md", "clip.md", "dropped.md"):  # dropped.md: copied by hand
+        (lib / "raw" / name).write_text(name)
+    # two links `add` wrote (counted by their log lines) and one typed by hand
+    (lib / "raw" / "links.md").write_text(
+        "# Links\n\n- https://example.org/a (added 2026-02-01)\n"
+        "- https://example.org/b (added 2026-03-02)\n- https://example.org/hand\n"
+    )
+    for name, kind in (("tsmom", "paper"), ("h001", "finding  # this research")):
+        (lib / "wiki" / f"{name}.md").write_text(f"---\ntype: {kind}\n---\n# {name}\n")
+    # the demo workspace's pages: no front matter, a standalone Type line
+    (lib / "wiki" / "demo.md").write_text("# demo\n\n> DEMO\n\nType: finding\n")
+    (lib / "wiki" / "notes.md").write_text("# notes\n\nno type given\n")
+
+    capsys.readouterr()
+    cli.main(["brief", str(root)])
+    assert (
+        "- Sources: 2 added by the agent, 1 by people, 3 with no recorded origin; "
+        "last added 2026-03-02T00:00:00+00:00; 2 of 4 wiki pages are findings"
+    ) in capsys.readouterr().out.splitlines()
+
+
+def test_brief_of_an_empty_library(tmp_path: Path, example_dir: Path, capsys) -> None:
+    root = _init(tmp_path, example_dir)
+    capsys.readouterr()
+    cli.main(["brief", str(root)])
+    assert (
+        "- Sources: 0 added by the agent, 0 by people; none added yet; "
+        "0 of 0 wiki pages are findings"
+    ) in capsys.readouterr().out.splitlines()
 
 
 def _fake_results(results: Path, costs: list) -> None:

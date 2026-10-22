@@ -7,10 +7,11 @@ description: Run hypothesis-driven quant research on top of ShinkaEvolve with th
 Turn a research direction into evidence-backed verdicts. Two ideas from
 Andrej Karpathy are combined:
 
-- **autoresearch**: the human writes `program.md` ("programming the program"),
-  you act as the researcher, Shinka evolves the code, and a frozen evaluator
-  nobody may touch judges it. Every attempt is logged (`results.tsv`).
-- **LLM knowledge base**: the human drops sources into `library/raw/`; you
+- **autoresearch**: the human makes a wish (a one-sentence direction and a
+  budget), you draft `program.md` from it and act as the researcher, Shinka
+  evolves the code, and a frozen evaluator nobody may touch judges it. Every
+  attempt is logged (`results.tsv`).
+- **LLM knowledge base**: the human and you add sources to `library/raw/`; you
   compile them into an interlinked markdown wiki, answer research questions
   from it, lint it, and file your findings back, so knowledge compounds across
   directions.
@@ -23,10 +24,15 @@ Andrej Karpathy are combined:
 Not for plain program optimization (use `shinka-run`) or non-quant tasks.
 
 ## Roles and hard rules
-- **The human owns `program.md`, the evaluator settings and the raw sources.**
-  You never edit `task/evaluate.py` or the data after `scaffold`; `run`,
-  `probe` and `skeptic` refuse tampered experiments. You never edit or delete
-  files in `library/raw/`; you may add web sources you found (step 1).
+- **The human owns the wish, the `program.md` sections marked (owner) (data,
+  evaluator settings, budget, autonomy, verdict thresholds) and the raw
+  sources.** You draft the Direction, Constraints and Notes sections and never
+  write an (owner) section: autonomy is only text, so writing it would grant
+  yourself room. You never edit `task/evaluate.py` or the data after
+  `scaffold`; `run`, `probe` and `skeptic` refuse tampered experiments. You
+  never edit or delete files in `library/raw/`, and you add sources only with
+  `library add` (step 1), which logs whether you or a human added each one.
+  Never unset `SHINKA_RESEARCH_AGENT` to change what it records.
 - **Never look at out-of-sample numbers while designing an experiment.**
   Score variants with `shinka_research probe` (public metrics only). Do not
   open `metrics.json`, `skeptic.md` or skeptic evidence of an experiment until
@@ -73,10 +79,10 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
 
 ## Workspace layout
 ```
-<workspace>/library/raw/         human sources: PDFs, papers, clips, notes, links.md
+<workspace>/library/raw/         sources: PDFs, papers, clips, notes, links.md
 <workspace>/library/wiki/        your pages: concepts, papers, findings
 <workspace>/library/index.md     catalog of wiki pages (you maintain it)
-<workspace>/library/log.md       ingests, compiles, lints, findings
+<workspace>/library/log.md       adds (by agent or human), compiles, lints, findings
 <workspace>/<direction>/         one research direction (notebook, experiments)
 ```
 One library serves every direction in the workspace.
@@ -88,11 +94,18 @@ One library serves every direction in the workspace.
 shinka_research init <workspace>/<direction> --direction "<one sentence>" --budget-usd <usd>
 shinka_research brief <workspace>/<direction>
 ```
-Ask the human to fill `program.md` (data, costs, budget, thresholds, autonomy)
-and to drop sources into `library/raw/` (or `shinka_research library add
-<dir> <file-or-url>`). Read the brief every round before proposing anything:
-it lists hypotheses with verdicts and evidence, trials, spend, the lockbox
-state, uncompiled sources and recent events.
+`init` writes `program.md` with the wish under Direction. Draft the sections
+that are yours: Direction (the wish in testable terms and what answer would
+settle it), Constraints (what the research must not do or assume) and Notes.
+Leave every (owner) section to the human, and ask them to fill those and to
+add sources (`shinka_research library add <dir> <file-or-url>`, or by hand into
+`library/raw/`). Show the draft and wait for the human to correct it before
+step 2. Read the brief every round before proposing anything: it lists
+hypotheses with verdicts and evidence, trials, spend, the lockbox state,
+uncompiled sources, where the sources came from (`Sources:` line) and recent
+events. When most sources are yours, none was added for a long time, or
+findings outnumber other pages, the library is mostly feeding on itself: say
+so in the checkpoint and ask the human for sources.
 
 ### 1. Compile the library, then research
 1. `shinka_research library pending <dir>` lists new or changed raw sources.
@@ -110,8 +123,11 @@ state, uncompiled sources and recent events.
 
 ### 2. Propose hypotheses
 Write 3–8 hypotheses with **different mechanisms**, each falsifiable on the
-available data, using `templates/hypothesis.md` and citing wiki pages under
-"Related work". Do not repeat refuted ideas unless you state what is different.
+available data, using `templates/hypothesis.md`: cite raw sources or URLs
+under "Related work" (a wiki page only through the sources it cites) and fill
+"Strongest counter-evidence". Do not repeat refuted ideas unless you state
+what is different, and read a refutation only as wide as the data and period
+its finding page declares.
 ```bash
 shinka_research hypothesis add <dir> --title "<short claim>" --file h.md
 ```
@@ -205,9 +221,11 @@ and `shinka_research library log <dir> finding "<hid>: <verdict>"`.
 ### 8. Lint the library (each round)
 Check the wiki for contradictions (two pages disagreeing, a finding that
 contradicts a cited paper), claims without a source, stale findings, missing
-pages for frequently mentioned concepts, and promising connections. Fix what
-you can, list what needs the human, and
-`shinka_research library log <dir> lint "<summary>"`.
+pages for frequently mentioned concepts, and promising connections. Also
+check two echo loops: hypotheses whose Related work cites only this
+research's own finding pages, and any page or hypothesis that uses a finding
+outside the data and period its page declares. Fix what you can, list what
+needs the human, and `shinka_research library log <dir> lint "<summary>"`.
 
 ### 9. Report, then next round
 Write `REPORT.md` (template: `templates/report.md`). Its last section holds at
@@ -240,7 +258,7 @@ research started.
 
 ## Direction layout
 ```
-<dir>/program.md            human: direction, constraints, budget, autonomy
+<dir>/program.md            human: wish, data, settings, budget, autonomy, thresholds; you: direction, constraints, notes
 <dir>/notebook.json         hypotheses, statuses, experiments, verdicts, budget
 <dir>/results.tsv           one line per event (scaffold, run, probe, skeptic, verdict, confirm, grant, approval, round-paused)
 <dir>/ledger.json           the human's round grants and the attempts taken from them

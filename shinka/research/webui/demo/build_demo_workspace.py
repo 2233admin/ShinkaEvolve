@@ -2174,9 +2174,9 @@ def build_library(workspace: Path, clock: DemoClock, staging: Path) -> Dict[str,
         f"{LABEL}\nFictional abstracts used to demo the library. Not real papers.\n",
         encoding="utf-8",
     )
-    library.add(lib, str(notes))
+    library.add(lib, str(notes), "human")
     clock.at("2026-09-27 15:05")
-    library.add(lib, str(abstracts))
+    library.add(lib, str(abstracts), "human")
     clock.at("2026-09-27 16:00")
     for name, (kind, summary, text) in WIKI.items():
         (lib / "wiki" / f"{name}.md").write_text(
@@ -2199,7 +2199,7 @@ def build_library(workspace: Path, clock: DemoClock, staging: Path) -> Dict[str,
     clock.at("2026-10-09 12:00")
     library.log(lib, "finding", f"{LABEL}: filed finding-d1-h001 and finding-d1-h002")
     clock.at("2026-10-18 09:00")
-    library.add(lib, "https://example.org/demo/volume-shock-notes")
+    library.add(lib, "https://example.org/demo/volume-shock-notes", "human")
     library.log(lib, "lint", f"{LABEL}: 1 raw source waiting to be compiled")
     return {"wiki_pages": len(library.wiki_pages(lib)), "pending": library.pending(lib)}
 
