@@ -13,6 +13,16 @@ All notable changes to `shinka-evolve` are documented in this file.
   experiment outside a `quant` direction. A notebook naming an unknown domain
   raises `UnknownDomain` and the workbench shows the error on that direction
   only.
+- Added frozen experiment plans and core verdict rules to Research. An
+  experiment may carry a plan (checker and data files with their hashes, the
+  task message hash, the rule, the claim and the owner's rationale); `run`,
+  `probe`, `skeptic` and `verdict` refuse a planned experiment whose wrapper,
+  plan file or task message changed and name the file. Verdict rules are a
+  closed, versioned set in `shinka.research.rules` (`dsr_pbo`, `reach_target`
+  with `on_budget_exhausted`, `counterexample`, `holdout_vs_baseline`); a
+  planned experiment is judged by its frozen rule and refuses command-line
+  thresholds. Experiments without a plan are shown as `unfrozen` in `status`
+  and `skeptic.md` and keep taking thresholds from the command line.
 - Added source origins to the Research library: `shinka_research library add`
   logs `[add agent]` when `SHINKA_RESEARCH_AGENT` is set and `[add human]`
   otherwise (a cooperation marker, not proof), and `brief` gains a `Sources:`

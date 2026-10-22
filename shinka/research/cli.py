@@ -17,10 +17,11 @@ from typing import Any, Dict, Iterator, List, Optional
 
 import yaml
 
-from shinka.research import domains, grants, library
+from shinka.research import domains, grants, library, rules
 from shinka.research.notebook import (
     RESULTS_LOG,
     DataSplit,
+    Experiment,
     LockboxOpening,
     Notebook,
     Status,
@@ -447,12 +448,35 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
     nb = Notebook.load(root)
     _not_confirming(nb)
     hyp, exp = _pick_experiment(nb, args.hid, args.eid)
-    th = _thresholds(args)
+    # A changed file is named before anything else, whatever the rule.
+    verify_experiment(root, nb, hyp.id, exp)
+    plan = exp.plan
+    if plan is None:
+        # Unfrozen (legacy): thresholds from the command line, as always.
+        th = _thresholds(args)
+    else:
+        given = _given_thresholds(args)
+        if given:
+            sys.exit(
+                f"{hyp.id}/{exp.id}'s rule and thresholds are frozen by its plan; "
+                f"drop {', '.join(given)}"
+            )
+        if plan.rule.kind != rules.DSR_PBO:
+            sys.exit(
+                f"{hyp.id}/{exp.id}'s rule {plan.rule.kind} is judged from the "
+                "checker's evidence, which `skeptic` cannot gather yet "
+                "(research-domains 1.3)"
+            )
+        th = Thresholds(**plan.rule.thresholds)
     # What the challenge starts from; a change to it meanwhile (a verdict, a
     # confirmation, a run, another challenge) is newer than this result.
     start = (hyp.status, hyp.verdict, exp.skeptic)
     report = challenge(root, nb, hyp.id, exp, th)
-    label, reason = decide(report, th)
+    if plan is None:
+        label, reason = decide(report, th)
+    else:
+        verdict, reason = rules.judge(plan.rule, report)
+        label = Status(verdict)
     # The challenge ran unlocked; its result goes onto the latest notebook.
     with Notebook.edit(root) as nb:
         _not_confirming(nb)
@@ -470,20 +494,45 @@ def cmd_skeptic(args: argparse.Namespace) -> None:
                 include={"dsr_supported", "min_positive_fraction", "max_pbo"}
             ),
         }
+        if plan is not None:
+            exp.skeptic["rule"] = plan.rule.model_dump()
         hyp.status, hyp.verdict = Status.challenged, None
     append_log(root, hyp.id, exp.id, "skeptic", f"rule says {label.value}: {reason}")
     out = experiment_dir(root, hyp.id, exp.id) / "skeptic.md"
-    out.write_text(render_report(hyp.id, exp.id, report, label) + f"\n{reason}\n")
+    frozen = (
+        "frozen by the plan"
+        if exp.plan is not None
+        else "legacy, thresholds from the command line"
+    )
+    out.write_text(
+        render_report(hyp.id, exp.id, report, label)
+        + f"\nRule: {_rule_name(exp)} ({frozen})\n\n{reason}\n"
+    )
     print(out.read_text())
 
 
+def _rule_name(exp: Experiment) -> str:
+    """The rule an experiment is judged by; experiments without a plan are
+    unfrozen (legacy) and take thresholds from the command line."""
+    if exp.plan is None:
+        return "unfrozen"
+    return f"{exp.plan.rule.kind} v{exp.plan.rule.version}"
+
+
+def _given_thresholds(args: argparse.Namespace) -> List[str]:
+    return [
+        flag
+        for flag in _THRESHOLD_FLAGS
+        if getattr(args, flag[2:].replace("-", "_")) is not None
+    ]
+
+
 def _thresholds(args: argparse.Namespace) -> Thresholds:
-    return Thresholds(
-        dsr_supported=args.dsr,
-        min_positive_fraction=args.min_positive_fraction,
-        n_subperiods=args.subperiods,
-        max_pbo=args.max_pbo,
-    )
+    given = {
+        field: getattr(args, flag[2:].replace("-", "_"))
+        for flag, field in _THRESHOLD_FLAGS.items()
+    }
+    return Thresholds(**{k: v for k, v in given.items() if v is not None})
 
 
 # Held for a confirm's whole run: a target found mid-scoring then belongs to a
@@ -691,6 +740,9 @@ def cmd_verdict(args: argparse.Namespace) -> None:
     with Notebook.edit(root) as nb:
         _not_confirming(nb)
         hyp, exp = _pick_experiment(nb, args.hid, args.eid)
+        if exp.plan is not None:
+            # Unfrozen (legacy) experiments keep recording without this check.
+            verify_experiment(root, nb, hyp.id, exp)
         if exp.skeptic is None:
             sys.exit(f"{hyp.id}/{exp.id} has not been challenged; run `skeptic` first")
         label = Status(args.label or exp.skeptic["rule_label"])
@@ -885,7 +937,10 @@ def cmd_status(args: argparse.Namespace) -> None:
             f"{nb.data.n_total - nb.data.n_dev} of {nb.data.n_total} bars)"
         )
     for h in nb.hypotheses:
-        counts = [f"{e.id}({_evaluated(root, h.id, e.id)})" for e in h.experiments]
+        counts = [
+            f"{e.id}({_evaluated(root, h.id, e.id)}, {_rule_name(e)})"
+            for e in h.experiments
+        ]
         exps = ", ".join(counts) or "-"
         line = f"{h.id}  {h.status.value:<12} {h.title}  [{exps}]"
         if h.verdict:
@@ -925,11 +980,22 @@ def cmd_ui(args: argparse.Namespace) -> None:
     ui.serve(Path(args.workspace), args.port, not args.no_browser, args.runs_root)
 
 
+# Flag -> Thresholds field. The flags default to None so a command can tell
+# thresholds given on the command line, which a frozen plan refuses, from the
+# defaults (``Thresholds``'s own).
+_THRESHOLD_FLAGS = {
+    "--dsr": "dsr_supported",
+    "--min-positive-fraction": "min_positive_fraction",
+    "--subperiods": "n_subperiods",
+    "--max-pbo": "max_pbo",
+}
+
+
 def _add_threshold_args(s: argparse.ArgumentParser) -> None:
-    s.add_argument("--dsr", type=float, default=0.95)
-    s.add_argument("--min-positive-fraction", type=float, default=2.0 / 3.0)
-    s.add_argument("--subperiods", type=int, default=3)
-    s.add_argument("--max-pbo", type=float, default=0.5)
+    s.add_argument("--dsr", type=float, help="default 0.95")
+    s.add_argument("--min-positive-fraction", type=float, help="default 2/3")
+    s.add_argument("--subperiods", type=int, help="default 3")
+    s.add_argument("--max-pbo", type=float, help="default 0.5")
 
 
 def build_parser() -> argparse.ArgumentParser:

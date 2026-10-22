@@ -212,9 +212,11 @@ in-sample edge in the hypothesis file.
 shinka_research skeptic <dir> <hid>      # DSR, PBO, sub-periods, baselines, decay
 shinka_research verdict <dir> <hid>      # rule-based verdict
 ```
-Use the thresholds from `program.md`. Override only with `--label ...
---reason "..."` when the rule clearly misreads the evidence. "Inconclusive" is
-a valid result.
+Use the thresholds from `program.md`. An experiment with a frozen plan
+(`status` shows its rule, e.g. `e01(120, dsr_pbo v1)`, instead of `unfrozen`)
+is judged by the plan's rule and thresholds; `skeptic` refuses threshold flags
+for it. Override only with `--label ... --reason "..."` when the rule clearly
+misreads the evidence. "Inconclusive" is a valid result.
 
 ### 7. File the finding back into the library
 For each verdict, create or update a `finding` wiki page for the mechanism

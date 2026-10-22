@@ -197,7 +197,7 @@ def test_status_and_brief_count_the_trials_of_a_run_in_progress(
     cli.main(["status", str(root)])
     cli.main(["brief", str(root)])
     out = capsys.readouterr().out
-    assert "Total trials: 3" in out and "e01(2)" in out
+    assert "Total trials: 3" in out and "e01(2, unfrozen)" in out
     assert "Trials so far: 3" in out
 
 
