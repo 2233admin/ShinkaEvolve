@@ -103,7 +103,7 @@ function Body({ items, onClose }: { items: PaletteItem[]; onClose: () => void })
   )
 }
 
-/** Ctrl K: jump to any page, direction, run or library page, or switch theme and language. */
+/** Ctrl K: jump to any page, direction, run, program of the open run or library page, or switch theme and language. */
 export function Palette({ open, onClose, items }: { open: boolean; onClose: () => void; items: PaletteItem[] }) {
   const { t } = useCopy()
   return (

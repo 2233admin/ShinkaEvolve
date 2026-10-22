@@ -60,12 +60,13 @@ export const COPY = {
 
   // Command palette (Ctrl K)
   'pal.label': { zh: '命令面板', en: 'Command palette' },
-  'pal.input': { zh: '搜索方向、运行、资料页或操作', en: 'Search directions, runs, pages or actions' },
+  'pal.input': { zh: '搜索方向、运行、程序编号或名称、资料页或操作', en: 'Search directions, runs, program IDs or names, pages or actions' },
   'pal.empty': { zh: '没有匹配项', en: 'No matches' },
   'pal.keys': { zh: '↑↓ 选择 · 回车打开 · Esc 关闭', en: '↑↓ to move · Enter to open · Esc to close' },
   'pal.pages': { zh: '页面', en: 'Pages' },
   'pal.directions': { zh: '研究方向', en: 'Directions' },
   'pal.runs': { zh: '运行', en: 'Runs' },
+  'pal.programs': { zh: '本运行的程序', en: "This run's programs" },
   'pal.library': { zh: '资料页', en: 'Library pages' },
   'pal.actions': { zh: '操作', en: 'Actions' },
   'pal.toDark': { zh: '切换到深色主题', en: 'Switch to the dark theme' },

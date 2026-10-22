@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import { AnalysisWorkspace } from '../AnalysisWorkspace'
 import { isCorrect } from '../compare/series'
 import { Icon } from '../design/icons'
@@ -49,15 +49,18 @@ type Props = {
   /** The router entry and the manual reload count: a new one remounts the restored page. */
   frameKey: string
   onRunList: () => void
+  /** Reports the run's programs to the shell, for the command palette. */
+  onPrograms: (run: string, programs: RunProgram[]) => void
 }
 
 /** One run's analysis: the run bar, then Lineage or Progress with the resident inspector, or the restored page. */
-export function RunPage({ route, data, name, go, sync, light, frameKey, onRunList }: Props) {
+export function RunPage({ route, data, name, go, sync, light, frameKey, onRunList, onPrograms }: Props) {
   const { t } = useCopy()
   const view = analysisView(route)
   const read = useRunData(route.run, data.runs, data.listed)
   const run = read.data
   const programs = useMemo(() => run?.programs ?? [], [run])
+  useEffect(() => onPrograms(route.run, programs), [onPrograms, route.run, programs])
   const byId = useMemo(() => new Map(programs.map((p) => [p.id, p])), [programs])
   const best = useMemo(() => bestOf(programs), [programs])
   const bestSet = useMemo(() => new Set(best.map((p) => p.id)), [best])

@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Notice } from './Notice'
 import { Compare } from './compare/Compare'
+import { isCorrect, scoreOf } from './compare/series'
+import { fmt } from './format'
 import { DEMO_TAG, untagged } from './demo'
 import { DirectionMeta } from './DirectionMeta'
 import { useTheme } from './design/theme'
@@ -17,6 +19,7 @@ import { useRouter } from './shell/useRouter'
 import { REFRESH_MS, RUNS_REFRESH_MS, useShellData } from './shell/useShellData'
 import { Overview } from './overview/Overview'
 import { RunPage, ViewTabs } from './run/RunPage'
+import { generationOf, nameOf, type RunProgram } from './run/data'
 
 // Each page's own layout; a run's analysis takes the full width and height.
 const PAGE_CLASS: Record<Route['view'], string> = {
@@ -50,6 +53,13 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
   const [reload, setReload] = useState(0)
   // design.md › 响应式: the rail narrows below 1280px and on the analysis page.
   const compact = useMatches('(max-width: 1279px)')
+  // The open run's programs, reported by its page, so Ctrl K can jump to any of them by ID or name (OD-2).
+  const [opened, setOpened] = useState<{ run: string; programs: RunProgram[] }>({ run: '', programs: [] })
+  const onPrograms = useCallback((run: string, programs: RunProgram[]) => setOpened({ run, programs }), [])
+  const ranked = useMemo(() => {
+    const rank = (p: RunProgram) => scoreOf(p) ?? -Infinity
+    return [...opened.programs].sort((a, b) => (rank(a) === rank(b) ? generationOf(a) - generationOf(b) : rank(b) > rank(a) ? 1 : -1))
+  }, [opened])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -112,6 +122,22 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
     { key: 'v-research', group: 'pal.pages', label: t('nav.research'), act: () => go(routeHref({ view: 'directions' })) },
     { key: 'v-runs', group: 'pal.pages', label: t('nav.runs'), act: () => go(routeHref(ALL_RUNS)) },
     { key: 'v-library', group: 'pal.pages', label: t('nav.library'), act: () => go(routeHref({ view: 'library', page: null })) },
+    // The open run's programs, best first; typing an ID or a name finds any of them.
+    ...(route.view === 'run' && opened.run === route.run
+      ? ranked.map((p): PaletteItem => {
+          const score = scoreOf(p)
+          return {
+            key: `g-${p.id}`,
+            group: 'pal.programs',
+            label: nameOf(p),
+            // Generation and score first: a narrow palette cuts the end of the ID, which is still searched.
+            detail: `${t('ra.gen', { g: generationOf(p) })} · ${isCorrect(p) ? (score === null ? '—' : fmt(score)) : t('ra.failedShort')} · ${p.id}`,
+            data: true,
+            // A generation scrubbed below the program would hide it, so the jump shows every generation then.
+            act: () => go(routeHref({ ...route, program: p.id, gen: route.gen !== null && Number(route.gen) < generationOf(p) ? null : route.gen })),
+          }
+        })
+      : []),
     ...directions.map((d): PaletteItem => ({
       key: `d-${d.id}`,
       group: 'pal.directions',
@@ -207,6 +233,7 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
           light={light}
           frameKey={`${entry}:${reload}`}
           onRunList={() => go(routeHref(ALL_RUNS))}
+          onPrograms={onPrograms}
         />
       )
       break

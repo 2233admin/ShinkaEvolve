@@ -203,6 +203,10 @@ All notable changes to `shinka-evolve` are documented in this file.
   restored page without a view. Where the run page's top bar cannot hold the
   four tabs (1024 px, and 1280 px in English), its tools move to a second row
   instead of the run name wrapping.
+- Let Ctrl K jump to any program of the open run by ID or name: the palette
+  lists the run's programs best first with their generation and score (or
+  “Failed”), and choosing one selects it in the current view, the restored
+  page included, clearing a generation limit that would hide it.
 - Removed the old run list and compare pages (`/analysis/index.html`,
   `/compare.html`), which the native All runs and Compare pages replaced; both
   addresses now answer 404 and are not redirected. The restored analysis page
