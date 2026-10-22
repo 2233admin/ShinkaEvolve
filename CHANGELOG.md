@@ -193,6 +193,12 @@ All notable changes to `shinka-evolve` are documented in this file.
   timeline, occupancy, completions per minute, stage durations and
   utilisation), and the eleven analysis plots of the old page in pairs, where a
   computation that fails is reported in place of the plots.
+- Kept a run's solution space and contest on the restored analysis page instead
+  of drawing them natively (owner decision, 2026-10-22). The view tabs stay
+  Lineage and Progress; `tab=space`, `tab=contest` and the run bar's “Original
+  workbench” link open the restored page in the same shell on the
+  current program, where the embeddings, clusters, MAPs, diversity, battle,
+  Pareto, ensemble and cost panels are chosen.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and
