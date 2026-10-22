@@ -104,9 +104,11 @@ function Tracks({ tracks, hypotheses, events, selected, onSelect, width }: Props
               onKeyDown={(event) => pick(event, h.id)}
             >
               <rect x={0} y={y - ROW / 2} width={width} height={ROW} fill="transparent" />
-              <text x={4} y={y + 4} className="axis mono">{h.id}</text>
+              {/* Trailing spaces keep the drawn texts separate words when read together (ID, status, span), so the
+                  accessible name, which starts with them, matches what is seen. SVG does not draw them. */}
+              <text x={4} y={y + 4} className="axis mono">{`${h.id} `}</text>
               <g transform={`translate(42,${y - 7})`}><Glyph kind={h.status} /></g>
-              <text x={62} y={y + 4} className="tl">{t(STATUS[h.status].key)}</text>
+              <text x={62} y={y + 4} className="tl">{`${t(STATUS[h.status].key)} `}</text>
               <line x1={x1} x2={x2} y1={y} y2={y} stroke={isSelected ? 'var(--text)' : 'var(--muted)'} strokeWidth={6} strokeLinecap="round" />
               <text x={late ? Math.min(width, x2 + 3) : x1 - 3} y={y + 18} textAnchor={late ? 'end' : undefined} className="axis halo">{span}</text>
               {onTrack.filter((m) => m.hypothesis === h.id).map((m, i) => (

@@ -1,6 +1,6 @@
 import { Notice } from '../Notice'
 import { bisectCenter, curveStepAfter, line, max, scaleLinear } from 'd3'
-import { useId, useMemo, useState, type KeyboardEvent } from 'react'
+import { Fragment, useId, useMemo, useState, type KeyboardEvent } from 'react'
 import { untagged } from '../demo'
 import { Glyph } from '../design/icons'
 import { useWidth } from '../design/useWidth'
@@ -10,7 +10,7 @@ import { useCopy } from '../i18n/lang'
 import { runCost, runGroup, runLabel, type RunStats } from '../runs/data'
 import { ALL_RUNS, routeHref, runRoute, type Route } from '../shell/route'
 import type { ShellData } from '../shell/useShellData'
-import { byGeneration, byGroup, bySpend, groupBoards, groupLeads, metricOf, METRICS, seriesStyle, stackLabels, stripDomain, valueAt, type Metric, type Point, type SeriesStyle as Style } from './series'
+import { byGeneration, byGroup, bySpend, groupBoards, groupLeads, metricOf, METRICS, seriesStyle, stackLabels, stripDomain, unpricedCharge, valueAt, type Metric, type Point, type SeriesStyle as Style } from './series'
 import { useCompareData } from './useCompareData'
 
 type CompareRoute = Extract<Route, { view: 'compare' }>
@@ -117,6 +117,9 @@ function CompareChart({ title, group, series, axis, format, zero }: { title: str
   const rows = stackLabels(ends.map((p) => y(p.y) + 4), gap, m.t + 4, HEIGHT - m.b)
   const xTicks = x.ticks(Math.max(2, Math.min(6, Math.floor((width - m.l - m.r) / 60)))).filter((v) => axis === 'spend' || Number.isInteger(v))
   const xText = (v: number) => (axis === 'generation' ? int(v) : money(v))
+  // Amounts keep the money format, so on a spend axis of a few cents several ticks read the same (<$0.01): only
+  // the first of a run of equal labels is written, the tick marks stay.
+  const xLabels = xTicks.map((v, i) => (i > 0 && xText(v) === xText(xTicks[i - 1]) ? null : xText(v)))
 
   // Every x where some run has a point; the reading is each run's value there.
   const xs = [...new Set(all.map((p) => p.x))].sort((a, b) => a - b)
@@ -154,10 +157,10 @@ function CompareChart({ title, group, series, axis, format, zero }: { title: str
                 <text x={m.l - 8} y={y(v) + 4} textAnchor="end" className="axis">{format(v)}</text>
               </g>
             ))}
-            {xTicks.map((v) => (
+            {xTicks.map((v, i) => (
               <g key={v}>
                 <line x1={x(v)} x2={x(v)} y1={HEIGHT - m.b + 2} y2={HEIGHT - m.b + 6} stroke="var(--stroke)" />
-                <text x={x(v)} y={HEIGHT - m.b + 19} textAnchor="middle" className="axis">{xText(v)}</text>
+                {xLabels[i] !== null && <text x={x(v)} y={HEIGHT - m.b + 19} textAnchor="middle" className="axis">{xLabels[i]}</text>}
               </g>
             ))}
             <line x1={m.l} x2={width - m.r} y1={HEIGHT - m.b + 2} y2={HEIGHT - m.b + 2} stroke="var(--stroke)" />
@@ -402,11 +405,16 @@ export function Compare({ data, route, go }: Props) {
       </div>
       {chartGroups.map((groupRuns) => {
         const group = chartGroups.length > 1 ? titleOf(keys[groupRuns[0]]) : null
+        // A run with an unpriced charge has an unknown spend from there on, so its spend curve stops early (bySpend).
+        const cut = groupRuns.filter((k) => unpricedCharge(runs[k])).map((k) => labels[k])
         return (
-          <div className="ccharts" key={groupRuns.join(',')}>
-            <CompareChart title={t('cmp.byGeneration', { metric: metricName })} group={group} series={series(curves.generation, groupRuns)} axis="generation" format={format} zero={metric !== 'best_score'} />
-            <CompareChart title={t('cmp.bySpend', { metric: metricName })} group={group} series={series(curves.spend, groupRuns)} axis="spend" format={format} zero={metric !== 'best_score'} />
-          </div>
+          <Fragment key={groupRuns.join(',')}>
+            <div className="ccharts">
+              <CompareChart title={t('cmp.byGeneration', { metric: metricName })} group={group} series={series(curves.generation, groupRuns)} axis="generation" format={format} zero={metric !== 'best_score'} />
+              <CompareChart title={t('cmp.bySpend', { metric: metricName })} group={group} series={series(curves.spend, groupRuns)} axis="spend" format={format} zero={metric !== 'best_score'} />
+            </div>
+            {cut.length > 0 && <p className="cnote small faint">{t('cmp.spendCut', { runs: cut.join(t('lib.listSeparator')) })}</p>}
+          </Fragment>
         )
       })}
       <div className={wide ? 'cbottom is-wide' : 'cbottom'}>

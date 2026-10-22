@@ -541,7 +541,8 @@ function ModelTable({ models, runBest, hasPosteriors }: { models: ReturnType<typ
       {models.length === 0 ? (
         <p className="small muted">{t('rp.noModels')}</p>
       ) : (
-        <div className="tscroll">
+        // Narrower than the table at 1024, the box scrolls; as a labelled tab stop the keyboard can scroll it too.
+        <div className="tscroll" role="region" aria-labelledby="models-head" tabIndex={0}>
           <table className="itable mtable">
             <thead>
               <tr>

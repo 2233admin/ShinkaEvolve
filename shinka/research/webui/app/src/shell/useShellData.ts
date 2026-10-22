@@ -8,8 +8,10 @@ export const RUNS_REFRESH_MS = 10_000
 
 export type ShellData = {
   workspace: WorkspaceSnapshot | null
-  /** The open direction's snapshot; null until it has loaded. */
+  /** The open direction's snapshot; null until it has loaded, and null when the direction does not exist. */
   snap: Snapshot | null
+  /** The open direction does not exist in the workspace (the snapshot answered 404); the shell itself is fine. */
+  missing: boolean
   /** Every run database; null until listed, and kept from the last good listing when one fails. */
   runs: RunEntry[] | null
   /** The first listing attempt has finished, whatever its outcome. */
@@ -40,9 +42,10 @@ export function useShellData(direction: string | null, every = REFRESH_MS): Shel
     workspace: WorkspaceSnapshot | null
     snap: Snapshot | null
     snapFor: string | null
+    missing: boolean
     updated: Date | null
     error: string | null
-  }>({ workspace: null, snap: null, snapFor: null, updated: null, error: null })
+  }>({ workspace: null, snap: null, snapFor: null, missing: false, updated: null, error: null })
   const [runs, setRuns] = useState<RunEntry[] | null>(null)
   const [runsError, setRunsError] = useState<string | null>(null)
   const [listed, setListed] = useState(false)
@@ -53,9 +56,16 @@ export function useShellData(direction: string | null, every = REFRESH_MS): Shel
     const { signal } = controller
     Promise.all([
       getJson<WorkspaceSnapshot>('/api/workspace', signal),
-      direction === null ? null : getJson<Snapshot>(`/api/snapshot?direction=${encodeURIComponent(direction)}`, signal),
+      // An unknown direction is an answer about the page, not a failed connection: the rest of the shell loads.
+      direction === null
+        ? null
+        : getJson<Snapshot>(`/api/snapshot?direction=${encodeURIComponent(direction)}`, signal).catch((e: unknown) => {
+            if (e instanceof Error && e.message === 'HTTP 404') return 'missing' as const
+            throw e
+          }),
     ]).then(
-      ([workspace, snap]) => setLoaded({ workspace, snap, snapFor: direction, updated: new Date(), error: null }),
+      ([workspace, snap]) =>
+        setLoaded({ workspace, snap: snap === 'missing' ? null : snap, snapFor: direction, missing: snap === 'missing', updated: new Date(), error: null }),
       (e: unknown) => {
         if (!signal.aborted) setLoaded((s) => ({ ...s, error: e instanceof Error ? e.message : String(e) }))
       },
@@ -99,6 +109,7 @@ export function useShellData(direction: string | null, every = REFRESH_MS): Shel
   }, [])
 
   const refresh = useCallback(() => setRound((r) => r + 1), [])
-  const { workspace, snap, snapFor, updated, error } = loaded
-  return { workspace, snap: snapFor === direction ? snap : null, runs, listed, runsError, updated, error, refresh, live, setLive: resume, every }
+  const { workspace, snap, snapFor, missing, updated, error } = loaded
+  const here = snapFor === direction
+  return { workspace, snap: here ? snap : null, missing: here && missing, runs, listed, runsError, updated, error, refresh, live, setLive: resume, every }
 }

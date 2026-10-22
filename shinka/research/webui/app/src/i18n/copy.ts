@@ -31,7 +31,7 @@ export const COPY = {
   'nav.runsShort': { zh: '运行', en: 'Runs' },
   'nav.libraryShort': { zh: '资料库', en: 'Library' },
   'nav.directions': { zh: '方向', en: 'Directions' },
-  'nav.pending': { zh: '{n} 份资料待整理', en: '{n} sources awaiting triage' },
+  'nav.pending': { zh: '{n} 份资料待整理', en: 'Sources awaiting triage: {n}' },
   'theme.label': { zh: '主题', en: 'Theme' },
   'theme.dark': { zh: '深色', en: 'Dark' },
   'theme.light': { zh: '浅色', en: 'Light' },
@@ -91,6 +91,8 @@ export const COPY = {
     zh: '{error}。确认 shinka_research ui 还在运行，然后点刷新。',
     en: '{error}. Check that shinka_research ui is still running, then refresh.',
   },
+  'error.noDirection': { zh: '工作区里没有这个研究方向：', en: 'No such direction in this workspace:' },
+  'error.noDirectionHint': { zh: '{id}。从左侧方向列表或研究方向总览打开。', en: '{id}. Open one from the direction list or the directions overview.' },
   'empty.hypotheses': { zh: '还没有假设：', en: 'No hypotheses yet:' },
   'empty.hypothesesHint': { zh: '用 shinka_research hypothesis add 添加第一个假设。', en: 'Add the first one with shinka_research hypothesis add.' },
 
@@ -267,7 +269,8 @@ export const COPY = {
   'rep.timeline': { zh: '时间线', en: 'Timeline' },
   'rep.dateAxis': { zh: '日期（UTC）', en: 'Date (UTC)' },
   'rep.timeAxis': { zh: '时间（UTC，{day}）', en: 'Time (UTC, {day})' },
-  'rep.trackLabel': { zh: '{id} {status}，{span} UTC：{title}', en: '{id} {status}, {span} UTC: {title}' },
+  // Starts with the texts drawn on the track (ID, status word, span) in their order, so the spoken name matches the visible one.
+  'rep.trackLabel': { zh: '{id} {status} {span} UTC：{title}', en: '{id} {status} {span} UTC: {title}' },
   'rep.events': { zh: '事件', en: 'Events' },
   'rep.eventsFilter': { zh: '筛选事件', en: 'Filter events' },
   'rep.eventsShown': { zh: '显示 {n} / {total} 条', en: 'Showing {n} of {total}' },
@@ -336,7 +339,7 @@ export const COPY = {
 
   // Library
   'lib.empty': { zh: '还没有资料库——用 <cmd>shinka_research library add</cmd> 加资料。', en: 'No library yet. Add sources with <cmd>shinka_research library add</cmd>.' },
-  'lib.pending': { zh: '有 {n} 份资料待整理：', en: '{n} sources awaiting triage:' },
+  'lib.pending': { zh: '有 {n} 份资料待整理：', en: 'Sources awaiting triage ({n}):' },
   'lib.pendingMore': { zh: '{list} 等', en: '{list} and more' },
   'lib.listSeparator': { zh: '、', en: ', ' },
   'lib.pages': { zh: '资料库页面', en: 'Library pages' },
@@ -429,6 +432,10 @@ export const COPY = {
   'cmp.metricValid': { zh: '有效程序数', en: 'Valid programs' },
   'cmp.byGeneration': { zh: '{metric} · 按代', en: '{metric} · by generation' },
   'cmp.bySpend': { zh: '{metric} · 按累计花费', en: '{metric} · by cumulative spend' },
+  'cmp.spendCut': {
+    zh: '{runs} 有未计价的调用：按累计花费的曲线停在第一笔未计价的调用处，之后的程序只画在按代的图里。',
+    en: '{runs} made calls without a price: the cumulative-spend curve stops at the first of them, and later programs appear only in the by-generation chart.',
+  },
   'cmp.generationAxis': { zh: '代', en: 'Generation' },
   'cmp.spendAxis': { zh: '累计花费', en: 'Cumulative spend' },
   'cmp.noPoints': { zh: '所选运行还没有可画的点。', en: 'The selected runs have nothing to plot yet.' },

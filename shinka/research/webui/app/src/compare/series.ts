@@ -137,6 +137,11 @@ export function bySpend(run: Pick<RunData, 'programs' | 'prompts'> & { stats?: R
   return sampled.flatMap((p) => (p.x === null || p.y === null ? [] : [{ x: p.x, y: p.y }]))
 }
 
+/** Whether `bySpend` stops early for this run: some program or prompt charge has no price. */
+export function unpricedCharge(run: Pick<RunData, 'programs' | 'prompts'>): boolean {
+  return run.programs.some((p) => programCost(p) === null) || run.prompts.some((v) => recordedCost(v.metadata?.llm?.cost) === null)
+}
+
 /** A step curve's value at x: its last point at or before x; null before the curve starts or after it ends. */
 export function valueAt(points: Point[], at: number): number | null {
   if (points.length === 0 || at < points[0].x || at > points[points.length - 1].x) return null

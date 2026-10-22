@@ -99,6 +99,7 @@
 .lpanel-body .md, .ibody .md { font-size: 12.5px; line-height: 19px; }
 .lpanel-body .md :is(h1, h2, h3, h4), .ibody .md :is(h1, h2, h3, h4) { margin: .9em 0 .3em; font-size: 13px; font-weight: 500; }
 .tscroll { max-width: 100%; overflow-x: auto; }
+.tscroll[tabindex]:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
 .lpanel-body .notice { max-width: none; }
 .metahead { display: grid; gap: 2px; }
 .metahead b { font-weight: 500; }

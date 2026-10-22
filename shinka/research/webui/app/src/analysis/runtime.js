@@ -103,13 +103,19 @@ Chart.register({
     }
   },
 })
-const originalPlot = Plotly.newPlot.bind(Plotly)
-Plotly.newPlot = (target, data, layout = {}, config = {}) => originalPlot(target, data, {
+// Every full (re)draw path gets the token theme; react redraws would otherwise
+// fall back to the page's hard-coded light layout and Plotly's default grid.
+const themedLayout = (layout = {}) => ({
   ...layout, paper_bgcolor: token('base'), plot_bgcolor: token('base'),
   font: { ...layout.font, family: token('font-sans'), color: token('ink'), size: 12 },
   xaxis: { ...layout.xaxis, gridcolor: token('line'), zerolinecolor: token('line-strong') },
   yaxis: { ...layout.yaxis, gridcolor: token('line'), zerolinecolor: token('line-strong') },
-}, { ...config, responsive: true, displaylogo: false })
+})
+const plotConfig = (config = {}) => ({ ...config, responsive: true, displaylogo: false })
+const originalPlot = Plotly.newPlot.bind(Plotly)
+const originalReact = Plotly.react.bind(Plotly)
+Plotly.newPlot = (target, data, layout, config) => originalPlot(target, data, themedLayout(layout), plotConfig(config))
+Plotly.react = (target, data, layout, config) => originalReact(target, data, themedLayout(layout), plotConfig(config))
 window.shinkaSetTheme = (theme) => {
   document.documentElement.dataset.theme = theme
   document.body?.classList.toggle('dark', theme !== 'light')

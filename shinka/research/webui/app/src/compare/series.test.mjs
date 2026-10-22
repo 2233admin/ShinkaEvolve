@@ -1,7 +1,7 @@
 // The compare page's curves, costs and leads (award-redesign 5.2); node strips the TypeScript types.
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { byGeneration, byGroup, bySpend, crossBoard, groupBoards, groupLeads, leads, MAX_POINTS, metricOf, programCost, scoreOf, seriesStyle, stackLabels, stripDomain, valueAt } from './series.ts'
+import { byGeneration, byGroup, bySpend, crossBoard, groupBoards, groupLeads, leads, MAX_POINTS, metricOf, programCost, scoreOf, seriesStyle, stackLabels, stripDomain, unpricedCharge, valueAt } from './series.ts'
 
 const program = (id, generation, score, extra = {}) => ({
   id,
@@ -66,6 +66,16 @@ test('the spend curve ends at the first charge without a price', () => {
   assert.deepEqual(xy(bySpend(run, 'best_score')), [[1, 0.2]])
   // An unpriced prompt ends it the same way.
   assert.deepEqual(xy(bySpend({ programs: [program('a', 0, 0.2, { timestamp: 1, cost: 1 })], prompts: [prompt(0, 0, 'n/a')] }, 'best_score')), [])
+})
+
+test('the page says a spend curve stopped early exactly when a charge has no price', () => {
+  const headless = { metadata: { model_name: 'headless/agent', headless_pricing_unknown: true } }
+  const priced = { programs: [program('a', 0, 0.2, { timestamp: 1, cost: 1 }), program('b', 1, 0.6, { timestamp: 2 })], prompts: [] }
+  assert.equal(unpricedCharge(priced), false)
+  // An unknown run total alone (cost-unrecorded) leaves the curve whole, so no note.
+  assert.equal(unpricedCharge({ ...priced, stats: { total_cost: null, prompt_evo_cost: 0 } }), false)
+  assert.equal(unpricedCharge({ programs: [...priced.programs, program('h', 2, 0.9, { timestamp: 3, ...headless })], prompts: [] }), true)
+  assert.equal(unpricedCharge({ programs: priced.programs, prompts: [prompt(0, 0, 'n/a')] }), true)
 })
 
 test('a long spend curve keeps every k-th point and its true end', () => {

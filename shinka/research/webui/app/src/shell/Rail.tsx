@@ -71,7 +71,8 @@ export function Rail({ route, data, narrow, demo, onSearch }: RailProps) {
   const directions = data.workspace?.directions ?? []
   return (
     <aside className={narrow ? 'rail is-narrow' : 'rail'}>
-      <a className="brand" href={routeHref({ view: 'directions' })}>
+      {/* The narrow rail hides the text spans, so the link and the button carry their names themselves. */}
+      <a className="brand" href={routeHref({ view: 'directions' })} aria-label={narrow ? 'Shinka Research' : undefined}>
         <Mark />
         <span>Shinka Research</span>
       </a>
@@ -81,7 +82,7 @@ export function Rail({ route, data, narrow, demo, onSearch }: RailProps) {
           {demo && <span className="demo" title={t('shell.demo')}>DEMO</span>}
         </div>
       )}
-      <button type="button" className="search" onClick={onSearch} aria-keyshortcuts="Control+K">
+      <button type="button" className="search" onClick={onSearch} aria-keyshortcuts="Control+K" aria-label={narrow ? t('shell.search') : undefined}>
         <Icon name="search" />
         <span>{t('shell.search')}</span>
         <kbd>Ctrl K</kbd>

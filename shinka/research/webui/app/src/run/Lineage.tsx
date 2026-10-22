@@ -482,9 +482,10 @@ export function Lineage({ programs, byId, upTo, maxGen, selected, onSelect, prom
                   if (g > upTo) return null
                   const px = zx(g)
                   const isBest = bestPrompts.has(q.id)
-                  const label = t('ra.promptMark', { k, fitness: typeof q.fitness === 'number' ? fmt(q.fitness) : '—', g })
-                  const open = () => onPanel('conclusions', { prompt: q.id })
                   const side = promptLabels[k]
+                  // The accessible name starts with the label drawn beside the mark, so speech matches what is seen.
+                  const label = `${side ? `${promptText(q, k)} · ` : ''}${t('ra.promptMark', { k, fitness: typeof q.fitness === 'number' ? fmt(q.fitness) : '—', g })}`
+                  const open = () => onPanel('conclusions', { prompt: q.id })
                   const w = promptText(q, k).length * LABEL_CHAR
                   return (
                     <g key={q.id} className="mark" role="button" tabIndex={0} aria-label={label} onClick={open} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}>
@@ -502,9 +503,9 @@ export function Lineage({ programs, byId, upTo, maxGen, selected, onSelect, prom
                 {updates.map((u, k) => {
                   if (u.generation === null || u.generation > upTo) return null
                   const px = zx(u.generation)
-                  const label = t('ra.metaMark', { k: k + 1, n: int(u.processed), g: u.generation })
-                  const open = () => onPanel('conclusions', { meta: u.processed })
                   const side = metaLabels[k]
+                  const label = `${side ? `${metaText(u, k)} · ` : ''}${t('ra.metaMark', { k: k + 1, n: int(u.processed), g: u.generation })}`
+                  const open = () => onPanel('conclusions', { meta: u.processed })
                   const w = metaText(u, k).length * LABEL_CHAR
                   return (
                     <g key={u.processed} className="mark" role="button" tabIndex={0} aria-label={label} onClick={open} onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), open())}>

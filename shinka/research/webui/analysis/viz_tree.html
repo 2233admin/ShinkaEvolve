@@ -1892,10 +1892,11 @@
         }
         body.dark svg { background: transparent !important; }
         body.dark #details-panel div { color: #E8EAED; }
-        /* Plotly chart overrides */
+        /* Plotly chart overrides. Plotly stacks several transparent .main-svg
+           layers (data, gl overlay, info/hover); painting them opaque hides the
+           data layer, so only the containers and .bg rects are darkened. */
         body.dark .plotly, body.dark .plot-container, body.dark .js-plotly-plot,
-        body.dark .main-svg, body.dark .bg { background: #1A1A1A !important; fill: #1A1A1A !important; }
-        body.dark .js-plotly-plot .plotly .main-svg { background: #1A1A1A !important; }
+        body.dark .bg { background: #1A1A1A !important; fill: #1A1A1A !important; }
         body.dark .meta-sub-tab[style*="background-color: #f8f9fa"] { background-color: #242424 !important; }
         body.dark #tree-legend {
             background-color: rgba(26, 26, 26, 0.95) !important;

@@ -190,7 +190,9 @@ function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
             <h1>{snap ? <span translate="no">{untagged(snap.direction)}</span> : t('head.direction')}</h1>
             {snap && <DirectionMeta snap={snap} entry={summary && summary.error === null ? summary : null} />}
           </header>
-          {data.error !== null && snap === null
+          {data.missing
+            ? <Notice kind="info" label={t('icon.info')} title={t('error.noDirection')} subtitle={t('error.noDirectionHint', { id: route.direction })} />
+            : data.error !== null && snap === null
             ? <Notice kind="error" label={t('icon.error')} title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
             : snap === null
               ? loading
