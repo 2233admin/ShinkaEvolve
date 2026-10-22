@@ -11,7 +11,7 @@
   - 失败返回：修正 `hifi/build.mjs` 后重建并重拍全部帧。
   - 完成：13 帧（另有两帧手机）在 `hifi/captures/`，逐帧检查记在 `hifi/captures/checks.json`：15 帧外层均无横向溢出、裁切、不当截断、SVG 文字越界与重叠，正文最低对比度 4.57:1。所有者按 `hifi/index.html` 的 sha256 评审通过（1.2），2026-10-22 复算该文件 sha256 仍为 `55a03eb7…caa4a`。
 - [x] 1.2 所有者评审高保真样稿；评审绑定样稿文件哈希。2026-10-20 视觉通过（`hifi/index.html` sha256 `55a03eb7…`），并要求原有功能一项不删（`owner-decisions.md` › 高保真评审）。
-- [x] 1.3 所有者确认默认语言；确认前实现按中文。
+- [x] 1.3 所有者确认默认语言：英文（2026-10-22；此前暂按中文实现）。
   - 完成（2026-10-22）：所有者回答「默认英语就行」。`i18n/lang.tsx`、`index.html`、恢复页（`accessibility.js`、`runtime.js`、`viz_tree.html`）与预览页的缺省都改为英文，只有明确存过 `shinka-lang=zh` 才用中文。`probe_default_lang.py` 实测：没有存储的新浏览器打开首页为 `lang=en`、导航 Research / All runs / Library，运行页四个页签为英文，解空间恢复页 `lang=en`；存过 zh 的浏览器仍是中文；控制台 0 错误。
 
 ## 2. 基础
