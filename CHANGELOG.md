@@ -242,6 +242,17 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Fixed
 
+- Fixed the Research workbench issues found in the 7.3 acceptance:
+  - the restored page's PCA plot was blank in the dark theme, because opaque
+    Plotly layers covered the data;
+  - an unknown direction made the whole shell report a lost connection; it now
+    shows a notice;
+  - the narrow rail's brand link and search button had no accessible names;
+  - lineage marks and timeline tracks were named differently from their
+    visible text;
+  - the compare page repeated `<$0.01` spend ticks; it now also says why a run
+    with unpriced calls has a shorter spend curve;
+  - English pending counts read "1 sources".
 - Fixed the Research workspace UI answering requests addressed to any host
   name: a page on another site that points its own name at 127.0.0.1 (DNS
   rebinding) could read notebooks and code. It now answers only a `Host` of
