@@ -106,3 +106,7 @@
 | 图表配色与对比度 | 恢复页随主题切换深浅，但 Plotly 图沿用自己的配色，对比度未按 token 核算 | 设计系统 |
 
 所有者 2026-10-22 回答「我确定」，所答的问题是：恢复页写死的中英标签算作 2.2 的例外、2.2 可以勾选。上表其余各项是否另做原生补齐，所有者没有单独回答；在他回答之前保持恢复页的现状。
+
+## 验收门禁豁免（2026-10-22）
+
+代理问「全仓库测试 `pytest -q -m "not requires_secrets"` 的 2 项 Windows 失败（`tests/test_headless_provider.py::test_query_headless_invokes_claude_through_shell`：`headless.py` 写死 `/bin/sh`；`tests/test_async_apply.py::test_validate_code_async_wolfram_uses_wolframscript_helpers`：Windows 找不到路径），在本次改版里修，还是记为与本次无关的已知问题、豁免后勾选 7.3」，所有者回答「豁免了」。两处代码最后改于 `02f0531`，早于本变更，本分支未改动；本变更不修，7.3 据此勾选。
