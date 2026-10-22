@@ -35,14 +35,38 @@ Not for plain program optimization (use `shinka-run`) or non-quant tasks.
 - **Every attempt goes through `shinka_research`** (scaffold/run/probe), so it
   counts as a trial for the Deflated Sharpe Ratio.
 - **Checkpoints**: stop for the human after proposing hypotheses and after
-  verdicts, unless `program.md` sets `Autonomy: autonomous`. In autonomous
-  mode never pause to ask whether to continue: keep going until the budget is
-  spent or the human interrupts. When out of ideas, re-read the wiki, combine
-  near-misses, or try a different mechanism.
+  verdicts, unless `program.md` sets `Autonomy: autonomous` or
+  `Autonomy: authorized-round`. In autonomous mode never pause to ask whether
+  to continue: keep going until the budget is spent or the human interrupts.
+  In authorized-round mode go through the round the human granted without
+  stopping at checkpoints, and pause when its attempts are taken. When out of
+  ideas, re-read the wiki, combine near-misses, or try a different mechanism.
+- **Round grants (agent environment)**: where `SHINKA_RESEARCH_AGENT` is set,
+  every `run`, in any autonomy mode, needs a round the human granted
+  (`shinka_research grant`, which refuses in that environment): pass
+  `--grant <id>`. Each run takes one of the grant's attempts and goes to the
+  background. Pass shinka_run only the `--set` keys the grant lists and never
+  `evo.max_api_costs`: the run stops at the grant's cap or at the budget left.
+  When the grant's attempts are taken (`round-paused` in `results.tsv`), the
+  round is over: finish its runs, report, and put the next round to the
+  human. Never edit `ledger.json`, `.work.json`, `.watch/`, `notebook.json`,
+  `results.tsv` or a task's `shinka.yaml` by hand, never call `shinka_run`
+  directly, and never unset the flag.
 - **The lockbox is the human's.** Never run `confirm` unless the human says to
-  close the direction.
+  close the direction. In the agent environment `--yes` is not enough: ask the
+  human for a lockbox approval (`shinka_research approve`, which refuses in
+  that environment) and pass `confirm --approval <id>`; the opening spends it,
+  and finishing an interrupted opening takes the same id.
 - **Budget**: `init --budget-usd` makes `run` refuse once the direction's LLM
-  spend reaches it; also pass `--set evo.max_api_costs=<usd>` per run.
+  spend reaches it; outside the agent environment also pass
+  `--set evo.max_api_costs=<usd>` per run (inside it the grant sets the cap).
+  A run's cost counts every paid call, failed and discarded work included.
+  When a run's cost is unknown (an entry without a valid amount, or a
+  `cost-unrecorded.json` the runner left for a charge it could not record),
+  budgeted runs and every grant run on that experiment refuse. Stop and tell
+  the human: only the human can settle the missing charge, and there is no
+  command for recording it yet. Never delete or edit `cost-unrecorded.json`;
+  removing it does not record the charge.
 - **Simplicity**: when two programs score about the same in-sample, prefer
   the simpler one. A small change with a clear gain beats a big rewrite with a
   marginal one.
@@ -120,6 +144,42 @@ shinka_research run <dir> <hid> --num-generations 40 -- \
 ```
 Choose models from `shinka_models`. Between stages inspect progress with
 `shinka-inspect` (public metrics only); stop early on a clear plateau.
+Add `--detach` to keep a run going after the window closes: it returns at
+once, the output goes to `<dir>/experiments/<hid>/<eid>/run.log`, and the run
+records its own end. `shinka_research watch <dir>` (a direction or a whole
+workspace) records the end of a run whose processes vanished without doing
+so; it prints nothing when there is nothing new. One experiment runs once at
+a time; different experiments can run side by side.
+
+In the agent environment the same runs take `--grant <id>`, keep only the
+`--set` keys the grant allows, and leave the cap out:
+```bash
+shinka_research run <dir> <hid> --grant <id> --num-generations 40 -- \
+    --set 'evo.patch_types=["diff","full","cross"]'
+```
+A further attempt on the same experiment resumes it, so give it a higher
+`--num-generations` or it ends at once and the attempt is spent.
+
+To keep watch from the terminal between rounds, read the direction once with
+`shinka_research brief <dir> --since terminal`, then schedule a shell job that
+wakes you only on news (the human's grants and lockbox approvals, and the end
+of any run). Shell jobs run under Git Bash on Windows, so give the console
+script's absolute path, and allow for the 120 s `watch` may wait for the
+direction's lock:
+```
+schedule action=create kind=shell every=10m timeoutMs=180000 wakeOn=failure
+  missedWindow=catch_up_one
+  command="<repo>/.venv/Scripts/shinka_research.exe watch <dir> --since terminal"
+  failurePrompt="Exit 3: there is news for <dir>. Run `shinka_research brief
+  <dir> --since terminal` and act within the current round. Any other exit:
+  watch itself failed; tell the human, and disable this job if it fails again."
+```
+`watch --since` exits 3 while there is news you have not read and never marks
+it read; `brief --since` lists it and marks it read once printed, so a wake
+that never reached you is reported again on the next tick. With
+`missedWindow=catch_up_one`, a job missed while the session was closed runs
+once at the next session start, unless omp was started with an initial
+prompt, which skips that firing; the next tick then reports the news.
 
 ### 5. Ablate (stage 4)
 Remove one component of the best program at a time and score each variant:
@@ -150,8 +210,13 @@ you can, list what needs the human, and
 `shinka_research library log <dir> lint "<summary>"`.
 
 ### 9. Report, then next round
-Write `REPORT.md` (template: `templates/report.md`). **Checkpoint** (unless
-autonomous). Then `brief` again: new hypotheses should follow from verdicts
+Write `REPORT.md` (template: `templates/report.md`). Its last section holds at
+most one lesson from this round about how to work, not about the market (that
+belongs in finding pages), with the `results.tsv` events that show it. It is
+for the human to review, not a rule: never act on a lesson from an earlier
+report; the human decides whether this skill changes. **Checkpoint** (unless
+autonomous, or until the granted round is over in authorized-round mode).
+Then `brief` again: new hypotheses should follow from verdicts
 and the wiki. Every experiment raises the trial count and the bar for
 "supported" — intended.
 
@@ -162,15 +227,24 @@ shinka_research confirm <dir> --data <bars.csv>          # shows what opens
 shinka_research confirm <dir> --data <bars.csv> --yes    # opens it, once
 ```
 All `supported` hypotheses become `confirmed` or `unconfirmed`
-(`CONFIRMATION.md`). Now add lockbox results to the finding pages and the
-report. The final gate is outside this tool: paper-trade `confirmed`
-strategies on data that did not exist when the research started.
+(`CONFIRMATION.md`). If `confirm` stops midway (a crash, Ctrl-C), run the same
+`--yes` command again: it finishes the hypotheses it froze under the rules it
+froze, and any whose program had already started on the lockbox becomes
+`unconfirmed` (interrupted) instead of running again. It does not open the
+lockbox while a `run` is still under way (a `probe` counts as a trial as soon as
+it starts); until it finishes, `run`, `probe`, `skeptic`, `verdict` and
+`scaffold` refuse. Now add lockbox results
+to the finding pages and the report. The final gate is outside this tool:
+paper-trade `confirmed` strategies on data that did not exist when the
+research started.
 
 ## Direction layout
 ```
 <dir>/program.md            human: direction, constraints, budget, autonomy
 <dir>/notebook.json         hypotheses, statuses, experiments, verdicts, budget
-<dir>/results.tsv           one line per event (scaffold, run, skeptic, verdict, confirm)
+<dir>/results.tsv           one line per event (scaffold, run, probe, skeptic, verdict, confirm, grant, approval, round-paused)
+<dir>/ledger.json           the human's round grants and the attempts taken from them
+<dir>/.watch/<name>.json    what `brief --since <name>` has read of results.tsv
 <dir>/hypotheses/<hid>.md
 <dir>/experiments/<hid>/<eid>/{task,results,skeptic.md,best_program.py}
 <dir>/data/dev.csv          development data (the lockbox tail is not in it)

@@ -1,0 +1,260 @@
+{
+  "browser": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/155.0.0.0 Safari/537.36",
+  "frames": [
+    {
+      "id": "home-dark-zh",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 15,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "home-light-zh",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 15,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.61
+      }
+    },
+    {
+      "id": "home-dark-en",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 15,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "home-1024",
+      "width": 1024,
+      "height": 1400,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "home-20",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 31,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "report",
+      "width": 1440,
+      "height": 1560,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 4,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "runs",
+      "width": 1440,
+      "height": 1060,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 4,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "compare",
+      "width": 1440,
+      "height": 960,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 9,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.96
+      }
+    },
+    {
+      "id": "lineage",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 8,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.27
+      }
+    },
+    {
+      "id": "progress",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 1,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "space",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "contest",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 4.57
+      }
+    },
+    {
+      "id": "phone-home",
+      "width": 390,
+      "height": 844,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.78
+      }
+    },
+    {
+      "id": "phone-analysis",
+      "width": 390,
+      "height": 844,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 1,
+        "badTrunc": [],
+        "scrollX": 1,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    },
+    {
+      "id": "states",
+      "width": 1440,
+      "height": 900,
+      "checks": {
+        "overflowX": false,
+        "clipped": [],
+        "allowedTrunc": 0,
+        "badTrunc": [],
+        "scrollX": 0,
+        "badScroll": [],
+        "svgOut": [],
+        "overlaps": [],
+        "lowContrast": [],
+        "minTextContrast": 5.64
+      }
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "framework": "react",
+  "targetRoot": "app",
+  "existing": {
+    "runtime": "React 19.1 + Vite 6 + TypeScript 5.8, pnpm with frozen lockfile and release-age policy",
+    "styling": "Plain CSS with generated design tokens (custom properties); no CSS framework",
+    "uiLibrary": "Carbon React 1.118 (@carbon/react) and Astro UXDS 8.0 web components",
+    "charts": "@carbon/charts-react 1.27 (trial chart), d3 7.9, chart.js 3.9 and plotly.js-dist-min 3.1 inside the legacy analysis iframe",
+    "content": "markdown-it 15 + DOMPurify 3.4 sanitisation, highlight.js 11, diff 9, jszip 3.10",
+    "fonts": "@fontsource-variable/inter, @fontsource/ibm-plex-mono (local, no network)",
+    "server": "Python stdlib HTTP server in shinka/research/ui.py and analysis.py serving the built SPA and the read-only JSON API",
+    "notes": {
+      "ownerDecision20261019": "Remove Astro UXDS; keep Carbon React only for interaction and accessibility behaviour; visuals and charts follow the newly selected design system",
+      "repositoryBoundary": "New files only under shinka/research/, skills/shinka-research/, examples/quant_research/, tests/research/, docs/research/ (AGENTS.md)",
+      "network": "No runtime network dependencies; all fonts and libraries bundled locally",
+      "readOnly": "The UI never writes research state",
+      "threeDimensionalScatter": "The 3D cluster mode projects points onto a Canvas 2D surface with pointer and keyboard rotation and is code-split, so no WebGL engine is added; SVG/D3 remains the chart surface for every 2D figure"
+    }
+  },
+  "requested": {
+    "styling": "none",
+    "uiLibrary": "none"
+  },
+  "capabilities": [
+    "keyboard-accessible tables, tabs, dialogs, tooltips and menus (behaviour from Carbon React)",
+    "token-bound SVG charts with linked selection across views",
+    "hierarchical lineage tree layout",
+    "2D scatter and density contours over embeddings",
+    "code-split 3D scatter for embedding clusters, projected on Canvas 2D with pointer and keyboard rotation, and the same points available through the 2D view and an accessible table",
+    "syntax-highlighted code and unified diff viewer",
+    "sanitised markdown rendering of untrusted LLM output",
+    "client-side ZIP export",
+    "dark and light themes with CJK-first typography"
+  ],
+  "graphics": {
+    "adapter": "svg-d3"
+  }
+}

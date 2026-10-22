@@ -1,0 +1,95 @@
+/* Shinka Research design tokens (award-redesign, design.md › 设计系统).
+   Dark is the default; [data-theme="light"] on <html> switches every token. */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #0a0a0b;
+  --rail: #0e0e10;
+  --raised: #16161a;
+  --hover: #1c1c21;
+  --selected: #232329;
+  --line: rgba(255, 255, 255, 0.08);
+  --line-strong: rgba(255, 255, 255, 0.16);
+  --text: #ededef;
+  --muted: #a1a1aa;
+  --faint: #8a8a93;
+  /* Signal orange: text and graphics share one value in dark. */
+  --signal: #f2622e;
+  --signal-graphic: #f2622e;
+  --stroke: #6d6d76;
+  --grid: #34343b;
+  /* Error-notice ground, kept from the Carbon notice the app used until 2026-10-22. */
+  --notice-error-bg: #262626;
+  /* Score ramp for lineage: lowest score -> best score. */
+  --ramp-0: #606066;
+  --ramp-1: #f1f1f3;
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+  --bg: #ffffff;
+  --rail: #f6f6f7;
+  --raised: #ffffff;
+  --hover: #efeff1;
+  --selected: #e7e7ea;
+  --line: rgba(0, 0, 0, 0.08);
+  --line-strong: rgba(0, 0, 0, 0.16);
+  --text: #18181b;
+  --muted: #52525b;
+  --faint: #66666f;
+  --signal: #b83e0b;
+  --signal-graphic: #e3550c;
+  --stroke: #82828b;
+  --grid: #d4d4d8;
+  --notice-error-bg: #fff1f1;
+  --ramp-0: #8d8d90;
+  --ramp-1: #18181b;
+}
+
+:root {
+  --font-sans: 'Inter Variable', 'PingFang SC', 'Microsoft YaHei', 'Noto Sans SC', system-ui, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'PingFang SC', 'Microsoft YaHei', monospace;
+
+  /* Type scale: size / line height, weight on the role. */
+  --type-headline: 600 28px/40px var(--font-sans);
+  --type-title: 590 26px/34px var(--font-sans);
+  --type-section: 590 15px/22px var(--font-sans);
+  --type-body: 400 13px/20px var(--font-sans);
+  --type-small: 400 12px/18px var(--font-sans);
+
+  /* 4px baseline. */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  /* Controls 6px, floating layers 8px; panels, tables, cards and code blocks stay square. */
+  --radius-control: 6px;
+  --radius-float: 8px;
+
+  --focus-ring: 2px solid var(--text);
+}
+
+/* The restored analysis page's names (app/src/analysis/workbench.css, viz_tree.html), kept for it under owner
+   decision A (solution space and contest stay on that page); the native views use only the tokens above. */
+:root,
+[data-theme='dark'] {
+  --ink: var(--text);
+  --base: var(--bg);
+  --accent: var(--signal-graphic);
+  --accent-text: var(--signal);
+  --ok: #9cd1ac;
+  --warn: #e5c06f;
+  --err: #ffa095;
+}
+
+[data-theme='light'] {
+  --ok: #2f7a4a;
+  --warn: #8a6410;
+  --err: #b3261e;
+}

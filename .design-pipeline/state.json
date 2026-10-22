@@ -1,0 +1,18 @@
+{
+  "schema": "design-pipeline.workflow-state.v1",
+  "deliverable": "ui",
+  "tier": "standard",
+  "mode": "brief",
+  "director": null,
+  "decisions": {
+    "intake": {
+      "answer": "Product: integrate the existing Shinka Research workspace and original ShinkaEvolve run browser, comparison and detailed analysis into one coherent frontend. Audience: the owner and technical researchers using a local persistent web application. Duration: not applicable, this is not a film or promo. Assets: reuse the existing ops-spec Astro UXDS and Carbon design system and existing repository UI only. Confirmed requirements: direction overview homepage; global ordinary runs without forced research association; direct experiment analysis within workspace navigation and return to the originating direction; preserve all existing analysis capabilities. Agent conversation remains the research control channel; no research execution, model use, new assets or new web control system in this task.",
+      "briefSha256": "sha256:aa66f21f6be4aa2c6e8948087d9467df209655d96d6cbb07a821675012cda89a"
+    },
+    "delivered": "Technical delivery correction only; owner visual acceptance remains pending. The custom workbench integration remains intact. Research server PDF export is explicitly disabled with501JSON before inherited conversion, independently of installed converters. The disabled button has visible bilingual accessible explanation. Installing wkhtmltopdf or pandoc alone cannot safely enable PDF; a verified resource-safe implementation is required. Meta reading and actual1862B programZIP Blob remain verified. Four realHTTP denial cases went red then green with zero converter/subprocess calls. NativeWindows108passed; independentWSLresearch107passed1skip, full1017passed1skip1deselected5existingwarnings; Ruffcheck andformat0; analysisbuild0. Standards andSpec correction reviews have no actionable findings. Browser helper moved under research and both regressions passed from newpath. Corrected8768preview restarted and real saved candidate checked; test8769 andownedChrome stopped. Evidence: docs/research/workspace.md and shinka/research/webui/design/changes/unified-analysis/qa.md, tasks.md, evidence/browser-acceptance.json andpdf-disabled-mobile.png. No actual conversion, provider, model, research orlockbox execution; no fullPDFparity, award or owner certification."
+  },
+  "gates": {},
+  "rules": [],
+  "createdAt": "2026-10-18T17:16:22.126Z",
+  "updatedAt": "2026-10-18T22:28:01.488Z"
+}

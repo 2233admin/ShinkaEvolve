@@ -1,0 +1,176 @@
+/* Direction report (award-redesign 4.2). Measurements follow the approved high-fidelity package
+   (hifi/build.mjs › report); colours come from design/tokens.css. */
+
+.shell .page.report-page { max-width: none; padding: 24px 32px 64px; font: var(--type-body); }
+.rhead h1 { margin: 0; font: var(--type-title); letter-spacing: -.01em; overflow-wrap: anywhere; }
+.rhead .dmeta { margin: 8px 0 0; font-size: 12.5px; }
+.report-page h2 { margin: 0 0 8px; font: 500 14px/22px var(--font-sans); letter-spacing: 0; }
+.report-page .num { text-align: right; justify-self: end; }
+.report-page .mono { font-variant-numeric: tabular-nums; }
+.report-page p.small { margin: 0; font: 400 12px/18px var(--font-sans); }
+.report-page p.small + p.small { margin-top: 6px; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---- Hypotheses (P06) ---- */
+.rsec { margin-top: 20px; }
+/* Narrower than the columns need, the table scrolls inside its own area and the page never does. */
+.hscroll { overflow-x: auto; }
+.htable { border-top: 1px solid var(--line); }
+.hrow {
+  position: relative; display: grid; grid-template-columns: 52px minmax(0, 1fr) 120px 64px 64px 112px 112px 140px;
+  column-gap: 16px; align-items: center; min-height: 40px; padding: 4px 8px; border-bottom: 1px solid var(--line); font-size: 13px;
+}
+.hrow.hhead { min-height: 30px; align-items: end; padding-bottom: 6px; color: var(--faint); font-size: 12px; line-height: 16px; }
+.hrow:not(.hhead):hover { background: var(--hover); }
+.hrow.is-selected { background: var(--selected); box-shadow: inset 2px 0 0 var(--text); }
+/* The whole row selects its hypothesis; the title stays the one focus stop and the row shows its focus. */
+.hpick { display: block; width: 100%; padding: 0; border: 0; background: none; color: var(--text); font: 500 13px/20px var(--font-sans); text-align: left; overflow-wrap: anywhere; cursor: pointer; }
+.hpick::after { content: ''; position: absolute; inset: 0; }
+.hpick:focus-visible { outline: none; }
+.hrow:has(.hpick:focus-visible) { outline: var(--focus-ring); outline-offset: -2px; }
+.hrow .term-box { position: relative; z-index: 1; }
+.hstat { display: inline-flex; gap: 6px; align-items: center; }
+.hsort { display: inline-flex; gap: 4px; align-items: end; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: inherit; cursor: pointer; }
+.hsort:hover { color: var(--text); }
+.hsort:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.hsort-mark { min-width: 8px; color: var(--text); }
+
+/* ---- The argument: claim, trials, ledger, then verdict; the verdict column joins from 1440px ---- */
+.rcols { display: grid; grid-template-columns: minmax(0, 1fr); gap: 24px; margin-top: 24px; }
+.rcols > * { min-width: 0; }
+.r-side { display: grid; gap: 24px; align-content: start; }
+@media (min-width: 1440px) {
+  /* The side spans a flexible last row, so a long verdict column lengthens the events, never the gaps. */
+  .rcols {
+    grid-template-columns: minmax(0, 1fr) 356px; column-gap: 36px;
+    grid-template-rows: auto auto auto auto 1fr;
+    grid-template-areas: 'claim side' 'chart side' 'ledger side' 'timeline side' 'events side';
+  }
+  .r-claim { grid-area: claim; }
+  .r-chart { grid-area: chart; }
+  .r-ledger { grid-area: ledger; }
+  .r-side { grid-area: side; align-self: start; }
+  .r-timeline { grid-area: timeline; }
+  .r-events { grid-area: events; }
+}
+
+.claim { margin: 0 0 10px; max-width: 880px; font: 500 17px/26px var(--font-sans); overflow-wrap: anywhere; }
+.defs { display: grid; grid-template-columns: 72px minmax(0, 1fr); gap: 4px 16px; max-width: 880px; margin: 0; color: var(--muted); }
+.defs dt { color: var(--faint); font-size: 12px; }
+.defs dd { margin: 0; overflow-wrap: anywhere; }
+.hmeta { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 10px 0 0; font-size: 12px; line-height: 18px; color: var(--faint); }
+.fulltext { max-width: 880px; margin-top: 12px; }
+.fulltext > summary { width: max-content; color: var(--muted); font-size: 12.5px; cursor: pointer; }
+.fulltext > summary:hover { color: var(--text); }
+.fulltext > summary:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+details.fulltext[open] > summary { margin-bottom: 8px; }
+
+.shead { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; column-gap: 16px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; margin: 0 0 8px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; gap: 6px; align-items: center; white-space: nowrap; }
+.legend i { display: inline-block; }
+.legend .ln { width: 16px; border-top: 1.6px solid var(--text); }
+.legend .ln.is-dash { border-top: 1.4px dashed var(--muted); }
+.legend .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--muted); }
+.legend .dot.is-hollow { background: none; border: 1px solid var(--stroke); }
+.legend .is-signal { color: var(--signal-graphic); }
+
+/* The chart's height is fixed in CSS, so Back restores the scroll position before the width is measured. */
+.tchart { position: relative; min-height: 280px; }
+.tchart-plot { position: relative; }
+.tchart-plot:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.tchart svg { display: block; overflow: visible; }
+.tchart-hit { cursor: crosshair; }
+.tchart-hit.is-link { cursor: pointer; }
+.tchart-tip {
+  position: absolute; z-index: 2; display: grid; gap: 2px; width: max-content; max-width: min(320px, 90%); padding: 6px 8px; pointer-events: none;
+  border: 1px solid var(--line-strong); border-radius: var(--radius-float); background: var(--raised); font-size: 12px; line-height: 17px;
+}
+.tchart-labels { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; font-size: 12px; }
+.tchart-labels .lbl { color: var(--text); }
+.tchart-labels .lbl.sig { color: var(--signal); }
+.tchart-labels .lbl.muted { color: var(--muted); }
+.lbl { font: 500 11.5px var(--font-mono); fill: var(--text); }
+.lbl.sig { fill: var(--signal); }
+.lbl.muted { fill: var(--muted); }
+.axis-title { font: 400 11px var(--font-sans); fill: var(--faint); }
+.halo { paint-order: stroke; stroke: var(--bg); stroke-width: 4px; stroke-linejoin: round; }
+
+/* ---- Check ledger (P09-Q4) ---- */
+.ltable { max-width: 744px; border-top: 1px solid var(--line); }
+.lrow {
+  display: grid; grid-template-columns: minmax(0, 1fr) 96px 84px 84px; column-gap: 10px; align-items: center;
+  min-height: 36px; padding: 4px; border-bottom: 1px solid var(--line); font-size: 12.5px; line-height: 18px;
+}
+.lrow.lhead { min-height: 30px; color: var(--faint); font-size: 12px; }
+.lpass { display: inline-flex; gap: 5px; align-items: center; }
+
+/* ---- Verdict, lockbox confirmation and experiments (P09) ---- */
+.vline { display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; margin-bottom: 8px; }
+.vline b { font-weight: 500; font-size: 15px; }
+.vline .faint { margin-left: auto; font-size: 11.5px; }
+.log.is-line { display: block; -webkit-line-clamp: unset; margin: 0; padding: 0; border: 0; white-space: normal; }
+.log.is-block { display: block; -webkit-line-clamp: unset; margin: 0; padding: 8px 10px; border: 1px solid var(--line); background: var(--bg); white-space: pre-wrap; }
+.kv { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 16px; margin: 0 0 8px; font-size: 12.5px; }
+.kv dd { margin: 0; overflow-wrap: anywhere; }
+.kv.is-grid { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 14px; }
+.kv.is-grid dd { text-align: right; }
+.xlist { display: grid; gap: 8px; }
+.xrow { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: center; padding: 12px 14px; border: 1px solid var(--line-strong); color: var(--muted); font-size: 12.5px; }
+.xrow b { color: var(--text); font-weight: 500; }
+.xrow .btn { margin-left: auto; }
+.btn {
+  display: inline-flex; gap: 8px; align-items: center; height: 30px; padding: 0 12px; border: 1px solid var(--line-strong);
+  border-radius: var(--radius-control); color: var(--text); font-size: 12.5px; font-weight: 500; text-decoration: none; white-space: nowrap;
+}
+.btn:hover { background: var(--hover); }
+.btn:focus-visible { outline: var(--focus-ring); outline-offset: 2px; }
+.r-side a.mono { color: var(--text); text-decoration: underline; text-decoration-color: var(--stroke); text-underline-offset: 3px; }
+
+/* ---- Timeline (P08) and events (P10) ---- */
+.tline svg { display: block; overflow: visible; }
+.tl { font-size: 12px; fill: var(--text); }
+.tl-track { cursor: pointer; outline: none; }
+.tl-track:focus-visible > rect { stroke: var(--text); stroke-width: 2px; }
+/* Hover darkens the track itself; a filled row would show the labels' halo. */
+.tl-track:hover > line { stroke: var(--text); }
+.tline-key { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 6px 0 0; }
+.tline-key span { display: inline-flex; gap: 6px; align-items: center; }
+.efilter { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin: 0 0 10px; }
+.efilter input {
+  width: min(300px, 100%); height: 32px; padding: 0 10px; border: 1px solid var(--stroke); border-radius: var(--radius-control);
+  background: transparent; color: var(--text); font: 400 13px var(--font-sans);
+}
+.efilter input::placeholder { color: var(--faint); }
+.efilter input:focus-visible { outline: var(--focus-ring); outline-offset: 1px; }
+.estream { border-top: 1px solid var(--line); }
+.erow {
+  display: grid; grid-template-columns: 128px 84px 120px minmax(0, 1fr); column-gap: 14px; align-items: baseline;
+  padding: 8px 4px; border-bottom: 1px solid var(--line); font-size: 12px; line-height: 18px;
+}
+.eword { display: inline-flex; gap: 6px; align-items: center; }
+.eword b { font-weight: 500; }
+.eword .evmark { padding-top: 0; }
+
+/* ---- Below 1280px the rail narrows and the hypothesis columns tighten ---- */
+@media (max-width: 1279px) {
+  .hrow { grid-template-columns: 44px minmax(0, 1fr) 104px 56px 56px 96px 96px 128px; column-gap: 12px; }
+}
+@media (max-width: 1023px) {
+  .htable { min-width: 880px; }
+}
+
+/* ---- Phone ---- */
+@media (max-width: 767px) {
+  .shell .page.report-page { padding: 16px 16px 96px; }
+  .rhead h1 { font-size: 22px; line-height: 30px; }
+  .defs { grid-template-columns: minmax(0, 1fr); gap: 0; }
+  .defs dd + dt { margin-top: 8px; }
+  .lrow { grid-template-columns: minmax(0, 1fr) 72px 64px 64px; column-gap: 8px; padding: 4px 0; }
+  .erow { grid-template-columns: auto minmax(0, 1fr); grid-template-areas: 'time ref' 'word word' 'note note'; row-gap: 2px; }
+  .erow > :nth-child(1) { grid-area: time; }
+  .erow > :nth-child(2) { grid-area: ref; justify-self: end; }
+  .erow > :nth-child(3) { grid-area: word; }
+  .erow > :nth-child(4) { grid-area: note; }
+  .xrow .btn { margin-left: 0; }
+}

@@ -14,11 +14,13 @@ Checks (all on out-of-sample returns the mutation LLM never saw):
 
 from __future__ import annotations
 
+import hashlib
 import math
+import shutil
 import tempfile
 from itertools import combinations
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Callable, Dict, List
 
 import numpy as np
 import pandas as pd
@@ -26,10 +28,21 @@ from pydantic import BaseModel
 from scipy import stats
 
 from shinka.research import rundb
-from shinka.research.notebook import Experiment, Notebook, Status, experiment_dir
+from shinka.research.notebook import (
+    DataSplit,
+    Experiment,
+    LockboxTarget,
+    Notebook,
+    Status,
+    experiment_dir,
+)
 from shinka.research.quant import (
+    InvalidPositions,
+    ProgramFailed,
+    ProgramTimeout,
     QuantConfig,
     annual_return,
+    check_positions,
     file_sha256,
     load_bars,
     max_drawdown,
@@ -168,21 +181,30 @@ def _oos_returns(
     return rets.iloc[:cut], rets.iloc[cut:]
 
 
+def trial_count(root: Path, nb: Notebook) -> int:
+    """The direction's trials as the DSR counts them: every evaluated program
+    in the run databases plus every probe. A run in progress counts as it goes;
+    the notebook's copy is written only once it returns. `brief` and `status`
+    report this same count."""
+    return sum(
+        rundb.count_evaluated(experiment_dir(root, h.id, e.id) / "results") + e.n_probed
+        for h in nb.hypotheses
+        for e in h.experiments
+    )
+
+
 def direction_trials(root: Path, nb: Notebook, ppy: float) -> tuple[int, float]:
     """(number of trials, variance of per-period trial Sharpe) for the whole
     direction: every evaluated program plus every probe."""
     scores: List[float] = []
-    n_trials = 0
     for h in nb.hypotheses:
         for e in h.experiments:
-            n_trials += e.n_probed
             rd = experiment_dir(root, h.id, e.id) / "results"
             if (rd / rundb.DB_FILENAME).exists():
                 scores.extend(rundb.correct_scores(rd))
-                n_trials += rundb.count_evaluated(rd)
     per_period = np.asarray(scores) / math.sqrt(ppy)
     var_trials = float(per_period.var(ddof=1)) if len(per_period) > 1 else 0.0
-    return max(n_trials, 1), var_trials
+    return max(trial_count(root, nb), 1), var_trials
 
 
 def _experiment_pbo(
@@ -258,55 +280,128 @@ def render_report(hid: str, eid: str, report: Dict[str, Any], label: Status) -> 
     )
 
 
-def confirm(
-    root: Path, nb: Notebook, hid: str, th: Thresholds, source: Path, tmp: Path
-) -> Dict[str, Any]:
-    """Score one supported hypothesis's verdict program on the lockbox.
+def _code_sha256(code: str) -> str:
+    return hashlib.sha256(code.encode()).hexdigest()
 
-    Uses exactly the experiment named in the verdict and reloads the program
-    it challenged from the results database; checks the evaluator, the dev
-    data and the source file; re-checks causality inside the lockbox. Returns
-    the evidence and does not modify the notebook."""
-    split = nb.data
-    if split is None:
-        raise ValueError("direction has no data yet")
+
+def confirm_target(root: Path, nb: Notebook, hid: str) -> LockboxTarget:
+    """Everything ``confirm`` checks for one supported hypothesis before the
+    lockbox is touched: the experiment and program its verdict names, the
+    frozen evaluator and development data, and the direction's trials for the
+    DSR. Returns what the lockbox opening freezes for it."""
     hyp = nb.get(hid)
     if hyp.verdict is None or hyp.status is not Status.supported:
         raise ValueError(f"{hid} is not supported")
     eid = hyp.verdict.evidence["experiment"]
-    exp = next(e for e in hyp.experiments if e.id == eid)
+    exp = next((e for e in hyp.experiments if e.id == eid), None)
+    if exp is None:
+        raise ValueError(f"{hid}'s verdict names experiment {eid}, which it lacks")
     verify_experiment(root, nb, hid, exp)
-    if file_sha256(Path(source)) != split.source_hash:
-        raise ValueError(f"{source} is not the data this direction was split from")
-    exp_dir = experiment_dir(root, hid, exp.id)
+    exp_dir = experiment_dir(root, hid, eid)
     pid = hyp.verdict.evidence["program_id"]
-    best = Path(tmp) / f"{hid}_{pid}.py"
-    best.write_text(rundb.program_code(exp_dir / "results", pid))
-    cfg = load_config(exp_dir / "task").model_copy(
-        update={"data_path": str(Path(source).resolve())}
+    code = rundb.program_code(exp_dir / "results", pid)
+    ppy = load_config(exp_dir / "task").periods_per_year
+    n_trials, var_trials = direction_trials(root, nb, ppy)
+    return LockboxTarget(
+        hypothesis=hid,
+        experiment=eid,
+        program_id=pid,
+        code_sha256=_code_sha256(code),
+        evaluator_sha256=exp.evaluator_hash,
+        data_path=exp.data_path,
+        data_sha256=exp.data_hash,
+        n_trials=n_trials,
+        var_trials=var_trials,
     )
-    bars = load_bars(Path(source), split.timestamp_col)
+
+
+def check_source(source_hash: str, source: Path) -> None:
+    """Raise unless ``source`` is the file the direction was split from."""
+    if file_sha256(Path(source)) != source_hash:
+        raise ValueError(f"{source} is not the data this direction was split from")
+
+
+def confirm(
+    root: Path,
+    split: DataSplit,
+    target: LockboxTarget,
+    th: Thresholds,
+    source: Path,
+    source_sha256: str,
+    tmp: Path,
+    started: Callable[[], None],
+) -> Dict[str, Any]:
+    """Score one frozen target's program on the lockbox.
+
+    A program, evaluator or development data that differs from what the target
+    froze is not run. ``started`` runs just before the program first sees
+    lockbox bars; from then on a retry would be a second look. The program's
+    own failures there give a failed report naming only their category, since
+    its output may carry lockbox figures. Returns the evidence and does not
+    modify the notebook."""
+    hid, pid = target.hypothesis, target.program_id
+    exp_dir = experiment_dir(root, hid, target.experiment)
+    base = {
+        "experiment": target.experiment,
+        "program_id": pid,
+        "lockbox_start": split.lockbox_start,
+    }
+    changed = {**base, "passed": False, "failure": "changed"}
+    try:
+        code = rundb.program_code(exp_dir / "results", pid)
+        evaluator = file_sha256(exp_dir / "task" / "evaluate.py")
+        data = file_sha256(Path(target.data_path))
+    except (LookupError, FileNotFoundError):
+        return changed
+    if (_code_sha256(code), evaluator, data) != (
+        target.code_sha256,
+        target.evaluator_sha256,
+        target.data_sha256,
+    ):
+        return changed
+    best = Path(tmp) / f"{hid}_{pid}.py"
+    best.write_text(code)
+    # This function and the program's own process read one copy, checked against
+    # the frozen hash, so the source cannot change between the check and a read.
+    data = Path(tmp) / f"{hid}_source{Path(source).suffix}"
+    shutil.copyfile(source, data)
+    if file_sha256(data) != source_sha256:
+        raise ValueError(f"{source} is not the data this direction was split from")
+    cfg = load_config(exp_dir / "task").model_copy(
+        update={"data_path": str(data.resolve())}
+    )
+    bars = load_bars(data, split.timestamp_col)
     ppy = cfg.periods_per_year
 
-    full = positions_for(best, cfg, bars).to_numpy()
-    n_lock = len(bars) - split.n_dev
-    for n in (split.n_dev + n_lock // 3, split.n_dev + 2 * n_lock // 3):
-        part = run_view(
-            str(best), cfg.data_path, cfg.timestamp_col, n, cfg.view_timeout_s
-        )
-        if np.any(np.abs(full[:n] - part) > 1e-9):
-            raise ValueError(f"{hid}: look-ahead detected inside the lockbox")
+    started()
+    try:
+        full = positions_for(best, cfg, bars).to_numpy()
+        n_lock = len(bars) - split.n_dev
+        for n in (split.n_dev + n_lock // 3, split.n_dev + 2 * n_lock // 3):
+            part = run_view(
+                str(best), cfg.data_path, cfg.timestamp_col, n, cfg.view_timeout_s
+            )
+            # NaN differences compare false, so a view must be valid positions
+            # before it can prove causality.
+            if check_positions(part, n):
+                return {**base, "passed": False, "failure": "invalid-positions"}
+            if np.any(np.abs(full[:n] - part) > 1e-9):
+                return {**base, "passed": False, "failure": "look-ahead"}
+    except ProgramTimeout:
+        return {**base, "passed": False, "failure": "timeout"}
+    except ProgramFailed:
+        return {**base, "passed": False, "failure": "error"}
+    except InvalidPositions:
+        return {**base, "passed": False, "failure": "invalid-positions"}
 
     rets = strategy_returns(
         pd.Series(full, index=bars.index), bars["close"], cfg.cost_bps
     )
     lock = rets.iloc[split.n_dev :]
     hold = bars["close"].pct_change().fillna(0.0).iloc[split.n_dev :]
-    n_trials, var_trials = direction_trials(root, nb, ppy)
+    n_trials, var_trials = target.n_trials, target.var_trials
     report = {
-        "experiment": exp.id,
-        "program_id": pid,
-        "lockbox_start": split.lockbox_start,
+        **base,
         "lockbox_bars": len(lock),
         "lockbox_sharpe": sharpe(lock, ppy),
         "lockbox_annual_return": annual_return(lock, ppy),

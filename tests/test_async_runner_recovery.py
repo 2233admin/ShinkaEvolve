@@ -15,6 +15,7 @@ from shinka.core.async_runner import (
 )
 from shinka.core.runtime_slots import LogicalSlotPool
 from shinka.database import DatabaseConfig, Program, ProgramDatabase
+from shinka.database.cost import recorded_in_full
 
 
 class _FakeAsyncDB:
@@ -39,9 +40,7 @@ class _RecordingAsyncDB(_FakeAsyncDB):
     async def run_program_maintenance_async(self, program, verbose=False):
         self.maintenance_calls += 1
 
-    async def record_attempt_event_async(
-        self, generation, stage, status, details=None
-    ):
+    async def record_attempt_event_async(self, generation, stage, status, details=None):
         self.attempt_events.append(
             {
                 "generation": generation,
@@ -164,7 +163,9 @@ def _build_runner(**overrides):
     runner.failed_jobs_for_retry = overrides.get("failed_jobs_for_retry", {})
     runner.assigned_generations = overrides.get("assigned_generations", set())
     runner.evaluation_slot_pool = overrides.get("evaluation_slot_pool", _FakeSlotPool())
-    runner.postprocess_slot_pool = overrides.get("postprocess_slot_pool", _FakeSlotPool())
+    runner.postprocess_slot_pool = overrides.get(
+        "postprocess_slot_pool", _FakeSlotPool()
+    )
     runner.sampling_slot_pool = overrides.get("sampling_slot_pool", _FakeSlotPool())
     runner.scheduler = overrides.get("scheduler", _FakeScheduler())
     runner.submitted_jobs = overrides.get("submitted_jobs", {})
@@ -340,7 +341,9 @@ def test_persist_failed_generation_stores_incorrect_program(tmp_path):
         runner._record_progress = lambda: None
 
         async def _update_completed_generations():
-            runner.completed_generations = await runner._count_completed_generations_from_db()
+            runner.completed_generations = (
+                await runner._count_completed_generations_from_db()
+            )
 
         async def _persist_program_metadata_async(_program):
             return None
@@ -393,7 +396,10 @@ def test_persist_failed_generation_stores_incorrect_program(tmp_path):
         assert failure_payload["language"] == "python"
         assert failure_payload["failure_stage"] == "proposal_failed"
         assert failure_payload["failure_class"] == "proposal_generation_failed"
-        assert failure_payload["failure_reason"] == "LLM failed to generate a valid proposal"
+        assert (
+            failure_payload["failure_reason"]
+            == "LLM failed to generate a valid proposal"
+        )
         assert failure_payload["artifacts"]["generated_code_path"] == str(exec_path)
         assert failure_payload["downstream_eval_submitted"] is False
 
@@ -418,7 +424,9 @@ def test_generate_evolved_proposal_records_failed_node_attempt_after_pre_eval_fa
         runner.novelty_judge = None
 
         async def _update_completed_generations():
-            runner.completed_generations = await runner._count_completed_generations_from_db()
+            runner.completed_generations = (
+                await runner._count_completed_generations_from_db()
+            )
 
         async def _persist_program_metadata_async(_program):
             return None
@@ -511,10 +519,14 @@ def test_persist_failed_generation_skips_maintenance_and_handles_missing_code(tm
         runner._record_progress = lambda: None
 
         async def _update_completed_generations():
-            runner.completed_generations = await runner._count_completed_generations_from_db()
+            runner.completed_generations = (
+                await runner._count_completed_generations_from_db()
+            )
 
         async def _persist_program_metadata_async(_program):
-            raise AssertionError("failed proposal persistence should not perform metadata rewrite")
+            raise AssertionError(
+                "failed proposal persistence should not perform metadata rewrite"
+            )
 
         runner._update_completed_generations = _update_completed_generations
         runner._persist_program_metadata_async = _persist_program_metadata_async
@@ -652,7 +664,9 @@ def test_maybe_evolve_prompt_updates_total_api_cost():
                 language="python",
                 use_text_feedback=False,
             ),
-            prompt_db=SimpleNamespace(last_generation=2, add=lambda *args, **kwargs: None),
+            prompt_db=SimpleNamespace(
+                last_generation=2, add=lambda *args, **kwargs: None
+            ),
         )
         runner.prompt_evolution_counter = 0
         runner.prompt_sampler_evo = SimpleNamespace(
@@ -698,7 +712,9 @@ def test_process_single_job_safely_applies_side_effects_inline():
         applied = []
 
         async def persist_completed_job(_job):
-            return CompletedJobPersistResult(job=_job, success=True, persisted_event=event)
+            return CompletedJobPersistResult(
+                job=_job, success=True, persisted_event=event
+            )
 
         async def enqueue_background_side_effects(_events):
             raise AssertionError("side effects should not be queued in inline mode")
@@ -708,7 +724,9 @@ def test_process_single_job_safely_applies_side_effects_inline():
 
         runner._persist_completed_job = persist_completed_job
         runner._enqueue_background_side_effects = enqueue_background_side_effects
-        runner._apply_persisted_program_side_effects = apply_persisted_program_side_effects
+        runner._apply_persisted_program_side_effects = (
+            apply_persisted_program_side_effects
+        )
 
         success = await runner._process_single_job_safely(job)
 
@@ -760,7 +778,9 @@ def test_start_proposals_does_not_assign_generation_past_target():
         assert runner.assigned_generations == {4}
         assert len(runner.active_proposal_tasks) == 1
 
-        await asyncio.gather(*runner.active_proposal_tasks.values(), return_exceptions=True)
+        await asyncio.gather(
+            *runner.active_proposal_tasks.values(), return_exceptions=True
+        )
         await runner._cleanup_completed_proposal_tasks()
 
     asyncio.run(_run())
@@ -773,7 +793,9 @@ def test_generate_evolved_proposal_returns_none_when_all_attempts_fail(tmp_path)
                 sample_with_fix_mode_async=lambda **kwargs: asyncio.sleep(
                     0,
                     result=(
-                        SimpleNamespace(id="parent-1", generation=0, combined_score=1.0),
+                        SimpleNamespace(
+                            id="parent-1", generation=0, combined_score=1.0
+                        ),
                         [],
                         [],
                         False,
@@ -790,6 +812,7 @@ def test_generate_evolved_proposal_returns_none_when_all_attempts_fail(tmp_path)
         )
         runner.llm_selection = None
         runner.novelty_judge = None
+
         async def _run_patch_async(*args, **kwargs):
             return None
 
@@ -827,7 +850,9 @@ def test_generate_evolved_proposal_returns_none_when_submit_fails(tmp_path):
                 sample_with_fix_mode_async=lambda **kwargs: asyncio.sleep(
                     0,
                     result=(
-                        SimpleNamespace(id="parent-1", generation=0, combined_score=1.0),
+                        SimpleNamespace(
+                            id="parent-1", generation=0, combined_score=1.0
+                        ),
                         [],
                         [],
                         False,
@@ -842,6 +867,9 @@ def test_generate_evolved_proposal_returns_none_when_submit_fails(tmp_path):
                 max_patch_resamples=1,
             ),
             scheduler=_FailingSubmitScheduler(),
+            # The paid proposal is charged when the submit fails; this fake DB
+            # takes no events, so the unrecorded marker lands here.
+            results_dir=str(tmp_path),
         )
         runner.llm_selection = None
         runner.novelty_judge = None
@@ -883,7 +911,9 @@ def test_generate_evolved_proposal_assigns_worker_ids_on_submit(tmp_path):
                 sample_with_fix_mode_async=lambda **kwargs: asyncio.sleep(
                     0,
                     result=(
-                        SimpleNamespace(id="parent-1", generation=0, combined_score=1.0),
+                        SimpleNamespace(
+                            id="parent-1", generation=0, combined_score=1.0
+                        ),
                         [],
                         [],
                         False,
@@ -958,9 +988,7 @@ def test_generation_budget_exhaustion_waits_for_completed_job_processing_to_fini
 
         runner._record_generation_event = _record_generation_event
         runner._wait_for_slot_or_stop = _wait_for_slot_or_stop
-        runner._cleanup_completed_proposal_tasks = lambda: asyncio.sleep(
-            0, result=None
-        )
+        runner._cleanup_completed_proposal_tasks = lambda: asyncio.sleep(0, result=None)
         runner._is_system_stuck = lambda: False
         runner._handle_stuck_system = lambda: asyncio.sleep(0, result=True)
         runner._compute_proposal_pipeline_target = lambda: 0
@@ -991,6 +1019,7 @@ def test_retry_failed_db_jobs_refreshes_completion_progress():
 
         update_calls = 0
         progress_calls = 0
+
         async def _process_single_job_safely(_job):
             return True
 
@@ -1038,7 +1067,9 @@ def test_update_prompt_fitness_only_recomputes_after_correct_programs():
             self.update_calls.append(kwargs)
 
         def recompute_all_percentiles(self, all_correct_scores, program_id_to_score):
-            self.recompute_calls.append((list(all_correct_scores), dict(program_id_to_score)))
+            self.recompute_calls.append(
+                (list(all_correct_scores), dict(program_id_to_score))
+            )
 
     class _FakeAsyncDB:
         async def compute_percentile_async(self, program_score, correct_only=True):
@@ -1193,6 +1224,7 @@ def test_generate_evolved_proposal_uses_slot_reservation_helper():
             evo_config=SimpleNamespace(
                 max_novelty_attempts=1,
                 max_patch_resamples=1,
+                num_generations=10,
             ),
             db_config=SimpleNamespace(
                 num_islands=1,
@@ -1300,34 +1332,34 @@ def test_is_job_hung_when_runtime_exceeds_limit():
     assert runner._is_job_hung(job) is True
 
 
-def test_cancel_surplus_inflight_work_cancels_backlog_once_target_hit():
+def _surplus_jobs():
+    def job(job_id, generation, worker):
+        return AsyncRunningJob(
+            job_id=job_id,
+            exec_fname=f"program_{generation}.py",
+            results_dir=f"results_{generation}",
+            start_time=time.time(),
+            proposal_started_at=time.time(),
+            evaluation_submitted_at=time.time(),
+            evaluation_started_at=time.time(),
+            generation=generation,
+            evaluation_worker_id=worker,
+        )
+
+    return job("job-1", 51, 3), job("job-2", 52, 4)
+
+
+def test_cancel_surplus_inflight_work_waits_for_proposals_then_cancels_jobs(
+    tmp_path,
+):
+    """Proposals in flight at the target finish (cancelling one mid-call would
+    drop calls it already paid for); running jobs are cancelled."""
+
     async def _run():
         scheduler = _FakeScheduler(cancelled_job_ids={"job-1", "job-2"})
         eval_pool = _FakeSlotPool()
-
-        proposal_task = asyncio.create_task(asyncio.sleep(60))
-        job_1 = AsyncRunningJob(
-            job_id="job-1",
-            exec_fname="program_1.py",
-            results_dir="results_1",
-            start_time=time.time(),
-            proposal_started_at=time.time(),
-            evaluation_submitted_at=time.time(),
-            evaluation_started_at=time.time(),
-            generation=51,
-            evaluation_worker_id=3,
-        )
-        job_2 = AsyncRunningJob(
-            job_id="job-2",
-            exec_fname="program_2.py",
-            results_dir="results_2",
-            start_time=time.time(),
-            proposal_started_at=time.time(),
-            evaluation_submitted_at=time.time(),
-            evaluation_started_at=time.time(),
-            generation=52,
-            evaluation_worker_id=4,
-        )
+        proposal_task = asyncio.create_task(asyncio.sleep(0.01))
+        job_1, job_2 = _surplus_jobs()
         runner = _build_runner(
             scheduler=scheduler,
             evaluation_slot_pool=eval_pool,
@@ -1335,17 +1367,41 @@ def test_cancel_surplus_inflight_work_cancels_backlog_once_target_hit():
             active_proposal_tasks={"proposal-1": proposal_task},
             assigned_generations={51, 52, 53},
             submitted_jobs={"job-1": job_1, "job-2": job_2},
+            results_dir=str(tmp_path),
         )
+        runner.surplus_proposal_wait_s = 5.0
 
         await runner._cancel_surplus_inflight_work()
 
-        assert proposal_task.cancelled()
+        assert proposal_task.done() and not proposal_task.cancelled()
         assert runner.running_jobs == []
         assert runner.active_proposal_tasks == {}
         assert runner.submitted_jobs == {}
         assert runner.assigned_generations == set()
         assert scheduler.cancelled_job_ids == ["job-1", "job-2"]
         assert eval_pool.released == [3, 4]
+        assert recorded_in_full(tmp_path)
+
+    asyncio.run(_run())
+
+
+def test_cancel_surplus_inflight_work_cancels_hung_proposal_as_unrecorded(tmp_path):
+    """A proposal still running after the wait is cancelled; what it may have
+    paid is unknown, so the run's total must read unknown, not complete."""
+
+    async def _run():
+        proposal_task = asyncio.create_task(asyncio.sleep(60))
+        runner = _build_runner(
+            active_proposal_tasks={"proposal-1": proposal_task},
+            results_dir=str(tmp_path),
+        )
+        runner.surplus_proposal_wait_s = 0.05
+
+        await runner._cancel_surplus_inflight_work()
+
+        assert proposal_task.cancelled()
+        assert runner.active_proposal_tasks == {}
+        assert not recorded_in_full(tmp_path)
 
     asyncio.run(_run())
 
@@ -1638,9 +1694,7 @@ def test_wandb_population_snapshots_are_offloaded_and_coalesced():
 
 def test_wandb_population_snapshot_uses_worker_owned_database_connection(tmp_path):
     async def _run():
-        db = ProgramDatabase(
-            DatabaseConfig(db_path=str(tmp_path / "programs.sqlite"))
-        )
+        db = ProgramDatabase(DatabaseConfig(db_path=str(tmp_path / "programs.sqlite")))
         db.add(Program(id="program", code="pass"), defer_maintenance=True)
         observed_ids = []
 

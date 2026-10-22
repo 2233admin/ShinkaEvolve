@@ -1,0 +1,38 @@
+{
+  "blockers": [],
+  "planSha256": "4bcec74983b8cb70a5af5ef634fbadfa4a998817f2935dddcef57949568e4242",
+  "results": [
+    {
+      "message": "catalog route resolved",
+      "status": "available",
+      "toolId": "design-pipeline/core",
+      "version": null
+    },
+    {
+      "message": "catalog route resolved",
+      "status": "available",
+      "toolId": "design-pipeline/feedback-loop",
+      "version": null
+    },
+    {
+      "message": "catalog route resolved",
+      "status": "available",
+      "toolId": "MengTo/skills",
+      "version": null
+    },
+    {
+      "message": "review route was not probed",
+      "status": "review",
+      "toolId": "wevm/frog",
+      "version": null
+    },
+    {
+      "message": "d3=7.9.0",
+      "status": "available",
+      "toolId": "svg-d3",
+      "version": "d3=7.9.0"
+    }
+  ],
+  "schema": "design-pipeline.toolchain-probe-result.v1",
+  "status": "ready"
+}

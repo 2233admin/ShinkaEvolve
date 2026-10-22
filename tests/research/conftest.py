@@ -8,6 +8,16 @@ REPO = Path(__file__).resolve().parents[2]
 EXAMPLE = REPO / "examples" / "quant_research"
 
 
+@pytest.fixture(autouse=True)
+def _outside_the_agent_environment():
+    """Tests start as the owner's manual commands, whatever shell runs them;
+    those about the agent environment set the marker themselves. Its own
+    patcher, so a test's `monkeypatch.undo()` does not bring the marker back."""
+    with pytest.MonkeyPatch.context() as patch:
+        patch.delenv("SHINKA_RESEARCH_AGENT", raising=False)
+        yield
+
+
 def _load_example_module(name: str):
     spec = importlib.util.spec_from_file_location(name, EXAMPLE / f"{name}.py")
     assert spec and spec.loader

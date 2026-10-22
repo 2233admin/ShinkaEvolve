@@ -195,12 +195,13 @@ class AsyncMetaSummarizer:
         combined_summaries = []
         total_cost = 0.0
         for i, response in enumerate(valid_responses):
-            if response and response.content:
+            # A reply without content is still paid for.
+            total_cost += response.cost or 0.0
+            if response.content:
                 program_summary = response.content.strip()
                 program_summary += "\n**Program Identifier:** "
                 program_summary += f"Generation {generation_ids[i]} - Patch Name {patch_names[i]} - Correct Program: {correct_programs[i]}"
                 combined_summaries.append(program_summary)
-                total_cost += response.cost or 0.0
             else:
                 logger.warning(f"Step 1: Empty response for program {i}")
 
@@ -304,12 +305,13 @@ class AsyncMetaSummarizer:
         self,
         results_dir: str,
         best_program: Optional[Program] = None,
-        db_config=None,
     ) -> tuple[bool, float]:
         """Async version of perform_final_summary.
 
         Returns:
-            Tuple of (success, meta_cost)
+            Tuple of (success, meta_cost). ``meta_cost`` is what the steps that
+            ran paid, failed summary included; the runner charges it to the
+            best program's row (``ShinkaEvolveRunner._store_final_meta_cost``).
         """
         if not self.async_llm_client:
             logger.info("No async meta LLM client configured, skipping final summary")
@@ -326,53 +328,16 @@ class AsyncMetaSummarizer:
         )
 
         updated_recs, meta_cost = await self.update_meta_memory_async(best_program)
-        if updated_recs:
-            await self.write_meta_output_async(results_dir)
-            logger.info(f"Final meta summary completed (cost: ${meta_cost:.4f})")
-
-            # Store the final meta cost in the best program's metadata
-            if meta_cost > 0 and best_program and db_config:
-                try:
-                    import json
-
-                    def update_metadata():
-                        from shinka.database import ProgramDatabase
-
-                        thread_db = ProgramDatabase(db_config)
-                        try:
-                            if best_program.metadata is None:
-                                best_program.metadata = {}
-
-                            # Accumulate meta_cost if it already exists
-                            existing_meta_cost = best_program.metadata.get(
-                                "meta_cost", 0.0
-                            )
-                            best_program.metadata["meta_cost"] = (
-                                existing_meta_cost + meta_cost
-                            )
-
-                            metadata_json = json.dumps(best_program.metadata)
-                            thread_db.cursor.execute(
-                                ("UPDATE programs SET metadata = ? WHERE id = ?"),
-                                (metadata_json, best_program.id),
-                            )
-                            thread_db.conn.commit()
-                        finally:
-                            thread_db.close()
-
-                    loop = asyncio.get_event_loop()
-                    await loop.run_in_executor(None, update_metadata)
-                    logger.info(
-                        f"Stored final meta cost ${meta_cost:.4f} "
-                        f"in best program metadata"
-                    )
-                except Exception as e:
-                    logger.warning(f"Failed to store final meta cost in database: {e}")
-
-            return True, meta_cost
-        else:
+        if not updated_recs:
             logger.warning("Final meta summary failed to generate recommendations")
-            return False, 0.0
+            return False, meta_cost
+        # The steps are paid for; a failed output file must not lose their cost.
+        try:
+            await self.write_meta_output_async(results_dir)
+        except Exception as e:
+            logger.error(f"Final meta summary output could not be written: {e}")
+        logger.info(f"Final meta summary completed (cost: ${meta_cost:.4f})")
+        return True, meta_cost
 
     async def write_meta_output_async(self, results_dir: str) -> None:
         """Async version of write_meta_output - write files in thread pool."""

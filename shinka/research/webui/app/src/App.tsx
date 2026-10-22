@@ -1,128 +1,276 @@
-import { useCallback, useEffect, useLayoutEffect, useState } from 'react'
-import { Button, InlineNotification, Tab, TabList, TabPanel, TabPanels, Tabs, Tag, Theme } from '@carbon/react'
-import { LibraryTab } from './LibraryTab'
-import { ResearchTab } from './ResearchTab'
-import { Term } from './Term'
-import { TopBar } from './TopBar'
-import type { Snapshot } from './types'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
+import { Notice } from './Notice'
+import { Compare } from './compare/Compare'
+import { isCorrect, scoreOf } from './compare/series'
+import { fmt } from './format'
+import { DEMO_TAG, untagged } from './demo'
+import { DirectionMeta } from './DirectionMeta'
+import { useTheme } from './design/theme'
+import { LangProvider, useCopy, useLangState, type Lang } from './i18n/lang'
+import { Library } from './library/Library'
+import { Report } from './report/Report'
+import { RunList } from './runs/RunList'
+import { Palette, type PaletteItem } from './shell/Palette'
+import { Rail, TabBar } from './shell/Rail'
+import { ALL_RUNS, analysisView, routeHref, runRoute, type Route } from './shell/route'
+import { TopBar, Updated, type Crumb } from './shell/TopBar'
+import { useMatches } from './shell/useMatches'
+import { useRouter } from './shell/useRouter'
+import { REFRESH_MS, RUNS_REFRESH_MS, useShellData } from './shell/useShellData'
+import { Overview } from './overview/Overview'
+import { RunPage, ViewTabs } from './run/RunPage'
+import { generationOf, nameOf, type RunProgram } from './run/data'
 
-const THEME_KEY = 'shinka-theme'
-
-function initialLight(): boolean {
-  try {
-    return localStorage.getItem(THEME_KEY) === 'light'
-  } catch {
-    return false
-  }
-}
-
-async function loadSnapshot(): Promise<Snapshot> {
-  const res = await fetch('/api/snapshot', { cache: 'no-store' })
-  if (!res.ok) throw new Error(`HTTP ${res.status}`)
-  return res.json()
+// Each page's own layout; a run's analysis takes the full width and height.
+const PAGE_CLASS: Record<Route['view'], string> = {
+  directions: 'home-page',
+  direction: 'report-page',
+  library: 'library-page',
+  runs: 'runs-page',
+  compare: 'compare-page',
+  run: 'analysis-page',
 }
 
 export default function App() {
-  const [light, setLight] = useState(initialLight)
-  const [snap, setSnap] = useState<Snapshot | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [selected, setSelected] = useState<string | null>(null)
+  const [lang, setLang] = useLangState()
+  return (
+    <LangProvider value={lang}>
+      <Workspace onLang={setLang} />
+    </LangProvider>
+  )
+}
 
-  // layout effect：先于子组件读取主题色值的 passive effect 生效。
-  useLayoutEffect(() => {
-    document.documentElement.dataset.theme = light ? 'light' : 'dark'
-    document.body.classList.toggle('light-theme', light)
-    try {
-      localStorage.setItem(THEME_KEY, light ? 'light' : 'dark')
-    } catch {
-      /* 存不了就不记 */
-    }
-  }, [light])
-
-  const refresh = useCallback(async () => {
-    setLoading(true)
-    try {
-      setSnap(await loadSnapshot())
-      setError(null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+function Workspace({ onLang }: { onLang: (lang: Lang) => void }) {
+  const [theme, setTheme] = useTheme()
+  const { lang, t } = useCopy()
+  const light = theme === 'light'
+  const { route, entry, go, sync } = useRouter()
+  // An experiment's analysis keeps its direction's snapshot, so Back draws the report at once and the
+  // browser can restore the scroll position. The run list refreshes as often as its legacy page did.
+  const data = useShellData(route.view === 'direction' || route.view === 'run' ? route.direction : null, route.view === 'runs' ? RUNS_REFRESH_MS : REFRESH_MS)
+  const [palette, setPalette] = useState(false)
+  // A manual refresh also reloads a hosted analysis page; the automatic one leaves it alone.
+  const [reload, setReload] = useState(0)
+  // design.md › 响应式: the rail narrows below 1280px and on the analysis page.
+  const compact = useMatches('(max-width: 1279px)')
+  // The open run's programs, reported by its page, so Ctrl K can jump to any of them by ID or name (OD-2).
+  const [opened, setOpened] = useState<{ run: string; programs: RunProgram[] }>({ run: '', programs: [] })
+  const onPrograms = useCallback((run: string, programs: RunProgram[]) => setOpened({ run, programs }), [])
+  const ranked = useMemo(() => {
+    const rank = (p: RunProgram) => scoreOf(p) ?? -Infinity
+    return [...opened.programs].sort((a, b) => (rank(a) === rank(b) ? generationOf(a) - generationOf(b) : rank(b) > rank(a) ? 1 : -1))
+  }, [opened])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    void refresh()
-  }, [refresh])
+    const onKey = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault()
+        setPalette(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
-  const pending = snap?.library?.pending.length ?? 0
-  const current = snap?.hypotheses.find((h) => h.id === selected) ?? snap?.hypotheses[0] ?? null
+  const { workspace, snap, runs } = data
+  const directions = workspace?.directions ?? []
+  const names = useMemo(() => new Map((runs ?? []).map((run) => [run.path, run.name])), [runs])
+  const lib = workspace?.library ?? null
+  const refresh = () => {
+    data.refresh()
+    setReload((n) => n + 1)
+  }
+  const shown = { ...data, refresh }
+  const demo = directions.some((d) => DEMO_TAG.test(d.direction))
 
+  const titleOf = (id: string) => untagged(directions.find((d) => d.id === id)?.direction ?? id)
+  const crumbs: Crumb[] = []
+  const research = { label: t('nav.research'), href: routeHref({ view: 'directions' }) }
+  const allRuns = { label: t('nav.runs'), href: routeHref(ALL_RUNS) }
+  switch (route.view) {
+    case 'directions':
+      crumbs.push(research)
+      break
+    case 'direction':
+      crumbs.push(research, { label: titleOf(route.direction), data: true })
+      break
+    case 'runs':
+      crumbs.push(allRuns)
+      break
+    case 'compare':
+      crumbs.push(allRuns, { label: t('crumb.compare', { n: route.runs.length }) })
+      break
+    case 'run':
+      if (route.direction) {
+        const back = routeHref({ view: 'direction', direction: route.direction, hypothesis: route.hypothesis })
+        crumbs.push(research, { label: titleOf(route.direction), href: back, data: true }, { label: t('crumb.analysis') })
+      } else {
+        crumbs.push(allRuns, { label: names.get(route.run) ?? route.run, data: true })
+      }
+      break
+    case 'library':
+      crumbs.push({ label: t('nav.library'), href: routeHref({ view: 'library', page: null }) })
+      if (route.page) crumbs.push({ label: route.page === 'log' ? t('lib.log') : route.page.replace(/^wiki\//, ''), data: route.page !== 'log' })
+      break
+  }
+  const here = crumbs[crumbs.length - 1].label
+  useEffect(() => {
+    document.title = `${here} · Shinka Research`
+  }, [here])
+
+  const items: PaletteItem[] = [
+    { key: 'v-research', group: 'pal.pages', label: t('nav.research'), act: () => go(routeHref({ view: 'directions' })) },
+    { key: 'v-runs', group: 'pal.pages', label: t('nav.runs'), act: () => go(routeHref(ALL_RUNS)) },
+    { key: 'v-library', group: 'pal.pages', label: t('nav.library'), act: () => go(routeHref({ view: 'library', page: null })) },
+    // The open run's programs, best first; typing an ID or a name finds any of them.
+    ...(route.view === 'run' && opened.run === route.run
+      ? ranked.map((p): PaletteItem => {
+          const score = scoreOf(p)
+          return {
+            key: `g-${p.id}`,
+            group: 'pal.programs',
+            label: nameOf(p),
+            // Generation and score first: a narrow palette cuts the end of the ID, which is still searched.
+            detail: `${t('ra.gen', { g: generationOf(p) })} · ${isCorrect(p) ? (score === null ? '—' : fmt(score)) : t('ra.failedShort')} · ${p.id}`,
+            data: true,
+            // A generation scrubbed below the program would hide it, so the jump shows every generation then.
+            act: () => go(routeHref({ ...route, program: p.id, gen: route.gen !== null && Number(route.gen) < generationOf(p) ? null : route.gen })),
+          }
+        })
+      : []),
+    ...directions.map((d): PaletteItem => ({
+      key: `d-${d.id}`,
+      group: 'pal.directions',
+      label: untagged(d.direction),
+      detail: d.id,
+      data: true,
+      act: () => go(routeHref({ view: 'direction', direction: d.id, hypothesis: null })),
+    })),
+    ...(runs ?? []).map((run): PaletteItem => ({
+      key: `r-${run.path}`,
+      group: 'pal.runs',
+      label: run.name,
+      detail: run.task,
+      data: true,
+      act: () => go(routeHref(runRoute(run.path))),
+    })),
+    ...(lib?.pages ?? []).map((page): PaletteItem => ({
+      key: `p-${page.name}`,
+      group: 'pal.library',
+      label: page.name,
+      data: true,
+      act: () => go(routeHref({ view: 'library', page: `wiki/${page.name}` })),
+    })),
+    light
+      ? { key: 'a-theme', group: 'pal.actions', label: t('pal.toDark'), act: () => setTheme('dark') }
+      : { key: 'a-theme', group: 'pal.actions', label: t('pal.toLight'), act: () => setTheme('light') },
+    lang === 'zh'
+      ? { key: 'a-lang', group: 'pal.actions', label: t('pal.toEn'), act: () => onLang('en') }
+      : { key: 'a-lang', group: 'pal.actions', label: t('pal.toZh'), act: () => onLang('zh') },
+    { key: 'a-refresh', group: 'pal.actions', label: t('pal.refresh'), act: refresh },
+  ]
+
+  // The first load failed: say why. A later failure keeps the data and shows in the top bar.
+  const readError = data.updated === null && data.error !== null && (
+    <Notice kind="error" label={t('icon.error')} title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
+  )
+  const loading = <p className="muted">{t('state.loading')}</p>
+
+  let page: ReactNode
+  switch (route.view) {
+    case 'directions':
+      page = workspace ? <Overview workspace={workspace} freshness={<Updated data={shown} />} /> : <div className="home-empty">{readError || loading}</div>
+      break
+    case 'direction': {
+      const current = snap?.hypotheses.find((h) => h.id === route.hypothesis) ?? snap?.hypotheses[0] ?? null
+      const summary = directions.find((d) => d.id === route.direction)
+      page = (
+        <>
+          <header className="rhead">
+            <h1>{snap ? <span translate="no">{untagged(snap.direction)}</span> : t('head.direction')}</h1>
+            {snap && <DirectionMeta snap={snap} entry={summary && summary.error === null ? summary : null} />}
+          </header>
+          {data.missing
+            ? <Notice kind="info" label={t('icon.info')} title={t('error.noDirection')} subtitle={t('error.noDirectionHint', { id: route.direction })} />
+            : data.error !== null && snap === null
+            ? <Notice kind="error" label={t('icon.error')} title={t('error.read')} subtitle={t('error.readHint', { error: data.error })} />
+            : snap === null
+              ? loading
+              : snap.hypotheses.length === 0
+                ? <Notice kind="info" label={t('icon.info')} title={t('empty.hypotheses')} subtitle={t('empty.hypothesesHint')} />
+                : current && (
+                  // One report per direction: its remembered sort, filter and open sections are read on mount.
+                  <Report
+                    key={route.direction}
+                    snap={snap}
+                    direction={route.direction}
+                    current={current}
+                    onSelect={(id) => go(routeHref({ view: 'direction', direction: route.direction, hypothesis: id }), { replace: true })}
+                    onOpen={go}
+                  />
+                )}
+        </>
+      )
+      break
+    }
+    case 'runs':
+      page = (
+        <>
+          <h1 className="sr-only">{t('nav.runs')}</h1>
+          <RunList data={shown} route={route} go={go} />
+        </>
+      )
+      break
+    case 'compare':
+      page = <Compare data={shown} route={route} go={go} />
+      break
+    case 'run':
+      page = (
+        <RunPage
+          route={route}
+          data={shown}
+          name={(names.get(route.run) ?? route.run).replace(/\/results$/, '')}
+          go={go}
+          sync={sync}
+          light={light}
+          frameKey={`${entry}:${reload}`}
+          onRunList={() => go(routeHref(ALL_RUNS))}
+          onPrograms={onPrograms}
+        />
+      )
+      break
+    case 'library':
+      page = workspace ? <Library lib={lib} page={route.page} /> : <div className="lib-none">{readError || loading}</div>
+      break
+  }
+
+  const analysis = route.view === 'run'
+  // The restored page has its own refresh switch; the native views follow the shell's.
+  const legacy = route.view === 'run' && analysisView(route) === 'legacy'
   return (
-    <Theme theme={light ? 'white' : 'g100'}>
-      <TopBar snap={snap} light={light} onTheme={setLight} />
-      <main className="page">
-        <header className="page-head">
-          <div className="page-head-row">
-            <h1>{snap ? snap.direction : loading ? '载入中…' : '研究方向'}</h1>
-            <Button kind="tertiary" size="sm" onClick={() => void refresh()} disabled={loading}>
-              刷新
-            </Button>
-          </div>
-          <p className="muted">
-            每个假设在<Term k="insample">样本内</Term>进化，再由质疑者在<Term k="validation">验证段</Term>检验；
-            <Term k="validation">验证段</Term>结果只在出结论后显示，<Term k="sealed">封存段</Term>只在最终确认时打开一次。
-          </p>
-        </header>
-
-        {error && (
-          <InlineNotification
-            kind="error"
-            lowContrast
-            hideCloseButton
-            title="读取失败："
-            subtitle={`${error}。确认 shinka_research ui 还在运行，然后点刷新。`}
+    <>
+      <a className="skip" href="#content">{t('shell.skip')}</a>
+      <div className="shell">
+        <Rail route={route} data={shown} narrow={analysis || compact} demo={demo} onSearch={() => setPalette(true)} />
+        <div className="main">
+          <TopBar
+            crumbs={crumbs}
+            data={shown}
+            demo={demo}
+            liveToggle={!legacy}
+            tabs={route.view === 'run' ? <ViewTabs route={route} /> : undefined}
+            theme={theme}
+            onTheme={setTheme}
+            onLang={onLang}
+            onSearch={() => setPalette(true)}
           />
-        )}
-
-        {snap && snap.hypotheses.length === 0 && (
-          <InlineNotification
-            kind="info"
-            lowContrast
-            hideCloseButton
-            title="还没有假设："
-            subtitle="用 shinka_research hypothesis add 添加第一个假设。"
-          />
-        )}
-
-        {snap && (
-          <Tabs>
-            <TabList aria-label="内容" contained={false}>
-              <Tab>研究</Tab>
-              <Tab>
-                <span className="tab-label">
-                  资料库
-                  {pending > 0 && (
-                    <Tag size="sm" type="gray" title={`${pending} 份资料待整理`}>
-                      {pending}
-                    </Tag>
-                  )}
-                </span>
-              </Tab>
-            </TabList>
-            <TabPanels>
-              <TabPanel>
-                {current && <ResearchTab snap={snap} current={current} light={light} onSelect={setSelected} />}
-              </TabPanel>
-              <TabPanel>
-                <LibraryTab lib={snap.library} />
-              </TabPanel>
-            </TabPanels>
-          </Tabs>
-        )}
-      </main>
-    </Theme>
+          <main id="content" className={`page ${PAGE_CLASS[route.view]}`} tabIndex={-1}>
+            {page}
+          </main>
+        </div>
+      </div>
+      <TabBar route={route} data={shown} />
+      <Palette open={palette} onClose={() => setPalette(false)} items={items} />
+    </>
   )
 }

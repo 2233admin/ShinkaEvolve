@@ -1,3 +1,5 @@
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pytest
@@ -106,15 +108,40 @@ def test_generated_evaluator_runs(
     assert out.stdout.strip().splitlines()[-1] == "correct"
 
 
-def test_verdict_rules_and_trials(tmp_path: Path, example_dir: Path) -> None:
+def test_verdict_rules(tmp_path: Path, example_dir: Path) -> None:
     root = _init(tmp_path, example_dir)
     nb = Notebook.load(root)
     with pytest.raises(ValueError):
         nb.set_status("h001", Status.supported)
-    nb.add_experiment("h001", "a", "/d.csv", "b").n_evaluated = 7
+    nb.add_experiment("h001", "a", "/d.csv", "b")
     nb.set_verdict("h001", Verdict(label=Status.refuted, reason="OOS Sharpe < 0"))
     assert nb.get("h001").status is Status.refuted
-    assert nb.total_trials == 7
+
+
+def test_status_and_brief_count_the_trials_of_a_run_in_progress(
+    tmp_path: Path, example_dir: Path, capsys
+) -> None:
+    root = _init(tmp_path, example_dir)
+    nb = Notebook.load(root)
+    nb.add_experiment("h001", "a", "/d.csv", "b").n_probed = 1
+    nb.save(root)
+    results = root / "experiments" / "h001" / "e01" / "results"
+    results.mkdir(parents=True)
+    with closing(sqlite3.connect(results / "programs.sqlite")) as conn, conn:
+        conn.execute(
+            "CREATE TABLE programs (id TEXT, code TEXT, combined_score REAL, "
+            "correct INTEGER, metadata TEXT)"
+        )
+        conn.executemany(
+            "INSERT INTO programs VALUES (?, '', 0.1, 1, '{}')", [("p1",), ("p2",)]
+        )
+    # The notebook still says 0 evaluated, as it does until a run returns.
+    capsys.readouterr()
+    cli.main(["status", str(root)])
+    cli.main(["brief", str(root)])
+    out = capsys.readouterr().out
+    assert "Total trials: 3" in out and "e01(2)" in out
+    assert "Trials so far: 3" in out
 
 
 def test_probe_shows_public_metrics_only(
@@ -137,7 +164,8 @@ def test_probe_shows_public_metrics_only(
     assert shown["correct"] is True
     assert "is_sharpe_mean" in shown["public"]
     assert "oos" not in out.lower()
-    assert Notebook.load(root).total_trials == 1  # probes count as trials
+    # Probes count as trials.
+    assert Notebook.load(root).get("h001").experiments[0].n_probed == 1
 
 
 def test_status_guard_and_headless_guard(tmp_path: Path, example_dir: Path) -> None:

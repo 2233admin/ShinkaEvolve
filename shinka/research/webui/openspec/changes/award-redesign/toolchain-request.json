@@ -1,0 +1,44 @@
+{
+  "brief": "Native redesign of a read-only research workbench web app (React 19 + Vite): research-direction overview home, direction and hypothesis research report with verdict evidence, shared library, ordinary runs list and multi-run compare, and experiment analysis reorganised into linked data-visualisation surfaces (lineage tree, progress small multiples, solution-space embeddings incl. 3D, contest) with a persistent program inspector showing code and diffs; dark and light themes, Chinese-first CJK typography, desktop-first and fully readable on phones; award-level visual and interaction craft",
+  "capabilities": [
+    "keyboard-accessible tables, tabs, dialogs, tooltips and menus (behaviour from Carbon React)",
+    "token-bound SVG charts with linked selection across views",
+    "hierarchical lineage tree layout",
+    "2D scatter and density contours over embeddings",
+    "code-split 3D scatter for embedding clusters, projected on Canvas 2D with pointer and keyboard rotation, and the same points available through the 2D view and an accessible table",
+    "syntax-highlighted code and unified diff viewer",
+    "sanitised markdown rendering of untrusted LLM output",
+    "client-side ZIP export",
+    "dark and light themes with CJK-first typography"
+  ],
+  "deliverableForm": "ui-motion",
+  "existing": {
+    "charts": "@carbon/charts-react 1.27 (trial chart), d3 7.9, chart.js 3.9 and plotly.js-dist-min 3.1 inside the legacy analysis iframe",
+    "content": "markdown-it 15 + DOMPurify 3.4 sanitisation, highlight.js 11, diff 9, jszip 3.10",
+    "fonts": "@fontsource-variable/inter, @fontsource/ibm-plex-mono (local, no network)",
+    "notes": {
+      "network": "No runtime network dependencies; all fonts and libraries bundled locally",
+      "ownerDecision20261019": "Remove Astro UXDS; keep Carbon React only for interaction and accessibility behaviour; visuals and charts follow the newly selected design system",
+      "readOnly": "The UI never writes research state",
+      "repositoryBoundary": "New files only under shinka/research/, skills/shinka-research/, examples/quant_research/, tests/research/, docs/research/ (AGENTS.md)",
+      "threeDimensionalScatter": "The 3D cluster mode projects points onto a Canvas 2D surface with pointer and keyboard rotation and is code-split, so no WebGL engine is added; SVG/D3 remains the chart surface for every 2D figure"
+    },
+    "runtime": "React 19.1 + Vite 6 + TypeScript 5.8, pnpm with frozen lockfile and release-age policy",
+    "server": "Python stdlib HTTP server in shinka/research/ui.py and analysis.py serving the built SPA and the read-only JSON API",
+    "styling": "Plain CSS with generated design tokens (custom properties); no CSS framework",
+    "uiLibrary": "Carbon React 1.118 (@carbon/react) and Astro UXDS 8.0 web components"
+  },
+  "framework": "react",
+  "graphics": {
+    "adapter": "svg-d3"
+  },
+  "jobId": "product-design",
+  "jobPlanPath": "openspec/changes/award-redesign/job-plan.json",
+  "jobPlanSha256": "5ede4f9234849a4716224391cd58a85a836be773ac7185c544a5a217abb51389",
+  "requested": {
+    "styling": "none",
+    "uiLibrary": "none"
+  },
+  "schema": "design-pipeline.toolchain-request.v1",
+  "targetRoot": "app"
+}

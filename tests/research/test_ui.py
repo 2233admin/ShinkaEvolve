@@ -1,3 +1,4 @@
+import http.client
 import json
 import sqlite3
 import threading
@@ -10,7 +11,7 @@ from pathlib import Path
 
 import numpy as np
 
-from shinka.research import library, ui
+from shinka.research import analysis, library, ui
 from shinka.research.notebook import (
     Experiment,
     Notebook,
@@ -53,11 +54,13 @@ def test_validation_evidence_hidden_until_verdict(tmp_path: Path) -> None:
     assert "skeptic" not in h2["experiments"][0]
     assert h2["verdict"] is None
     assert "-0.40" not in json.dumps(snap)
-    notes = [(e["hypothesis"], e["event"], e["note"]) for e in snap["events"]]
+    notes = [
+        (e["hypothesis"], e["event"], e["note"], e["withheld"]) for e in snap["events"]
+    ]
     assert notes == [
-        ("h002", "verdict", ui.HIDDEN),  # verdict cleared by a re-run
-        ("h002", "skeptic", ui.HIDDEN),
-        ("h001", "skeptic", "rule says supported: val Sharpe 1.23"),
+        ("h002", "verdict", None, True),  # verdict cleared by a re-run
+        ("h002", "skeptic", None, True),
+        ("h001", "skeptic", "rule says supported: val Sharpe 1.23", False),
     ]
 
 
@@ -78,14 +81,54 @@ def test_server_serves_snapshot(tmp_path: Path, monkeypatch) -> None:
     dist.mkdir()
     (dist / "index.html").write_text("<!doctype html><title>t</title>")
     monkeypatch.setattr(ui, "DIST", dist)
-    root = _direction(tmp_path / "d")
+    root = tmp_path / "workspace"
+    direction = _direction(root / "d")
     server = ThreadingHTTPServer(("127.0.0.1", 0), partial(ui._Handler, root=root))
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"
     try:
-        snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot").read())
+        query = urllib.parse.urlencode({"direction": direction.name})
+        snap = json.loads(urllib.request.urlopen(f"{base}/api/snapshot?{query}").read())
         assert snap["hypotheses"][1]["verdict"] is None
         assert b"<title>t</title>" in urllib.request.urlopen(f"{base}/").read()
+    finally:
+        server.shutdown()
+        server.server_close()
+
+
+def test_server_answers_only_requests_addressed_to_this_machine(
+    tmp_path: Path, monkeypatch
+) -> None:
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<!doctype html><title>t</title>")
+    monkeypatch.setattr(ui, "DIST", dist)
+    root = tmp_path / "workspace"
+    _direction(root / "d")
+    server = ThreadingHTTPServer(("127.0.0.1", 0), partial(ui._Handler, root=root))
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    port = server.server_address[1]
+
+    def status(method: str, path: str, host: str) -> int:
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
+        try:
+            conn.request(method, path, headers={"Host": host})
+            response = conn.getresponse()
+            response.read()
+            return response.status
+        finally:
+            conn.close()
+
+    try:
+        for path in ("/", "/api/workspace"):
+            # A rebinding page reaches 127.0.0.1 under its own name.
+            assert status("GET", path, f"attacker.example:{port}") == 421
+            assert status("GET", path, f"127.0.0.1:{port}") == 200
+            assert status("GET", path, f"LOCALHOST:{port}") == 200
+        # The Host is checked before anything else, and only GET is answered.
+        assert status("HEAD", "/", f"attacker.example:{port}") == 421
+        assert status("HEAD", "/", f"127.0.0.1:{port}") == 405
+        assert status("POST", "/api/workspace", f"127.0.0.1:{port}") == 501
     finally:
         server.shutdown()
         server.server_close()
@@ -121,7 +164,7 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
     nb = Notebook.load(root)
     nb.get("h001").experiments[0].n_probed = 2  # probes leave no program row
     nb.save(root)
-    snap = ui.snapshot(root, tree_url="http://127.0.0.1:1/viz_tree.html")
+    snap = ui.snapshot(root)
     pts = snap["trial_points"]
     assert snap["probes"] == 2
     assert [(p["hypothesis"], p["score"], p["record"]) for p in pts] == [
@@ -135,9 +178,7 @@ def test_trial_points_carry_noise_bar_not_private_metrics(tmp_path: Path) -> Non
     assert pts[0]["bar"] == expected_max_sharpe(1 + 2, var)
     assert "-7.77" not in json.dumps(snap)
     exp = snap["hypotheses"][0]["experiments"][0]
-    assert exp["tree_db"] == "h001/e01/results/programs.sqlite"
     assert exp["first_trial"].startswith("1970-01-01T00:01:40")
-    assert snap["tree_url"] == "http://127.0.0.1:1/viz_tree.html"
 
 
 def test_library_contents(tmp_path: Path) -> None:
@@ -159,7 +200,7 @@ def test_tree_server_stays_inside_experiments(tmp_path: Path) -> None:
     _programs(outside.parent, [(1.0, 0, 1, 0.5, {})])
     server = ThreadingHTTPServer(
         ("127.0.0.1", 0),
-        partial(ui._TreeHandler, search_root=str(root / "experiments")),
+        partial(analysis.AnalysisHandler, search_root=str(root / "experiments")),
     )
     threading.Thread(target=server.serve_forever, daemon=True).start()
     base = f"http://127.0.0.1:{server.server_address[1]}"

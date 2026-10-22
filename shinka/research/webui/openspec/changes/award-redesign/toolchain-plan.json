@@ -1,0 +1,197 @@
+{
+  "blockers": [],
+  "brief": "Native redesign of a read-only research workbench web app (React 19 + Vite): research-direction overview home, direction and hypothesis research report with verdict evidence, shared library, ordinary runs list and multi-run compare, and experiment analysis reorganised into linked data-visualisation surfaces (lineage tree, progress small multiples, solution-space embeddings incl. 3D, contest) with a persistent program inspector showing code and diffs; dark and light themes, Chinese-first CJK typography, desktop-first and fully readable on phones; award-level visual and interaction craft",
+  "deliverableForm": "ui-motion",
+  "evidence": [
+    "registry:2026-08-14",
+    "mengto:83a47fee32f0b6349bff1fede99257a5ef03dc93",
+    "tool:design-pipeline/core@bundled",
+    "tool:design-pipeline/feedback-loop@bundled",
+    "tool:MengTo/skills@83a47fee32f0b6349bff1fede99257a5ef03dc93",
+    "tool:wevm/frog@702c4eadefe175a208290a99c36e7f4ac1390e53"
+  ],
+  "framework": "react",
+  "graphics": {
+    "family": "vector-data",
+    "guide": "references/graphics-runtime-routing.md#svg-d3-project-lifecycle",
+    "id": "svg-d3",
+    "support": "native",
+    "versionRange": "project-pinned"
+  },
+  "invocations": [
+    {
+      "command": null,
+      "kind": "agent-route",
+      "owner": "agent",
+      "target": "design-pipeline/core",
+      "toolId": "design-pipeline/core"
+    },
+    {
+      "command": null,
+      "kind": "agent-route",
+      "owner": "agent",
+      "target": "design-pipeline/feedback-loop",
+      "toolId": "design-pipeline/feedback-loop"
+    },
+    {
+      "command": null,
+      "kind": "agent-route",
+      "owner": "agent",
+      "target": "MengTo/skills",
+      "toolId": "MengTo/skills"
+    },
+    {
+      "command": null,
+      "kind": "governed-review",
+      "owner": "agent",
+      "status": "review",
+      "target": "wevm/frog",
+      "toolId": "wevm/frog"
+    },
+    {
+      "command": [
+        "npm",
+        "run",
+        "dev"
+      ],
+      "entrypoint": "package.json#scripts.dev",
+      "kind": "project-runtime",
+      "owner": "target-project",
+      "toolId": "svg-d3"
+    }
+  ],
+  "jobId": "product-design",
+  "jobPlanSha256": "5ede4f9234849a4716224391cd58a85a836be773ac7185c544a5a217abb51389",
+  "primaryRouteId": "design-pipeline/core",
+  "probes": [
+    {
+      "command": null,
+      "kind": "catalog",
+      "status": "available",
+      "toolId": "design-pipeline/core"
+    },
+    {
+      "command": null,
+      "kind": "catalog",
+      "status": "available",
+      "toolId": "design-pipeline/feedback-loop"
+    },
+    {
+      "command": null,
+      "kind": "catalog",
+      "status": "available",
+      "toolId": "MengTo/skills"
+    },
+    {
+      "command": null,
+      "kind": "governed-review",
+      "status": "review",
+      "toolId": "wevm/frog"
+    },
+    {
+      "command": [
+        "node",
+        "-e",
+        "const fs = require('node:fs'), path = require('node:path'), { createRequire } = require('node:module'), { pathToFileURL } = require('node:url'); const fail = (error) => { console.error(String(error?.message ?? error).replace(/[\\r\\n]+/g, ' ')); process.exitCode = 1; }; try { let pkg; try { pkg = JSON.parse(fs.readFileSync('package.json', 'utf8')); } catch { throw new Error('Cannot read the target project package.json'); } const pin = pkg.dependencies?.d3 ?? pkg.devDependencies?.d3; if (typeof pin !== 'string' || !/^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?(?:\\+[0-9A-Za-z.-]+)?$/.test(pin)) throw new Error('Declare an exact d3 version in the target package.json'); const local = path.resolve('node_modules/d3'); let installed; try { installed = JSON.parse(fs.readFileSync(path.join(local, 'package.json'), 'utf8')); } catch { throw new Error('Cannot resolve the d3 package of the target project at node_modules/d3'); } if (installed.name !== 'd3') throw new Error('node_modules/d3 is not the d3 package'); if (pin !== installed.version) throw new Error('d3 version mismatch: declared ' + pin + ', installed ' + installed.version); if (typeof pkg.scripts?.dev !== 'string' || !pkg.scripts.dev.trim()) throw new Error('Define the target project scripts.dev before npm run dev'); const entry = fs.realpathSync(createRequire(path.resolve('package.json')).resolve('d3')); const inside = path.relative(fs.realpathSync(local), entry); if (!inside || inside.startsWith('..') || path.isAbsolute(inside)) throw new Error('d3 resolved outside node_modules/d3: ' + entry); import(pathToFileURL(entry).href).then((d3) => { if (typeof d3.select !== 'function') throw new Error('The installed d3 package does not export select'); console.log('d3=' + installed.version); }).catch(fail); } catch (error) { fail(error); }"
+      ],
+      "kind": "command",
+      "status": "pending",
+      "timeoutMs": 10000,
+      "toolId": "svg-d3"
+    }
+  ],
+  "recommendedSkills": [],
+  "reviews": [
+    "wevm/frog is review"
+  ],
+  "routingContext": null,
+  "schema": "design-pipeline.toolchain-plan.v1",
+  "sourceHashes": {
+    "adapterRegistry": "6afce6b45bb1110bfaed5dab33bf75f5e7eb30803ea2a3967cec90fb6b45caf0",
+    "frontendRegistry": "78567f3452701e27dbed2c87a67305af3187dae3c478078a316c8a8ef86deb99",
+    "graphicsCatalog": "9baabd9656a05cf7ebf3a95399e11e348db50422ca068f7b00abee0caf1bc090"
+  },
+  "status": "ready",
+  "styling": {
+    "id": "none",
+    "label": "None"
+  },
+  "targetRoot": "app",
+  "tools": [
+    {
+      "id": "design-pipeline/core",
+      "mode": "project-owned",
+      "source": "frontend-stack",
+      "status": "ready"
+    },
+    {
+      "id": "design-pipeline/feedback-loop",
+      "mode": "project-owned",
+      "source": "frontend-stack",
+      "status": "ready"
+    },
+    {
+      "id": "MengTo/skills",
+      "mode": "bundled-index",
+      "source": "frontend-stack",
+      "status": "ready"
+    },
+    {
+      "id": "wevm/frog",
+      "mode": "governed-candidate",
+      "source": "frontend-stack",
+      "status": "review"
+    },
+    {
+      "id": "svg-d3",
+      "mode": "library",
+      "source": "graphics-runtime",
+      "status": "native"
+    }
+  ],
+  "uiLibrary": {
+    "id": "none",
+    "label": "None",
+    "license": "project",
+    "source": "project-owned"
+  },
+  "verification": [
+    {
+      "evidenceTypes": [
+        "design-workflow"
+      ],
+      "receiptSchema": "design-pipeline.toolchain-receipt.v1",
+      "toolId": "design-pipeline/core"
+    },
+    {
+      "evidenceTypes": [
+        "friction-logging"
+      ],
+      "receiptSchema": "design-pipeline.toolchain-receipt.v1",
+      "toolId": "design-pipeline/feedback-loop"
+    },
+    {
+      "evidenceTypes": [
+        "design-workflow"
+      ],
+      "receiptSchema": "design-pipeline.toolchain-receipt.v1",
+      "toolId": "MengTo/skills"
+    },
+    {
+      "evidenceTypes": [
+        "friction-logging"
+      ],
+      "receiptSchema": "design-pipeline.toolchain-receipt.v1",
+      "toolId": "wevm/frog"
+    },
+    {
+      "evidenceTypes": [
+        "dom",
+        "screenshot",
+        "accessibility"
+      ],
+      "receiptSchema": "design-pipeline.toolchain-receipt.v1",
+      "toolId": "svg-d3"
+    }
+  ]
+}

@@ -12,12 +12,15 @@ diff them::
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Literal, Optional
 
 from pydantic import BaseModel, Field
+
+from .state import atomic_write_text, file_lock, lock_path, read_text
 
 NOTEBOOK_FILENAME = "notebook.json"
 
@@ -49,6 +52,44 @@ class Verdict(BaseModel):
     created: str = Field(default_factory=_now)
 
 
+class LockboxTarget(BaseModel):
+    """One supported hypothesis as the lockbox opening froze it: what it scores
+    and the hashes that must still match, the direction's trials for the DSR,
+    and how far its scoring got."""
+
+    hypothesis: str
+    experiment: str
+    program_id: str
+    code_sha256: str
+    evaluator_sha256: str
+    data_path: str
+    data_sha256: str
+    n_trials: int = Field(ge=1)
+    var_trials: float = Field(ge=0.0)
+    state: Literal["pending", "scoring", "done"] = "pending"
+
+
+class LockboxOpening(BaseModel):
+    """What ``confirm`` froze, under the lock, before it scored anything on the
+    lockbox: which programs and under which rules. A confirm interrupted after
+    that resumes exactly these, so a retry cannot choose differently after a
+    look at held-out data. It holds no lockbox figures."""
+
+    started: str = Field(default_factory=_now)
+    # The source file's hash when the lockbox opened; a resumed confirm checks
+    # its --data against this rather than the notebook's current value.
+    source_sha256: str
+    thresholds: Dict[str, float]
+    targets: List[LockboxTarget]
+    finished: Optional[str] = None
+
+    def target(self, hid: str) -> LockboxTarget:
+        return next(t for t in self.targets if t.hypothesis == hid)
+
+    def finish(self) -> None:
+        self.finished = _now()
+
+
 class DataSplit(BaseModel):
     """Direction-wide data. The lockbox (the tail of the source file) is never
     copied into experiments; only `confirm` reads it, once per direction.
@@ -63,6 +104,16 @@ class DataSplit(BaseModel):
     n_dev: int
     lockbox_start: str
     opened: bool = False
+    # Set with ``opened`` by the confirm that opens the lockbox; directions
+    # opened before it existed have none.
+    opening: Optional[LockboxOpening] = None
+
+    @property
+    def unfinished(self) -> bool:
+        """The lockbox was opened but its confirmation was never recorded."""
+        return (
+            self.opened and self.opening is not None and self.opening.finished is None
+        )
 
 
 class Experiment(BaseModel):
@@ -104,10 +155,22 @@ class Notebook(BaseModel):
         p = cls.path(root)
         if not p.exists():
             raise FileNotFoundError(f"No research notebook at {p}; run `init` first")
-        return cls.model_validate_json(p.read_text())
+        return cls.model_validate_json(read_text(p))
 
     def save(self, root: Path) -> None:
-        self.path(root).write_text(self.model_dump_json(indent=2) + "\n")
+        """Replace the notebook in one step. Writers that may run alongside
+        another command change it through ``edit`` instead."""
+        atomic_write_text(self.path(root), self.model_dump_json(indent=2) + "\n")
+
+    @classmethod
+    @contextmanager
+    def edit(cls, root: Path) -> Iterator["Notebook"]:
+        """The latest notebook, saved when the block ends without an exception.
+        Other writers wait meanwhile, so long work belongs outside the block."""
+        with file_lock(lock_path(root)):
+            nb = cls.load(root)
+            yield nb
+            nb.save(root)
 
     # ---- queries ---------------------------------------------------------
 
@@ -116,13 +179,6 @@ class Notebook(BaseModel):
             if h.id == hid:
                 return h
         raise KeyError(f"Unknown hypothesis {hid!r}")
-
-    @property
-    def total_trials(self) -> int:
-        """Variants evaluated across the whole direction (for DSR)."""
-        return sum(
-            e.n_evaluated + e.n_probed for h in self.hypotheses for e in h.experiments
-        )
 
     # ---- mutations -------------------------------------------------------
 
@@ -176,11 +232,14 @@ _LOG_HEADER = "time\thypothesis\texperiment\tevent\tnote\n"
 def append_log(root: Path, hid: str, eid: str, event: str, note: str) -> None:
     """One line per research event, autoresearch's results.tsv style."""
     path = Path(root) / RESULTS_LOG
-    if not path.exists():
-        path.write_text(_LOG_HEADER)
     clean = " ".join(note.split())
-    with path.open("a") as f:
-        f.write(f"{_now()}\t{hid}\t{eid}\t{event}\t{clean}\n")
+    # Two first writers would each write the header, the second truncating the
+    # first one's line.
+    with file_lock(lock_path(root)):
+        if not path.exists():
+            path.write_text(_LOG_HEADER)
+        with path.open("a") as f:
+            f.write(f"{_now()}\t{hid}\t{eid}\t{event}\t{clean}\n")
 
 
 def experiment_dir(root: Path, hid: str, eid: str) -> Path:

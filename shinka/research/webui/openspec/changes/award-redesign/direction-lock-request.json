@@ -1,0 +1,29 @@
+{
+  "directionId": "dark-instrument",
+  "selectionReceiptHash": "a129b1cdcaf9820b1dd53082832987d1720705e7f3e5d1318b2df11ad8a17d13",
+  "previewArtifactSha256": "3e1f0d46b5462d79573cbf1dd0c6ce38ff62588774cf13a554e43f0d2b93e375",
+  "constraints": {
+    "selectionReceipt": "selectionReceiptHash is the SHA-256 of the canonical JSON of direction-preview.json#/decision, the owner's 2026-10-19 selection; previewArtifactSha256 is the SHA-256 of direction-preview.json. The comparison was re-bound to brief.md after the factual trial-range correction (brief.md:42-43, direction trials 0-5,000); the owner's decision, the rendered previews and their hashes are unchanged",
+    "base": "dark-instrument: three-pane shell (nav rail, content, activity or persistent inspector), dense sortable direction table, glyph status, one signal colour",
+    "absorbedFromResearchPaper": [
+      "island-lane lineage chart: x = generation, one lane per island, sharing the generation axis and scrubber with Progress",
+      "Progress as small multiples with labelled, shared axes",
+      "data-sentence headline on the home page, generated from live data"
+    ],
+    "themes": "default dark; light theme delivered too, user-switchable and remembered",
+    "language": "zh/en toggle on every surface; Sharpe, DSR and PBO stay English abbreviations; default language zh pending owner confirmation",
+    "status": "text plus shape, never colour alone; fixed product words 待跑, 已选, 运行中, 待判定, 成立, 否定, 未定, 已确认, 未确认, 放弃",
+    "numbers": "tabular right-aligned figures; scores and Sharpe 2 decimals, DSR 3, money $0.00, time YYYY-MM-DD HH:MM UTC, missing value —",
+    "evidence": "best record and noise bar share one scale across all directions",
+    "colour": "graphite neutrals plus one signal orange; no decorative gradients, glass or meaningless icons",
+    "contrast": "body text at least 4.5:1, large text and graphics at least 3:1, in both themes",
+    "behaviourDependency": "@carbon/react 1.118, already pinned in app/package.json, is not in the governed catalog or provider registry; the owner's 2026-10-19 decision keeps it inside project-owned components for interaction and accessibility behaviour only, so it is recorded here and not as a fit-matrix candidate. Astro UXDS is removed.",
+    "charts": "SVG/D3 with token-bound colours; 3D clusters on a code-split Canvas 2D projection, no WebGL engine",
+    "motion": "static posture: no entrance animation, state changes instant under reduced motion",
+    "offline": "fonts and libraries bundled locally; no CDN"
+  },
+  "visualKeywords": ["graphite", "signal orange", "hairline rules", "tabular figures", "glyph status", "three-pane shell", "island lanes", "small multiples", "data sentence"],
+  "visualFit": {
+    "provider:project-dom": { "status": "pass", "reason": "project-owned components render every visible style from the project's tokens" }
+  }
+}

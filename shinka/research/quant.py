@@ -187,6 +187,18 @@ def evaluate_positions(
     }
 
 
+class ProgramTimeout(RuntimeError):
+    """The candidate program did not finish in time."""
+
+
+class ProgramFailed(RuntimeError):
+    """The candidate program exited with an error or wrote no positions."""
+
+
+class InvalidPositions(ValueError):
+    """The candidate program's positions have the wrong length or values."""
+
+
 def run_view(
     program: str, data: str, timestamp_col: str, n_bars: int, timeout: float
 ) -> np.ndarray:
@@ -207,14 +219,15 @@ def run_view(
                 cmd, cwd=tmp, capture_output=True, text=True, timeout=timeout
             )
         except subprocess.TimeoutExpired:
-            raise RuntimeError(f"program timed out after {timeout:.0f}s") from None
+            raise ProgramTimeout(f"program timed out after {timeout:.0f}s") from None
         if proc.returncode != 0 or not out.exists():
             tail = (proc.stderr or proc.stdout).strip()[-2000:]
-            raise RuntimeError(tail or f"program exited with {proc.returncode}")
+            raise ProgramFailed(tail or f"program exited with {proc.returncode}")
         return np.load(out, allow_pickle=False)
 
 
-def _check_array(values: Any, n: int) -> Optional[str]:
+def check_positions(values: Any, n: int) -> Optional[str]:
+    """Why ``values`` are not ``n`` valid positions, or None if they are."""
     if not isinstance(values, np.ndarray) or values.shape != (n,):
         return f"expected {n} positions"
     if not np.all(np.isfinite(values)) or np.any(np.abs(values) > 1.0 + 1e-9):
@@ -248,7 +261,7 @@ def run_quant_eval(
 
     def aggregate(results: List[Any]) -> Dict[str, Any]:
         for n, values in zip(lengths, results):
-            err = _check_array(values, n)
+            err = check_positions(values, n)
             if err:
                 raise ValueError(err)
         full = results[0]
@@ -280,7 +293,7 @@ def positions_for(
         str(program_path), cfg.data_path, cfg.timestamp_col, len(bars),
         cfg.view_timeout_s,
     )  # fmt: skip
-    err = _check_array(values, len(bars))
+    err = check_positions(values, len(bars))
     if err:
-        raise ValueError(err)
+        raise InvalidPositions(err)
     return pd.Series(values, index=bars.index)

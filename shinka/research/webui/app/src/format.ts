@@ -1,41 +1,44 @@
+import type { CopyKey } from './i18n/copy'
 import type { Evidence, Hypothesis, Status, Thresholds } from './types'
 
-export type RuxStatus = 'normal' | 'caution' | 'critical' | 'standby' | 'off'
-
-export const STATUS: Record<Status, { label: string; rux: RuxStatus }> = {
-  proposed: { label: '待跑', rux: 'off' },
-  selected: { label: '已选', rux: 'standby' },
-  running: { label: '运行中', rux: 'standby' },
-  challenged: { label: '待判定', rux: 'caution' },
-  supported: { label: '成立', rux: 'normal' },
-  refuted: { label: '否定', rux: 'critical' },
-  inconclusive: { label: '未定', rux: 'caution' },
-  confirmed: { label: '已确认', rux: 'normal' },
-  unconfirmed: { label: '未确认', rux: 'critical' },
-  dropped: { label: '放弃', rux: 'off' },
+export const STATUS: Record<Status, { key: CopyKey }> = {
+  proposed: { key: 'status.proposed' },
+  selected: { key: 'status.selected' },
+  running: { key: 'status.running' },
+  challenged: { key: 'status.challenged' },
+  supported: { key: 'status.supported' },
+  refuted: { key: 'status.refuted' },
+  inconclusive: { key: 'status.inconclusive' },
+  confirmed: { key: 'status.confirmed' },
+  unconfirmed: { key: 'status.unconfirmed' },
+  dropped: { key: 'status.dropped' },
 }
 
-export const EVENT_STATUS: Record<string, RuxStatus> = {
-  verdict: 'normal',
-  skeptic: 'caution',
-  run: 'standby',
-  'run-failed': 'critical',
-  confirm: 'normal',
-}
+/** Statuses read best-first: outcomes, then work in progress, then what has not started. */
+export const STATUS_ORDER: Status[] = ['confirmed', 'supported', 'unconfirmed', 'refuted', 'inconclusive', 'challenged', 'running', 'selected', 'proposed', 'dropped']
 
 export const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null)
 
+// design.md › 格式: scores 2 decimals, DSR 3; negatives take the minus sign (U+2212), and a value
+// that rounds to zero shows as zero, never as −0.00. Missing is —.
 export const fmt = (v: unknown, digits = 2): string => {
   const n = num(v)
-  return n === null ? '—' : n.toFixed(digits)
+  if (n === null) return '—'
+  return (Math.abs(n) < 0.5 * 10 ** -digits ? 0 : n).toFixed(digits).replace(/^-/, '−')
 }
 
-export const pct = (v: unknown): string => {
+/** A fraction as a percentage, under fmt's sign rules. */
+export const pct = (v: unknown, digits = 0): string => {
   const n = num(v)
-  return n === null ? '—' : `${(n * 100).toFixed(0)}%`
+  return n === null ? '—' : `${fmt(n * 100, digits)}%`
 }
 
-export const usd = (v: number): string => `$${v.toFixed(2)}`
+/** Whole counts with thousands separators. */
+export const int = (v: number): string => Math.round(v).toLocaleString('en-US')
+
+/** $0.00; a recorded amount under half a cent shows as <$0.01, never as $0.00. */
+export const money = (v: number): string =>
+  v === 0 ? '$0.00' : Math.abs(v) < 0.005 ? '<$0.01' : `${v < 0 ? '−' : ''}$${Math.abs(v).toFixed(2)}`
 
 export const when = (iso: string): string => iso.slice(0, 16).replace('T', ' ')
 
@@ -50,35 +53,20 @@ export const bestIs = (h: Hypothesis): number | null => {
 
 export const oosOf = (h: Hypothesis): number | null => (h.verdict ? num(h.verdict.evidence.oos_sharpe) : null)
 
-export type Check = { key: string; label: string; pass: boolean | null; value: string }
+export type Check = { key: string; pass: boolean | null; value: string }
 
-// 五条规则与 skeptic.decide() 一一对应，阈值用判定时记下的那组。
-export function checksOf(ev: Evidence, th: Thresholds): Check[] {
+// 五条规则与 skeptic.decide() 一一对应，阈值用判定时记下的那组。pboNone 是“无法计算”时显示的话。
+export function checksOf(ev: Evidence, th: Thresholds, pboNone: string): Check[] {
   const oos = num(ev.oos_sharpe)
   const hold = num(ev.baseline_buy_hold_oos_sharpe)
   const dsr = num(ev.dsr)
   const frac = num(ev.oos_positive_fraction)
   const pbo = num(ev.pbo)
   return [
-    { key: 'oos', label: '验证段 Sharpe > 0', pass: oos === null ? null : oos > 0, value: fmt(oos) },
-    {
-      key: 'hold',
-      label: '跑赢买入持有',
-      pass: oos === null || hold === null ? null : oos > hold,
-      value: `${fmt(oos)} vs ${fmt(hold)}`,
-    },
-    { key: 'dsr', label: `DSR ≥ ${th.dsr_supported}`, pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
-    {
-      key: 'sub',
-      label: `子区间为正 ≥ ${pct(th.min_positive_fraction)}`,
-      pass: frac === null ? null : frac >= th.min_positive_fraction,
-      value: pct(frac),
-    },
-    {
-      key: 'pbo',
-      label: `PBO ≤ ${th.max_pbo}`,
-      pass: pbo === null ? true : pbo <= th.max_pbo,
-      value: pbo === null ? '无法计算，视为通过' : fmt(pbo),
-    },
+    { key: 'oos', pass: oos === null ? null : oos > 0, value: fmt(oos) },
+    { key: 'hold', pass: oos === null || hold === null ? null : oos > hold, value: `${fmt(oos)} / ${fmt(hold)}` },
+    { key: 'dsr', pass: dsr === null ? null : dsr >= th.dsr_supported, value: fmt(dsr, 3) },
+    { key: 'sub', pass: frac === null ? null : frac >= th.min_positive_fraction, value: pct(frac) },
+    { key: 'pbo', pass: pbo === null ? true : pbo <= th.max_pbo, value: pbo === null ? pboNone : fmt(pbo) },
   ]
 }

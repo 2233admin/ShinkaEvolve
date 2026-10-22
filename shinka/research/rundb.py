@@ -3,10 +3,37 @@
 from __future__ import annotations
 
 import sqlite3
+from contextlib import closing
 from pathlib import Path
-from typing import List, Optional, Tuple
+from typing import Callable, List, NamedTuple, Optional, Tuple, TypeVar
+from urllib.parse import quote
+
+# Administrative copies (migration and dynamic island spawning) are not trials
+# and not charges; the cost rule owns the predicate.
+from shinka.database.cost import NOT_COPY as _NOT_COPY
+from shinka.database.cost import (
+    Spend,
+    program_spend,
+    prompt_spend,
+    recorded_in_full,
+)
 
 DB_FILENAME = "programs.sqlite"
+T = TypeVar("T")
+
+
+def has_programs(results_dir: Path) -> bool:
+    """Whether the results database exists with its programs table. A run
+    creates the file before its tables, so one caught or killed in between has
+    neither; the readers below still treat that as an error, as for any
+    damaged store, and only reconciling a dead run reads it as empty."""
+    if not (Path(results_dir) / DB_FILENAME).exists():
+        return False
+    ((n,),) = _query(
+        results_dir,
+        "SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name = 'programs'",
+    )
+    return bool(n)
 
 
 def count_evaluated(results_dir: Path) -> int:
@@ -17,20 +44,30 @@ def count_evaluated(results_dir: Path) -> int:
     return int(n)
 
 
-# Administrative copies (migration and dynamic island spawning) are not trials;
-# same predicate as shinka.database.dbase's evaluated_count.
-_NOT_COPY = (
-    "COALESCE(json_extract(metadata, '$._is_island_copy'), 0) = 0 "
-    "AND COALESCE(json_extract(metadata, '$._spawned_island'), 0) = 0"
-)
-
-
-def _query(results_dir: Path, sql: str, params: tuple = ()) -> list:
-    db = Path(results_dir) / DB_FILENAME
+def _connect(
+    results_dir: Path, filename: str = DB_FILENAME
+) -> "closing[sqlite3.Connection]":
+    db = Path(results_dir) / filename
     if not db.exists():
         raise FileNotFoundError(db)
-    with sqlite3.connect(f"file:{db}?mode=ro", uri=True) as conn:
+    # Encode the native filename so UNC paths never become URI authorities.
+    # closing(): the connection's own context manager only commits, and an open
+    # handle keeps the file locked on Windows after a failed read.
+    return closing(
+        sqlite3.connect(f"file:{quote(str(db.resolve()), safe='')}?mode=ro", uri=True)
+    )
+
+
+def _query(
+    results_dir: Path, sql: str, params: tuple = (), filename: str = DB_FILENAME
+) -> list:
+    with _connect(results_dir, filename) as conn:
         return conn.execute(sql, params).fetchall()
+
+
+def _read(results_dir: Path, filename: str, total: Callable[..., T]) -> T:
+    with _connect(results_dir, filename) as conn:
+        return total(conn)
 
 
 def best_program(results_dir: Path) -> Tuple[str, str, float]:
@@ -56,19 +93,19 @@ def correct_scores(results_dir: Path) -> List[float]:
     return [float(s) for (s,) in rows if s is not None]
 
 
-def trials(results_dir: Path) -> List[Tuple[float, int, Optional[float]]]:
-    """(timestamp, generation, in-sample score or None if incorrect) of every
-    evaluated program, oldest first."""
+def trials(results_dir: Path) -> List[Tuple[float, int, Optional[float], str]]:
+    """(timestamp, generation, in-sample score or None if incorrect, program id)
+    of every evaluated program, oldest first."""
     if not (Path(results_dir) / DB_FILENAME).exists():
         return []
     rows = _query(
         results_dir,
-        "SELECT timestamp, generation, correct, combined_score FROM programs "
+        "SELECT timestamp, generation, correct, combined_score, id FROM programs "
         f"WHERE {_NOT_COPY} ORDER BY timestamp",
     )
     return [
-        (float(t), int(g), float(s) if ok and s is not None else None)
-        for t, g, ok, s in rows
+        (float(t), int(g), float(s) if ok and s is not None else None, str(pid))
+        for t, g, ok, s, pid in rows
     ]
 
 
@@ -96,37 +133,49 @@ def program_code(results_dir: Path, program_id: str) -> str:
     return str(rows[0][0])
 
 
-_COST = " + ".join(
-    f"CASE WHEN json_type(metadata, '$.{k}') IN ('integer', 'real') "
-    f"THEN json_extract(metadata, '$.{k}') ELSE 0 END"
-    for k in ("api_costs", "embed_cost", "novelty_cost", "meta_cost")
-)
-
-
 PROMPT_DB_FILENAME = "prompts.sqlite"
 
 
-def total_cost(results_dir: Path) -> float:
-    """LLM spend of a run (USD), as Shinka totals it: program costs plus
-    prompt-evolution costs (``prompts.sqlite``, metadata.llm.cost)."""
+class RunCost(NamedTuple):
+    """Recorded LLM spend of a run (USD), by the one cost rule
+    (``shinka.database.cost``): evaluated programs without island copies,
+    charge events of paid work that never became a program, and prompt
+    evolution. A part whose ``*_known`` flag is false holds an unpriced or
+    malformed entry, or the run marked a charge it could not record, so its
+    amount is only a lower bound."""
+
+    programs_usd: float
+    programs_known: bool
+    prompts_usd: float
+    prompts_known: bool
+
+    @property
+    def recorded_usd(self) -> float:
+        return self.programs_usd + self.prompts_usd
+
+    @property
+    def known(self) -> bool:
+        return self.programs_known and self.prompts_known
+
+
+def run_cost(results_dir: Path, db_name: str = DB_FILENAME) -> RunCost:
+    """LLM spend of a run. The budget, grants, the workspace, the run
+    statistics and the runner's resume base all use this one rule, so the
+    research layer never shows two costs for a run (the upstream analysis UI,
+    console summaries and W&B keep their own totals)."""
     results_dir = Path(results_dir)
-    cost = 0.0
-    if (results_dir / DB_FILENAME).exists():
-        ((c,),) = _query(
-            results_dir,
-            f"SELECT COALESCE(SUM({_COST}), 0) FROM programs WHERE {_NOT_COPY}",
-        )
-        cost += float(c)
-    prompts = results_dir / PROMPT_DB_FILENAME
-    if prompts.exists():
-        with sqlite3.connect(f"file:{prompts}?mode=ro", uri=True) as conn:
-            ((c,),) = conn.execute(
-                "SELECT COALESCE(SUM(CASE WHEN json_type(metadata, '$.llm.cost') "
-                "IN ('integer', 'real') THEN json_extract(metadata, '$.llm.cost') "
-                "ELSE 0 END), 0) FROM system_prompts"
-            ).fetchall()
-        cost += float(c)
-    return cost
+    programs = Spend(0.0, True)
+    if (results_dir / db_name).exists():
+        programs = _read(results_dir, db_name, program_spend)
+    prompts = Spend(0.0, True)
+    if (results_dir / PROMPT_DB_FILENAME).exists():
+        prompts = _read(results_dir, PROMPT_DB_FILENAME, prompt_spend)
+    return RunCost(
+        programs.usd,
+        programs.known and recorded_in_full(results_dir),
+        prompts.usd,
+        prompts.known,
+    )
 
 
 def best_score(results_dir: Path) -> float | None:

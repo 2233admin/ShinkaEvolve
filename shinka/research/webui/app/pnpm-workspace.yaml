@@ -1,0 +1,5 @@
+# pnpm 11 refuses an install that skips unapproved build scripts.
+# esbuild's script checks its platform binary; @parcel/watcher's is not needed.
+allowBuilds:
+  esbuild: true
+  '@parcel/watcher': false

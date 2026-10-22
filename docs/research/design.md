@@ -74,12 +74,16 @@ ShinkaEvolve 能把"一个程序 + 一个评估器"进化到更高分，但它�
 | 模块 | 职责 |
 |---|---|
 | `shinka/research/notebook.py` | 研究笔记本的数据模型与文件存储（方向 → 假设 → 实验 → 结论） |
+| `shinka/research/state.py` | 方向的目录锁与原子替换；运行租约（`.work.json`：命令、监管进程与 `shinka_run` 子进程的 pid 与启动时间） |
+| `shinka/research/runs.py` | 运行的结束只记一次：前台命令、后台监管进程（`run --detach`）或 `watch` 谁先到谁记 |
+| `shinka/research/grants.py` | 所有者给 Agent 的批准（`ledger.json`）：轮次授权与已用尝试、封存段批准与其消耗；Agent 执行环境（`SHINKA_RESEARCH_AGENT`）中 `run` 的授权、尝试、参数白名单与费用上限，`confirm` 的封存段批准；账本与 `results.tsv` 对照，手改后授权的运行与开封拒绝 |
+| `shinka/research/rounds.py` | Agent 轮次的只读视图（工作台、`brief` 与 Agent 服务共用）：每份授权的尝试与运行状态、进行中的运行、封存段批准、待决事项与轮次状态；方向预算的已花与进行中授权运行的余量（`run` 用同一规则）；`news()`：运行日志里某个读者没读过的消息（所有者的授权与批准、运行结束），终端 `watch --since` 与之后的网页 Agent 共用 |
 | `shinka/research/scaffold.py` | 由假设生成 Shinka 任务目录；评估器是单个自包含的 `evaluate.py`（配置内嵌，因为 Shinka 会把它复制到结果目录再运行）；记录评估器与数据的哈希并校验 |
 | `shinka/research/quant.py` | 量化评估框架：数据加载、样本内/样本外切分、样本内多折、成本模型、绩效指标、前视检测；产出符合 `run_shinka_eval` 约定的 `public`/`private` 指标 |
-| `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本） |
+| `shinka/research/rundb.py` | 只读访问 Shinka 结果库（评估次数，排除岛屿迁移副本）；`run_cost` 用 `shinka/database/cost.py` 的费用规则（非岛副本程序、`attempt_log` 中没有成为程序的已付费工作、提示词进化；读不出或 `cost-unrecorded.json` 时未知），与运行器续跑的起点相同 |
 | `shinka/research/skeptic.py` | DSR、PBO、子区间稳定性、样本内外衰减、基线；lockbox 一次性确认 |
 | `shinka/research/library.py` | 工作区资料库的记账：`raw/` 中哪些资料是新的/已编译（按哈希）、操作日志；编译本身由 agent 完成 |
-| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `library` / `brief` / `status` |
+| `shinka/research/cli.py` | `shinka_research` 命令：`init` / `hypothesis` / `scaffold` / `run` / `probe` / `skeptic` / `verdict` / `confirm` / `grant` / `approve` / `watch` / `library` / `brief` / `status` |
 | `skills/shinka-research/` | 研究循环 program：每一步做什么、何时停下问人、产出格式 |
 
 ## 5. 研究笔记本（数据模型）
@@ -130,7 +134,7 @@ research/<direction-slug>/
 做法（参照 train / validation / lockbox 的成熟实践，以及量化研究里"最终段只开一次、看过再修就降级为开发数据"的规则）：
 
 - **验证段**：逐假设的质疑者和结论只用它，可多轮复用，结论算"开发级证据"（`supported`）。
-- **Lockbox**：`shinka_research confirm --data <源文件>` 在方向收尾时整个方向只开一次（需要 `--yes`，由人决定），一次性确认全部 `supported` 的假设：用的是结论里记录的那个实验、从结果库重新取出的那个程序，并校验评估器、开发数据和源文件哈希。笔记本里不存源文件路径（候选代码能读到笔记本），只存哈希。，结果为 `confirmed` / `unconfirmed`，写入 `CONFIRMATION.md`。确认同样要求：Sharpe > 0 且高于买入持有、DSR（试验数 = 全方向）、子区间稳定；并在 lockbox 内再做一次前视检测。开过之后不能再开，继续研究要用新数据开新方向。
+- **Lockbox**：`shinka_research confirm --data <源文件>` 在方向收尾时整个方向只开一次（需要 `--yes`，由人决定），一次性确认全部 `supported` 的假设：用的是结论里记录的那个实验、从结果库重新取出的那个程序，并校验评估器、开发数据和源文件哈希。笔记本里不存源文件路径（候选代码能读到笔记本），只存哈希。结果为 `confirmed` / `unconfirmed`，写入 `CONFIRMATION.md`。确认同样要求：Sharpe > 0 且高于买入持有、DSR（试验数 = 全方向）、子区间稳定；并在 lockbox 内再做一次前视检测。开过之后不能再开，继续研究要用新数据开新方向。不碰 lockbox 的检查全部通过、且方向里没有仍在增加试验的 `run`（按原则 4，试验数在开封时冻结；`probe` 一开始就计为一次试验）之后才开封：在锁内冻结每个假设的程序、评估器与开发数据的哈希、试验数、阈值和源文件哈希，并把 lockbox 记为已开，然后才运行候选程序；程序自身在 lockbox 上的失败（超时、出错退出、仓位无效、前视）只记类别并判 `unconfirmed`，不记它的输出（输出里可能带 lockbox 数字）；全部结果最后一起写入笔记本，后打分的程序读不到先打分的结果。中途中断时再执行同一条 `confirm --yes`：已开始打分的假设记为 `unconfirmed`（中断），不重跑，开封后被改动的程序也不运行，其余按冻结的规则补完；补完之前 `run`、`probe`、`skeptic`、`verdict`、`scaffold` 一律等待，同一时间只能有一个 `confirm`。
 - **PBO**（Bailey, Borwein, López de Prado & Zhu, 2014 的 CSCV）：质疑者取该实验得分最高的至多 64 个不同程序，在开发数据上算逐 K 线收益矩阵，切成 16 块，枚举所有"一半样本内、一半样本外"的组合，统计"样本内第一名在样本外落到中位数及以下"的比例。PBO > 0.5（可调）时不判 `supported`。
 - **前向测试**（工具之外的最终关卡）：`confirmed` 的策略到模拟盘上用研究开始后才产生的新数据跑一段时间。
 - **不采用** Thresholdout / Ladder 这类可复用留存集：查询预算约随留存样本数平方增长，几百到几千根 K 线太少，且其独立样本假设不适用于有自相关的行情数据。
@@ -168,9 +172,9 @@ research/<direction-slug>/
 - 主流工具都不显式展示试验数、DSR、PBO，也没有"一次性不可逆"的留存集状态。这是本前端要补的。
 
 决定：
-- 入口 `shinka_research ui <方向目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/snapshot`（一份方向快照）和打包好的前端，不改上游。每个实验的进化细节跳转到上游 viz_tree（默认隐藏 private 指标）。
+- 入口 `shinka_research ui <工作区目录>`：`shinka/research/ui.py` 用标准库 HTTP 服务给出 `/api/workspace`（方向摘要与共享资料库）、`/api/snapshot?direction=<目录名>`（单方向快照）和构建好的前端，不改上游。方向以原生链接进入并返回工作区；每个实验的进化细节仍跳转到限定该方向的上游 viz_tree（隐藏 private 指标）。完整目录、身份与错误契约见 [workspace.md](workspace.md)。
 - 前端在 `shinka/research/webui/app/`（Vite + React 19 + TypeScript），构建到 `webui/dist/`（不入库，`pnpm build` 生成）。照 Optuna Dashboard：Python 端只读文件、出 JSON，界面是单独打包的前端。
-- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。
+- 视觉方向 ops-spec（运维规格台，默认暗色、可切浅色），组件用现成库、不手搓：Astro UXDS 管「信号」（顶栏、状态符号、时间线、事件流），Carbon 管「内容」（表格、页签、术语提示、提示条、图表、代码）。两个库套同一份 token。选型过程与对比图见 `shinka/research/webui/design/changes/research-ui/component-selection/`。与 KatanaConsole 分开，不共用代码和组件。2026-10-19 起由 award-redesign 重做为暗场仪器方向；2026-10-22 所有者选定组件路线 A，Carbon 换成只管交互与无障碍的 react-aria-components，外观全部来自项目 token（`shinka/research/webui/openspec/changes/award-redesign/owner-decisions.md` › 组件路线）。
 - 只读。选中/放弃假设、出结论、confirm 仍走 CLI；confirm 永远不进 UI（不可逆操作不做成一次点击）。
 - 页面：工作区（方向列表）、方向（头部状态条、假设表、前沿图、流水、报告）、资料库（index、wiki、`[[链接]]`、待编译、log）。
 - 前沿图：方向内所有试验的样本内分数按时间排开，叠加"N 个纯噪声试验的期望最大值"门槛线（与质疑者同一近似：方差取试验样本内分数）。试得越多线越高，直观表达多重检验代价。

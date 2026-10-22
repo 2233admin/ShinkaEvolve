@@ -1,0 +1,405 @@
+{
+  "capabilityInventory": {
+    "capabilityResults": {
+      "command-palette": {
+        "count": 29,
+        "matchedIds": [
+          "astryx:component:CommandPalette",
+          "astryx:component:CommandPaletteEmpty",
+          "astryx:component:CommandPaletteFooter",
+          "astryx:component:CommandPaletteGroup",
+          "astryx:component:CommandPaletteInput",
+          "astryx:component:CommandPaletteItem",
+          "astryx:component:CommandPaletteList",
+          "astryx:hook:useHotkeys",
+          "astryx:template:ChatComposerInputSlashCommands",
+          "astryx:template:ChatToolCallsInteractiveToolCalls",
+          "astryx:template:CodeBlockTerminal",
+          "astryx:template:CommandPaletteAutoGrouped",
+          "astryx:template:CommandPaletteCustomFooter",
+          "astryx:template:CommandPaletteEmptyBasic",
+          "astryx:template:CommandPaletteEmptyShowcase",
+          "astryx:template:CommandPaletteFooterBasic",
+          "astryx:template:CommandPaletteFooterShowcase",
+          "astryx:template:CommandPaletteGroupBasic",
+          "astryx:template:CommandPaletteGroupShowcase",
+          "astryx:template:CommandPaletteInputShowcase",
+          "astryx:template:CommandPaletteItemBasic",
+          "astryx:template:CommandPaletteItemShowcase",
+          "astryx:template:CommandPaletteListShowcase",
+          "astryx:template:CommandPaletteShowcase",
+          "astryx:template:shell-nav",
+          "astryx:template:IconNonSemanticColors",
+          "astryx:component:Kbd",
+          "astryx:template:CommandPaletteInputBasic",
+          "astryx:template:KbdModifierCombos"
+        ],
+        "terms": [
+          "command",
+          "palette",
+          "command palette",
+          "shortcut",
+          "quick action"
+        ]
+      },
+      "data-table": {
+        "count": 113,
+        "matchedIds": [
+          "astryx:template:MarkdownDataTable",
+          "astryx:template:PaginationWithTable",
+          "astryx:template:TablePaginatedTable",
+          "astryx:template:ToolbarTableFilter",
+          "astryx:template:table",
+          "astryx:template:table-grouped",
+          "astryx:template:table-page",
+          "astryx:template:table-page-chart",
+          "astryx:template:table-page-shoe-store-heatmap",
+          "astryx:component:Item",
+          "astryx:component:List",
+          "astryx:component:MetadataList",
+          "astryx:component:Outline",
+          "astryx:component:OverflowList",
+          "astryx:component:Table",
+          "astryx:component:TableCell",
+          "astryx:component:TableHeaderCell",
+          "astryx:component:TableRow",
+          "astryx:component:TreeList",
+          "astryx:hook:useTableColumnResize",
+          "astryx:hook:useTableColumnSettings",
+          "astryx:hook:useTableFilterState",
+          "astryx:hook:useTableFiltering",
+          "astryx:hook:useTableGroupedRows",
+          "astryx:hook:useTablePagination",
+          "astryx:hook:useTableSortable",
+          "astryx:hook:useTableStickyColumns",
+          "astryx:hook:useTableTreeData",
+          "astryx:hook:useTableTreeState",
+          "astryx:template:BadgeStatusLabels",
+          "astryx:template:ColumnResizeHookUsage",
+          "astryx:template:PaginationPageSize",
+          "astryx:template:PowerSearchSearchWithTable",
+          "astryx:template:SkeletonTableRowSkeleton",
+          "astryx:template:StickyColumnsHookUsage",
+          "astryx:template:TableColumnSettingsTable",
+          "astryx:template:TableFilterableTable",
+          "astryx:template:TableGridDividersTable",
+          "astryx:template:TableGroupedRowsTable",
+          "astryx:template:TableInCard",
+          "astryx:template:TableInlineFilterTable",
+          "astryx:template:TableResizableTable",
+          "astryx:template:TableRichCellTable",
+          "astryx:template:TableRowExpansionTable",
+          "astryx:template:TableRowIndexTable",
+          "astryx:template:TableRowStatusTable",
+          "astryx:template:TableSelectableTable",
+          "astryx:template:TableShowcase",
+          "astryx:template:TableSortableTable",
+          "astryx:template:TableStripedTable"
+        ],
+        "terms": [
+          "data table",
+          "table",
+          "datagrid",
+          "grid",
+          "row",
+          "column",
+          "数据表",
+          "表格",
+          "数据网格",
+          "行",
+          "列"
+        ]
+      },
+      "dialog": {
+        "count": 54,
+        "matchedIds": [
+          "astryx:component:AlertDialog",
+          "astryx:component:CommandPalette",
+          "astryx:component:Dialog",
+          "astryx:component:DialogHeader",
+          "astryx:hook:useFocusTrap",
+          "astryx:hook:useImperativeAlertDialog",
+          "astryx:hook:useImperativeDialog",
+          "astryx:hook:usePopover",
+          "astryx:hook:useScrollLock",
+          "astryx:template:AlertDialogAsyncAction",
+          "astryx:template:DialogConfirmationDialog",
+          "astryx:template:DialogFormDialog",
+          "astryx:template:DialogFullscreenDialog",
+          "astryx:template:DialogHeaderBasic",
+          "astryx:template:DialogScrollingContent",
+          "astryx:template:DialogShowcase",
+          "astryx:template:DialogWithSubtitle",
+          "astryx:template:settings-dialog",
+          "astryx:template:AlertDialogDeleteConfirmation",
+          "astryx:component:DropdownMenu",
+          "astryx:component:HoverCard",
+          "astryx:component:Popover",
+          "astryx:hook:useHoverCard",
+          "astryx:hook:useLayer",
+          "astryx:component:ContextMenu",
+          "astryx:component:SideNavHeading",
+          "astryx:component:TopNavHeading",
+          "astryx:component:TopNavMegaMenuItem",
+          "astryx:component:TopNavMenu",
+          "astryx:hook:useTableFiltering",
+          "astryx:template:DateInputShowcase",
+          "astryx:template:DateRangeInputShowcase",
+          "astryx:template:DateTimeInputShowcase",
+          "astryx:template:NavHeadingMenuShowcase",
+          "astryx:template:PopoverConfirmAction",
+          "astryx:template:PopoverFilterPanel",
+          "astryx:template:PopoverHookUsage",
+          "astryx:template:PopoverKeyboardShortcuts",
+          "astryx:template:PopoverSettingsPanel",
+          "astryx:template:PopoverShowcase",
+          "astryx:template:TableFilterableTable",
+          "astryx:component:FieldLabel",
+          "astryx:component:MediaTheme",
+          "astryx:component:Tooltip",
+          "astryx:hook:useTableRowStatus",
+          "astryx:hook:useTooltip",
+          "astryx:template:AvatarTooltip",
+          "astryx:template:FieldLabelShowcase",
+          "astryx:template:TextInputTypes",
+          "astryx:template:TimestampTooltipTimezones"
+        ],
+        "terms": [
+          "dialog",
+          "modal",
+          "alertdialog",
+          "popup",
+          "popover",
+          "tooltip",
+          "弹窗",
+          "对话框",
+          "模态框"
+        ]
+      },
+      "tabs": {
+        "count": 21,
+        "matchedIds": [
+          "astryx:component:Tab",
+          "astryx:component:TabList",
+          "astryx:component:TabMenu",
+          "astryx:hook:useFocusTrap",
+          "astryx:template:LinkExternalLinks",
+          "astryx:template:TabListTabsWithMenu",
+          "astryx:template:TabMenuShowcase",
+          "astryx:template:TabShowcase",
+          "astryx:template:TabWithSelectedIcon",
+          "astryx:template:ToolbarWithTabs",
+          "astryx:template:useContainerRevealHookUsage",
+          "astryx:component:SegmentedControl",
+          "astryx:hook:useKeyboardHint",
+          "astryx:template:TabListTabsFillLayout",
+          "astryx:template:TabListTabsWithActions",
+          "astryx:template:TabListTabsWithBadge",
+          "astryx:template:TabListTabsWithIcons",
+          "astryx:template:TabListTabsWithStatusDot",
+          "astryx:template:TabMenuBasic",
+          "astryx:template:classic-gallery",
+          "astryx:template:library"
+        ],
+        "terms": [
+          "tab",
+          "tabs",
+          "tab bar"
+        ]
+      },
+      "typography": {
+        "count": 98,
+        "matchedIds": [
+          "astryx:component:AvatarGroupOverflow",
+          "astryx:component:BreadcrumbItem",
+          "astryx:component:ChatComposerInput",
+          "astryx:component:ChatDictationButton",
+          "astryx:component:ChatTokenizedText",
+          "astryx:component:InputGroupText",
+          "astryx:component:Markdown",
+          "astryx:component:TabMenu",
+          "astryx:component:TableHeaderCell",
+          "astryx:component:Text",
+          "astryx:component:TextArea",
+          "astryx:component:TextInput",
+          "astryx:component:TopNavHeading",
+          "astryx:doc:color",
+          "astryx:doc:typography",
+          "astryx:hook:useInputContainer",
+          "astryx:hook:useStreamingText",
+          "astryx:hook:useTableFiltering",
+          "astryx:template:AvatarGroupOverflowCustomText",
+          "astryx:template:AvatarGroupOverflowShowcase",
+          "astryx:template:AvatarTooltip",
+          "astryx:template:BreadcrumbItemBasic",
+          "astryx:template:CardShowcase",
+          "astryx:template:CardWithSimpleContent",
+          "astryx:template:ChatComposerFlat",
+          "astryx:template:CitationInlineText",
+          "astryx:template:CodeAcrossTextSizes",
+          "astryx:template:CodeInlineInParagraph",
+          "astryx:template:CodeShowcase",
+          "astryx:template:DateInputFormats",
+          "astryx:template:DateInputWithDescription",
+          "astryx:template:DialogFullscreenDialog",
+          "astryx:template:DropdownMenuNoChevron",
+          "astryx:template:FieldShowcase",
+          "astryx:template:FieldWithDescription",
+          "astryx:template:FileInputBasic",
+          "astryx:template:FormLayoutMixedControls",
+          "astryx:template:FormLayoutShowcase",
+          "astryx:template:HeadingPageLayout",
+          "astryx:template:HoverCardInlineTextHoverCard",
+          "astryx:template:InternationalizationProvider03RtlDirection",
+          "astryx:template:ItemBasicItem",
+          "astryx:template:KbdInlineInstructions",
+          "astryx:template:LinkInlineLink",
+          "astryx:template:ListMessageList",
+          "astryx:template:MediaThemeImageOverlay",
+          "astryx:template:MediaThemeLightScrim",
+          "astryx:template:MediaThemeShowcase",
+          "astryx:template:MetadataListItemBasic",
+          "astryx:template:MetadataListItemShowcase"
+        ],
+        "terms": [
+          "text",
+          "heading",
+          "paragraph",
+          "typography",
+          "font"
+        ]
+      }
+    },
+    "directQuery": "read-only research workbench: dense sortable data table, tabs, tooltips, dialog and command palette, tree, code and diff viewer, charts with linked selection, dark and light themes, CJK typography",
+    "directQueryResults": 0,
+    "searchedCapabilities": [
+      "command-palette",
+      "data-table",
+      "dialog",
+      "tabs",
+      "typography"
+    ],
+    "zeroResultInconclusive": true
+  },
+  "evidence": [
+    "frontend-stack:78567f3452701e27dbed2c87a67305af3187dae3c478078a316c8a8ef86deb99",
+    "zero-result-inconclusive",
+    "capability-inventory:5:315",
+    "mode:custom"
+  ],
+  "frontendStackDecision": {
+    "blockers": [],
+    "capabilities": [
+      "2D scatter and density contours over embeddings",
+      "client-side ZIP export",
+      "code-split 3D scatter for embedding clusters, projected on Canvas 2D with pointer and keyboard rotation, and the same points available through the 2D view and an accessible table",
+      "dark and light themes with CJK-first typography",
+      "design-workflow",
+      "friction-logging",
+      "hierarchical lineage tree layout",
+      "keyboard-accessible tables, tabs, dialogs, tooltips and menus (behaviour from Carbon React)",
+      "sanitised markdown rendering of untrusted LLM output",
+      "syntax-highlighted code and unified diff viewer",
+      "token-bound SVG charts with linked selection across views"
+    ],
+    "evidence": [
+      "registry:2026-08-14",
+      "mengto:83a47fee32f0b6349bff1fede99257a5ef03dc93",
+      "tool:design-pipeline/core@bundled",
+      "tool:design-pipeline/feedback-loop@bundled",
+      "tool:MengTo/skills@83a47fee32f0b6349bff1fede99257a5ef03dc93",
+      "tool:wevm/frog@702c4eadefe175a208290a99c36e7f4ac1390e53"
+    ],
+    "framework": "react",
+    "primaryRoute": {
+      "capabilities": [
+        "design-workflow"
+      ],
+      "id": "design-pipeline/core",
+      "mode": "project-owned",
+      "source": "bundled",
+      "status": "ready"
+    },
+    "recommendedSkills": [],
+    "registryHash": "78567f3452701e27dbed2c87a67305af3187dae3c478078a316c8a8ef86deb99",
+    "reviews": [
+      "wevm/frog is review"
+    ],
+    "schema": "design-pipeline.frontend-stack-decision.v1",
+    "selected": {
+      "styling": {
+        "id": "none",
+        "label": "None"
+      },
+      "uiLibrary": {
+        "id": "none",
+        "label": "None",
+        "license": "project",
+        "source": "project-owned"
+      }
+    },
+    "status": "ready",
+    "toolRoutes": [
+      {
+        "capabilities": [
+          "design-workflow"
+        ],
+        "id": "design-pipeline/core",
+        "mode": "project-owned",
+        "source": "bundled",
+        "status": "ready"
+      },
+      {
+        "capabilities": [
+          "friction-logging"
+        ],
+        "id": "design-pipeline/feedback-loop",
+        "mode": "project-owned",
+        "source": "bundled",
+        "status": "ready"
+      },
+      {
+        "capabilities": [
+          "design-workflow"
+        ],
+        "id": "MengTo/skills",
+        "license": "MIT",
+        "mode": "bundled-index",
+        "revision": "83a47fee32f0b6349bff1fede99257a5ef03dc93",
+        "source": "https://github.com/MengTo/skills",
+        "status": "ready"
+      },
+      {
+        "capabilities": [
+          "friction-logging"
+        ],
+        "fallback": "design-pipeline/feedback-loop",
+        "id": "wevm/frog",
+        "license": "MIT",
+        "mode": "governed-candidate",
+        "requirements": [
+          "Node.js 22+",
+          "explicit GitHub repository and workflow permission"
+        ],
+        "revision": "702c4eadefe175a208290a99c36e7f4ac1390e53",
+        "source": "https://github.com/wevm/frog",
+        "status": "review"
+      }
+    ]
+  },
+  "mode": "custom",
+  "projectAuthority": {
+    "id": "shinka-research-instrument",
+    "source": "project"
+  },
+  "rationale": [
+    "Custom mode keeps the design system project-owned."
+  ],
+  "rejected": [],
+  "schema": "design-pipeline.design-system-decision.v1",
+  "selected": {
+    "id": "shinka-research-instrument",
+    "source": "project"
+  },
+  "status": "ready"
+}

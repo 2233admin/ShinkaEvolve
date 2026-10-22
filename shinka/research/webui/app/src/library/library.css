@@ -1,0 +1,37 @@
+/* Shared library (award-redesign 4.3). No high-fidelity frame draws it, so it reuses the report's
+   header, measure and rules; colours come from design/tokens.css. */
+
+.shell .page.library-page { max-width: none; padding: 24px 32px 64px; font: var(--type-body); }
+.library-page .notice { max-width: 1000px; margin-top: 16px; }
+.library-page .notice + .notice { margin-top: 8px; }
+.lib-pending { display: grid; gap: 2px; }
+.lib-none { margin-top: 20px; }
+
+.lib { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; align-items: start; margin-top: 24px; }
+/* The page list stays in view beside a long page, under the sticky top bar. */
+.lib-nav { position: sticky; top: 68px; display: grid; gap: 2px; max-height: calc(100dvh - 84px); overflow-y: auto; }
+.lib-nav ul { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; }
+.lib-nav a {
+  display: block; padding: 5px 10px; border-radius: var(--radius-control); color: var(--muted);
+  font-size: 13px; line-height: 20px; text-decoration: none; overflow-wrap: anywhere;
+}
+.lib-nav a:hover { background: var(--hover); color: var(--text); }
+.lib-nav a[aria-current='page'] { background: var(--selected); color: var(--text); font-weight: 500; }
+.lib-nav a:focus-visible { outline: var(--focus-ring); outline-offset: -2px; }
+.lib-group { margin: 14px 10px 4px; font: 400 12px/18px var(--font-sans); color: var(--faint); }
+.lib-nopages { padding: 0 10px; }
+.lib-article { min-width: 0; max-width: 760px; padding-top: 2px; }
+
+/* ---- Phone: the page list is one row that scrolls on its own, above the page ---- */
+@media (max-width: 767px) {
+  .shell .page.library-page { padding: 16px 16px 96px; }
+  .lib { grid-template-columns: minmax(0, 1fr); gap: 16px; margin-top: 16px; }
+  .lib-nav {
+    position: static; display: flex; gap: 4px; max-height: none; margin: 0 -16px; padding: 0 16px 8px;
+    overflow-x: auto; overflow-y: hidden; border-bottom: 1px solid var(--line); scrollbar-width: thin;
+  }
+  .lib-nav ul { display: flex; gap: 4px; }
+  .lib-nav a { white-space: nowrap; overflow-wrap: normal; border: 1px solid var(--line-strong); }
+  .lib-group { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+  .lib-nopages { white-space: nowrap; }
+}

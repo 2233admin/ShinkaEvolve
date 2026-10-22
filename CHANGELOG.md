@@ -6,6 +6,109 @@ All notable changes to `shinka-evolve` are documented in this file.
 
 ### Added
 
+- Added a unified read-only Research workspace with independent ordinary runs,
+  comparison links and the fork's redesigned full experiment analysis workbench.
+  Research links retain direction/hypothesis context, while analysis URLs retain
+  tabs, selected programs and comparison selections across refresh and history.
+  The restored renderer uses local pinned dependencies, shared dark/light tokens,
+  keyboard navigation and protected same-origin data access.
+- Added Chinese and English to the Research workbench: one copy table for every
+  React screen, a 中/EN switch remembered across reloads and kept in step with
+  the restored analysis pages, and withheld skeptic/verdict notes and unreadable
+  directions worded by the page (`/api/snapshot` events now carry `withheld`
+  with a `null` note; `/api/workspace` returns the error kind, not a sentence).
+- Added per-direction evidence to `/api/workspace` (hypothesis status counts,
+  best in-sample score, noise bar, evaluated and failed programs, last
+  activity), computed exactly as the direction page computes it, and the
+  program id on every `/api/snapshot` trial point.
+- Added the Research workbench's native shell: a rail with section counts and
+  every direction's state (shape and word), a top bar with breadcrumb, an
+  “Updated” time that refreshes on click and flags a lost connection, theme and
+  language switches, a Ctrl K palette for pages, directions, runs, library pages
+  and actions, and on phones a bottom tab bar with a settings sheet. The data
+  refreshes every 30 seconds while the page is visible without losing the
+  selection. Demo workspaces show the DEMO label once instead of in every title.
+- Added the Research workbench's native directions overview: a data sentence
+  whose counts jump to the first matching row, totals of trials, evaluated and
+  failed programs, spend and budget, and a sortable table in which every row
+  shares one evidence scale (best record against its noise line), with a
+  totals row and an activity column fed by the new `/api/workspace` `events`
+  field (the newest 30 events across directions, withheld notes kept hidden).
+  Unreadable directions stay as error rows outside the totals; phones get one
+  card per direction. The overview never requests `/api/snapshot`.
+- Added the Research workbench's native direction report, read in the order the
+  argument runs: a sortable hypothesis table, the selected hypothesis's claim,
+  mechanism and falsification with its full notebook text, every trial against
+  the noise line the chart draws itself (integer trial numbers, failures in
+  their own band), the check ledger, and beside it the verdict, the lockbox
+  confirmation and each experiment. A trial point, by click or by keyboard,
+  opens that program's code in its experiment's analysis; an experiment opens
+  the program its verdict rests on. Back returns to the same hypothesis with the
+  scroll position, sort, open text and event filter as left. The timeline and
+  the filterable event stream are native too, so the workbench no longer loads
+  Astro UXDS web components.
+- Added the Research workbench's native shared library: the index, the log and
+  every wiki page are links that can be shared and reopened, sources waiting to
+  be compiled are named with the command that marks them done, and a missing
+  page says so instead of silently showing the index. `[[page]]` links open the
+  library page from any Markdown in the workbench, including hypothesis text;
+  Markdown links use the text colour instead of the signal orange.
+- Added the Research workbench's native run list: runs grouped by evaluator
+  (research experiments under their direction, ordinary runs under their task)
+  with every legacy column plus failures, runtime and update time, search (`/`
+  focuses it), a kind filter, sorting and a selection that survives filtering,
+  all kept in the URL. Totals always cover every run, with a subtotal while
+  filtered and a lower bound while a cost is unknown or unread, or while a row
+  keeps its earlier numbers because its latest read failed; stall and cost
+  thresholds are shown by type weight instead of a second colour. The run list
+  refreshes every 10 seconds, and the top bar can pause automatic refresh for
+  the visit.
+- Added the Research workbench's native compare page: cumulative best, program
+  count or valid count against generation and against cumulative spend for any
+  two or more runs, point for point as the old compare page drew them, with
+  each run told apart by shape and line and its value readable by pointer or
+  arrow keys; a leaderboard of the best valid programs, each opening its code;
+  and run-level metrics with the better value in bold. Runs from different
+  tasks keep their score curves, leaderboards and best apart by task, since
+  scores from different evaluators do not compare. The metric and the selection
+  live in the URL, and the page follows automatic refresh and its pause.
+- Added background research runs: `shinka_research run --detach` returns at
+  once and keeps the run going after its window closes (no console, a session
+  or process group of its own, output in the experiment's `run.log`), and
+  `shinka_research watch <direction-or-workspace>` records the end of a run
+  whose processes vanished without doing so. A run's end is recorded exactly
+  once, by whichever of the waiting command, the background supervisor or
+  `watch` gets there first; one experiment runs once at a time, overlapping
+  runs of a hypothesis share the status they restore, and only when none of
+  them added a program. A run killed while creating its database is recorded
+  too, as adding nothing.
+- Added round grants for the research agent: `shinka_research grant <dir>
+  <hid>... --attempts N --max-cost USD [--allow NS.FIELD]` records the owner's
+  approval of one round, and where `SHINKA_RESEARCH_AGENT` is set every `run`
+  needs `--grant`, takes one of its attempts, always runs in the background,
+  passes `shinka_run` only the `--set` keys the grant allows and is capped at
+  the smaller of the grant's cap and the direction budget left after the caps
+  of grant runs in progress (counted on top of what a resumed experiment
+  already spent; a soft cap: shinka_run stops proposing once committed cost
+  reaches it, and work in flight still finishes). A used-up grant pauses the
+  round, logged once. Grants and attempts
+  live in `ledger.json`, checked against `results.tsv`, so a ledger changed by
+  hand stops grant runs; manual runs are unchanged and their end events say
+  "manual run", and `probe` now logs each probe when it starts. Opening the
+  lockbox there takes `confirm --approval <id>` from the owner's
+  `shinka_research approve`: the opening spends it in the same lock, `--yes`
+  alone is refused, and an interrupted opening is finished only with the
+  approval that opened it; a manual `confirm --yes` is unchanged.
+- Added a read-only view of the agent's rounds to the Research workspace API
+  and to `shinka_research brief`: each grant's attempts and the state of their
+  runs (running, ended, ended without a record, or lost), the runs in
+  progress, lockbox approvals, and what waits on the owner (a round over, an
+  unrecorded end, a lost attempt, a grant the agent cannot use and why, an
+  unfinished opening, a ledger that does not match the run log), each with
+  what to do, plus the round's state. It names no process, command or path
+  and none of the validation figures a run keeps for its end. The owner's next
+  grant after a round's attempts ran out answers the round, whatever hypotheses
+  it names.
 - Added native Google Gemini 3.7 Flash support at its introductory 2026 price.
 - Added native Google Gemini 3.6 Flash support with current pricing and
   level-based thinking controls. Thanks @anantgar.
@@ -23,6 +126,22 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Added DeepSeek V4 Flash and V4 Pro pricing entries to the DeepSeek LLM pricing catalog.
 - Added controls to reduce evaluation stdout bloat: `JobConfig.eval_verbose` suppresses framework evaluation progress output, and `DatabaseConfig.max_stdout_log_chars` can persist only the tail of `stdout_log` metadata while keeping full logs on disk. Thanks @marcopirazzini.
 - Added SLURM support for `numeric_threads_per_job`, applying numeric-library thread caps consistently across local and SLURM evaluation jobs. Thanks @marcopirazzini.
+- Added `shinka_research watch <dir> --since NAME` and `brief <dir> --since NAME`
+  so a scheduled shell job can wake a research agent only on news: the owner's
+  grants and lockbox approvals and the end of any run, which `watch` alone
+  never reported for a run that recorded its own end. `watch --since` exits 3
+  while there is news NAME has not read and never marks it read; `brief
+  --since` lists it and marks it read once printed (`<dir>/.watch/NAME.json`),
+  so a wake that never reached the agent is reported again. The research skill
+  documents the terminal job (`wakeOn=failure`, `missedWindow=catch_up_one`).
+- Added a "Lesson for the skill" section to the research report template: at
+  most one lesson per round about how to work rather than about the market
+  (when it applies, the lesson, the `results.tsv` events that show it, and a
+  confidence), or "None". It is a candidate for the owner to review, not an
+  adopted rule: the research skill instructs the agent not to act on a lesson
+  from an earlier report (guidance only, not enforced in code), and the owner
+  decides whether the skill changes. Adapted from google-research/harness2's
+  lesson entries, without its automatic adoption.
 
 ### Changed
 
@@ -34,8 +153,183 @@ All notable changes to `shinka-evolve` are documented in this file.
 - Relaxed the exact HTTPX dependency pin to a `>=0.27` compatibility lower
   bound in issue #180. Thanks @htmai-880.
 - Removed the automatic Claude Code Review pull-request workflow.
+- Moved the Research workbench to one token stylesheet
+  (`app/src/design/tokens.css`) for the dark default and light themes; the
+  remembered theme now applies before the first paint.
+- Replaced Carbon in the Research workbench with react-aria-components 1.22.1:
+  glossary terms and table definitions open a react-aria tooltip (also on a
+  tap), and notices are a project component with Carbon's low-contrast look.
+  `@carbon/react`, `@carbon/styles` and the unused `@carbon/charts-react` are
+  gone, and the workbench stylesheet shrinks from 1.28 MB to 64 kB. Carbon's
+  stylesheet also fetched IBM Plex Mono from IBM's CDN; the semibold figures now
+  use a bundled copy instead.
+- Drew a run's analysis natively in the Research workbench, starting with
+  Lineage: island lanes on a generation axis with patch-type shapes, the failure
+  band, the best program's ancestry (ties all marked) and the selected program's
+  ancestry across islands; zoom, pan and a score-axis range; a generation
+  scrubber with replay; prompt-version and meta-analysis tracks; a legend and an
+  island list that fold away; and a resizable panel with the global
+  conclusions, the prompt evolution tree and each
+  version's programs, island populations and migrations, the best path with each
+  step's diff, and the most fertile parents with mutation size. A resident
+  inspector beside it shows the selected program's code, diff (against its parent
+  or the initial program), evaluation, LLM record and meta-analysis summary, with
+  plain-text downloads. Solution space and contest stay on the restored page,
+  opened in the same shell on the current program from the run bar
+  (`tab=legacy`). Private metrics are never shown, and a `correct` of `'false'`
+  is a failure everywhere. Long program names, file names and direction titles
+  wrap instead of being cut, in the breadcrumb too.
+- Drew a run's Progress natively (`tab=progress`): five panels on one
+  generation axis — the cumulative best with the median, every valid score, the
+  direction's noise line and the bracket by which the record clears it (by
+  island on request); cost split into model calls, meta-analysis and prompt
+  evolution with its running total, or compute time when a run records no spend;
+  one × per failed program; programs per generation; and model posteriors —
+  over the shared scrubber, then each model's programs, success rate, best,
+  mean, cost and latest posterior. Below them four sections open on request:
+  every public metric's running minimum or maximum, the best score against
+  spend (saying why the curve ends where it does), runtime and throughput
+  (score against wall-clock time, compute time per generation, the worker-slot
+  timeline, occupancy, completions per minute, stage durations and
+  utilisation), and the eleven analysis plots of the old page in pairs, where a
+  computation that fails is reported in place of the plots.
+- Kept a run's solution space and contest on the restored analysis page instead
+  of drawing them natively (owner decision, 2026-10-22), and gave them their
+  own view tabs: the top bar now lists Lineage, Progress, Solution space and
+  Contest. The last two open the restored page in the same shell on the current
+  program, on the clusters panel and the ranked program table unless the URL
+  names a panel, and stay the current tab while the reader moves between the
+  restored page's panels. The run bar's “Original workbench” link opens the
+  restored page without a view. Where the run page's top bar cannot hold the
+  four tabs (1024 px, and 1280 px in English), its tools move to a second row
+  instead of the run name wrapping.
+- Let Ctrl K jump to any program of the open run by ID or name: the palette
+  lists the run's programs best first with their generation and score (or
+  “Failed”), and choosing one selects it in the current view, the restored
+  page included, clearing a generation limit that would hide it.
+- Removed the old run list and compare pages (`/analysis/index.html`,
+  `/compare.html`), which the native All runs and Compare pages replaced; both
+  addresses now answer 404 and are not redirected. The restored analysis page
+  (`/viz_tree.html`) stays for Solution space and Contest. The unused Astro UXDS
+  package (`@astrouxds/astro-web-components`) is no longer a dependency.
+- Rewrote the Research workbench design package for the dark-field instrument
+  design: `DESIGN.md`, `MOTION.md` and `design-system/README.md` describe the
+  shipped interface, and `design-system/preview.html` (`pnpm design`) renders
+  the app's own components (tokens of both themes, view tabs, notices, the
+  direction report, Lineage and Progress) on demo data. The old Astro/Carbon
+  `tokens.json`, `bundle.css` and component previews are gone; the rules the app
+  still used moved into `app/src/design/base.css`.
+- Changed the Research workbench URLs to one page per `view`
+  (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
+  analysis pages' state now appears as `select`, `runs`, `run` and `program`, and
+  `/api/snapshot` experiment links open `/?view=run&run=…`. The old
+  `analysis=`/`compare=` and view-less `?direction=` links are not redirected.
+- Changed `shinka_research confirm` to open the lockbox only after every check
+  that leaves it untouched has passed, and then to freeze, under the direction's
+  lock, each supported hypothesis's program, evaluator and data hashes, trial
+  count and the thresholds before any candidate runs on it. A candidate that
+  times out, exits with an error, returns invalid positions, looks ahead or was
+  changed after opening is now recorded as `unconfirmed` with that category
+  alone (its output may carry lockbox figures) instead of aborting the whole
+  confirm; results reach the notebook together. Running `confirm --yes` again
+  after an interruption finishes the frozen hypotheses under the frozen rules
+  and records any whose candidate had already started as interrupted rather
+  than running it twice, or rewrites missing `CONFIRMATION.md` and log lines.
+  Until it finishes, experiment commands refuse and a second `confirm` is
+  refused at once; it does not open while a run is still adding trials, since
+  every trial counts toward the DSR. A probe now counts as a trial when it
+  starts, so one that fails or is killed is counted too.
+- Changed the Research workbench's default language to English (owner,
+  2026-10-22), including the restored analysis page; a browser that chose
+  Chinese keeps it.
 
 ### Fixed
+
+- Fixed the Research workbench issues found in the 7.3 acceptance:
+  - the restored page's PCA plot was blank in the dark theme, because opaque
+    Plotly layers covered the data;
+  - an unknown direction made the whole shell report a lost connection; it now
+    shows a notice;
+  - the narrow rail's brand link and search button had no accessible names;
+  - lineage marks and timeline tracks were named differently from their
+    visible text;
+  - the compare page repeated `<$0.01` spend ticks; it now also says why a run
+    with unpriced calls has a shorter spend curve;
+  - English pending counts read "1 sources".
+- Fixed the Research workspace UI answering requests addressed to any host
+  name: a page on another site that points its own name at 127.0.0.1 (DNS
+  rebinding) could read notebooks and code. It now answers only a `Host` of
+  `127.0.0.1:<port>` or `localhost:<port>`, refusing any other with 421, and
+  only GET (HEAD gets 405).
+- Fixed restored analysis frontiers admitting failed zero-valued scores, stale
+  program details after rapid selection, lost selected-program links, and absent
+  cost/diversity measurements being presented as measured zero values.
+- Fixed Research run statistics and the restored analysis pages reporting
+  every real run's cost as unknown: `meta_cost` is written only on programs a
+  meta update charged, and both demanded all four cost fields on every program.
+  The research budget, workspace, direction snapshot, run statistics, analysis
+  cost tab and compare page now share one rule (`rundb.run_cost`): non-copy
+  programs, absent fields as zero, unpriced headless calls and malformed values
+  as unknown, prompt evolution in every total. Island copies no longer double
+  count cost, read-only connections close after failed reads, and a budgeted
+  direction with unknown spend refuses new runs.
+- Fixed run cost totals that missed real spend or counted some twice, as
+  measured against a stub model's own charge ledger: a resumed run counted
+  island copies again and ignored failed proposals; paid steps of a failed
+  meta update or final summary were recorded nowhere; surplus proposals
+  discarded at the target, paid empty replies and prompt evolutions that
+  produced no prompt were dropped; and a results directory holding only
+  generation 0 plus failures resumed from zero. One rule
+  (`shinka.database.cost`) now totals a run for the runner's resume base and
+  `rundb.run_cost`: non-copy programs, one `attempt_log` charge event for each
+  paid proposal or prompt evolution that never became a row, and prompt
+  evolution. Proposals still in flight at the target finish and are charged
+  instead of being cancelled (up to `surplus_proposal_wait_s`, 600 s by
+  default; one still running then is cancelled and leaves the marker), a
+  deliberate change from upstream, whose two recovery tests in
+  `tests/test_async_runner_recovery.py` now expect it. A charge the database
+  refuses, or whose amount
+  cannot be known, leaves `cost-unrecorded.json`, and the run's total reads
+  unknown until the missing charge is recorded durably (deleting the file is
+  not that); with `evo.max_api_costs` set a resume then refuses, as does a
+  research grant run in any direction, and a run that cannot even leave the
+  marker stops with `ChargeNotRecordedError`. The analysis cost tab takes its
+  total from the server and lists the rest as other charges, and the compare
+  spend curve ends at the run total. A results directory holding only
+  generation 0 now resumes instead of running its seed again.
+- Fixed `shinka_research run` accepting a `headless/*` model configured in the
+  experiment's `task/shinka.yaml`: only `--set` arguments were checked, so a
+  headless CLI agent, which works inside the results directory beside the
+  out-of-sample metrics, could still mutate a research run. The four model
+  lists (`llm_models`, `meta_llm_models`, `novelty_llm_models`,
+  `prompt_llm_models`, under `evo` or `evo_config`) are now read as
+  `shinka_run` reads them and refused before any grant attempt is taken;
+  hypothesis text that merely mentions a headless model still runs.
+- Fixed run list totals that dropped what an unknown-cost run had recorded:
+  `/get_database_stats` sent `null` for the unknown part and nothing else, so
+  the workbench's `≥` total counted such a run's priced charges as zero and
+  the restored `/analysis/index.html` showed `—` for the whole total. Run
+  statistics now carry `recorded_cost` (everything the run recorded: its cost
+  when known, otherwise a lower bound); both run lists sum it and mark the
+  total `≥` when a run's cost is unknown or its statistics could not be read.
+- Fixed the restored run list painting the prompt-evolution count in white on
+  a near-white chip.
+- Fixed the Research workbench's trial counts while a run is in progress: the
+  overview, the direction header, the hypothesis table and each experiment card
+  used the notebook's figure, which `run` writes only when it returns, so a
+  running experiment showed fewer trials than evaluated programs. Workspace and
+  direction snapshots now count evaluated programs in the run databases, as the
+  skeptic counts trials for the DSR, and build every count, best score and trial
+  point of one response from a single read of each run. `shinka_research brief`
+  and `status`, which the research agent reads each round, count the same way.
+- Fixed concurrent `shinka_research` commands discarding each other's notebook
+  changes: a probe, skeptic or run that finished after another command saved
+  wrote back its stale copy of the whole notebook, and two first events could
+  truncate `results.tsv`. Writers now take a per-direction lock
+  (`.research.lock`), re-read the notebook, evaluate outside the lock and
+  replace `notebook.json` atomically, so readers never see half a file; a
+  failed run restores the hypothesis's earlier status only if nothing moved it
+  on meanwhile.
 
 - Fixed Anthropic response parsing to dispatch by content-block type, avoiding
   crashes and truncated output for redacted, thinking-only, and multi-block
