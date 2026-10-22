@@ -3,7 +3,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { framePath, HostError, projectedHref } from '../legacyFrame.ts'
-import { ALL_RUNS, analysisView, parseRoute, routeHref, runRoute, viewRoute } from './route.ts'
+import { ALL_RUNS, analysisView, parseRoute, routeHref, runRoute, viewRoute, viewTab } from './route.ts'
 
 // A direction folder name that must not be decoded twice or split.
 const ODD = 'workspace/中文 space + % literal%2F # &/experiments/h001/e01/results/programs.sqlite'
@@ -53,16 +53,49 @@ test('a missing or unknown part opens a page that exists', () => {
   assert.deepEqual(at('/?view=run'), ALL_RUNS)
 })
 
-test('a run opens Lineage and Progress natively and every view not drawn yet on the restored page', () => {
+test('a run opens Lineage and Progress natively, and solution space and contest on the restored page', () => {
   assert.equal(analysisView(runRoute(B)), 'lineage')
   assert.equal(analysisView({ ...runRoute(B), tab: 'lineage' }), 'lineage')
   assert.equal(analysisView({ ...runRoute(B), tab: 'progress' }), 'progress')
   assert.equal(analysisView({ ...runRoute(B), tab: 'nowhere' }), 'lineage')
   assert.equal(analysisView({ ...runRoute(B), tab: 'legacy' }), 'legacy')
-  // Solution space and contest still live on the restored page (tasks 6.4–6.5).
   for (const tab of ['space', 'contest']) assert.equal(analysisView({ ...runRoute(B), tab }), 'legacy')
   // A link written before the native views names only the restored page's panels: it keeps opening there.
   assert.equal(analysisView({ ...runRoute(B), panels: [['left_tab', 'clusters']] }), 'legacy')
+})
+
+test('the current tab is the view the URL names; the restored page alone is the run bar’s link', () => {
+  for (const tab of ['lineage', 'progress', 'space', 'contest', 'legacy']) assert.equal(viewTab({ ...runRoute(B), tab }), tab)
+  assert.equal(viewTab(runRoute(B)), 'lineage')
+  assert.equal(viewTab({ ...runRoute(B), tab: 'nowhere' }), 'lineage')
+  assert.equal(viewTab({ ...runRoute(B), panels: [['left_tab', 'clusters-view']] }), 'legacy')
+})
+
+test('solution space and contest open the restored page on their own panel and stay that tab inside it', () => {
+  const space = viewRoute(opened, 'space')
+  const contest = viewRoute({ ...space, panels: [['left_tab', 'clusters-view']] }, 'contest')
+  // Moving between them drops the other view's panel, so each opens on its own.
+  assert.deepEqual(contest.panels, [])
+  for (const [route, panel] of [[space, 'clusters-view'], [contest, 'table-view']]) {
+    const run = inside(framePath(route))
+    assert.equal(run.searchParams.get('selected_node'), 'p-1')
+    assert.equal(run.searchParams.get('left_tab'), panel)
+    // The first projection writes the panel into the public URL; after that the trip changes nothing.
+    const once = projectedHref(run, route)
+    assert.deepEqual(at(once), { ...route, panels: [['left_tab', panel]] })
+    assert.equal(projectedHref(inside(framePath(at(once))), at(once)), once)
+  }
+  // A left panel the URL already names wins over the view's own.
+  assert.equal(inside(framePath({ ...space, panels: [['left_tab', 'maps-view']] })).searchParams.get('left_tab'), 'maps-view')
+  // Any panel the reader opens inside keeps the tab the page was opened as, with the program chosen there.
+  assert.deepEqual(at(projectedHref(frame({ db_path: ODD, selected_node: 'p-2', left_tab: 'tree-view' }), contest)), {
+    ...contest,
+    program: 'p-2',
+    panels: [['left_tab', 'tree-view']],
+  })
+  // The run bar's link keeps the panel and becomes the plain restored page; another run drops the view.
+  assert.equal(viewRoute({ ...space, panels: [['left_tab', 'clusters-view']] }, 'legacy').tab, 'legacy')
+  assert.equal(at(projectedHref(frame({ db_path: B }), space)).tab, 'legacy')
 })
 
 test('switching views keeps the selection, and a native view drops the restored page’s panels', () => {

@@ -13,7 +13,7 @@ export type Route =
   | {
       view: 'run'
       run: string
-      /** The analysis view: lineage, progress, space or contest, or `legacy` for the restored page (see `analysisView`). */
+      /** The analysis view: lineage, progress, space or contest, or `legacy` for the restored page (see `analysisView` and `viewTab`). */
       tab: string | null
       program: string | null
       /** The inspector pane: code, diff, evaluation, llm or meta; absent is code. */
@@ -26,7 +26,7 @@ export type Route =
       prompt: string | null
       /** The meta-analysis update the conclusions show, by its processed count (R03-C1); absent is the latest. */
       meta: string | null
-      /** The restored analysis page's own panels (left_tab, right_tab, meta_section) until task 7.1 removes it. */
+      /** The restored analysis page's own panels (left_tab, right_tab, meta_section). */
       panels: [string, string][]
       /** The research an experiment's analysis returns to; absent for an ordinary run. */
       direction: string | null
@@ -38,25 +38,38 @@ export type RunRoute = Extract<Route, { view: 'run' }>
 
 export const RUN_PANELS = ['left_tab', 'right_tab', 'meta_section']
 
-/** The analysis views in their tab order, and those drawn natively so far (design.md › 迁移与删除). */
+/**
+ * The analysis views in their tab order. Lineage and Progress are drawn natively; solution space
+ * and contest stay on the restored analysis page (owner decision A, design.md › 迁移与删除).
+ */
 export const ANALYSIS_VIEWS = ['lineage', 'progress', 'space', 'contest'] as const
-export const SHIPPED_VIEWS = ['lineage', 'progress'] as const
-export type AnalysisView = (typeof SHIPPED_VIEWS)[number] | 'legacy'
+export const NATIVE_VIEWS = ['lineage', 'progress'] as const
+export const HOSTED_VIEWS = ['space', 'contest'] as const
+export type AnalysisView = (typeof NATIVE_VIEWS)[number] | 'legacy'
+export type ViewTab = (typeof ANALYSIS_VIEWS)[number] | 'legacy'
+
+/** The hosted view a tab names (the view a restored page was opened as), or null. */
+export const hostedView = (tab: string | null) => HOSTED_VIEWS.find((view) => view === tab) ?? null
 
 /**
- * Which page a run's URL opens. A shipped view draws natively; `legacy`, a view not shipped yet, and a
- * URL that only names the restored page's own panels open the restored page; anything else is Lineage.
+ * Which page a run's URL opens. A native view draws natively; `legacy`, a hosted view and a URL that
+ * only names the restored page's own panels open the restored page; anything else is Lineage.
  */
 export function analysisView(route: RunRoute): AnalysisView {
   const { tab } = route
-  if (tab === 'legacy') return 'legacy'
-  const shipped = SHIPPED_VIEWS.find((view) => view === tab)
-  if (shipped) return shipped
-  if (tab !== null && (ANALYSIS_VIEWS as readonly string[]).includes(tab)) return 'legacy'
+  if (tab === 'legacy' || hostedView(tab)) return 'legacy'
+  const native = NATIVE_VIEWS.find((view) => view === tab)
+  if (native) return native
   return tab === null && route.panels.length > 0 ? 'legacy' : 'lineage'
 }
 
-/** The same run and selection in another view: a native view drops the restored page's own panels. */
+/** The tab a run's URL marks as current: a hosted view keeps its own tab on the restored page. */
+export function viewTab(route: RunRoute): ViewTab {
+  const view = analysisView(route)
+  return view === 'legacy' ? (hostedView(route.tab) ?? 'legacy') : view
+}
+
+/** The same run and selection in another view: every view but `legacy` drops the restored page's own panels. */
 export const viewRoute = (route: RunRoute, tab: string): RunRoute => ({ ...route, tab, panels: tab === 'legacy' ? route.panels : [] })
 
 export const ALL_RUNS: Extract<Route, { view: 'runs' }> = { view: 'runs', q: '', kind: '', sort: '', select: [] }

@@ -21,7 +21,7 @@
   --grid: #34343b;
   /* Error-notice ground, kept from the Carbon notice the app used until 2026-10-22. */
   --notice-error-bg: #262626;
-  /* Score ramp for lineage and solution space: lowest score -> best score. */
+  /* Score ramp for lineage: lowest score -> best score. */
   --ramp-0: #606066;
   --ramp-1: #f1f1f3;
 }

@@ -7,7 +7,7 @@ import { int, money } from '../format'
 import { useCopy } from '../i18n/lang'
 import { Notice } from '../Notice'
 import { runCost } from '../runs/data'
-import { analysisView, routeHref, SHIPPED_VIEWS, viewRoute, type RunRoute } from '../shell/route'
+import { ANALYSIS_VIEWS, analysisView, routeHref, viewRoute, viewTab, type RunRoute } from '../shell/route'
 import type { ShellData } from '../shell/useShellData'
 import { bestOf, bestPrompts, generationOf, islandOf, metaUpdates, type RunProgram } from './data'
 import { Inspector, paneOf, type Pane } from './Inspector'
@@ -22,15 +22,17 @@ import { useRunData } from './useRunData'
 const LANE_LEFT = 128
 const LANE_RIGHT = 28
 
-/** The analysis views shipped so far, as the top bar's view tabs (design.md › 迁移与删除). */
+const VIEW_LABELS = { lineage: 'ra.view.lineage', progress: 'ra.view.progress', space: 'ra.view.space', contest: 'ra.view.contest' } as const
+
+/** The four analysis views as the top bar's view tabs; solution space and contest open the restored page (design.md › 迁移与删除). */
 export function ViewTabs({ route }: { route: RunRoute }) {
   const { t } = useCopy()
-  const view = analysisView(route)
+  const current = viewTab(route)
   return (
     <nav className="vtabs" aria-label={t('ra.views')}>
-      {SHIPPED_VIEWS.map((tab) => (
-        <a key={tab} href={routeHref(viewRoute(route, tab))} aria-current={view === tab ? 'page' : undefined}>
-          {t(tab === 'progress' ? 'ra.view.progress' : 'ra.view.lineage')}
+      {ANALYSIS_VIEWS.map((tab) => (
+        <a key={tab} href={routeHref(viewRoute(route, tab))} aria-current={current === tab ? 'page' : undefined}>
+          {t(VIEW_LABELS[tab])}
         </a>
       ))}
     </nav>
@@ -49,7 +51,7 @@ type Props = {
   onRunList: () => void
 }
 
-/** One run's analysis (6.1–6.3): the run bar, then Lineage or Progress with the resident inspector, or the restored page. */
+/** One run's analysis: the run bar, then Lineage or Progress with the resident inspector, or the restored page. */
 export function RunPage({ route, data, name, go, sync, light, frameKey, onRunList }: Props) {
   const { t } = useCopy()
   const view = analysisView(route)
@@ -81,6 +83,7 @@ export function RunPage({ route, data, name, go, sync, light, frameKey, onRunLis
   const generations = new Set(programs.map(generationOf)).size
   const cost = run ? runCost(run.stats) : null
   const legacy = view === 'legacy'
+  const workbench = viewTab(route) === 'legacy'
   const bar = (
     <div className="runbar" role="group" aria-label={t('ra.runbar')}>
       <span className="mono trunc" translate="no" title={route.run}>{name}</span>
@@ -92,7 +95,7 @@ export function RunPage({ route, data, name, go, sync, light, frameKey, onRunLis
         </span>
       )}
       {read.error !== null && run !== null && <span className="small sig">{t('ra.stale', { error: read.error })}</span>}
-      <a className="runbar-legacy" href={routeHref(viewRoute(route, 'legacy'))} aria-current={legacy ? 'page' : undefined} title={t('ra.legacyHint')}>
+      <a className="runbar-legacy" href={routeHref(viewRoute(route, 'legacy'))} aria-current={workbench ? 'page' : undefined} title={t('ra.legacyHint')}>
         {t('ra.legacy')}
         <Icon name="arrow" />
       </a>

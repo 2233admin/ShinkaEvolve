@@ -98,6 +98,14 @@ a.railitem:hover, .railitem.is-on { background: var(--hover); color: var(--text)
 .crumbs a:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; }
 .crumbs .is-here { max-width: 420px; color: var(--text); font-weight: 500; }
 .tools { margin-left: auto; display: flex; align-items: center; gap: 10px; white-space: nowrap; font-size: 12px; }
+/*
+ * The run page's four view tabs leave a long run name a few characters per line below about 1280 px:
+ * there the tools move to a second row of the bar instead, and the name keeps at least 14rem.
+ */
+.top:has(.vtabs) { flex-wrap: wrap; row-gap: 0; }
+.top:has(.vtabs) .crumbs { min-width: min(100%, 14rem); }
+.top:has(.vtabs) .vtabs { min-height: 51px; }
+.top:has(.vtabs) .tools { min-height: 40px; }
 .updated {
   display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px; border: 0; border-radius: var(--radius-control);
   background: none; color: var(--faint); font: inherit; cursor: pointer;
