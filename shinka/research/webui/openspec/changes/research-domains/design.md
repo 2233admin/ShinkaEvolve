@@ -72,7 +72,7 @@ Agent 起草的只是检查器，不是完整的评估器。核心生成评估�
 | `dsr_pbo`（量化现行） | 样本外 Sharpe、DSR、子区间、PBO，试验校正 | 现行 `skeptic.decide` | 现行 | 现行 |
 | `reach_target` | 检查器认可的最好产物的得分 | 达到冻结的目标值 | `on_budget_exhausted = refuted` 且预算用完仍未达到（推翻的是“这个方法在这个预算内能达到”） | 尚未达到；或 `on_budget_exhausted = insufficient` 且预算用完仍未达到 |
 | `counterexample` | 检查器认可的反例产物 | — | 找到合法反例 | 没找到 |
-| `holdout_vs_baseline` | 留存段上的指标与冻结基线的差，按试验数校正 | 差值越过阈值 | 差值不大于 0 | 介于两者之间 |
+| `holdout_vs_baseline` | 留存段上的指标与冻结基线的差（越大越好）：原始差值，以及按试验数校正后的差值（领域声明 `trial_correction` 时由随检查器冻结的校正给出，否则等于原始差值；不得大于原始差值） | 校正后的差值大于阈值 `support_margin` | 原始差值不大于 0（试验多不会让推翻更容易，同 `dsr_pbo` 只按样本外 Sharpe 不大于 0 推翻） | 介于两者之间 |
 
 - 规则带版本，计划记录种类与版本；改规则的行为就是新版本，旧计划继续用旧版本。
 - `reach_target` 的目标值在 `hypothesis plan` 时校验：用方向已批准的检查器跑一次种子程序，记录 `correct` 与得分，目标必须高于种子得分，否则拒绝该计划。

@@ -227,8 +227,8 @@ def _experiment_pbo(
 def challenge(
     root: Path, nb: Notebook, hid: str, exp: Experiment, th: Thresholds
 ) -> Dict[str, Any]:
-    """Run all checks for one experiment and return the evidence report."""
-    verify_experiment(root, nb, hid, exp)
+    """Run all checks for one experiment and return the evidence report. The
+    caller has verified the experiment (``verify_experiment``)."""
     exp_dir = experiment_dir(root, hid, exp.id)
     task_dir, results_dir = exp_dir / "task", exp_dir / "results"
     cfg = load_config(task_dir)

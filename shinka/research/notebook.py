@@ -15,12 +15,13 @@ from __future__ import annotations
 from contextlib import contextmanager
 from datetime import datetime, timezone
 from enum import Enum
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 from typing import Any, Dict, Iterator, List, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from . import domains
+from .rules import Rule
 from .state import atomic_write_text, file_lock, lock_path, read_text
 
 NOTEBOOK_FILENAME = "notebook.json"
@@ -117,6 +118,46 @@ class DataSplit(BaseModel):
         )
 
 
+class FileSet(BaseModel):
+    """Files a plan freezes: direction-relative POSIX path -> sha256."""
+
+    model_config = ConfigDict(extra="forbid")
+    files: Dict[str, str] = Field(default_factory=dict)
+
+    @field_validator("files")
+    @classmethod
+    def _inside(cls, files: Dict[str, str]) -> Dict[str, str]:
+        for rel in files:
+            path = PurePosixPath(rel)
+            if (
+                not rel
+                or "\\" in rel
+                or ":" in rel
+                or path.is_absolute()
+                or ".." in path.parts
+            ):
+                raise ValueError(f"{rel!r} is not a path inside the direction")
+        return files
+
+
+class ExperimentPlan(BaseModel):
+    """What the owner froze for one experiment: the checker and data files,
+    the task message, the verdict rule and the claim. ``rationale`` is the
+    falsification agreed in conversation, kept for audit; the verdict reads
+    only ``rule``. Experiments from before plans have none (unfrozen, legacy)
+    and keep taking thresholds from the command line."""
+
+    model_config = ConfigDict(extra="forbid")
+    domain: str
+    checker: FileSet
+    data: FileSet
+    # sha256 of the task message (task/shinka.yaml evo.task_sys_msg)
+    task_message: str
+    rule: Rule
+    claim: Literal["certificate", "empirical"]
+    rationale: str
+
+
 class Experiment(BaseModel):
     id: str
     created: str = Field(default_factory=_now)
@@ -126,6 +167,7 @@ class Experiment(BaseModel):
     n_evaluated: int = 0
     n_probed: int = 0
     skeptic: Optional[Dict[str, Any]] = None
+    plan: Optional[ExperimentPlan] = None
 
 
 class Hypothesis(BaseModel):
