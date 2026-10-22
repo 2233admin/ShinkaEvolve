@@ -34,8 +34,8 @@ Purpose: every question the UI answers today gets a destination in the new linke
 | **RPT** | Report (direction/hypothesis research report) |
 | **LIN** | Lineage (tree, path, islands, prompt evolution) |
 | **PRG** | Progress (metrics, cost, throughput) |
-| **SOL** | Solution space (embeddings, clusters incl. 3D, MAPs, diversity) |
-| **CON** | Contest (battle, Pareto, multi-run compare) |
+| **SOL** | Solution space (embeddings, clusters incl. 3D, MAPs, diversity). Owner decision A (2026-10-22): served by the restored page's panels, opened from the Solution space tab; no native view |
+| **CON** | Contest (battle, Pareto, multi-run compare). Owner decision A (2026-10-22): the run's contest panels are served by the restored page, opened from the Contest tab; multi-run compare is the native compare page |
 | **INS** | Persistent Program inspector |
 | **RUN** | Runs list/compare |
 | **LIB** | Library |
