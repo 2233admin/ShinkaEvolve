@@ -19,6 +19,7 @@ from shinka.database.cost import (
 )
 
 DB_FILENAME = "programs.sqlite"
+PROMPT_DB_FILENAME = "prompts.sqlite"
 T = TypeVar("T")
 
 
@@ -45,18 +46,21 @@ def count_evaluated(results_dir: Path) -> int:
 
 
 def roll_back_dead_writer(results_dir: Path) -> None:
-    """Roll back the transaction a killed run left open. A writer killed in
-    rollback-journal mode (a run's database is only switched to WAL after it is
+    """Roll back transactions a killed writer left open in a results
+    directory's databases (programs and prompts). A writer killed in
+    rollback-journal mode (a run's databases only switch to WAL after they are
     created) leaves a hot journal, and every read-only connection then fails
     with "attempt to write a readonly database"; a read-write connection rolls
-    it back on its first read. Only for a run none of whose writers lives; a
-    missing database stays missing (``mode=rw`` never creates one)."""
-    db = Path(results_dir) / DB_FILENAME
-    if not (db.is_file() and Path(f"{db}-journal").is_file()):
-        return
-    uri = f"file:{quote(str(db.resolve()), safe='')}?mode=rw"
-    with closing(sqlite3.connect(uri, uri=True)) as conn:
-        conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchall()
+    it back on its first read. Only for a results directory no live run writes
+    to (``runs.finish_run`` checks the work ledger); a missing database stays
+    missing (``mode=rw`` never creates one)."""
+    for filename in (DB_FILENAME, PROMPT_DB_FILENAME):
+        db = Path(results_dir) / filename
+        if not (db.is_file() and Path(f"{db}-journal").is_file()):
+            continue
+        uri = f"file:{quote(str(db.resolve()), safe='')}?mode=rw"
+        with closing(sqlite3.connect(uri, uri=True)) as conn:
+            conn.execute("SELECT COUNT(*) FROM sqlite_master").fetchall()
 
 
 def _connect(
@@ -146,9 +150,6 @@ def program_code(results_dir: Path, program_id: str) -> str:
     if not rows:
         raise LookupError(f"program {program_id} not in {results_dir}")
     return str(rows[0][0])
-
-
-PROMPT_DB_FILENAME = "prompts.sqlite"
 
 
 class RunCost(NamedTuple):

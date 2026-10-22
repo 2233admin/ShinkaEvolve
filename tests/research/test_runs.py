@@ -9,9 +9,12 @@ processes.
 import json
 import os
 import re
+import shutil
+import sqlite3
 import subprocess
 import sys
 import time
+from contextlib import closing
 from pathlib import Path
 
 import psutil
@@ -238,25 +241,17 @@ def test_a_killed_run_is_recorded_once_by_two_watches(
 OPEN_TRANSACTION = """
 import sqlite3, sys, time
 conn = sqlite3.connect(sys.argv[1], isolation_level=None)
+conn.execute("CREATE TABLE IF NOT EXISTS hot (x TEXT)")
 conn.execute("PRAGMA cache_size = 1")  # spill to the file, so the journal is hot
 conn.execute("BEGIN")
 for i in range(20000):
-    conn.execute("INSERT INTO programs (id) VALUES (?)", ("x" * 200,))
+    conn.execute("INSERT INTO hot VALUES (?)", ("x" * 200,))
 print("open", flush=True)
 time.sleep(600)
 """
 
 
-def test_watch_records_a_run_killed_with_a_transaction_open(
-    direction: Path, monkeypatch
-) -> None:
-    _plan(monkeypatch, e01=dict(hang=True))
-    cli.main(["run", str(direction), "h001", "--detach"])
-    db = direction / "experiments" / "h001" / "e01" / "results" / "programs.sqlite"
-    _until(
-        lambda: work_entries(direction)[0].get("workers") and has_programs(db.parent)
-    )
-    _kill(direction)
+def _leave_hot_journal(db: Path) -> Path:
     writer = subprocess.Popen(
         [sys.executable, "-c", OPEN_TRANSACTION, str(db)],
         stdout=subprocess.PIPE, text=True,
@@ -264,11 +259,37 @@ def test_watch_records_a_run_killed_with_a_transaction_open(
     assert writer.stdout.readline().strip() == "open"
     writer.kill()
     writer.wait()
-    assert Path(f"{db}-journal").exists()
+    journal = Path(f"{db}-journal")
+    assert journal.exists()
+    return journal
+
+
+def test_watch_records_a_run_killed_with_a_transaction_open(
+    direction: Path, example_dir: Path, monkeypatch
+) -> None:
+    _second_experiment(direction, example_dir)
+    _plan(monkeypatch, e01=dict(hang=True))
+    cli.main(["run", str(direction), "h001", "--eid", "e01", "--detach"])
+    results = direction / "experiments" / "h001" / "e01" / "results"
+    _until(lambda: work_entries(direction)[0].get("workers") and has_programs(results))
+    _kill(direction)
+    # The killed run's programs and prompts, and a sibling experiment whose own
+    # run died earlier, the hypothesis's trial total reads them all.
+    sibling = direction / "experiments" / "h001" / "e02" / "results"
+    sibling.mkdir(parents=True)
+    shutil.copyfile(results / "programs.sqlite", sibling / "programs.sqlite")
+    with closing(sqlite3.connect(results / "prompts.sqlite")) as conn:
+        conn.execute("CREATE TABLE system_prompts (id TEXT, metadata TEXT)")
+    journals = [
+        _leave_hot_journal(results / "programs.sqlite"),
+        _leave_hot_journal(results / "prompts.sqlite"),
+        _leave_hot_journal(sibling / "programs.sqlite"),
+    ]
 
     assert watch(direction) == ["h001/e01: run-failed"]
     assert work_entries(direction) == []
-    # The killed transaction added nothing, and every reader opens the store.
+    assert [j for j in journals if j.exists()] == []
+    # The killed transactions added nothing, and every reader opens the stores.
     assert Notebook.load(direction).get("h001").experiments[0].n_evaluated == 0
     cli.main(["brief", str(direction)])
 
