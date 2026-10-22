@@ -1,3 +1,4 @@
+import os
 import sys
 from types import ModuleType, SimpleNamespace
 
@@ -328,16 +329,15 @@ def test_wandb_logger_dry_run_and_resume_use_fake_wandb(tmp_path, monkeypatch):
 
 @pytest.mark.requires_secrets
 def test_wandb_online_logging_with_authenticated_sdk(tmp_path, monkeypatch, caplog):
+    # CI passes the secret as WANDB_API_KEY; a fork without it skips. With the
+    # key set, a missing SDK or any login failure stays red.
+    if not os.environ.get("WANDB_API_KEY"):
+        pytest.skip("WANDB_API_KEY is not configured")
     import wandb
 
     db, first, second = make_db(tmp_path)
     monkeypatch.delenv("WANDB_MODE", raising=False)
-    try:
-        wandb.login(verify=True)
-    except wandb.errors.UsageError as error:
-        # No key configured (a fork without the secret); a configured but
-        # invalid key raises AuthenticationError and still fails.
-        pytest.skip(f"no W&B credentials: {error}")
+    wandb.login(verify=True)
 
     config = EvolutionConfig(
         enable_wandb_logging=True,
