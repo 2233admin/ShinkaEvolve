@@ -16,8 +16,6 @@ export function storedTheme(): ThemeName {
 
 function applyTheme(theme: ThemeName): void {
   document.documentElement.dataset.theme = theme
-  // Astro UXDS reads this class; it goes with Astro in task 7.1.
-  document.body.classList.toggle('light-theme', theme === 'light')
   try {
     localStorage.setItem(THEME_KEY, theme)
   } catch {

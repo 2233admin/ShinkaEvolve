@@ -18,9 +18,7 @@ from . import rundb
 
 WEBUI = Path(__file__).parent / "webui" / "dist" / "analysis"
 ANALYSIS_PATHS = {
-    "/analysis/index.html",
     "/viz_tree.html",
-    "/compare.html",
     "/list_databases",
     "/get_programs",
     "/get_programs_summary",
@@ -171,8 +169,6 @@ class AnalysisHandler(visualization.DatabaseRequestHandler):
                     target.as_posix(), safe="/"
                 )
             self.directory = str(WEBUI)
-            if url.path == "/analysis/index.html":
-                self.path = "/index.html" + (f"?{url.query}" if url.query else "")
             super().do_GET()
         except PermissionError:
             self.send_error(403, "Outside analysis read scope")

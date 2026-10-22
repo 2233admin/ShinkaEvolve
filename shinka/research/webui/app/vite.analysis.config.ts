@@ -39,7 +39,7 @@ function workbenchDocuments(): Plugin {
   return {
     name: 'owned-analysis-documents',
     generateBundle() {
-      for (const name of ['index.html', 'viz_tree.html', 'compare.html']) {
+      for (const name of ['viz_tree.html']) {
         const source = readFileSync(new URL(`../analysis/${name}`, import.meta.url), 'utf8')
         const declared = new Set([...source.matchAll(/function\s+([\w$]+)\s*\(/g)].map((m) => m[1]))
         const actions = [...new Set([...source.matchAll(/on(?:click|change|input)="([^"]*)"/g)]

@@ -122,7 +122,7 @@
 
 ## 迁移与删除
 
-按能力组替换：首页与报告 → 全部运行与比较 → 谱系 → 进展 → 资料库。全部运行与比较页整页替换，旧的 `/analysis/index.html`、`/analysis/compare.html` 只剩直接打开的入口。分析页的谱系与进展是原生视图；解空间与对比按所有者决定 A（2026-10-22，`owner-decisions.md` › 解空间与对比）长期留在恢复的原分析工作台：它们的视图页签在同一外壳内打开恢复页的对应面板并带上当前程序，运行条的「原分析工作台」打开整个恢复页。因此 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 与它们用到的 Plotly、Chart.js、JSZip 保留；7.1 只删除已无入口的部分（`/analysis/index.html`、`/analysis/compare.html` 及其服务端路由与构建入口、未被引用的 Astro UXDS 依赖），不保留兼容跳转。恢复页内的行为以恢复页为准，与原生规则不同之处列在 `owner-decisions.md` › 解空间与对比。
+按能力组替换：首页与报告 → 全部运行与比较 → 谱系 → 进展 → 资料库。全部运行与比较页整页替换，旧的 `/analysis/index.html`、`/analysis/compare.html` 已随 7.1 删除。分析页的谱系与进展是原生视图；解空间与对比按所有者决定 A（2026-10-22，`owner-decisions.md` › 解空间与对比）长期留在恢复的原分析工作台：它们的视图页签在同一外壳内打开恢复页的对应面板并带上当前程序，运行条的「原分析工作台」打开整个恢复页。因此 `/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts` 与它们用到的 Plotly、Chart.js、JSZip 保留；7.1 只删除已无入口的部分（`/analysis/index.html`、`/analysis/compare.html` 及其服务端路由与构建入口、未被引用的 Astro UXDS 依赖），不保留兼容跳转。恢复页内的行为以恢复页为准，与原生规则不同之处列在 `owner-decisions.md` › 解空间与对比。
 
 ## 风险
 

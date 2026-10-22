@@ -203,6 +203,11 @@ All notable changes to `shinka-evolve` are documented in this file.
   restored page without a view. Where the run page's top bar cannot hold the
   four tabs (1024 px, and 1280 px in English), its tools move to a second row
   instead of the run name wrapping.
+- Removed the old run list and compare pages (`/analysis/index.html`,
+  `/compare.html`), which the native All runs and Compare pages replaced; both
+  addresses now answer 404 and are not redirected. The restored analysis page
+  (`/viz_tree.html`) stays for Solution space and Contest. The unused Astro UXDS
+  package (`@astrouxds/astro-web-components`) is no longer a dependency.
 - Changed the Research workbench URLs to one page per `view`
   (`directions`, `direction`, `runs`, `compare`, `run`, `library`); the restored
   analysis pages' state now appears as `select`, `runs`, `run` and `program`, and

@@ -53,7 +53,8 @@
 
 ## 7. 删除与收尾
 
-- [ ] 7.1 删除已无入口的旧代码：`/analysis/index.html`、`/analysis/compare.html` 及其服务端路由与 `vite.analysis.config.ts` 中的构建入口、未被引用的 Astro UXDS 依赖（`@astrouxds/astro-web-components`）；Carbon 的三个包含已无人使用的 Carbon Charts，已于 2026-10-22 随组件路线 A 移除。按决定 A，`/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts`、Plotly、Chart.js 与 JSZip 继续承载解空间与对比，不删除。删除前确认 `tests/research` 不再引用被删页面，单独提交，不保留兼容跳转。
+- [x] 7.1 删除已无入口的旧代码：`/analysis/index.html`、`/analysis/compare.html` 及其服务端路由与 `vite.analysis.config.ts` 中的构建入口、未被引用的 Astro UXDS 依赖（`@astrouxds/astro-web-components`）；Carbon 的三个包含已无人使用的 Carbon Charts，已于 2026-10-22 随组件路线 A 移除。按决定 A，`/viz_tree.html`、`/analysis/runtime.*`、`vite.analysis.config.ts`、Plotly、Chart.js 与 JSZip 继续承载解空间与对比，不删除。删除前确认 `tests/research` 不再引用被删页面，单独提交，不保留兼容跳转。
+  - 完成（2026-10-22）：两份页面删除；`analysis.py` 的 `ANALYSIS_PATHS` 去掉两条路径与 `/analysis/index.html` 改写；构建只产出 `viz_tree.html`；`pnpm remove @astrouxds/astro-web-components`（少 8 个包），`theme.ts` 不再给 `body` 加 Astro 的 `light-theme`；`test_analysis_cost_rule.py` 删去只测旧比较页与旧运行列表的用例，恢复页的计价用例保留。重启演示服务器后 `/analysis/index.html` 与 `/compare.html` 返回 404，`/viz_tree.html` 返回 200；`probe_view_tabs.py` 两种组合下四个页签、默认面板、当前程序、后退与控制台 0 错误同前。
 - [ ] 7.2 改写根目录 `DESIGN.md`、`MOTION.md` 与 `design-system/`（含深浅主题的 token、组件状态与图表族预览页），更新 `docs/research/workspace.md`。
 - [ ] 7.3 验收：1920/1440/1024 宽 × 深浅 × 中英截图实看；axe 无严重问题；控制台零错误；本机测量 LCP、INP 与包体；原生视图首屏不请求 `/viz_tree.html` 与 `/analysis/*`；`pytest -q tests/research` 与仓库门禁。
 - [ ] 7.4 恢复管线 `state.json` 的所有者交付与评审委派，运行管线交付门禁；所有者验收绑定最终版本。
