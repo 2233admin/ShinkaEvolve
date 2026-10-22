@@ -110,3 +110,7 @@
 ## 验收门禁豁免（2026-10-22）
 
 代理问「全仓库测试 `pytest -q -m "not requires_secrets"` 的 2 项 Windows 失败（`tests/test_headless_provider.py::test_query_headless_invokes_claude_through_shell`：`headless.py` 写死 `/bin/sh`；`tests/test_async_apply.py::test_validate_code_async_wolfram_uses_wolframscript_helpers`：Windows 找不到路径），在本次改版里修，还是记为与本次无关的已知问题、豁免后勾选 7.3」，所有者回答「豁免了」。两处代码最后改于 `02f0531`，早于本变更，本分支未改动；本变更不修，7.3 据此勾选。
+
+## 最终验收（2026-10-22）
+
+三项委派已从 2026-10-17 提交的 `state.json` 恢复（`deliver` 交给所有者，`review` 与 `creative-intent` 锁定给所有者），管线已按 `e7e069e` 登记交付（`ui/full: done`）。所有者回复：「我已查看并验收提交 e7e069e，最终版本通过」。验收绑定 `e7e069e`；记录本条的提交只改本文件与 `tasks.md`，不改代码。之后任何代码改动都需要重新登记交付并重新签署。
