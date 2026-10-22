@@ -332,7 +332,12 @@ def test_wandb_online_logging_with_authenticated_sdk(tmp_path, monkeypatch, capl
 
     db, first, second = make_db(tmp_path)
     monkeypatch.delenv("WANDB_MODE", raising=False)
-    wandb.login(verify=True)
+    try:
+        wandb.login(verify=True)
+    except wandb.errors.UsageError as error:
+        # No key configured (a fork without the secret); a configured but
+        # invalid key raises AuthenticationError and still fails.
+        pytest.skip(f"no W&B credentials: {error}")
 
     config = EvolutionConfig(
         enable_wandb_logging=True,
