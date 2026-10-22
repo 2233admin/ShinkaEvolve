@@ -114,3 +114,7 @@
 ## 最终验收（2026-10-22）
 
 三项委派已从 2026-10-17 提交的 `state.json` 恢复（`deliver` 交给所有者，`review` 与 `creative-intent` 锁定给所有者），管线已按 `e7e069e` 登记交付（`ui/full: done`）。所有者回复：「我已查看并验收提交 e7e069e，最终版本通过」。验收绑定 `e7e069e`；记录本条的提交只改本文件与 `tasks.md`，不改代码。之后任何代码改动都需要重新登记交付并重新签署。
+
+## 合并后补签（2026-10-22）
+
+PR #28 以合并提交 `130b1fc` 并入 main，合并发生在重新签署之前。`e7e069e` 之后的改动不涉及界面源码与测试：`.github/workflows/ci.yml` 与 `research-ci.yml` 在测试前安装 pnpm 11、Node 24 并执行 `pnpm install --frozen-lockfile` 与 `pnpm build`（`10fe3e6`）；`webui/app/pnpm-workspace.yaml` 允许 esbuild 的构建脚本、忽略 @parcel/watcher 的（`120e673`）；其余是文档。`120e673` 上 Research CI 与两条 CI 全部通过。管线已按 `130b1fc` 重新登记交付（`decide --stage deliver`，返回 `ui/full: done`）。所有者回复：「我已查看并验收提交 130b1fc」。验收改为绑定 `130b1fc`；记录本条的提交只改本文件。之后任何代码改动仍需重新登记交付并重新签署。
